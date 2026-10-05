@@ -21,7 +21,7 @@ test('Quick view opens from a card, and its chunk loads only on the first click'
         if (CHUNK.test(new URL(response.url()).pathname)) chunkLoads.push(response.status());
     });
 
-    await storefrontPage(page, PAGES.category);
+    await storefrontPage(page, 'category');
     await dismissCookieBanner(page);
     expect(chunkLoads, 'the Quick view chunk loads before any click').toEqual([]);
 

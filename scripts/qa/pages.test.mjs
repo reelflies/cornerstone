@@ -1,11 +1,18 @@
-// What the pinned pages in scripts/qa/pages.mjs make the screenshot gate see: which parts
-// of a page the diffs mask.
+// What the pinned pages in scripts/qa/pages.mjs make the gates see: the status each pin
+// must return, and which parts of a page the screenshot diffs mask.
 //
 //   node --test scripts/qa/pages.test.mjs
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { CHANNELS, masksFor } from './pages.mjs';
+import { CHANNELS, expectedStatus, masksFor } from './pages.mjs';
+
+describe('the status a pinned page must return', () => {
+    it('is 404 for the 404 template and 200 for every other one', () => {
+        assert.equal(expectedStatus('404'), 404);
+        for (const template of ['home', 'product', 'category', 'cart', 'brand', 'fly-type']) assert.equal(expectedStatus(template), 200);
+    });
+});
 
 describe('the screenshot masks', () => {
     const LIVE = ['.price-section', '[data-product-stock]', '.productView-rating', '.countPill', '.cart-total-value'];

@@ -15,7 +15,7 @@ import {
 
 for (const [template, pagePath] of Object.entries(PAGES)) {
     test(`${template} (${pagePath}) matches its baseline`, async ({ page }) => {
-        await storefrontPage(page, pagePath);
+        await storefrontPage(page, template);
         await dismissCookieBanner(page);
         await expect(page).toHaveScreenshot([BASELINE_SET, `${template}.png`], {
             fullPage: true,

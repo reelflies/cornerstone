@@ -2,15 +2,16 @@
 //
 // - The preview cookie for QA_BASE_URL goes into the browser's cookie jar for that
 //   host only, so it never reaches fonts, the CDN or any other host.
-// - storefrontPage(page, path) opens a page and waits until it stops moving: fonts
-//   loaded, lazy images in, network quiet, back at the top.
-// - dismissCookieBanner(page) closes the store's cookie banner.
+// - storefrontPage(page, template) opens the template's pinned page, fails unless it
+//   answers with the template's status (404 for the 404 page, 200 for every other), and
+//   waits until it stops moving: fonts loaded, lazy images in, network quiet, at the top.
+// - dismissCookieBanner(page) closes the store's cookie banner without moving the pointer.
 
 /* eslint-env browser */ // the page.evaluate callbacks run in the page
 
 import { test as base, expect } from '@playwright/test';
 import { QA_CHANNEL, previewCookies } from './storefront.mjs';
-import { pinnedPages } from './pages.mjs';
+import { expectedStatus, pinnedPages } from './pages.mjs';
 
 export const test = base.extend({
     context: async ({ context }, use) => {
@@ -24,8 +25,14 @@ export { expect };
 
 export const PAGES = pinnedPages(QA_CHANNEL);
 
-export async function storefrontPage(page, pagePath) {
+export async function storefrontPage(page, template, pagePath = PAGES[template]) {
     const response = await page.goto(pagePath, { waitUntil: 'load' });
+    // Anything else is an error page: checking it, or recording it as a baseline, would
+    // pass the gate without looking at the template. Fix the pin in pages.mjs.
+    const status = response?.status();
+    if (status !== expectedStatus(template)) {
+        throw new Error(`the ${template} page ${pagePath} returned HTTP ${status}, not ${expectedStatus(template)}; fix its pin in scripts/qa/pages.mjs`);
+    }
     await page.evaluate(() => document.fonts.ready);
     // lazysizes loads images as they scroll into view; scroll once so every image is in.
     await page.evaluate(async () => {
@@ -49,11 +56,13 @@ export async function storefrontPage(page, pagePath) {
 }
 
 // BigCommerce's cookie banner (a store setting) is fixed to the viewport, so in a
-// full-page screenshot it covers the template. Dismiss it as a shopper would.
+// full-page screenshot it covers the template. Dismiss it as a keyboard user would: a
+// click would leave the pointer where the button was, over whatever the banner covered,
+// which then shows its hover state (on the desktop product page, EasyZoom's flyout).
 export async function dismissCookieBanner(page) {
     const banner = page.locator('#consent-manager');
     if (await banner.isVisible()) {
-        await banner.getByRole('button', { name: 'Reject all' }).click();
+        await banner.getByRole('button', { name: 'Reject all' }).press('Enter');
         await banner.waitFor({ state: 'hidden' });
     }
 }

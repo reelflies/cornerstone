@@ -52,6 +52,8 @@ Without `QA_BASE_URL`, each gate uses `npx stencil start -c $QA_CHANNEL -v "$QA_
 
 - **Page keys** are the spec's template names: `home`, `fly-type`, `species`, `species-hub`, `product`, `cart`, `hook-chart`, `404` and `brand`, plus `category` for the stock category template until ticket 32.
 - **Test products are pinned** by URL. Pick ones that will stay in the catalogue.
+- **Every pinned page must answer as its template:** HTTP 404 for `404`, and 200 for every other page. Otherwise axe, the screenshots and the raw-HTML check fail the page instead of checking an error page. A renamed product or a mistyped pin shows up as that failure.
+
 When a page is added for a channel, axe and the screenshots cover it on the next run. The raw-HTML check fetches the `RAW_HTML_PAGES` kinds: home, product and category.
 
 **What the screenshots mask** (`masksFor(channel, template)`):
@@ -113,7 +115,7 @@ Every pinned page, at 375 and 1280, runs with the tags WCAG 2.0–2.2 A and AA p
 **How a run works:**
 
 1. Each page scrolls once so lazy images load.
-2. The store's cookie banner is dismissed ("Reject all"), because it is fixed to the viewport and would cover the template.
+2. The store's cookie banner is dismissed by pressing Enter on "Reject all", because it is fixed to the viewport and would cover the template. A click would leave the pointer over whatever the banner covered, and on the desktop product page that opens EasyZoom's hover zoom.
 3. A full-page screenshot is compared with the baseline, with `masksFor(channel, template)` masked.
 
 **The threshold** is in `playwright.config.mjs`. A pixel counts as changed when its colour moves more than 0.2 (Playwright's `threshold`). A run fails when more than 0.2% of the pixels change (`maxDiffPixelRatio`).
@@ -213,6 +215,7 @@ It needs a category page with products, so run it with `QA_CHANNEL=1` until Reel
 ## Which runner picks up what
 
 - Playwright runs `scripts/qa/*.spec.mjs` with this folder's config.
+- `harness-selftest.spec.mjs` runs with `qa:axe`, `qa:screens` and `qa:quick-view`, on pages it serves itself. It proves that a pinned page answering with the wrong status fails the run, and that dismissing the cookie banner leaves nothing hovered.
 - `npm run test:scripts` runs every `scripts/**/*.test.mjs` with `node --test`.
 - Jest runs `assets/js/test-unit/`. `jest.config.js` ignores `scripts/`, because Jest 30 would otherwise match `*.test.mjs` and `*.spec.mjs` too.
 - Playwright writes its report, traces and failed diffs to `scripts/qa/results/`, which is ignored by git. A run with `QA_PREVIEW_COOKIE` writes no traces, so the cookie never lands there.

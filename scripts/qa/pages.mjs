@@ -44,6 +44,10 @@ export const CHANNELS = {
 // The page kinds the raw-HTML harness fetches, when the channel has them pinned.
 export const RAW_HTML_PAGES = ['home', 'product', 'category'];
 
+// The status each pinned page must return. A gate that got anything else would be
+// checking an error page instead of the template, so the run fails.
+export const expectedStatus = template => (template === '404' ? 404 : 200);
+
 // Live data the screenshots mask on every page, so they don't fail on price, stock or
 // catalogue changes: prices, stock and SKU lines, ratings and review counts, sale and
 // sold-out badges, cart counts and totals, page counts, and store content edited outside

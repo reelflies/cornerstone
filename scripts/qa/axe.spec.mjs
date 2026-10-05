@@ -18,7 +18,7 @@ const describe = violation => `${violation.id} (${violation.impact}): ${violatio
 
 for (const [template, pagePath] of Object.entries(PAGES)) {
     test(`${template} (${pagePath}) has no serious or critical axe issues`, async ({ page }, testInfo) => {
-        await storefrontPage(page, pagePath);
+        await storefrontPage(page, template);
         const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze();
         const blocking = violations.filter(violation => BLOCKING.includes(violation.impact));
 
