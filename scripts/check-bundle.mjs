@@ -16,6 +16,11 @@
 //   - rf-quick-add      quick add on cards (ticket 43, measured in 45)      15,000 B
 //   - rf-region-prompt  the outside-Canada prompt (ticket 52)                1,000 B
 //   KB is read conservatively as 1,000 B, like CONFIG_LIMIT. gzip is zlib's default level.
+//   The limit covers everything the import loads: the named file plus the shared chunks
+//   webpack's splitChunks moved out of it, which the same first use fetches. Each file is
+//   gzipped on its own, as it is served. A shared chunk the page may have loaded already
+//   still counts, so the figure can be high but never low. When two imports load the
+//   chunk with different shared chunks, the larger total counts.
 // - Reports the compiled ReelFlies CSS layer (the reelflies/ imports in theme.scss)
 //   against the design's estimate of about 12 KB. It warns and never fails, until
 //   ticket 26's spike sets a real figure.
@@ -43,6 +48,12 @@ const CONFIG_LIMIT = 64000; // the handoff's "64 KB" upload limit, read conserva
 // parsed/ and manifest.json itself, so those belong in the zip. Junk gets in only under assets/.
 const FORBIDDEN = [/(^|\/)report\.html$/, /(^|\/)secrets\.stencil\.json$/, /(^|\/)config\.stencil\.json$/, /\.env$/];
 const REELFLIES_IMPORT = /^[ \t]*@import\s+["']reelflies\/[^"']*["'].*$/gm;
+// webpack's production output: a lazy chunk file starts `(self.webpackChunk…||[]).push([[ids],{`,
+// and a dynamic import compiles to `X.e(id)`, or to `Promise.all([X.e(a),X.e(b),…])` when it
+// needs shared chunks too.
+const CHUNK_HEADER = /\.push\(\[\[(\d+(?:,\d+)*)\]/;
+const LOADS_TOGETHER = /Promise\.all\(\[((?:[\w$]+\.e\(\d+\),?)+)\]\)/g;
+const LOAD = /[\w$]+\.e\((\d+)\)/g;
 
 const bytes = n => `${n.toLocaleString('en-CA')} B`;
 
@@ -61,17 +72,68 @@ export function checkMainJs(dist) {
         : result('ok', `theme-bundle.main.js is ${bytes(size)} (limit ${bytes(MAIN_JS_LIMIT)})`, { file: 'theme-bundle.main.js', size });
 }
 
-export function checkChunks(dist, limits = CHUNK_GZIP_LIMITS) {
-    return Object.entries(limits).map(([file, limit]) => {
-        const chunk = path.join(dist, file);
-        if (!fs.existsSync(chunk)) {
-            return result('skip', `${file} isn't built yet (limit ${bytes(limit)} gzip)`, { file });
+// Every script in the build, by file name, with the chunk ids its JSONP header registers.
+function readScripts(dist) {
+    return new Map(fs.readdirSync(dist).filter(name => name.endsWith('.js')).map(name => {
+        const code = fs.readFileSync(path.join(dist, name));
+        const header = code.subarray(0, 1000).toString('latin1').match(CHUNK_HEADER);
+        return [name, { code, ids: header ? header[1].split(',') : [] }];
+    }));
+}
+
+// The chunk ids each import() of one of `ids` loads at once, from every script in the build.
+function importsOf(scripts, ids) {
+    const groups = [];
+    for (const { code } of scripts.values()) {
+        const text = code.toString('latin1');
+        for (const [, calls] of text.matchAll(LOADS_TOGETHER)) {
+            const group = [...calls.matchAll(LOAD)].map(([, id]) => id);
+            if (group.some(id => ids.includes(id))) groups.push(group);
         }
-        const size = zlib.gzipSync(fs.readFileSync(chunk)).length;
-        return size > limit
-            ? result('fail', `${file} is ${bytes(size)} gzip, over its ${bytes(limit)} limit`, { file, size })
-            : result('ok', `${file} is ${bytes(size)} gzip (limit ${bytes(limit)})`, { file, size });
+        const alone = [...text.replace(LOADS_TOGETHER, '').matchAll(LOAD)].map(([, id]) => id);
+        ids.filter(id => alone.includes(id)).forEach(id => groups.push([id]));
+    }
+    return groups;
+}
+
+// webpack names a chunk's file after the chunk's name, or else its id.
+function fileOf(scripts, id) {
+    const numbered = `theme-bundle.chunk.${id}.js`;
+    if (scripts.has(numbered)) return numbered;
+    return [...scripts].find(([name, { ids }]) => !/^theme-bundle\.chunk\.\d+\.js$/.test(name) && ids.includes(id))?.[0];
+}
+
+function checkChunk(scripts, file, limit) {
+    const gzip = name => zlib.gzipSync(scripts.get(name).code).length;
+    const groups = importsOf(scripts, scripts.get(file).ids);
+    if (!groups.length) {
+        return result('fail', `${file}: found no import() that loads it in the build, so its ${bytes(limit)} gzip limit can't be checked`, { file });
+    }
+    const loads = groups.map(group => group.map(id => ({ id, name: fileOf(scripts, id) })));
+    const missing = loads.flat().find(({ name }) => !name);
+    if (missing) {
+        return result('fail', `${file}: its import also loads chunk ${missing.id}, which isn't in the build, so its ${bytes(limit)} gzip limit can't be checked`, { file });
+    }
+
+    const totals = loads.map(group => {
+        const names = [...new Set([file, ...group.map(({ name }) => name)])];
+        return { names, size: names.reduce((sum, name) => sum + gzip(name), 0) };
     });
+    const { names, size } = totals.reduce((most, total) => (total.size > most.size ? total : most));
+    const shared = names.filter(name => name !== file);
+    const verdict = size > limit ? `over its ${bytes(limit)} limit` : `(limit ${bytes(limit)})`;
+    const message = shared.length
+        ? `${file} loads with ${shared.length} shared chunk${shared.length > 1 ? 's' : ''}: ${bytes(size)} gzip in all, ${verdict} (${names.map(name => `${name} ${bytes(gzip(name))}`).join(', ')})`
+        : `${file} is ${bytes(size)} gzip${size > limit ? ', ' : ' '}${verdict}`;
+    return result(size > limit ? 'fail' : 'ok', message, { file, size });
+}
+
+export function checkChunks(dist, limits = CHUNK_GZIP_LIMITS) {
+    const built = Object.keys(limits).filter(file => fs.existsSync(path.join(dist, file)));
+    const scripts = built.length ? readScripts(dist) : null;
+    return Object.entries(limits).map(([file, limit]) => (built.includes(file)
+        ? checkChunk(scripts, file, limit)
+        : result('skip', `${file} isn't built yet (limit ${bytes(limit)} gzip)`, { file })));
 }
 
 export function checkConfig(configPath) {

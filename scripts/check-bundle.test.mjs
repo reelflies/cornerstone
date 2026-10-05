@@ -33,6 +33,28 @@ function writeDist(files) {
     return dist;
 }
 
+// A build the way webpack writes one. Each chunk file starts with its JSONP header,
+// `(self.webpackChunk…||[]).push([[id],{…`, and a dynamic import compiles to `o.e(id)`,
+// or to `Promise.all([o.e(a),o.e(b),…])` when it also needs shared chunks.
+//   chunks:  { file: { id, size } or { id, content } }
+//   imports: groups of ids, each one import() in main.js
+const jsonpHeader = id => `(self.webpackChunkbigcommerce_cornerstone=self.webpackChunkbigcommerce_cornerstone||[]).push([[${id}],{`;
+const loads = ids => (ids.length === 1 ? `o.e(${ids[0]})` : `Promise.all([${ids.map(id => `o.e(${id})`).join(',')}])`);
+
+function writeBuild(chunks, imports = Object.values(chunks).map(({ id }) => [id]), { importsIn = 'theme-bundle.main.js' } = {}) {
+    const dist = tempDir();
+    for (const [file, { id, size, content }] of Object.entries(chunks)) {
+        const body = content === undefined ? crypto.randomBytes(size) : Buffer.from(content);
+        fs.writeFileSync(path.join(dist, file), Buffer.concat([Buffer.from(jsonpHeader(id)), body]));
+    }
+    const calls = imports.map(ids => `function(){return ${loads(ids)}.then(o.bind(o,4184))}`).join(',');
+    const importer = path.join(dist, importsIn);
+    const existing = fs.existsSync(importer) ? fs.readFileSync(importer) : Buffer.from('');
+    fs.writeFileSync(importer, Buffer.concat([existing, Buffer.from(`;var L=[${calls}];`)]));
+    if (!fs.existsSync(path.join(dist, 'theme-bundle.main.js'))) fs.writeFileSync(path.join(dist, 'theme-bundle.main.js'), '/* main */');
+    return dist;
+}
+
 const levelOf = (results, file) => results.find(result => result.file === file)?.level;
 const MENU = 'theme-bundle.chunk.rf-menu.js';
 const QUICK_ADD = 'theme-bundle.chunk.rf-quick-add.js';
@@ -64,31 +86,100 @@ describe('the per-chunk gzip limits', () => {
     });
 
     it('fail each chunk over its gzip limit', () => {
-        const results = checkChunks(writeDist({ [MENU]: 8200, [QUICK_ADD]: 15200, [REGION]: 1100 }));
+        const results = checkChunks(writeBuild({
+            [MENU]: { id: 101, size: 8200 }, [QUICK_ADD]: { id: 102, size: 15200 }, [REGION]: { id: 103, size: 1100 },
+        }));
         assert.equal(levelOf(results, MENU), 'fail');
         assert.equal(levelOf(results, QUICK_ADD), 'fail');
         assert.equal(levelOf(results, REGION), 'fail');
     });
 
     it('pass each chunk under its gzip limit', () => {
-        const results = checkChunks(writeDist({ [MENU]: 7000, [QUICK_ADD]: 14000, [REGION]: 800 }));
+        const results = checkChunks(writeBuild({
+            [MENU]: { id: 101, size: 7000 }, [QUICK_ADD]: { id: 102, size: 14000 }, [REGION]: { id: 103, size: 800 },
+        }));
         assert.equal(levelOf(results, MENU), 'ok');
         assert.equal(levelOf(results, QUICK_ADD), 'ok');
         assert.equal(levelOf(results, REGION), 'ok');
     });
 
     it('measure gzip, not raw size, so a large chunk that compresses well passes', () => {
-        const dist = tempDir();
-        fs.writeFileSync(path.join(dist, MENU), 'const a = 1;\n'.repeat(5000)); // 65,000 B raw
+        const dist = writeBuild({ [MENU]: { id: 101, content: 'const a = 1;\n'.repeat(5000) } }); // 65,000 B raw
         assert.equal(levelOf(checkChunks(dist), MENU), 'ok');
     });
 
     it('skip a chunk that isn\'t built yet', () => {
-        const results = checkChunks(writeDist({ [MENU]: 7000 }));
+        const results = checkChunks(writeBuild({ [MENU]: { id: 101, size: 7000 } }));
         assert.equal(levelOf(results, MENU), 'ok');
         assert.equal(levelOf(results, QUICK_ADD), 'skip');
         assert.equal(levelOf(results, REGION), 'skip');
         assert.ok(results.every(result => result.level !== 'fail'));
+    });
+});
+
+describe('the per-chunk gzip limits count every chunk the import loads', () => {
+    // webpack's splitChunks moves code an import shares with other chunks into numbered
+    // chunks, which the same click fetches. Quick view's 782 B chunk loads with 311, 668
+    // and 354, about 20 KB gzip more (ticket 16 review).
+    const SHARED = 'theme-bundle.chunk.311.js';
+    const OTHER_SHARED = 'theme-bundle.chunk.668.js';
+
+    it('fail a chunk under its limit on its own whose import also loads a shared chunk that takes it over', () => {
+        const dist = writeBuild(
+            { [REGION]: { id: 52, size: 700 }, [SHARED]: { id: 311, size: 900 } },
+            [[311, 52]],
+        );
+        const region = checkChunks(dist).find(result => result.file === REGION);
+        assert.equal(region.level, 'fail');
+        assert.ok(region.size > 1600, `size ${region.size}`);
+        assert.match(region.message, /theme-bundle\.chunk\.rf-region-prompt\.js loads with 1 shared chunk: [\d,]+ B gzip in all, over its 1,000 B limit/);
+        assert.match(region.message, /theme-bundle\.chunk\.311\.js [\d,]+ B/);
+    });
+
+    it('pass a chunk whose import and its shared chunks together stay under the limit', () => {
+        const dist = writeBuild(
+            { [QUICK_ADD]: { id: 970, size: 4000 }, [SHARED]: { id: 311, size: 5000 } },
+            [[311, 970]],
+        );
+        const quickAdd = checkChunks(dist).find(result => result.file === QUICK_ADD);
+        assert.equal(quickAdd.level, 'ok');
+        assert.ok(quickAdd.size > 9000 && quickAdd.size < 15000, `size ${quickAdd.size}`);
+    });
+
+    it('measure the import that loads the most, when two imports load the chunk differently', () => {
+        const dist = writeBuild(
+            { [QUICK_ADD]: { id: 970, size: 4000 }, [SHARED]: { id: 311, size: 5000 }, [OTHER_SHARED]: { id: 668, size: 7000 } },
+            [[311, 970], [311, 668, 970]],
+        );
+        const quickAdd = checkChunks(dist).find(result => result.file === QUICK_ADD);
+        assert.equal(quickAdd.level, 'fail');
+        assert.ok(quickAdd.size > 16000, `size ${quickAdd.size}`);
+        assert.match(quickAdd.message, /loads with 2 shared chunks/);
+    });
+
+    it('find an import made inside another lazy chunk, such as a page class', () => {
+        const dist = writeBuild(
+            { 'theme-bundle.chunk.27.js': { id: 27, size: 100 }, [MENU]: { id: 88, size: 6000 }, [SHARED]: { id: 311, size: 3000 } },
+            [[311, 88]],
+            { importsIn: 'theme-bundle.chunk.27.js' },
+        );
+        const menu = checkChunks(dist).find(result => result.file === MENU);
+        assert.equal(menu.level, 'fail');
+        assert.ok(menu.size > 9000, `size ${menu.size}`);
+    });
+
+    it('fail a built chunk that no import in the build loads, rather than measure only its file', () => {
+        const dist = writeBuild({ [MENU]: { id: 88, size: 100 } }, []);
+        const menu = checkChunks(dist).find(result => result.file === MENU);
+        assert.equal(menu.level, 'fail');
+        assert.match(menu.message, /found no import\(\) that loads it/);
+    });
+
+    it('fail when the import loads a chunk that isn\'t in the build', () => {
+        const dist = writeBuild({ [MENU]: { id: 88, size: 100 } }, [[311, 88]]);
+        const menu = checkChunks(dist).find(result => result.file === MENU);
+        assert.equal(menu.level, 'fail');
+        assert.match(menu.message, /chunk 311, which isn't in/);
     });
 });
 
@@ -142,12 +233,12 @@ describe('the command line', () => {
     }
 
     it('exits 0 on a build within every limit', { skip: !hasZip && 'zip is not installed' }, () => {
-        const { status, stdout } = run(writeDist({ 'theme-bundle.main.js': 250000, [MENU]: 7000 }));
+        const { status, stdout } = run(writeBuild({ [MENU]: { id: 88, size: 7000 } }));
         assert.equal(status, 0, stdout);
     });
 
     it('exits 1 with a GitHub error annotation on a chunk over its limit', { skip: !hasZip && 'zip is not installed' }, () => {
-        const { status, stderr } = run(writeDist({ 'theme-bundle.main.js': 250000, [REGION]: 1500 }));
+        const { status, stderr } = run(writeBuild({ [REGION]: { id: 52, size: 1500 } }));
         assert.equal(status, 1);
         assert.match(stderr, /::error::theme-bundle\.chunk\.rf-region-prompt\.js is [\d,]+ B gzip, over its 1,000 B limit/);
     });
