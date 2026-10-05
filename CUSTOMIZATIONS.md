@@ -45,6 +45,7 @@ This repo is Cornerstone (`upstream`, bigcommerce/cornerstone) plus ReelFlies co
 | `.github/CODEOWNERS` | Deleted | It named `@bigcommerce/team-trac` | 06 |
 | `config.json` | `variations`: Light, Bold and Warm replaced by "ReelFlies CA" and "ReelFlies US", both with empty settings for now and Light's screenshots as placeholders | One thin variation per storefront, so releases push and activate by name; shared values stay in `settings` | 04 |
 | `assets/js/theme/global.js` | Lines 12 and 25: imports and starts `reelflies/lazy-quick-view` instead of `global/quick-view` | Quick view, ProductDetails and reviews load as `theme-bundle.chunk.quick-view.js` on the first Quick view click, which takes main.js from 307,607 B to under the 300 KiB limit | 16 |
+| `package.json`, `package-lock.json` | `@playwright/test` 1.59.1 and `@axe-core/playwright` 4.10.2 as exact devDependencies; `qa:axe`, `qa:screens`, `qa:quick-view`, `qa:raw-html` and `qa:prepush` scripts | The storefront gates in `scripts/qa/`. Playwright 1.59.1 uses Chromium build 1217; `@axe-core/playwright` 4.10.2 uses the axe-core 4.10.3 already in the lockfile, the same engine as Lighthouse's audit | 16 |
 
 New ReelFlies files in upstream folders: `.github/workflows/reelflies-checks.yml`, `.gitleaksignore`, and `RELEASES.md` at the repo root (the release log, written by `scripts/release.sh`, and the Switch toggles log; tickets 05 and 15). `stencil bundle` zips only `README.md` and `CHANGELOG.md` from the root's Markdown files, so `RELEASES.md` never ships.
 
@@ -81,8 +82,8 @@ Added by the design session (spec, "Hook count"), with the ticket that adds each
 1. `git fetch upstream --tags`, then fast-forward `vendor/cornerstone` to the new tag and push it.
 2. Branch `upgrade/<tag>` from `master` and merge `vendor/cornerstone` into it.
 3. Resolve conflicts. They should only be at the files listed above.
-   - For `package-lock.json`, take upstream's version and re-run `npm install --save-dev --save-exact @bigcommerce/stencil-cli@9.1.0`.
+   - For `package-lock.json`, take upstream's version and re-run `npm install --save-dev --save-exact @bigcommerce/stencil-cli@9.1.0`, then `npm install --save-dev --save-exact @playwright/test@1.59.1 @axe-core/playwright@4.10.2`.
    - If upstream has moved `.nvmrc`, check that the pinned stencil-cli still supports that Node version.
 4. Open a PR. CI runs the checks.
-5. Run `npx stencil start -c 1895766` (ReelFlies_CA) and compare screenshots before merging.
+5. Run `npm run qa:screens`, which starts `npx stencil start -c 1895766` (ReelFlies_CA) itself, and `QA_CHANNEL=1 npm run qa:screens` for the product and category pages until ReelFlies_CA has them. A failed diff shows what the merge changed: fix it, or update the baseline only for a change you meant ([scripts/qa/README.md](scripts/qa/README.md)).
 6. Merge to `master`.

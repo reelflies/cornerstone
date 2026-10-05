@@ -27,12 +27,14 @@
     "whatwg-fetch": "^3.6.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.10.2",
     "@babel/core": "^7.12.17",
     "@babel/eslint-parser": "^7.25.1",
     "@babel/plugin-syntax-dynamic-import": "^7.8.3",
     "@babel/preset-env": "^7.12.17",
     "@bigcommerce/citadel": "^2.15.1",
     "@bigcommerce/stencil-cli": "9.1.0",
+    "@playwright/test": "1.59.1",
     "@stylistic/stylelint-plugin": "^3.1.2",
     "babel-jest": "^30.0.5",
     "babel-loader": "^8.2.2",
@@ -75,6 +77,11 @@
     "test": "npx jest",
     "test:watch": "npx jest --watch",
     "test:scripts": "node scripts/test-scripts.mjs",
+    "qa:axe": "npx playwright test --config scripts/qa/playwright.config.mjs axe.spec",
+    "qa:screens": "npx playwright test --config scripts/qa/playwright.config.mjs screens",
+    "qa:quick-view": "npx playwright test --config scripts/qa/playwright.config.mjs quick-view.spec --project desktop-1280",
+    "qa:raw-html": "node scripts/qa/raw-html.mjs",
+    "qa:prepush": "npm run qa:axe; axe=$?; npm run qa:raw-html; raw=$?; [ $axe -eq 0 ] && [ $raw -eq 0 ]",
     "stylelint": "npx stylelint **/*.scss",
     "stylelint:fix": "npx stylelint --fix **/*.scss"
   }
