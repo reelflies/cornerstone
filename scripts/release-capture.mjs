@@ -43,9 +43,12 @@ export function toLiveConfig(raw, capturedAt) {
     };
 }
 
-// The diff means something only when the channel already runs this fork.
-export function isThisFork(live, config) {
-    return live.capture.themeName === config.name && (config.variations || []).some(item => item.name === live.capture.variationName);
+// The diff means something only when the channel already runs this fork: its live variation is one
+// of config.json's, or its theme is one the release pushed (releasedUuids, from RELEASES.md). The
+// theme's name doesn't count, because config.json's name can change between releases.
+export function isThisFork(live, config, releasedUuids = []) {
+    return (config.variations || []).some(item => item.name === live.capture.variationName)
+        || releasedUuids.includes(live.capture.themeUuid);
 }
 
 export function describeLiveTheme(live) {

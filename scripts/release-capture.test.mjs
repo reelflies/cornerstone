@@ -62,12 +62,20 @@ test('unpublished Theme Styles edits are the saved settings; the published ones 
     assert.deepEqual(live.capture.publishedSettings, { hide_blog: false, 'body-bg': '#ffffff' }, 'what shoppers see');
 });
 
-test('the channel runs this fork only with the same theme name and one of its variations', () => {
-    const config = { name: 'Cornerstone', variations: [{ name: 'ReelFlies CA' }, { name: 'ReelFlies US' }] };
-    const live = (name, variation) => ({ capture: { themeName: name, variationName: variation } });
-    assert.equal(isThisFork(live('Cornerstone', 'ReelFlies CA'), config), true);
+test('the channel runs this fork when its variation is one of config.json\'s, whatever the theme is called', () => {
+    const config = { name: 'ReelFlies', variations: [{ name: 'ReelFlies CA' }, { name: 'ReelFlies US' }] };
+    const live = (name, variation, uuid = 'some-theme') => ({ capture: { themeName: name, variationName: variation, themeUuid: uuid } });
+    assert.equal(isThisFork(live('ReelFlies', 'ReelFlies CA'), config), true);
+    assert.equal(isThisFork(live('Cornerstone', 'ReelFlies CA'), config), true, 'pushed before config.json\'s name changed');
     assert.equal(isThisFork(live('Cavio', 'Natural'), config), false);
     assert.equal(isThisFork(live('Cornerstone', 'Light'), config), false, 'stock Cornerstone from the Marketplace');
+});
+
+test('the channel runs this fork when RELEASES.md records a push of its theme, even under a variation renamed since', () => {
+    const config = { name: 'Cornerstone', variations: [{ name: 'ReelFlies Canada' }] };
+    const live = { capture: { themeName: 'Cornerstone', variationName: 'ReelFlies CA', themeUuid: 'pushed-1' } };
+    assert.equal(isThisFork(live, config, ['pushed-1']), true);
+    assert.equal(isThisFork(live, config, ['pushed-2']), false);
 });
 
 test('the live theme is described by name, variation and uuid', () => {

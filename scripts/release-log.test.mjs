@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
-    addReleaseEntry, describeStep1, formatPushSummary, formatReleaseEntry,
+    addReleaseEntry, describeStep1, formatPushSummary, formatReleaseEntry, releasedThemeUuids,
 } from './release-log.mjs';
 
 const release = {
@@ -81,6 +81,13 @@ test('the first entry creates RELEASES.md with its header and a Releases section
     const second = addReleaseEntry(first, formatReleaseEntry({ ...release, timestamp: '2026-10-06T09:00:00.000Z' }));
     assert.ok(second.indexOf('2026-10-05 18:04 UTC') < second.indexOf('2026-10-06 09:00 UTC'), 'entries are in date order');
     assert.match(second, /Operator: Shaun Bathgate\n\n### 2026-10-06 09:00 UTC/);
+});
+
+test('RELEASES.md gives the uuids of the themes the release pushed', () => {
+    const unknown = formatReleaseEntry({ ...release, timestamp: '2026-10-06T09:00:00.000Z', theme: { ...release.theme, uuid: 'unknown' } });
+    const markdown = addReleaseEntry(addReleaseEntry(null, formatReleaseEntry(release)), unknown);
+    assert.deepEqual(releasedThemeUuids(markdown), ['9f0c2a10-0000-0000-0000-000000000001']);
+    assert.deepEqual(releasedThemeUuids(null), []);
 });
 
 test('the push summary shows the target, the variation, step 1 and the sizes before the operator confirms', () => {

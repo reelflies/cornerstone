@@ -1,7 +1,7 @@
 // Formats the push summary and the RELEASES.md entry for scripts/release.sh (ticket 05, step 7,
 // with ticket 15's rf_* values, new switches and Switch toggles section). Pure: no network, no files.
 //
-//   import { formatPushSummary, formatReleaseEntry, addReleaseEntry } from './release-log.mjs';
+//   import { formatPushSummary, formatReleaseEntry, addReleaseEntry, releasedThemeUuids } from './release-log.mjs';
 //
 // A release: { timestamp, channel, channelName, variation, theme: { uuid, name, version },
 //   git: { sha, branch }, bundle: { file, bytes, sha256, mainJsBytes },
@@ -75,6 +75,11 @@ export function addReleaseEntry(markdown, entry) {
     const before = text.slice(0, end).replace(/\n*$/, '\n');
     const after = text.slice(end);
     return `${before}\n${entry}${after ? `\n${after}` : ''}`;
+}
+
+// The uuids of the themes the release pushed, from the entries' "- Theme:" lines.
+export function releasedThemeUuids(markdown) {
+    return [...(markdown || '').matchAll(/^- Theme: .*, uuid `([0-9a-f-]{36})`$/gm)].map(match => match[1]);
 }
 
 export function formatPushSummary(release) {

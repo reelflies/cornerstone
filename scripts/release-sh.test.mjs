@@ -73,12 +73,12 @@ after(() => tempDirs.forEach(dir => fs.rmSync(dir, { recursive: true, force: tru
 // Writes a repo config and a live capture (the shape release.sh writes to config.<slug>.live.json).
 // published: values where the published Theme Styles differ from the saved (live) ones.
 function fixtures({
-    repo = {}, caSettings = {}, live = {}, published = null, liveTheme = 'Cornerstone', liveVariation = 'ReelFlies CA', themeCount = 11,
+    name = 'Cornerstone', repo = {}, caSettings = {}, live = {}, published = null, liveTheme = 'Cornerstone', liveVariation = 'ReelFlies CA', themeCount = 11,
 } = {}) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-release-test-'));
     tempDirs.push(dir);
     const config = {
-        name: 'Cornerstone',
+        name,
         version: '6.22.0',
         settings: { ...BASE_SETTINGS, ...repo },
         variations: [
@@ -150,6 +150,17 @@ test('--first-release is refused on a channel that already runs this fork, becau
     const result = run([...CA, '--dry-run', '--first-release'], env);
     assert.equal(result.status, 2, result.output);
     assert.match(result.stderr, /already runs this fork/);
+});
+
+test('a channel that runs this fork under the theme\'s old name still gets the diff, and --first-release is refused', () => {
+    const { env } = fixtures({ name: 'ReelFlies', live: { 'body-bg': '#fafafa' } });
+    const stopped = run([...CA, '--dry-run'], env);
+    assert.equal(stopped.status, 1, stopped.output);
+    assert.match(stopped.stdout, /changed {4}body-bg: live "#fafafa", config\.json "#ffffff"/);
+
+    const first = run([...CA, '--dry-run', '--first-release'], env);
+    assert.equal(first.status, 2, first.output);
+    assert.match(first.stderr, /already runs this fork/);
 });
 
 test('a live Theme Styles edit stops the release, naming the key and both values', () => {

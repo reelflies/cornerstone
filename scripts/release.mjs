@@ -36,7 +36,9 @@ import {
     acceptLiveValues, blockingDifferences, diffSettings, displayValue, effectiveSettings, verifyRelease,
 } from './release-diff.mjs';
 import { checkRelease, menuIdsSet } from './release-guard.mjs';
-import { addReleaseEntry, formatPushSummary, formatReleaseEntry } from './release-log.mjs';
+import {
+    addReleaseEntry, formatPushSummary, formatReleaseEntry, releasedThemeUuids,
+} from './release-log.mjs';
 import { redact } from './release-redact.mjs';
 import { validateThemeConfig } from './release-schema.mjs';
 import { buildPushArgs } from './release-targets.mjs';
@@ -159,15 +161,17 @@ function reportCapture(live) {
     }
 }
 
+const readReleases = () => (fs.existsSync(RELEASES) ? fs.readFileSync(RELEASES, 'utf8') : null);
+
 // A channel that runs another theme has no diff to run. Returns the theme being replaced.
 function foreignTheme(state, live, config) {
-    const fork = isThisFork(live, config);
+    const fork = isThisFork(live, config, releasedThemeUuids(readReleases()));
     if (fork && state.firstRelease) {
         throw refuse(`--first-release refused: channel ${state.channel} already runs this fork (${describeLiveTheme(live)}), so the diff must run. Rerun without --first-release.`);
     }
     if (fork) return null;
     if (!state.firstRelease) {
-        throw new Stop(`channel ${state.channel} runs ${describeLiveTheme(live)}, not this fork (${config.name} with ${config.variations.map(item => `"${item.name}"`).join(' or ')}), so a settings diff means nothing. If this release is meant to replace that theme, rerun with --first-release.`);
+        throw new Stop(`channel ${state.channel} runs ${describeLiveTheme(live)}, not this fork: its variation isn't ${config.variations.map(item => `"${item.name}"`).join(' or ')}, and ${RELEASES} records no push of its theme, so a settings diff means nothing. If this release is meant to replace that theme, rerun with --first-release.`);
     }
     const { themeName, variationName, themeUuid } = live.capture;
     say('first', `first release: replacing ${describeLiveTheme(live)}. That theme keeps its own Theme Styles in My Themes.`);
@@ -446,8 +450,7 @@ function log() {
     const state = readState();
     heading('Step 7 · Log');
     const record = releaseRecord(state, { themeUuid: state.verify.themeUuid || 'unknown', verified: { problems: state.verify.problems } });
-    const existing = fs.existsSync(RELEASES) ? fs.readFileSync(RELEASES, 'utf8') : null;
-    fs.writeFileSync(RELEASES, addReleaseEntry(existing, formatReleaseEntry(record)));
+    fs.writeFileSync(RELEASES, addReleaseEntry(readReleases(), formatReleaseEntry(record)));
     say('ok', `appended this release to ${RELEASES}: commit it`);
     if (state.verify.problems.length) {
         throw new Stop(`the push went through, but verify found ${state.verify.problems.length} problem(s), listed above and in ${RELEASES}`);

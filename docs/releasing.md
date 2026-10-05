@@ -80,6 +80,7 @@ The targets are in `scripts/release-targets.mjs`. Any channel that isn't listed 
 ## When step 1 stops
 
 - **The channel runs another theme.** ReelFlies_CA runs Cavio until the first push. A diff against another theme means nothing, so the release stops.
+  - The channel runs this fork when its live variation is one of `config.json`'s, or when a `RELEASES.md` entry records a push of its theme's uuid. The theme's name doesn't count, so renaming the theme in `config.json` doesn't turn the next release into a first release.
   - Rerun with `--first-release` to replace that theme. The release reports the theme being replaced, which keeps its own Theme Styles in My Themes.
   - `--first-release` is refused on a channel that already runs this fork, because it would skip the diff.
 - **A live value differs from `config.json`.** The release lists each changed or live-only key with both values. Settings that only `config.json` has are new, so they pass. The `rf_*` module switches are the release guard's, so step 1 skips them. The two menu ids aren't switches, so step 1 checks them like any other setting. Rerun with one of:
