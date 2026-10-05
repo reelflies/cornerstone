@@ -44,12 +44,13 @@ test('a capture reads like a theme config, so the diff and the contrast check ca
         savedConfigurationUuid: '5ccf46c0-9d28-013f-22d4-1635e1ac7e32',
         savedEqualsActive: true,
         unpublishedKeys: [],
+        publishedSettings: { hide_blog: false, 'body-bg': '#ffffff' },
         themeCount: 2,
         capturedAt: '2026-10-05T12:00:00.000Z',
     });
 });
 
-test('unpublished Theme Styles edits are the saved settings, and the keys that differ are listed', () => {
+test('unpublished Theme Styles edits are the saved settings; the published ones are kept, and the keys that differ listed', () => {
     const live = toLiveConfig({
         ...raw,
         active: { ...raw.active, saved_theme_configuration_uuid: 'saved-1' },
@@ -58,6 +59,7 @@ test('unpublished Theme Styles edits are the saved settings, and the keys that d
     assert.equal(live.capture.savedEqualsActive, false);
     assert.deepEqual(live.settings, { hide_blog: true, 'body-bg': '#ffffff' });
     assert.deepEqual(live.capture.unpublishedKeys, ['hide_blog']);
+    assert.deepEqual(live.capture.publishedSettings, { hide_blog: false, 'body-bg': '#ffffff' }, 'what shoppers see');
 });
 
 test('the channel runs this fork only with the same theme name and one of its variations', () => {

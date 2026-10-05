@@ -12,11 +12,13 @@ const CHANNEL = 1895766;
 const TREE = [23, 24, 25, 40, 41];
 const BASE = { 'body-bg': '#ffffff', rf_menu_type_ids: '', rf_menu_species_root_id: '' };
 
+// published: the published Theme Styles where they differ from the saved (live) ones.
 const guard = ({
-    repo = {}, live = {}, categoryIds = TREE, channelId = CHANNEL,
+    repo = {}, live = {}, published = {}, categoryIds = TREE, channelId = CHANNEL,
 } = {}) => checkRelease({
     repoSettings: { ...BASE, ...repo },
     liveSettings: { ...BASE, ...live },
+    publishedSettings: { ...BASE, ...live, ...published },
     channelId,
     categoryIds,
 });
@@ -84,6 +86,30 @@ test('a switch only on the live side refuses, because removing a switch must be 
 test('any rf_* value is protected, not only on/off switches', () => {
     const result = guard({ repo: { rf_free_shipping_cad: '75' }, live: { rf_free_shipping_cad: '100' } });
     assert.match(result.reasons[0], /^rf_free_shipping_cad: live "100", config\.json "75"/);
+});
+
+test('a published switch that differs from config.json refuses, even when the saved draft matches', () => {
+    const result = guard({ repo: { rf_quick_add: true }, live: { rf_quick_add: true }, published: { rf_quick_add: false } });
+    assert.equal(result.pass, false);
+    assert.deepEqual(result.reasons.length, 1);
+    assert.match(result.reasons[0], /^rf_quick_add: published false \(what shoppers see\), config\.json true; the saved draft has true\. No flag overrides this/);
+});
+
+test('a saved draft that differs from config.json refuses while the published switch matches it', () => {
+    const result = guard({ repo: { rf_quick_add: true }, live: { rf_quick_add: false }, published: { rf_quick_add: true } });
+    assert.deepEqual(result.reasons.length, 1);
+    assert.match(result.reasons[0], /^rf_quick_add: live false, config\.json true/);
+});
+
+test('a switch only in the published settings refuses, like one only on the live side', () => {
+    const result = guard({ published: { rf_region_prompt: true } });
+    assert.equal(result.pass, false);
+    assert.match(result.reasons[0], /^rf_region_prompt is only on the live theme, published true \(the saved draft has no value\): removing a switch must be deliberate/);
+});
+
+test('a published switch that matches the saved one is checked once', () => {
+    const result = guard({ repo: { rf_quick_add: true }, live: { rf_quick_add: false }, published: { rf_quick_add: false } });
+    assert.deepEqual(result.reasons.length, 1);
 });
 
 test('every switch difference is its own reason', () => {

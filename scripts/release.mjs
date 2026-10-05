@@ -165,7 +165,7 @@ function reportCapture(live) {
     say('', `My Themes holds ${capture.themeCount} of ${MAX_THEMES} themes`);
     if (!capture.savedEqualsActive) {
         const keys = capture.unpublishedKeys || [];
-        say('NOTE', `the channel has unpublished Theme Styles edits${keys.length ? ` in ${keys.length} setting(s): ${keys.slice(0, 10).join(', ')}` : ''}. The diff uses the saved settings.`);
+        say('NOTE', `the channel has unpublished Theme Styles edits${keys.length ? ` in ${keys.length} setting(s): ${keys.slice(0, 10).join(', ')}` : ''}. Step 1 diffs the saved settings; the release guard checks the rf_* switches against the published ones too.`);
     }
 }
 
@@ -248,7 +248,7 @@ async function guardStep(state, live, config) {
     const repoSettings = effectiveSettings(config, state.variation);
     const categoryIds = await readCategoryIds(state, repoSettings);
     const result = checkRelease({
-        repoSettings, liveSettings: live.settings, channelId: state.channel, categoryIds,
+        repoSettings, liveSettings: live.settings, publishedSettings: live.capture.publishedSettings, channelId: state.channel, categoryIds,
     });
     result.reasons.forEach(reason => say('FAIL', reason));
     const values = result.values.map(({ key, value }) => `${key} = ${displayValue(key, value)}`);
@@ -293,7 +293,7 @@ async function prepare(argv) {
         ...state,
         liveFile,
         capture: live.capture,
-        step1: { replacing, overwritten, unpublished: !live.capture.savedEqualsActive },
+        step1: { replacing, overwritten, unpublished: live.capture.savedEqualsActive ? [] : live.capture.unpublishedKeys || [] },
         guard,
     });
 }

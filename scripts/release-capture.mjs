@@ -36,6 +36,7 @@ export function toLiveConfig(raw, capturedAt) {
             savedConfigurationUuid: active.saved_theme_configuration_uuid,
             savedEqualsActive,
             unpublishedKeys: [...unpublished.changed, ...unpublished.liveOnly, ...unpublished.repoOnly].map(entry => entry.key).sort(),
+            publishedSettings: activeConfiguration.settings, // what shoppers see; the release guard checks both
             themeCount: raw.themes.length,
             capturedAt,
         },

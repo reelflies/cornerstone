@@ -15,7 +15,7 @@ const release = {
     bundle: {
         file: 'reelflies-ca-6.22.0-1be9fb2.zip', bytes: 9876543, sha256: 'ab12', mainJsBytes: 307607,
     },
-    step1: { replacing: null, overwritten: [], unpublished: false },
+    step1: { replacing: null, overwritten: [], unpublished: [] },
     guard: { values: [], newSwitches: [] },
     verify: { problems: [] },
     operator: 'Shaun Bathgate',
@@ -59,12 +59,12 @@ test('a dry-run entry says the theme uuid is assigned at push and that nothing w
 
 test('step 1 says which theme a first release replaced, or which live values it overwrote', () => {
     assert.equal(
-        describeStep1({ replacing: { themeName: 'Cavio', variationName: 'Natural', themeUuid: '25121d00' }, overwritten: [], unpublished: false }),
+        describeStep1({ replacing: { themeName: 'Cavio', variationName: 'Natural', themeUuid: '25121d00' }, overwritten: [], unpublished: [] }),
         'first release, replacing Cavio · variation "Natural" (theme 25121d00)',
     );
     assert.equal(
-        describeStep1({ replacing: null, overwritten: ['body-bg', 'logo_size'], unpublished: true }),
-        'overwrote the live values of `body-bg`, `logo_size` (the channel had unpublished Theme Styles edits)',
+        describeStep1({ replacing: null, overwritten: ['body-bg', 'logo_size'], unpublished: ['body-bg'] }),
+        'overwrote the live values of `body-bg`, `logo_size` (the channel had unpublished Theme Styles edits in `body-bg`)',
     );
 });
 

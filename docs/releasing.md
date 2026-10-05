@@ -85,7 +85,7 @@ The targets are in `scripts/release-targets.mjs`. Any channel that isn't listed 
 - **A live value differs from `config.json`.** The release lists each changed or live-only key with both values. Settings that only `config.json` has are new, so they pass. The `rf_*` module switches are the release guard's, so step 1 skips them. The two menu ids aren't switches, so step 1 checks them like any other setting. Rerun with one of:
   - `--accept-live`, which copies the live values of every differing key, `rf_*` included, into the variation's `settings` in `config.json`, keeping its formatting, then stops. Review the change with `git diff config.json`, commit it, and rerun. In a dry run it shows the values and writes nothing.
   - `--overwrite-live`, which lists the keys and asks you to type the channel id, then lets the push overwrite them. The overwritten keys go into the `RELEASES.md` entry. A dry run lists them and asks nothing.
-- **The channel has unpublished Theme Styles edits** (its saved configuration differs from the published one). The release says so and diffs against the saved settings, which a push overwrites too.
+- **The channel has unpublished Theme Styles edits** (its saved configuration differs from the published one). The release names the keys and diffs against the saved settings, which a push overwrites too. The release guard checks the `rf_*` switches against both. The push summary and the `RELEASES.md` entry name the keys.
 - **My Themes holds 20 themes.** Delete one by hand in the control panel (Storefront > My Themes). The release never uses `stencil push -d`. A dry run only warns.
 
 ## The release guard
@@ -97,6 +97,7 @@ The release guard (ticket 15, `scripts/release-guard.mjs`) runs after step 1 and
 - A live value that differs from `config.json` stops the release, naming the key and both values. No flag overrides it. Either set the switch back in Theme Styles, or change `config.json` to match, commit, and rerun.
 - A key only in `config.json` passes, because it is a module's first release. The push summary lists it as a "new switch".
 - A key only on the live theme stops the release, because removing a switch must be deliberate.
+- While a switch has an unpublished draft, the guard checks the published value (what shoppers see) too. A published value that differs from `config.json` stops the release even when the draft matches, because the push would change what shoppers see. Publish the draft, or set the draft and `config.json` to the published value.
 
 **Rule 2, menu ids.** This covers `rf_menu_type_ids` (comma-separated) and `rf_menu_species_root_id`.
 

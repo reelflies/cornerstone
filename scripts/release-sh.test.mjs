@@ -71,8 +71,9 @@ const tempDirs = [];
 after(() => tempDirs.forEach(dir => fs.rmSync(dir, { recursive: true, force: true })));
 
 // Writes a repo config and a live capture (the shape release.sh writes to config.<slug>.live.json).
+// published: values where the published Theme Styles differ from the saved (live) ones.
 function fixtures({
-    repo = {}, caSettings = {}, live = {}, liveTheme = 'Cornerstone', liveVariation = 'ReelFlies CA', savedEqualsActive = true, themeCount = 11,
+    repo = {}, caSettings = {}, live = {}, published = null, liveTheme = 'Cornerstone', liveVariation = 'ReelFlies CA', themeCount = 11,
 } = {}) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-release-test-'));
     tempDirs.push(dir);
@@ -89,9 +90,11 @@ function fixtures({
             },
         ],
     };
+    const settings = { ...BASE_SETTINGS, ...live };
+    const savedEqualsActive = !published;
     const capture = {
         name: liveTheme,
-        settings: { ...BASE_SETTINGS, ...live },
+        settings,
         variations: [{ name: liveVariation, settings: {} }],
         capture: {
             channelId: 1895766,
@@ -102,6 +105,8 @@ function fixtures({
             activeConfigurationUuid: '00000000-0000-0000-0000-00000000cccc',
             savedConfigurationUuid: savedEqualsActive ? '00000000-0000-0000-0000-00000000cccc' : '00000000-0000-0000-0000-00000000dddd',
             savedEqualsActive,
+            unpublishedKeys: Object.keys(published || {}).sort(),
+            publishedSettings: { ...settings, ...published },
             themeCount,
             capturedAt: '2026-10-05T12:00:00.000Z',
         },
@@ -184,11 +189,11 @@ test('--accept-live in a dry run shows the live values and leaves config.json al
     assert.equal(fs.readFileSync(configPath, 'utf8'), before);
 });
 
-test('unpublished Theme Styles edits are reported, and the diff uses the saved settings', () => {
-    const { env } = fixtures({ savedEqualsActive: false });
+test('unpublished Theme Styles edits are reported by key, and step 1 diffs the saved settings', () => {
+    const { env } = fixtures({ published: { 'body-bg': '#eeeeee' } });
     const result = run([...CA, '--dry-run'], env);
     assert.equal(result.status, 0, result.output);
-    assert.match(result.stdout, /unpublished Theme Styles edits/);
+    assert.match(result.stdout, /unpublished Theme Styles edits in 1 setting\(s\): body-bg/);
 });
 
 test('a full My Themes (20) is a warning in a dry run, because a real release would stop there', () => {
@@ -217,6 +222,14 @@ test('a live rf_quick_add that is off while config.json has it on stops release.
     assert.match(result.stdout, /rf_quick_add: live false, config\.json true/);
     assert.match(result.stderr, /release guard.*nothing was built or pushed/);
     assert.doesNotMatch(result.output, /Step 2|npm ci|stopped before the clean build/);
+});
+
+test('a published rf_quick_add that is off stops release.sh, though the saved draft has it on like config.json', () => {
+    const { env } = fixtures({ repo: { rf_quick_add: true }, live: { rf_quick_add: true }, published: { rf_quick_add: false } });
+    const result = run([...CA, '--dry-run'], env);
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.stdout, /rf_quick_add: published false \(what shoppers see\), config\.json true; the saved draft has true/);
+    assert.match(result.stderr, /release guard.*nothing was built or pushed/);
 });
 
 test('a switch only in config.json passes and is listed as a new switch', () => {

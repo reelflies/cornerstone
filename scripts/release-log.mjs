@@ -5,7 +5,7 @@
 //
 // A release: { timestamp, channel, channelName, variation, theme: { uuid, name, version },
 //   git: { sha, branch }, bundle: { file, bytes, sha256, mainJsBytes },
-//   step1: { replacing, overwritten, unpublished }, guard: { values, newSwitches },
+//   step1: { replacing, overwritten, unpublished: [keys] }, guard: { values, newSwitches },
 //   verify: { problems } | null, operator }
 
 import { displayValue } from './release-diff.mjs';
@@ -38,7 +38,7 @@ export function describeStep1({ replacing, overwritten, unpublished }) {
     } else if (overwritten.length) {
         text = `overwrote the live values of ${codeList(overwritten)}`;
     }
-    return unpublished && !replacing ? `${text} (the channel had unpublished Theme Styles edits)` : text;
+    return unpublished.length && !replacing ? `${text} (the channel had unpublished Theme Styles edits in ${codeList(unpublished)})` : text;
 }
 
 function describeVerify(verify) {
