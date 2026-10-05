@@ -20,6 +20,10 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
+    # ReelFlies: the bundle analyser is opt-in (webpack.common.js); the report steps below need it.
+    env:
+      ANALYZE: true
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
