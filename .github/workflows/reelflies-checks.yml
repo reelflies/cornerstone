@@ -50,6 +50,9 @@ jobs:
     - name: Jest
       run: npx jest
 
+    - name: Script tests (node --test)
+      run: npm run test:scripts
+
     - name: ESLint (assets/js and scripts)
       run: npx eslint --ext .js,.mjs assets/js scripts
 

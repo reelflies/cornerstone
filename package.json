@@ -74,6 +74,7 @@
     "lighthouse": "npx lighthouse --config-path=lighthouse-config.js --quiet --output html --chrome-flags=\"--headless\" $URL",
     "test": "npx jest",
     "test:watch": "npx jest --watch",
+    "test:scripts": "node scripts/test-scripts.mjs",
     "stylelint": "npx stylelint **/*.scss",
     "stylelint:fix": "npx stylelint --fix **/*.scss"
   }
