@@ -11,7 +11,7 @@
 
 import { defineConfig } from '@playwright/test';
 import {
-    BASE_URL, IS_LOCAL, READY_URL, ROOT, START_COMMAND, checkEnv,
+    BASE_URL, IS_LOCAL, READY_URL, ROOT, START_COMMAND, checkEnv, previewCookies,
 } from './storefront.mjs';
 
 checkEnv();
@@ -47,7 +47,9 @@ export default defineConfig({
         locale: 'en-CA',
         timezoneId: 'America/Toronto',
         extraHTTPHeaders: { 'Accept-Language': 'en-CA,en;q=0.9' },
-        trace: 'retain-on-failure',
+        // A trace records every request's headers, the Cookie header too, so a run that
+        // sends the prelaunch preview cookie keeps none: it would sit in results/.
+        trace: previewCookies().length ? 'off' : 'retain-on-failure',
     },
     projects: [
         { name: 'phone-375', use: { viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true } },

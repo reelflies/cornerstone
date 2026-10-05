@@ -33,7 +33,7 @@ It must come after the bundle check, for the reason in "Fresh start" below.
 | `QA_CHANNEL` | `1895766` | Channel to render (ReelFlies_CA) |
 | `QA_VARIATION` | `ReelFlies CA` | Theme variation; it must exist in `config.json` |
 | `QA_BASE_URL` | none | Test this host (for example the prelaunch host) instead of a local `stencil start` |
-| `QA_PREVIEW_COOKIE` | none | Cookie for the prelaunch host, as `name=value; name2=value2`. It goes only to `QA_BASE_URL` and is never printed. |
+| `QA_PREVIEW_COOKIE` | none | Cookie for the prelaunch host, as `name=value; name2=value2`. It goes only to `QA_BASE_URL` and is never printed. A run that sends it keeps no Playwright traces, because a trace records every request's Cookie header. |
 
 Without `QA_BASE_URL`, each gate uses `npx stencil start -c $QA_CHANNEL -v "$QA_VARIATION" -p 3300` (`scripts/qa/storefront.mjs`):
 
@@ -205,4 +205,4 @@ It needs a category page with products, so run it with `QA_CHANNEL=1` until Reel
 - Playwright runs `scripts/qa/*.spec.mjs` with this folder's config.
 - `npm run test:scripts` runs every `scripts/**/*.test.mjs` with `node --test`.
 - Jest runs `assets/js/test-unit/`. `jest.config.js` ignores `scripts/`, because Jest 30 would otherwise match `*.test.mjs` and `*.spec.mjs` too.
-- Playwright writes its report, traces and failed diffs to `scripts/qa/results/`, which is ignored by git.
+- Playwright writes its report, traces and failed diffs to `scripts/qa/results/`, which is ignored by git. A run with `QA_PREVIEW_COOKIE` writes no traces, so the cookie never lands there.
