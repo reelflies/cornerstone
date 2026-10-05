@@ -162,7 +162,7 @@ export function checkZipScripts(zip, entries, read = readZipEntry(zip)) {
     const dev = entries.filter(entry => SHIPPED_SCRIPT.test(entry) && INLINE_SOURCE_MAP.test(read(entry).toString('latin1')));
     const list = `${dev.slice(0, 5).join(', ')}${dev.length > 5 ? ', …' : ''}`;
     return dev.length
-        ? result('fail', `${zip} ships ${dev.length} dev-build script${dev.length > 1 ? 's' : ''} with an inline source map, left in assets/dist by stencil start: ${list}. Run rm -rf assets/dist, then bundle again`)
+        ? result('fail', `${zip} ships ${dev.length} dev-build script${dev.length > 1 ? 's' : ''} with an inline source map, left in assets/dist by stencil start; run rm -rf assets/dist, then bundle again: ${list}`)
         : result('ok', `${zip}: no dev-build scripts in assets/dist`);
 }
 
