@@ -200,7 +200,7 @@ test('a full My Themes (20) is a warning in a dry run, because a real release wo
     const { env } = fixtures({ themeCount: 20 });
     const result = run([...CA, '--dry-run'], env);
     assert.equal(result.status, 0, result.output);
-    assert.match(result.stdout, /My Themes holds 20 themes.*never deletes themes.*A real release stops here/);
+    assert.match(result.stdout, /My Themes holds 20 themes.*never deletes themes.*a real release stops here/);
 });
 
 // --- The release guard (ticket 15) ----------------------------------------------------------

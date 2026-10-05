@@ -40,7 +40,7 @@ scripts/release.sh --channel 1895766 --variation 'ReelFlies CA'
 | 2. Clean build | `rm -rf assets/dist`, then `npm ci`. Upstream's webpack clean step never deletes anything, so stale chunks would otherwise ship. | `npm ci` fails. |
 | 3. Checks | Jest, `npm run test:scripts`, ESLint, Stylelint, the contrast check, and `config.json` against stencil-cli's full theme config schema. `stencil bundle` uses a looser schema, so it accepts a variation without `demo_url`. | Any check fails. |
 | 4. Bundle | `npx stencil bundle --name reelflies-<slug>-<version>-<commit>`, which runs the production webpack build, then `scripts/check-bundle.mjs`. | The zip has forbidden files, or `config.json` is over the upload limit. |
-| 5. Push | Captures the channel again and shows the push summary, then asks you to type the channel id. Then runs `npx stencil push -f <zip> -a '<variation>' -c <channel>`, which pushes the zip that was checked. | The live theme or its Theme Styles changed since step 1, My Themes is full, or you typed anything but the channel id. |
+| 5. Push | Shows the push summary and asks you to type the channel id. Only then does it capture the channel again and check that nothing changed since steps 1 and 4: the commit and the tree, the zip's size and sha256, the live theme and variation, and the saved and published Theme Styles. A switch toggled while the prompt waited is caught there. Then it runs `npx stencil push -f <zip> -a '<variation>' -c <channel>`, which pushes the zip that was checked. | You type anything but the channel id or close stdin (Ctrl-D), something listed here changed since step 1 or 4, or My Themes is full. |
 | 6. Verify | Captures again. Checks that the channel runs the new theme with the target variation, and that its saved Theme Styles equal `config.json`'s. | Never: it reports problems, and the release exits non-zero after step 7. The theme is already live, so fix forward. |
 | 7. Log | Appends an entry to `RELEASES.md`. Commit it. | — |
 
@@ -131,7 +131,8 @@ The guard prints every `rf_*` value to be pushed and each new switch. The push s
 The release's tests are `scripts/release-*.test.mjs`. `npm run test:scripts` runs them, in CI too, with no store credentials.
 
 - `release-guard.test.mjs` covers the four refusals of the spec's seam 5 (more than one channel, no named variation, a switch difference, and a set-but-missing menu id) and each case of the guard's two rules.
-- `release-sh.test.mjs` runs `scripts/release.sh` itself. It covers every refusal, step 1's stops and the guard, using three test-only overrides:
+- `release-checks.test.mjs` covers the stops that only a real release reaches, which a dry run can't: the Node version and dirty-tree refusals, the My Themes cap, the typed channel id (a wrong answer, a closed stdin, no terminal), and step 5's gate (a switch toggled or a draft published while the prompt waits, another theme, a new commit, a changed or missing zip).
+- `release-sh.test.mjs` runs `scripts/release.sh` itself, in dry runs. It covers the argument refusals, step 1's stops and the guard, using three test-only overrides:
   - `RF_RELEASE_CONFIG=<file>` is a theme config to use instead of `config.json`. The run stops before the clean build.
   - `RF_RELEASE_LIVE_FIXTURE=<file>` is a capture to use instead of the store.
   - `RF_RELEASE_TREE_FIXTURE=<file>` is a JSON array of the channel's category ids, to use instead of the catalogue API.

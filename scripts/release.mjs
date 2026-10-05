@@ -6,8 +6,8 @@
 //   node scripts/release.mjs validate-config                  step 3: config.json against stencil-cli's schema
 //   node scripts/release.mjs bundle-info <zip>                step 4: records the zip's bytes and sha256
 //   node scripts/release.mjs dry-run-report                   a dry run's push summary, command and log entry
-//   node scripts/release.mjs pre-push                         step 5: capture again, summary, typed confirmation
-//   node scripts/release.mjs push-args                        step 5: the push arguments, NUL-separated
+//   node scripts/release.mjs pre-push                         step 5: summary, typed confirmation, then the gate
+//   node scripts/release.mjs push-args                        step 5: the push arguments, NUL-separated, once the gate passed
 //   node scripts/release.mjs redact                           step 5: filters tokens out of the push output
 //   node scripts/release.mjs verify                           step 6: capture again and compare
 //   node scripts/release.mjs log                              step 7: appends the entry to RELEASES.md
@@ -25,12 +25,13 @@
 import { execFileSync } from 'child_process';
 import crypto from 'crypto';
 import fs from 'fs';
-import readline from 'readline';
-import { isDeepStrictEqual } from 'util';
 import { parseReleaseArgs, resolveTarget, USAGE } from './release-args.mjs';
 import {
     captureLive, describeLiveTheme, getStoreHash, isThisFork,
 } from './release-capture.mjs';
+import {
+    confirmChannel, MAX_THEMES, pushGate, realReleaseStops, setupProblems, themeCapProblems,
+} from './release-checks.mjs';
 import {
     acceptLiveValues, blockingDifferences, diffSettings, displayValue, effectiveSettings, verifyRelease,
 } from './release-diff.mjs';
@@ -41,7 +42,6 @@ import { validateThemeConfig } from './release-schema.mjs';
 import { buildPushArgs } from './release-targets.mjs';
 import { fetchChannelCategoryIds, tokenGetJson } from './release-tree-ids.mjs';
 
-const MAX_THEMES = 20; // My Themes holds at most 20; the release never deletes one (-d)
 const MAIN_JS = 'assets/dist/theme-bundle.main.js';
 const RELEASES = 'RELEASES.md';
 const OVERRIDES = ['RF_RELEASE_CONFIG', 'RF_RELEASE_LIVE_FIXTURE', 'RF_RELEASE_TREE_FIXTURE'];
@@ -90,15 +90,20 @@ function readGit() {
     };
 }
 
-// The operator types the channel id; anything else stops the release.
-async function confirmChannel(channel, question) {
-    if (!process.stdin.isTTY) throw new Stop('this confirmation needs an operator at a terminal, and stdin is not one');
-    const prompt = readline.createInterface({ input: process.stdin, output: process.stdout });
-    const answer = await new Promise(resolve => {
-        prompt.question(question, resolve);
-    });
-    prompt.close();
-    if (answer.trim() !== String(channel)) throw new Stop(`"${answer.trim()}" isn't ${channel}: stopped`);
+// The operator types the channel id; anything else, or closing stdin, stops the release.
+async function confirmOrStop(channel, question) {
+    try {
+        await confirmChannel({ channel, question });
+    } catch (error) {
+        throw new Stop(error.message);
+    }
+}
+
+// A real release stops on these problems; a dry run warns and goes on.
+function stopOrWarn(problems, dryRun, stop) {
+    const { stops, warnings } = realReleaseStops(problems, dryRun);
+    if (stops.length) throw stop(stops.join('; '));
+    warnings.forEach(warn);
 }
 
 // --- prepare: refusals ---------------------------------------------------------------------
@@ -118,17 +123,9 @@ function readOptions(argv) {
 }
 
 function checkSetup(options) {
-    const nvmrc = fs.readFileSync('.nvmrc', 'utf8').trim();
-    if (process.version !== `v${nvmrc}`) {
-        const message = `node is ${process.version}, not ${nvmrc} from .nvmrc (source ~/.nvm/nvm.sh && nvm use ${nvmrc})`;
-        if (!options.dryRun) throw refuse(message);
-        warn(message);
-    }
     const repo = readGit();
-    if (repo.dirty) {
-        if (!options.dryRun) throw refuse('the git tree has uncommitted changes: a real release pushes a committed tree only (commit or stash, then rerun)');
-        warn('the git tree has uncommitted changes: fine for a dry run, refused for a real release');
-    }
+    const nvmrc = fs.readFileSync('.nvmrc', 'utf8').trim();
+    stopOrWarn(setupProblems({ nodeVersion: process.version, nvmrc, dirty: repo.dirty }), options.dryRun, refuse);
     return repo;
 }
 
@@ -138,7 +135,7 @@ async function readLive(state) {
     const fixture = process.env.RF_RELEASE_LIVE_FIXTURE;
     if (fixture) {
         say('fixture', `live settings from ${fixture} (RF_RELEASE_LIVE_FIXTURE)`);
-        return { live: readJson(fixture, 'the live fixture'), liveFile: fixture };
+        return readJson(fixture, 'the live fixture');
     }
     say('', `Capturing channel ${state.channel} (${state.target.name}) read-only…`);
     let live;
@@ -149,14 +146,7 @@ async function readLive(state) {
     }
     fs.writeFileSync(state.target.liveFile, `${JSON.stringify(live, null, 2)}\n`);
     say('ok', `wrote ${state.target.liveFile}`);
-    return { live, liveFile: state.target.liveFile };
-}
-
-function checkThemeCount(count, dryRun) {
-    if (count < MAX_THEMES) return;
-    const message = `My Themes holds ${count} themes, the limit is ${MAX_THEMES}: delete one by hand (Storefront > My Themes). The release never deletes themes.`;
-    if (!dryRun) throw new Stop(message);
-    warn(`${message} A real release stops here.`);
+    return live;
 }
 
 function reportCapture(live) {
@@ -217,7 +207,7 @@ async function diffStep(state, live, config) {
     if (state.dryRun) {
         say('dry run', `--overwrite-live: a real release asks you to type the channel id here, then overwrites these ${blocking.length} value(s)`);
     } else {
-        await confirmChannel(state.channel, `Type the channel id (${state.channel}) to overwrite these ${blocking.length} live value(s): `);
+        await confirmOrStop(state.channel, `Type the channel id (${state.channel}) to overwrite these ${blocking.length} live value(s): `);
     }
     return blocking.map(entry => entry.key);
 }
@@ -283,16 +273,15 @@ async function prepare(argv) {
     writeState(state);
 
     heading(`Step 1 · Capture and diff: channel ${state.channel} (${target.name}), variation "${state.variation}"${state.dryRun ? ', dry run' : ''}`);
-    const { live, liveFile } = await readLive(state);
+    const live = await readLive(state);
     reportCapture(live);
-    checkThemeCount(live.capture.themeCount, state.dryRun);
+    stopOrWarn(themeCapProblems(live.capture.themeCount), state.dryRun, message => new Stop(message));
     const replacing = foreignTheme(state, live, config);
     const overwritten = replacing ? [] : await diffStep(state, live, config);
     const guard = await guardStep(state, live, config);
     writeState({
         ...state,
-        liveFile,
-        capture: live.capture,
+        liveAtStep1: { settings: live.settings, capture: live.capture }, // step 5's gate compares with it
         step1: { replacing, overwritten, unpublished: live.capture.savedEqualsActive ? [] : live.capture.unpublishedKeys || [] },
         guard,
     });
@@ -314,14 +303,15 @@ function validateConfig() {
     say('ok', 'config.json passes stencil-cli\'s theme config schema');
 }
 
-function bundleInfo([zip]) {
+// The zip's size and sha256, or null when it's missing.
+function readBundle(zip) {
+    if (!fs.existsSync(zip)) return null;
     const data = fs.readFileSync(zip);
-    const bundle = {
-        file: zip,
-        bytes: data.length,
-        sha256: crypto.createHash('sha256').update(data).digest('hex'),
-        mainJsBytes: fs.statSync(MAIN_JS).size,
-    };
+    return { bytes: data.length, sha256: crypto.createHash('sha256').update(data).digest('hex') };
+}
+
+function bundleInfo([zip]) {
+    const bundle = { file: zip, ...readBundle(zip), mainJsBytes: fs.statSync(MAIN_JS).size };
     writeState({ ...readState(), bundle });
     say('ok', `${zip}: ${bundle.bytes.toLocaleString('en-CA')} B, sha256 ${bundle.sha256}`);
 }
@@ -375,26 +365,33 @@ async function captureOrStop(channel) {
     }
 }
 
+// The operator confirms first, then the gate captures the channel again and checks it, the commit
+// and the zip, so nothing slow sits between the last check and the push.
 async function prePush() {
     const state = readState();
     heading(`Step 5 · Push to channel ${state.channel} (${state.target.name})`);
-    const repo = readGit();
-    if (repo.sha !== state.git.sha || repo.dirty) throw new Stop('the git tree changed during the release (a new commit or uncommitted files): rerun the release');
-    say('', `Capturing channel ${state.channel} again…`);
-    const live = await captureOrStop(state.channel);
-    checkThemeCount(live.capture.themeCount, false);
-    const before = readJson(state.liveFile, 'the step 1 capture');
-    if (live.capture.themeUuid !== before.capture.themeUuid || !isDeepStrictEqual(live.settings, before.settings)) {
-        throw new Stop('the live theme or its saved Theme Styles changed since step 1: rerun the release');
-    }
     console.log(formatPushSummary(releaseRecord(state)));
-    await confirmChannel(state.channel, `Type the channel id (${state.channel}) to push: `);
+    const { live, problems } = await pushGate({
+        confirm: () => confirmOrStop(state.channel, `Type the channel id (${state.channel}) to push: `),
+        capture: () => {
+            say('', `Capturing channel ${state.channel} again, and checking the commit and the zip…`);
+            return captureOrStop(state.channel);
+        },
+        step1: state.liveAtStep1,
+        git: { step1: state.git, read: readGit },
+        bundle: { step4: state.bundle, read: () => readBundle(state.bundle.file) },
+    });
+    if (problems.length) {
+        problems.forEach(problem => console.log(`  ${problem}`));
+        throw new Stop(`${problems.length} thing(s) changed since the release checked them, listed above. Nothing was pushed: rerun the release`);
+    }
+    say('ok', 'nothing changed since steps 1 and 4');
     writeState({ ...state, beforePush: live.capture });
 }
 
 function printPushArgs() {
     const state = readState();
-    if (!fs.existsSync(state.bundle.file)) throw new Stop(`${state.bundle.file} is missing`);
+    if (!state.beforePush) throw new Stop('step 5\'s confirmation and gate haven\'t passed, so there is nothing to push');
     process.stdout.write(pushArgs(state).map(arg => `${arg}\0`).join(''));
 }
 

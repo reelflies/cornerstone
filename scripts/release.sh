@@ -60,8 +60,10 @@ if [ "$dry_run" = true ]; then
     exit 0
 fi
 
-# Step 5: capture again, show the push summary and ask for the channel id, then push exactly the
-# checked zip to one channel with one named variation (scripts/release-targets.mjs buildPushArgs).
+# Step 5: show the push summary and ask for the channel id. Then the gate captures the channel
+# again and checks that nothing changed since steps 1 and 4 (scripts/release-checks.mjs pushGate),
+# and the push sends exactly the checked zip to one channel with one named variation
+# (scripts/release-targets.mjs buildPushArgs). push-args refuses unless the gate passed.
 release pre-push
 release push-args > "$STATE_DIR/push-args"
 push_args=()
