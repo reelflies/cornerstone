@@ -8,7 +8,7 @@
 // theme config's shape, so scripts/check-contrast.mjs can read it too. The token is never printed.
 
 import fs from 'fs';
-import { diffSettings } from './release-diff.mjs';
+import { changedKeys } from './release-diff.mjs';
 
 const API_HOST = 'https://api.bigcommerce.com';
 const STENCIL_CLIENT = '../node_modules/@bigcommerce/stencil-cli/lib/theme-api-client.js';
@@ -19,7 +19,6 @@ export function toLiveConfig(raw, capturedAt) {
     const theme = raw.themes.find(item => item.uuid === active.active_theme_uuid);
     const variation = raw.variations.find(item => item.uuid === saved.variation_uuid);
     const savedEqualsActive = active.saved_theme_configuration_uuid === active.active_theme_configuration_uuid;
-    const unpublished = diffSettings(saved.settings, activeConfiguration.settings);
     const variationName = variation ? variation.name : saved.variation_uuid;
     return {
         name: theme ? theme.name : active.active_theme_uuid,
@@ -35,7 +34,7 @@ export function toLiveConfig(raw, capturedAt) {
             activeConfigurationUuid: active.active_theme_configuration_uuid,
             savedConfigurationUuid: active.saved_theme_configuration_uuid,
             savedEqualsActive,
-            unpublishedKeys: [...unpublished.changed, ...unpublished.liveOnly, ...unpublished.repoOnly].map(entry => entry.key).sort(),
+            unpublishedKeys: changedKeys(saved.settings, activeConfiguration.settings),
             publishedSettings: activeConfiguration.settings, // what shoppers see; the release guard checks both
             themeCount: raw.themes.length,
             capturedAt,
@@ -51,8 +50,9 @@ export function isThisFork(live, config, releasedUuids = []) {
         || releasedUuids.includes(live.capture.themeUuid);
 }
 
-export function describeLiveTheme(live) {
-    return `${live.capture.themeName} · variation "${live.capture.variationName}" (theme ${live.capture.themeUuid})`;
+// Takes a capture's `capture` fields, or the ones step 1 records of the theme a first release replaces.
+export function describeLiveTheme({ themeName, variationName, themeUuid }) {
+    return `${themeName} · variation "${variationName}" (theme ${themeUuid})`;
 }
 
 // Credentials from `stencil init`. Read at runtime only; never printed or copied.

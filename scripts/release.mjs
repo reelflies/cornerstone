@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // The node steps of scripts/release.sh (tickets 05 and 15). release.sh calls one step at a time:
 //
-//   node scripts/release.mjs prepare <release.sh arguments>   refusals, step 1 (capture and diff), the guard
+//   node scripts/release.mjs prepare <release.sh arguments>   refusals, step 1 (capture, diff, live contrast), the guard
 //   node scripts/release.mjs state <key>                      prints one value from the release state
 //   node scripts/release.mjs validate-config                  step 3: config.json against stencil-cli's schema
 //   node scripts/release.mjs bundle-info <zip>                step 4: records the zip's bytes and sha256
@@ -10,7 +10,7 @@
 //   node scripts/release.mjs push-args                        step 5: the push arguments, NUL-separated, once the gate passed
 //   node scripts/release.mjs redact                           step 5: filters tokens out of the push output
 //   node scripts/release.mjs verify                           step 6: capture again and compare
-//   node scripts/release.mjs log                              step 7: appends the entry to RELEASES.md
+//   node scripts/release.mjs write-log                        step 7: appends the entry to RELEASES.md
 //
 // Steps share a state file named by RF_RELEASE_STATE, which release.sh creates and removes.
 // Exit codes: 0 go on, 1 the release stops, 2 the arguments or the setup are refused.
@@ -25,7 +25,9 @@
 import { execFileSync } from 'child_process';
 import crypto from 'crypto';
 import fs from 'fs';
-import { pathToFileURL } from 'url';
+import { checkContrast } from './check-contrast.mjs';
+import { formatBytes } from './lib/format.mjs';
+import { isMain } from './lib/is-main.mjs';
 import { parseReleaseArgs, resolveTarget, USAGE } from './release-args.mjs';
 import {
     captureLive, describeLiveTheme, getStoreHash, isThisFork,
@@ -49,9 +51,8 @@ const MAIN_JS = 'assets/dist/theme-bundle.main.js';
 const RELEASES = 'RELEASES.md';
 const OVERRIDES = ['RF_RELEASE_CONFIG', 'RF_RELEASE_LIVE_FIXTURE', 'RF_RELEASE_TREE_FIXTURE'];
 
-const inActions = Boolean(process.env.GITHUB_ACTIONS);
 const say = (label, message) => console.log(`${label.padEnd(8)} ${message}`);
-const warn = message => console.log(inActions ? `::warning::${message}` : `WARNING  ${message}`);
+const warn = message => console.log(`WARNING  ${message}`);
 const heading = title => console.log(`\n== ${title}`);
 const short = (key, value) => {
     const text = displayValue(key, value);
@@ -132,29 +133,41 @@ function checkSetup(options) {
     return repo;
 }
 
+// --- the live capture (steps 1, 5 and 6) ----------------------------------------------------
+
+async function captureOrStop(channel) {
+    try {
+        return await captureLive(channel);
+    } catch (error) {
+        throw new Stop(error.message);
+    }
+}
+
+// Writes the capture to config.<slug>.live.json (gitignored), which the operator can open and
+// scripts/check-contrast.mjs can read.
+function saveCapture(state, live) {
+    fs.writeFileSync(state.target.liveFile, `${JSON.stringify(live, null, 2)}\n`);
+    say('ok', `wrote ${state.target.liveFile}`);
+}
+
 // --- prepare: step 1, capture and diff ------------------------------------------------------
 
+// The capture, and the file it's in: config.<slug>.live.json, or the test fixture.
 async function readLive(state) {
     const fixture = process.env.RF_RELEASE_LIVE_FIXTURE;
     if (fixture) {
         say('fixture', `live settings from ${fixture} (RF_RELEASE_LIVE_FIXTURE)`);
-        return readJson(fixture, 'the live fixture');
+        return { live: readJson(fixture, 'the live fixture'), file: fixture };
     }
     say('', `Capturing channel ${state.channel} (${state.target.name}) read-only…`);
-    let live;
-    try {
-        live = await captureLive(state.channel);
-    } catch (error) {
-        throw new Stop(error.message);
-    }
-    fs.writeFileSync(state.target.liveFile, `${JSON.stringify(live, null, 2)}\n`);
-    say('ok', `wrote ${state.target.liveFile}`);
-    return live;
+    const live = await captureOrStop(state.channel);
+    saveCapture(state, live);
+    return { live, file: state.target.liveFile };
 }
 
 function reportCapture(live) {
     const { capture } = live;
-    say('live', `${describeLiveTheme(live)}, ${Object.keys(live.settings).length} saved settings, captured ${capture.capturedAt}`);
+    say('live', `${describeLiveTheme(capture)}, ${Object.keys(live.settings).length} saved settings, captured ${capture.capturedAt}`);
     say('', `My Themes holds ${capture.themeCount} of ${MAX_THEMES} themes`);
     if (!capture.savedEqualsActive) {
         const keys = capture.unpublishedKeys || [];
@@ -168,15 +181,16 @@ const readReleases = () => (fs.existsSync(RELEASES) ? fs.readFileSync(RELEASES, 
 function foreignTheme(state, live, config) {
     const fork = isThisFork(live, config, releasedThemeUuids(readReleases()));
     if (fork && state.firstRelease) {
-        throw refuse(`--first-release refused: channel ${state.channel} already runs this fork (${describeLiveTheme(live)}), so the diff must run. Rerun without --first-release.`);
+        throw refuse(`--first-release refused: channel ${state.channel} already runs this fork (${describeLiveTheme(live.capture)}), so the diff must run. Rerun without --first-release.`);
     }
     if (fork) return null;
     if (!state.firstRelease) {
-        throw new Stop(`channel ${state.channel} runs ${describeLiveTheme(live)}, not this fork: its variation isn't ${config.variations.map(item => `"${item.name}"`).join(' or ')}, and ${RELEASES} records no push of its theme, so a settings diff means nothing. If this release is meant to replace that theme, rerun with --first-release.`);
+        throw new Stop(`channel ${state.channel} runs ${describeLiveTheme(live.capture)}, not this fork: its variation isn't ${config.variations.map(item => `"${item.name}"`).join(' or ')}, and ${RELEASES} records no push of its theme, so a settings diff means nothing. If this release is meant to replace that theme, rerun with --first-release.`);
     }
     const { themeName, variationName, themeUuid } = live.capture;
-    say('first', `first release: replacing ${describeLiveTheme(live)}. That theme keeps its own Theme Styles in My Themes.`);
-    return { themeName, variationName, themeUuid };
+    const replacing = { themeName, variationName, themeUuid };
+    say('first', `first release: replacing ${describeLiveTheme(replacing)}. That theme keeps its own Theme Styles in My Themes.`);
+    return replacing;
 }
 
 function printEntries(entries) {
@@ -215,6 +229,28 @@ async function diffStep(state, live, config) {
         await confirmOrStop(state.channel, `Type the channel id (${state.channel}) to overwrite these ${blocking.length} live value(s): `);
     }
     return blocking.map(entry => entry.key);
+}
+
+// Spec seam 3: the contrast check on each pulled config. It only reports: the push replaces the
+// live colours with config.json's, which step 3 checks and stops on, so a stop here would only ever
+// block a release that fixes a live failure. Another theme's colours (a first release) say nothing
+// about this one, so they aren't checked.
+function reportLiveContrast(file, replacing) {
+    if (replacing) {
+        say('skipped', 'live contrast: the live theme\'s colours aren\'t checked, because it\'s another theme, which this release replaces');
+        return;
+    }
+    say('', 'Checking the live colours\' contrast (a report: it never stops the release)…');
+    const { unexpected, unreadable } = checkContrast(file);
+    const problems = [
+        unexpected && `${unexpected} pair(s) fail WCAG contrast`,
+        unreadable && `${unreadable} pair(s) can't be read`,
+    ].filter(Boolean);
+    if (!problems.length) {
+        say('ok', 'live contrast: no failures beyond the KNOWN_FAILURES in scripts/check-contrast.mjs');
+        return;
+    }
+    warn(`the live colours: ${problems.join(' and ')}, listed above. This doesn't stop the release: the push replaces them with config.json's, which step 3 checks`);
 }
 
 // --- prepare: the release guard (ticket 15) -----------------------------------------------
@@ -278,11 +314,12 @@ async function prepare(argv) {
     writeState(state);
 
     heading(`Step 1 · Capture and diff: channel ${state.channel} (${target.name}), variation "${state.variation}"${state.dryRun ? ', dry run' : ''}`);
-    const live = await readLive(state);
+    const { live, file } = await readLive(state);
     reportCapture(live);
     stopOrWarn(themeCapProblems(live.capture.themeCount), state.dryRun, message => new Stop(message));
     const replacing = foreignTheme(state, live, config);
     const overwritten = replacing ? [] : await diffStep(state, live, config);
+    reportLiveContrast(file, replacing);
     const guard = await guardStep(state, live, config);
     writeState({
         ...state,
@@ -318,7 +355,7 @@ function readBundle(zip) {
 function bundleInfo([zip]) {
     const bundle = { file: zip, ...readBundle(zip), mainJsBytes: fs.statSync(MAIN_JS).size };
     writeState({ ...readState(), bundle });
-    say('ok', `${zip}: ${bundle.bytes.toLocaleString('en-CA')} B, sha256 ${bundle.sha256}`);
+    say('ok', `${zip}: ${formatBytes(bundle.bytes)}, sha256 ${bundle.sha256}`);
 }
 
 function operator() {
@@ -360,14 +397,6 @@ function dryRunReport() {
     heading(`Step 7 · The entry a release would append to ${RELEASES} (dry run: not written)`);
     console.log(formatReleaseEntry(record));
     say('dry run', 'finished before the push. Nothing was pushed, and RELEASES.md is unchanged.');
-}
-
-async function captureOrStop(channel) {
-    try {
-        return await captureLive(channel);
-    } catch (error) {
-        throw new Stop(error.message);
-    }
 }
 
 // The operator confirms first, then the gate captures the channel again and checks it, the commit
@@ -433,9 +462,9 @@ async function verify() {
     let themeUuid = null;
     try {
         const after = await captureLive(state.channel);
-        fs.writeFileSync(state.target.liveFile, `${JSON.stringify(after, null, 2)}\n`);
+        saveCapture(state, after);
         themeUuid = after.capture.themeUuid;
-        say('live', describeLiveTheme(after));
+        say('live', describeLiveTheme(after.capture));
         problems = verifyRelease({
             before: state.beforePush, after, config: readJson('config.json', 'the theme config'), variation: state.variation,
         });
@@ -447,7 +476,7 @@ async function verify() {
     writeState({ ...state, verify: { problems, themeUuid } });
 }
 
-function log() {
+function writeReleaseLog() {
     const state = readState();
     heading('Step 7 · Log');
     const record = releaseRecord(state, { themeUuid: state.verify.themeUuid || 'unknown', verified: { problems: state.verify.problems } });
@@ -468,7 +497,7 @@ const STEPS = {
     'push-args': printPushArgs,
     redact: redactStream,
     verify,
-    log,
+    'write-log': writeReleaseLog,
 };
 
 async function main([step, ...rest]) {
@@ -476,14 +505,11 @@ async function main([step, ...rest]) {
     await STEPS[step](rest);
 }
 
-// pathToFileURL escapes '#' and '%' in the checkout's path the way import.meta.url does.
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(fs.realpathSync(process.argv[1])).href;
-
-if (isMain) {
+if (isMain(import.meta.url)) {
     main(process.argv.slice(2)).catch(error => {
         if (!(error instanceof Stop)) throw error;
         const label = error.code === 2 ? 'REFUSED' : 'STOP';
-        console.error(inActions ? `::error::${error.message}` : `${label.padEnd(8)} ${error.message}`);
+        console.error(`${label.padEnd(8)} ${error.message}`);
         if (error.code === 2) console.error(`Usage:   ${USAGE}`);
         process.exit(error.code);
     });

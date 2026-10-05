@@ -37,8 +37,9 @@ import { execFileSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { pathToFileURL } from 'url';
 import zlib from 'zlib';
+import { formatBytes } from './lib/format.mjs';
+import { isMain } from './lib/is-main.mjs';
 
 export const MAIN_JS_LIMIT = 300 * 1024;
 export const CHUNK_GZIP_LIMITS = {
@@ -61,8 +62,6 @@ const LOAD = /[\w$]+\.e\((\d+)\)/g;
 const SHIPPED_SCRIPT = /^assets\/dist\/.*\.js$/;
 const INLINE_SOURCE_MAP = /\/\/# sourceMappingURL=data:/;
 
-const bytes = n => `${n.toLocaleString('en-CA')} B`;
-
 // Each check returns a result: level is ok, info, skip, warn or fail, and only fail
 // fails the run. Chunk and size checks add the file and its measured size.
 const result = (level, message, extra = {}) => ({ level, message, ...extra });
@@ -74,8 +73,8 @@ export function checkMainJs(dist) {
     }
     const size = fs.statSync(file).size;
     return size > MAIN_JS_LIMIT
-        ? result('fail', `theme-bundle.main.js is ${bytes(size)}, over the ${bytes(MAIN_JS_LIMIT)} limit`, { file: 'theme-bundle.main.js', size })
-        : result('ok', `theme-bundle.main.js is ${bytes(size)} (limit ${bytes(MAIN_JS_LIMIT)})`, { file: 'theme-bundle.main.js', size });
+        ? result('fail', `theme-bundle.main.js is ${formatBytes(size)}, over the ${formatBytes(MAIN_JS_LIMIT)} limit`, { file: 'theme-bundle.main.js', size })
+        : result('ok', `theme-bundle.main.js is ${formatBytes(size)} (limit ${formatBytes(MAIN_JS_LIMIT)})`, { file: 'theme-bundle.main.js', size });
 }
 
 // Every script in the build, by file name, with the chunk ids its JSONP header registers.
@@ -113,12 +112,12 @@ function checkChunk(scripts, file, limit) {
     const gzip = name => zlib.gzipSync(scripts.get(name).code).length;
     const groups = importsOf(scripts, scripts.get(file).ids);
     if (!groups.length) {
-        return result('fail', `${file}: found no import() that loads it in the build, so its ${bytes(limit)} gzip limit can't be checked`, { file });
+        return result('fail', `${file}: found no import() that loads it in the build, so its ${formatBytes(limit)} gzip limit can't be checked`, { file });
     }
     const loads = groups.map(group => group.map(id => ({ id, name: fileOf(scripts, id) })));
     const missing = loads.flat().find(({ name }) => !name);
     if (missing) {
-        return result('fail', `${file}: its import also loads chunk ${missing.id}, which isn't in the build, so its ${bytes(limit)} gzip limit can't be checked`, { file });
+        return result('fail', `${file}: its import also loads chunk ${missing.id}, which isn't in the build, so its ${formatBytes(limit)} gzip limit can't be checked`, { file });
     }
 
     const totals = loads.map(group => {
@@ -127,10 +126,10 @@ function checkChunk(scripts, file, limit) {
     });
     const { names, size } = totals.reduce((most, total) => (total.size > most.size ? total : most));
     const shared = names.filter(name => name !== file);
-    const verdict = size > limit ? `over its ${bytes(limit)} limit` : `(limit ${bytes(limit)})`;
+    const verdict = size > limit ? `over its ${formatBytes(limit)} limit` : `(limit ${formatBytes(limit)})`;
     const message = shared.length
-        ? `${file} loads with ${shared.length} shared chunk${shared.length > 1 ? 's' : ''}: ${bytes(size)} gzip in all, ${verdict} (${names.map(name => `${name} ${bytes(gzip(name))}`).join(', ')})`
-        : `${file} is ${bytes(size)} gzip${size > limit ? ', ' : ' '}${verdict}`;
+        ? `${file} loads with ${shared.length} shared chunk${shared.length > 1 ? 's' : ''}: ${formatBytes(size)} gzip in all, ${verdict} (${names.map(name => `${name} ${formatBytes(gzip(name))}`).join(', ')})`
+        : `${file} is ${formatBytes(size)} gzip${size > limit ? ', ' : ' '}${verdict}`;
     return result(size > limit ? 'fail' : 'ok', message, { file, size });
 }
 
@@ -139,14 +138,14 @@ export function checkChunks(dist, limits = CHUNK_GZIP_LIMITS) {
     const scripts = built.length ? readScripts(dist) : null;
     return Object.entries(limits).map(([file, limit]) => (built.includes(file)
         ? checkChunk(scripts, file, limit)
-        : result('skip', `${file} isn't built yet (limit ${bytes(limit)} gzip)`, { file })));
+        : result('skip', `${file} isn't built yet (limit ${formatBytes(limit)} gzip)`, { file })));
 }
 
 export function checkConfig(configPath) {
     const size = fs.statSync(configPath).size;
     return size > CONFIG_LIMIT
-        ? result('fail', `${configPath} is ${bytes(size)}, over the ${bytes(CONFIG_LIMIT)} upload limit`)
-        : result('ok', `${configPath} is ${bytes(size)} (limit ${bytes(CONFIG_LIMIT)})`);
+        ? result('fail', `${configPath} is ${formatBytes(size)}, over the ${formatBytes(CONFIG_LIMIT)} upload limit`)
+        : result('ok', `${configPath} is ${formatBytes(size)} (limit ${formatBytes(CONFIG_LIMIT)})`);
 }
 
 export function checkZipEntries(zip, entries) {
@@ -192,7 +191,7 @@ export async function measureCssLayer(themeDir = '.') {
     const scssDir = path.join(themeDir, 'assets/scss');
     const themeScss = fs.readFileSync(path.join(scssDir, 'theme.scss'), 'utf8');
     if (!themeScss.match(REELFLIES_IMPORT)) {
-        return { level: 'info', message: `no ReelFlies CSS layer yet: theme.scss imports nothing from reelflies/ (estimate about ${bytes(CSS_LAYER_ESTIMATE)})` };
+        return { level: 'info', message: `no ReelFlies CSS layer yet: theme.scss imports nothing from reelflies/ (estimate about ${formatBytes(CSS_LAYER_ESTIMATE)})` };
     }
 
     const config = JSON.parse(fs.readFileSync(path.join(themeDir, 'config.json'), 'utf8'));
@@ -208,10 +207,10 @@ export async function measureCssLayer(themeDir = '.') {
         const stock = await compileThemeCss(stockDir, configuration);
         const size = withLayer.length - stock.length;
         const gzip = zlib.gzipSync(withLayer).length - zlib.gzipSync(stock).length;
-        const detail = `the ReelFlies CSS layer compiles to ${bytes(size)} (${bytes(gzip)} gzip)`;
+        const detail = `the ReelFlies CSS layer compiles to ${formatBytes(size)} (${formatBytes(gzip)} gzip)`;
         return size > CSS_LAYER_ESTIMATE
-            ? result('warn', `${detail}, over the design's estimate of about ${bytes(CSS_LAYER_ESTIMATE)}`, { size, gzip })
-            : result('ok', `${detail} (estimate about ${bytes(CSS_LAYER_ESTIMATE)})`, { size, gzip });
+            ? result('warn', `${detail}, over the design's estimate of about ${formatBytes(CSS_LAYER_ESTIMATE)}`, { size, gzip })
+            : result('ok', `${detail} (estimate about ${formatBytes(CSS_LAYER_ESTIMATE)})`, { size, gzip });
     } finally {
         fs.rmSync(stockDir, { recursive: true, force: true });
     }
@@ -255,6 +254,4 @@ async function main() {
     process.exit(results.some(({ level }) => level === 'fail') ? 1 : 0);
 }
 
-// pathToFileURL escapes '#' and '%' in the checkout's path the way import.meta.url does.
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(fs.realpathSync(process.argv[1])).href;
-if (isMain) main();
+if (isMain(import.meta.url)) main();

@@ -9,13 +9,14 @@ import { findTarget } from './release-targets.mjs';
 
 export const USAGE = 'scripts/release.sh --channel <id> --variation "<name>" [--dry-run] [--first-release] [--accept-live | --overwrite-live]';
 
-const SWITCHES = {
+// Flags that take no value (not the rf_* module switches, which the release guard checks).
+const BOOLEAN_FLAGS = {
     '--dry-run': 'dryRun',
     '--first-release': 'firstRelease',
     '--accept-live': 'acceptLive',
     '--overwrite-live': 'overwriteLive',
 };
-const VALUES = { '--channel': 'channels', '--variation': 'variations' };
+const VALUE_FLAGS = { '--channel': 'channels', '--variation': 'variations' };
 
 // stencil push flags (and look-alikes) that must never reach a release.
 const ALL_CHANNELS = 'pushing to all channels is never allowed: name one channel with --channel <id>';
@@ -43,17 +44,17 @@ function readFlags(argv) {
     for (let i = 0; i < argv.length; i++) {
         const [flag, inline] = splitFlag(argv[i]);
         if (FORBIDDEN[flag]) throw new Error(`${flag}: ${FORBIDDEN[flag]}`);
-        if (SWITCHES[flag]) {
+        if (BOOLEAN_FLAGS[flag]) {
             if (inline !== undefined) throw new Error(`${flag} takes no value`);
-            found[SWITCHES[flag]] = true;
-        } else if (VALUES[flag]) {
+            found[BOOLEAN_FLAGS[flag]] = true;
+        } else if (VALUE_FLAGS[flag]) {
             let value = inline;
             if (value === undefined) {
                 const next = argv[i + 1];
                 value = next === undefined || next.startsWith('--') ? '' : next;
                 if (next !== undefined && !next.startsWith('--')) i++;
             }
-            found[VALUES[flag]].push(value);
+            found[VALUE_FLAGS[flag]].push(value);
         } else if (flag.startsWith('-')) {
             throw new Error(`unknown flag ${flag}`);
         } else {

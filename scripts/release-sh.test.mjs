@@ -16,7 +16,7 @@ const NOTHING_RAN = /Step 1|Step 2|npm ci|Capturing/;
 const CA = ['--channel', '1895766', '--variation', 'ReelFlies CA'];
 
 function run(args, env = {}, script = SCRIPT) {
-    const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(RF_(RELEASE|BC)_|GITHUB_ACTIONS$)/.test(key)));
+    const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^RF_(RELEASE|BC)_/.test(key)));
     const result = spawnSync('bash', [script, ...args], {
         encoding: 'utf8',
         env: { ...inherited, PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH}`, ...env },
@@ -78,6 +78,7 @@ test('release.sh and step 3\'s contrast check still run from a checkout whose pa
     fs.readdirSync(scripts).filter(name => /^(release(-[a-z-]+)?\.(mjs|sh)|check-contrast\.mjs)$/.test(name)).forEach(name => {
         fs.copyFileSync(path.join(scripts, name), path.join(root, 'scripts', name));
     });
+    fs.cpSync(path.join(scripts, 'lib'), path.join(root, 'scripts', 'lib'), { recursive: true }); // isMain and formatBytes
     assertRefused(run([...CA, '-allc', '--dry-run'], {}, path.join(root, 'scripts', 'release.sh')), /all channels/);
 
     const config = fileURLToPath(new URL('../config.json', import.meta.url));
@@ -229,6 +230,42 @@ test('a full My Themes (20) is a warning in a dry run, because a real release wo
     assert.match(result.stdout, /My Themes holds 20 themes.*never deletes themes.*a real release stops here/);
 });
 
+// --- The live contrast report (spec seam 3, ticket 06) -------------------------------------
+
+// config.json's colours for ReelFlies CA, so every pair the contrast check reads is there.
+function caColours() {
+    const config = JSON.parse(fs.readFileSync(new URL('../config.json', import.meta.url), 'utf8'));
+    return { ...config.settings, ...config.variations.find(variation => variation.name === 'ReelFlies CA').settings };
+}
+
+test('a live colour pair that fails contrast is reported as a warning, and the release goes on', () => {
+    const colours = { ...caColours(), 'color-textHeading': '#bbbbbb' };
+    const { env } = fixtures({ repo: colours, live: colours });
+    const result = run([...CA, '--dry-run'], env);
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.stdout, /config\.ca\.live\.json · ReelFlies CA: \d+\/\d+ pass/);
+    assert.match(result.stdout, /FAIL {5}heading: #bbbbbb on #ffffff/);
+    assert.match(result.stdout, /WARNING {2}the live colours: 1 pair\(s\) fail WCAG contrast.*doesn't stop the release.*step 3/);
+    assert.match(result.stdout, /guard: pass/);
+    assert.match(result.stdout, /stopped before the clean build/);
+});
+
+test('live colours that pass, apart from the known failures, get no contrast warning', () => {
+    const { env } = fixtures({ repo: caColours(), live: caColours() });
+    const result = run([...CA, '--dry-run'], env);
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.stdout, /ReelFlies CA: \d+\/\d+ pass/);
+    assert.doesNotMatch(result.stdout, /WARNING .*live colours/);
+});
+
+test('a first release doesn\'t check the live colours, because they belong to another theme', () => {
+    const { env } = fixtures({ liveTheme: 'Cavio', liveVariation: 'Natural', live: { 'color-textHeading': '#bbbbbb' } });
+    const result = run([...CA, '--dry-run', '--first-release'], env);
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.stdout, /first release: replacing Cavio[^\n]*\nskipped {2}live contrast: the live theme's colours aren't checked, because it's another theme/);
+    assert.doesNotMatch(result.stdout, /\d+\/\d+ pass|heading:/);
+});
+
 // --- The release guard (ticket 15) ----------------------------------------------------------
 
 test('with today\'s config.json (no rf_* keys, no menu ids) the guard passes', () => {
@@ -329,7 +366,7 @@ test('a set menu id without RF_BC_API_TOKEN stops before any catalogue call, nam
 
 // --- Order of the build steps ---------------------------------------------------------------
 
-test('the storefront gates (axe, raw HTML) run on the target channel after the bundle check and before the dry-run exit and the push', () => {
+test('the storefront gates (axe, raw HTML and screenshots) run on a fresh server for the target, after the bundle check and before the dry-run exit and the push', () => {
     const lines = fs.readFileSync(SCRIPT, 'utf8').split('\n');
     const lineOf = pattern => {
         const index = lines.findIndex(line => pattern.test(line) && !/^\s*#/.test(line));
@@ -343,6 +380,17 @@ test('the storefront gates (axe, raw HTML) run on the target channel after the b
     // The gates' stencil start swaps assets/dist for a dev build, so they come after the zip is
     // checked; the push sends that checked zip (stencil push -f).
     assert.ok(bundleCheck < gates && gates < dryRunExit && dryRunExit < push, 'check-bundle, then qa:prepush, then the dry-run exit, then the push');
+    // A server someone left running could serve another checkout or a stale build.
+    assert.match(lines[gates], /QA_FRESH_SERVER=1 /);
     assert.match(lines[gates], /QA_CHANNEL="\$\(release state channel\)"/);
     assert.match(lines[gates], /QA_VARIATION="\$\(release state variation\)"/);
+});
+
+test('every release.mjs step that release.sh calls is one release.mjs has', () => {
+    const calls = fs.readFileSync(SCRIPT, 'utf8').split('\n').filter(line => !/^\s*#/.test(line))
+        .flatMap(line => [...line.matchAll(/(?:^\s*|\$\(|\|\s*)release ([a-z-]+)/g)].map(match => match[1]));
+    const listed = spawnSync(process.execPath, [fileURLToPath(new URL('./release.mjs', import.meta.url))], { encoding: 'utf8' });
+    const steps = /\(steps: ([^)]+)\)/.exec(listed.stderr)[1].split(', ');
+    assert.ok(calls.includes('prepare') && calls.includes('write-log'), `found ${calls.join(', ')}`);
+    assert.deepEqual(calls.filter(call => !steps.includes(call)), [], `release.mjs steps: ${steps.join(', ')}`);
 });

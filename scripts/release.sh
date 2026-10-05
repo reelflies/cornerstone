@@ -4,8 +4,8 @@
 #   scripts/release.sh --channel <id> --variation "<name>" [--dry-run] [--first-release] [--accept-live | --overwrite-live]
 #
 #   1 capture the channel's live Theme Styles (read-only) and diff them against config.json,
-#     then the release guard: rf_* module switches and menu category ids
-#   2 clean build      3 checks      4 bundle, check the zip, then axe and the raw-HTML check
+#     report the live colours' contrast, then the release guard: rf_* module switches and menu ids
+#   2 clean build      3 checks      4 bundle, check the zip, then axe, raw HTML and screenshots
 #   5 push (never in a dry run: a dry run prints the push command and the log entry, then stops)
 #   6 verify           7 log the release in RELEASES.md
 #
@@ -23,7 +23,8 @@ export RF_RELEASE_STATE="$STATE_DIR/state.json"
 release() { node scripts/release.mjs "$@"; }
 step() { printf '\n== %s\n' "$1"; }
 
-# Refusals (before any network call or build), step 1 (capture and diff), then the release guard.
+# Refusals (before any network call or build), step 1 (capture and diff, then a report of the
+# live colours' contrast), then the release guard.
 release prepare "$@"
 
 if [ "$(release state stopBeforeBuild)" = true ]; then
@@ -59,10 +60,13 @@ npx stencil bundle --name "$bundle_name"
 node scripts/check-bundle.mjs "$zip"
 release bundle-info "$zip"
 
-# axe and the raw-HTML check (scripts/qa, ticket 16) on a local stencil start of the target.
-# Its dev build replaces assets/dist, so this runs after the zip is checked; the push sends that zip.
-step "Step 4 · Storefront gates"
-QA_CHANNEL="$(release state channel)" QA_VARIATION="$(release state variation)" npm run qa:prepush
+# axe, the raw-HTML check and the screenshot diffs (scripts/qa, ticket 16), each on a local
+# stencil start of the target. QA_FRESH_SERVER=1 starts a new one each time and stops if one is
+# already running, so no gate checks a server left running on another checkout or an older build.
+# stencil start's dev build replaces assets/dist, so this runs after the zip is checked; the push
+# sends that zip.
+step "Step 4 · Storefront gates: axe, raw HTML and screenshots"
+QA_FRESH_SERVER=1 QA_CHANNEL="$(release state channel)" QA_VARIATION="$(release state variation)" npm run qa:prepush
 
 if [ "$dry_run" = true ]; then
     release dry-run-report
@@ -84,4 +88,4 @@ fi
 npx stencil "${push_args[@]}" 2>&1 | release redact
 
 release verify
-release log
+release write-log

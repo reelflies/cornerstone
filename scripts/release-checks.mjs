@@ -9,7 +9,7 @@
 
 import readline from 'readline';
 import { describeLiveTheme } from './release-capture.mjs';
-import { diffSettings } from './release-diff.mjs';
+import { changedKeys } from './release-diff.mjs';
 
 export const MAX_THEMES = 20; // My Themes holds at most 20; the release never deletes one (-d)
 
@@ -46,10 +46,6 @@ export async function confirmChannel({
     if (answer.trim() !== String(channel)) throw new Error(`"${answer.trim()}" isn't ${channel}: stopped`);
 }
 
-const changedKeys = (before, after) => {
-    const diff = diffSettings(before, after);
-    return [...diff.changed, ...diff.liveOnly, ...diff.repoOnly].map(entry => entry.key).sort();
-};
 const published = live => live.capture.publishedSettings ?? live.settings;
 const short = sha => sha.slice(0, 7);
 
@@ -67,7 +63,7 @@ function pushProblems({
     }
     problems.push(...themeCapProblems(live.capture.themeCount));
     if (live.capture.themeUuid !== step1.capture.themeUuid || live.capture.variationName !== step1.capture.variationName) {
-        problems.push(`the channel now runs ${describeLiveTheme(live)}, not the theme step 1 captured (${describeLiveTheme(step1)})`);
+        problems.push(`the channel now runs ${describeLiveTheme(live.capture)}, not the theme step 1 captured (${describeLiveTheme(step1.capture)})`);
         return problems;
     }
     const saved = changedKeys(step1.settings, live.settings);

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    acceptLiveValues, blockingDifferences, diffSettings, displayValue, effectiveSettings, verifyRelease,
+    acceptLiveValues, blockingDifferences, changedKeys, diffSettings, displayValue, effectiveSettings, hasSetting, verifyRelease,
 } from './release-diff.mjs';
 
 const config = {
@@ -31,6 +31,20 @@ test('the diff lists changed, live-only and repo-only keys with both values', ()
     assert.deepEqual(diff.changed, [{ key: 'body-bg', repo: '#ffffff', live: '#fafafa' }]);
     assert.deepEqual(diff.liveOnly, [{ key: 'homepage_show_carousel', live: false }]);
     assert.deepEqual(diff.repoOnly, [{ key: 'rf_quick_add', repo: true }]);
+});
+
+test('a setting is there when its key is, whatever its value, and inherited keys don\'t count', () => {
+    assert.equal(hasSetting({ rf_menu_type_ids: '' }, 'rf_menu_type_ids'), true);
+    assert.equal(hasSetting({ logo: null }, 'logo'), true);
+    assert.equal(hasSetting({}, 'toString'), false);
+});
+
+test('the changed keys are every key that differs, is only on one side, sorted', () => {
+    assert.deepEqual(changedKeys(
+        { 'body-bg': '#ffffff', logo_size: '300x100', rf_quick_add: true },
+        { 'body-bg': '#fafafa', logo_size: '300x100', homepage_show_carousel: false },
+    ), ['body-bg', 'homepage_show_carousel', 'rf_quick_add']);
+    assert.deepEqual(changedKeys({ channels: ['a'] }, { channels: ['a'] }), [], 'values are compared deeply');
 });
 
 test('changed and live-only keys stop step 1, except the rf_* switches, which the guard owns', () => {

@@ -29,9 +29,10 @@ A dry run writes nothing that git tracks, but it isn't read-only for the checkou
 
 - It deletes and rebuilds `assets/dist`, and reinstalls `node_modules` with `npm ci`, like a real release (step 2).
 - It writes the gitignored capture (`config.ca.live.json`) and the bundle zip.
-- The storefront gates start `stencil start` on ports 3300 and 3301 and leave its dev build in `assets/dist`. The zip was checked before that, and the push sends that zip.
+- The storefront gates start `stencil start` up to three times (axe, the raw-HTML check and the screenshots), on ports 3300 and 3301, and leave its dev build in `assets/dist`. The zip was checked before that, and the push sends that zip.
+- The gates refuse to reuse a running `stencil start`, so ports 3300 and 3301 must be free. If a `stencil start` is already running, step 4 stops.
 
-So don't run it while `stencil start`, another build or another release is using the same checkout.
+So stop any `stencil start` first, and don't run a release while another build or release is using the same checkout.
 
 ## Real release
 
@@ -41,11 +42,11 @@ scripts/release.sh --channel 1895766 --variation 'ReelFlies CA'
 
 | Step | What it does | It stops when |
 |---|---|---|
-| 1. Capture and diff | Reads the channel's active theme and saved Theme Styles with stencil-cli's own API client (GET only). Writes `config.<slug>.live.json` and diffs it against `config.json`'s settings for the variation (base settings, with the variation's settings on top). | A live value differs, the channel runs another theme, or My Themes is full. See [When step 1 stops](#when-step-1-stops). |
+| 1. Capture and diff | Reads the channel's active theme and saved Theme Styles with stencil-cli's own API client (GET only). Writes `config.<slug>.live.json` and diffs it against `config.json`'s settings for the variation (base settings, with the variation's settings on top). Then reports the live colours' contrast; see [The live contrast report](#the-live-contrast-report). | A live value differs, the channel runs another theme, or My Themes is full. See [When step 1 stops](#when-step-1-stops). The contrast report only warns. |
 | Release guard | Checks the module switches (`rf_*`) and the menu category ids. See [The release guard](#the-release-guard). | A switch differs from the live theme or exists only there, or a set menu id isn't in the channel's category tree. |
 | 2. Clean build | `rm -rf assets/dist`, then `npm ci`. Upstream's webpack clean step never deletes anything, so stale chunks would otherwise ship. | `npm ci` fails. |
 | 3. Checks | Jest, `npm run test:scripts`, ESLint, Stylelint, the contrast check, and `config.json` against stencil-cli's full theme config schema. `stencil bundle` uses a looser schema, so it accepts a variation without `demo_url`. | Any check fails. |
-| 4. Bundle and storefront gates | `npx stencil bundle --name reelflies-<slug>-<version>-<commit>`, which runs the production webpack build, then `scripts/check-bundle.mjs`. Then `npm run qa:prepush` on a local `stencil start` of the target channel and variation: axe and the raw-HTML check ([scripts/qa/README.md](../scripts/qa/README.md)). | The zip has forbidden files, is over a size limit, or `config.json` is over the upload limit; axe finds a serious or critical issue; a raw-HTML assertion fails. |
+| 4. Bundle and storefront gates | `npx stencil bundle --name reelflies-<slug>-<version>-<commit>`, which runs the production webpack build, then `scripts/check-bundle.mjs`. Then `npm run qa:prepush` on a local `stencil start` of the target channel and variation: axe, the raw-HTML check and the screenshot diffs ([scripts/qa/README.md](../scripts/qa/README.md)). It runs with `QA_FRESH_SERVER=1`, so each gate starts its own `stencil start` and never checks a server left running from another checkout or an older build. | The zip has forbidden files, is over a size limit, or `config.json` is over the upload limit; axe finds a serious or critical issue; a raw-HTML assertion fails; a screenshot differs from its baseline, or the channel and variation have no baseline for a template; a `stencil start` is already running. |
 | 5. Push | Shows the push summary and asks you to type the channel id. Only then does it capture the channel again and check that nothing changed since steps 1 and 4: the commit and the tree, the zip's size and sha256, the live theme and variation, and the saved and published Theme Styles. A switch toggled while the prompt waited is caught there. Then it runs `npx stencil push -f <zip> -a '<variation>' -c <channel>`, which pushes the zip that was checked. | You type anything but the channel id or close stdin (Ctrl-D), something listed here changed since step 1 or 4, or My Themes is full. |
 | 6. Verify | Captures again. Checks that the channel runs the new theme with the target variation, and that its saved Theme Styles equal `config.json`'s. | Never: it reports problems, and the release exits non-zero after step 7. The theme is already live, so fix forward. |
 | 7. Log | Appends an entry to `RELEASES.md`. Commit it. | — |
@@ -95,6 +96,15 @@ The targets are in `scripts/release-targets.mjs`. Any channel that isn't listed 
 - **The channel has unpublished Theme Styles edits** (its saved configuration differs from the published one). The release names the keys and diffs against the saved settings, which a push overwrites too. The release guard checks the `rf_*` switches against both. The push summary and the `RELEASES.md` entry name the keys.
 - **My Themes holds 20 themes.** Delete one by hand in the control panel (Storefront > My Themes). The release never uses `stencil push -d`. A dry run only warns.
 
+## The live contrast report
+
+Once step 1 passes on a channel that runs this fork, the release runs the contrast check (`scripts/check-contrast.mjs`) on the capture, `config.<slug>.live.json`, which has a theme config's shape so the check can read it (spec seam 3, ticket 06). It is a report, not a stop:
+
+- A pair below WCAG contrast is listed, followed by a warning, and the release goes on. `KNOWN_FAILURES` applies by variation name, as it does to `config.json`.
+- The push replaces the live colours with `config.json`'s, and step 3 runs the same check on `config.json` and stops on a failure. A stop here would only ever block a release that fixes a live failure, such as `--overwrite-live` over a Theme Styles edit that broke contrast.
+- If step 1 listed a failing live colour, `--accept-live` would copy it into `config.json`, where step 3 stops on it.
+- On a first release the channel runs another theme, whose colours say nothing about this one. The release prints one line saying they aren't checked.
+
 ## The release guard
 
 The release guard (ticket 15, `scripts/release-guard.mjs`) runs after step 1 and before the clean build, so a failure stops the release before anything is bundled or pushed. It takes any channel and variation, so ticket 53's channel-1 target can reuse it unchanged.
@@ -139,7 +149,7 @@ The release's tests are `scripts/release-*.test.mjs`. `npm run test:scripts` run
 
 - `release-guard.test.mjs` covers the four refusals of the spec's seam 5 (more than one channel, no named variation, a switch difference, and a set-but-missing menu id) and each case of the guard's two rules.
 - `release-checks.test.mjs` covers the stops that only a real release reaches, which a dry run can't: the Node version and dirty-tree refusals, the My Themes cap, the typed channel id (a wrong answer, a closed stdin, no terminal), and step 5's gate (a switch toggled or a draft published while the prompt waits, another theme, a new commit, a changed or missing zip).
-- `release-sh.test.mjs` runs `scripts/release.sh` itself, in dry runs. It covers the argument refusals, step 1's stops and the guard, using three test-only overrides:
+- `release-sh.test.mjs` runs `scripts/release.sh` itself, in dry runs. It covers the argument refusals, step 1's stops, the live contrast report and the guard, using three test-only overrides:
   - `RF_RELEASE_CONFIG=<file>` is a theme config to use instead of `config.json`. The run stops before the clean build.
   - `RF_RELEASE_LIVE_FIXTURE=<file>` is a capture to use instead of the store.
   - `RF_RELEASE_TREE_FIXTURE=<file>` is a JSON array of the channel's category ids, to use instead of the catalogue API.

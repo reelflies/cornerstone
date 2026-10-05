@@ -281,6 +281,7 @@ describe('the command line', () => {
         fs.mkdirSync(dir);
         const copy = path.join(dir, 'check-bundle.mjs');
         fs.copyFileSync(SCRIPT, copy);
+        fs.cpSync(path.join(path.dirname(SCRIPT), 'lib'), path.join(dir, 'lib'), { recursive: true }); // its isMain and formatBytes
         const { status, stderr } = spawnSync(process.execPath, [copy], { encoding: 'utf8' });
         assert.equal(status, 2, 'no zip given: it prints its usage and exits 2');
         assert.match(stderr, /Usage: node scripts\/check-bundle\.mjs/);

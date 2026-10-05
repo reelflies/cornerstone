@@ -22,40 +22,40 @@
 // there like any other Theme Styles edit (scripts/release-diff.mjs blockingDifferences).
 
 import { isDeepStrictEqual } from 'util';
-import { displayValue, isSwitchKey, MENU_ID_KEYS } from './release-diff.mjs';
+import {
+    changedKeys, displayValue, hasSetting, isSwitchKey, MENU_ID_KEYS,
+} from './release-diff.mjs';
 
-const has = (settings, key) => Object.prototype.hasOwnProperty.call(settings, key);
-const sameSetting = (a, b, key) => has(a, key) === has(b, key) && isDeepStrictEqual(a[key], b[key]);
 const menuIds = value => (value === undefined || value === null ? [] : String(value).split(',').map(id => id.trim()).filter(Boolean));
 
 export function menuIdsSet(settings) {
     return MENU_ID_KEYS.some(key => menuIds(settings[key]).length > 0);
 }
 
+// The switches config.json and the saved settings differ on: new, live only, or changed.
 function checkSwitches(repo, live) {
     const reasons = [];
     const newSwitches = [];
-    const keys = [...new Set([...Object.keys(repo), ...Object.keys(live)])].filter(isSwitchKey).sort();
-    for (const key of keys) {
-        if (!has(live, key)) {
+    for (const key of changedKeys(repo, live).filter(isSwitchKey)) {
+        if (!hasSetting(live, key)) {
             newSwitches.push(key);
-        } else if (!has(repo, key)) {
+        } else if (!hasSetting(repo, key)) {
             reasons.push(`${key} is only on the live theme (${displayValue(key, live[key])}): removing a switch must be deliberate, so the guard refuses it`);
-        } else if (!isDeepStrictEqual(repo[key], live[key])) {
+        } else {
             reasons.push(`${key}: live ${displayValue(key, live[key])}, config.json ${displayValue(key, repo[key])}. No flag overrides this: set it back in Theme Styles, or change config.json to match, commit, and rerun`);
         }
     }
     return { reasons, newSwitches };
 }
 
-// Only switches whose published value differs from the saved one: checkSwitches covers the rest.
+// Only published switches whose value differs from the saved one: checkSwitches covers the rest.
 function checkPublishedSwitches(repo, saved, published) {
     const reasons = [];
-    const keys = Object.keys(published).filter(key => isSwitchKey(key) && !sameSetting(saved, published, key)).sort();
+    const keys = changedKeys(saved, published).filter(key => isSwitchKey(key) && hasSetting(published, key));
     for (const key of keys) {
         const value = displayValue(key, published[key]);
-        const draft = has(saved, key) ? displayValue(key, saved[key]) : 'no value';
-        if (!has(repo, key)) {
+        const draft = hasSetting(saved, key) ? displayValue(key, saved[key]) : 'no value';
+        if (!hasSetting(repo, key)) {
             reasons.push(`${key} is only on the live theme, published ${value} (the saved draft has ${draft}): removing a switch must be deliberate, so the guard refuses it`);
         } else if (!isDeepStrictEqual(repo[key], published[key])) {
             reasons.push(`${key}: published ${value} (what shoppers see), config.json ${displayValue(key, repo[key])}; the saved draft has ${draft}. No flag overrides this: publish the draft in Theme Styles, or set the draft and config.json to the published value, commit, and rerun`);

@@ -78,6 +78,7 @@ test('the channel runs this fork when RELEASES.md records a push of its theme, e
     assert.equal(isThisFork(live, config, ['pushed-2']), false);
 });
 
-test('the live theme is described by name, variation and uuid', () => {
-    assert.equal(describeLiveTheme(toLiveConfig(raw, 'now')), `Cavio · variation "Natural" (theme ${THEME})`);
+test('the live theme is described by name, variation and uuid, from a capture or the fields step 1 keeps of one', () => {
+    assert.equal(describeLiveTheme(toLiveConfig(raw, 'now').capture), `Cavio · variation "Natural" (theme ${THEME})`);
+    assert.equal(describeLiveTheme({ themeName: 'Cavio', variationName: 'Natural', themeUuid: THEME }), `Cavio · variation "Natural" (theme ${THEME})`);
 });

@@ -8,6 +8,8 @@
 //   step1: { replacing, overwritten, unpublished: [keys] }, guard: { values, newSwitches },
 //   verify: { problems } | null, operator }
 
+import { formatBytes } from './lib/format.mjs';
+import { describeLiveTheme } from './release-capture.mjs';
 import { displayValue } from './release-diff.mjs';
 
 export const RELEASES_TEMPLATE = `# Release log
@@ -26,7 +28,6 @@ After a toggle, change \`config.json\` to match and commit it. Otherwise the nex
 |---|---|---|---|---|---|---|
 `;
 
-const bytes = count => `${count.toLocaleString('en-CA')} B`;
 const utc = iso => `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
 const codeList = keys => keys.map(key => `\`${key}\``).join(', ');
 const valueList = (values, code) => values.map(({ key, value }) => `${code ? `\`${key}\`` : key} = ${displayValue(key, value)}`).join(', ') || 'none';
@@ -34,7 +35,7 @@ const valueList = (values, code) => values.map(({ key, value }) => `${code ? `\`
 export function describeStep1({ replacing, overwritten, unpublished }) {
     let text = 'no differences from the live saved settings';
     if (replacing) {
-        text = `first release, replacing ${replacing.themeName} · variation "${replacing.variationName}" (theme ${replacing.themeUuid})`;
+        text = `first release, replacing ${describeLiveTheme(replacing)}`;
     } else if (overwritten.length) {
         text = `overwrote the live values of ${codeList(overwritten)}`;
     }
@@ -54,8 +55,8 @@ export function formatReleaseEntry(release) {
         '',
         `- Theme: ${theme.name} ${theme.version}, uuid ${theme.uuid ? `\`${theme.uuid}\`` : 'assigned at push'}`,
         `- Commit: \`${git.sha}\` on \`${git.branch}\``,
-        `- Bundle: \`${bundle.file}\`, ${bytes(bundle.bytes)}, sha256 \`${bundle.sha256}\``,
-        `- main.js: ${bytes(bundle.mainJsBytes)}`,
+        `- Bundle: \`${bundle.file}\`, ${formatBytes(bundle.bytes)}, sha256 \`${bundle.sha256}\``,
+        `- main.js: ${formatBytes(bundle.mainJsBytes)}`,
         `- Step 1: ${describeStep1(release.step1)}`,
         `- rf_* values pushed: ${valueList(release.guard.values, true)}`,
         `- New switches: ${codeList(release.guard.newSwitches) || 'none'}`,
@@ -92,7 +93,7 @@ export function formatPushSummary(release) {
         line('step 1', describeStep1(release.step1)),
         line('rf_* values', valueList(release.guard.values, false)),
         ...(newSwitches.length ? newSwitches.map(key => line('new switch', key)) : [line('new switch', 'none')]),
-        line('bundle', `${release.bundle.file}, ${bytes(release.bundle.bytes)}`),
-        line('main.js', bytes(release.bundle.mainJsBytes)),
+        line('bundle', `${release.bundle.file}, ${formatBytes(release.bundle.bytes)}`),
+        line('main.js', formatBytes(release.bundle.mainJsBytes)),
     ].join('\n');
 }

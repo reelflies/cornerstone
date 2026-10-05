@@ -1,7 +1,7 @@
 // Compares the repo's Theme Styles for a variation with a channel's live saved settings
 // (ticket 05, step 1). Pure: no network, no files.
 //
-//   import { effectiveSettings, diffSettings, blockingDifferences, acceptLiveValues } from './release-diff.mjs';
+//   import { effectiveSettings, diffSettings, changedKeys, hasSetting, blockingDifferences, acceptLiveValues } from './release-diff.mjs';
 
 import { isDeepStrictEqual } from 'util';
 
@@ -33,20 +33,30 @@ export function effectiveSettings(config, variationName) {
     return { ...config.settings, ...variation.settings };
 }
 
+// True when the settings hold the key, whatever its value ('' and null included).
+export const hasSetting = (settings, key) => Object.prototype.hasOwnProperty.call(settings, key);
+
+// Every key the two sides differ on, each with its values, in key order:
+// { changed: [{ key, repo, live }], liveOnly: [{ key, live }], repoOnly: [{ key, repo }] }.
 export function diffSettings(repo, live) {
     const keys = [...new Set([...Object.keys(repo), ...Object.keys(live)])].sort();
-    const has = (settings, key) => Object.prototype.hasOwnProperty.call(settings, key);
     const diff = { changed: [], liveOnly: [], repoOnly: [] };
     for (const key of keys) {
-        if (has(repo, key) && has(live, key)) {
+        if (hasSetting(repo, key) && hasSetting(live, key)) {
             if (!isDeepStrictEqual(repo[key], live[key])) diff.changed.push({ key, repo: repo[key], live: live[key] });
-        } else if (has(live, key)) {
+        } else if (hasSetting(live, key)) {
             diff.liveOnly.push({ key, live: live[key] });
         } else {
             diff.repoOnly.push({ key, repo: repo[key] });
         }
     }
     return diff;
+}
+
+// The keys alone, sorted: changed, or on one side only.
+export function changedKeys(a, b) {
+    const diff = diffSettings(a, b);
+    return [...diff.changed, ...diff.liveOnly, ...diff.repoOnly].map(entry => entry.key).sort();
 }
 
 // Live values a push would overwrite or drop. Repo-only keys are new settings, so they pass.
