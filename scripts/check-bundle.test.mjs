@@ -221,11 +221,16 @@ describe('the CSS layer report', () => {
 describe('the command line', () => {
     const hasZip = spawnSync('zip', ['-v']).status === 0;
 
-    function run(dist) {
+    // Zips manifest.json plus `files` ({ 'assets/dist/x.js': content }), as stencil bundle would.
+    function run(dist, files = {}) {
         const dir = tempDir();
         const zip = path.join(dir, 'bundle.zip');
-        fs.writeFileSync(path.join(dir, 'manifest.json'), '{}');
-        spawnSync('zip', ['-q', zip, 'manifest.json'], { cwd: dir });
+        const entries = { 'manifest.json': '{}', ...files };
+        for (const [name, content] of Object.entries(entries)) {
+            fs.mkdirSync(path.dirname(path.join(dir, name)), { recursive: true });
+            fs.writeFileSync(path.join(dir, name), content);
+        }
+        spawnSync('zip', ['-q', zip, ...Object.keys(entries)], { cwd: dir });
         return spawnSync(process.execPath, [SCRIPT, zip, '--dist', dist], {
             encoding: 'utf8',
             env: { ...process.env, GITHUB_ACTIONS: 'true' },
@@ -247,6 +252,28 @@ describe('the command line', () => {
         const { status, stderr } = run(writeDist({ 'theme-bundle.main.js': 307607 }));
         assert.equal(status, 1);
         assert.match(stderr, /::error::theme-bundle\.main\.js is 307,607 B, over the 307,200 B limit/);
+    });
+
+    // `stencil start` writes a webpack dev build into assets/dist, and the clean step never
+    // removes it, so a bundle made afterwards without `rm -rf assets/dist` would ship it.
+    const DEV_CHUNK = 'assets/dist/theme-bundle.chunk.assets_js_theme_brand_js.js';
+    const devScript = `(self.webpackChunk=self.webpackChunk||[]).push([["brand"],{}]);\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,${Buffer.from('{"sources":["webpack:///./assets/js/theme/brand.js"]}').toString('base64')}`;
+    const prodScript = '(self.webpackChunk=self.webpackChunk||[]).push([[27],{}]);\n//# sourceMappingURL=theme-bundle.chunk.27.js.map';
+
+    it('exits 1 on a zip that ships a dev-build script with an inline source map', { skip: !hasZip && 'zip is not installed' }, () => {
+        const { status, stderr } = run(writeDist({ 'theme-bundle.main.js': 250000 }), {
+            [DEV_CHUNK]: devScript,
+            'assets/dist/theme-bundle.chunk.27.js': prodScript,
+        });
+        assert.equal(status, 1);
+        assert.match(stderr, /::error::.*bundle\.zip ships 1 dev-build script with an inline source map.*theme-bundle\.chunk\.assets_js_theme_brand_js\.js/);
+        assert.doesNotMatch(stderr, /chunk\.27\.js/);
+    });
+
+    it('exits 0 on a zip whose scripts link their source maps, as the production build does', { skip: !hasZip && 'zip is not installed' }, () => {
+        const { status, stdout } = run(writeDist({ 'theme-bundle.main.js': 250000 }), { 'assets/dist/theme-bundle.chunk.27.js': prodScript });
+        assert.equal(status, 0, stdout);
+        assert.match(stdout, /no dev-build scripts/);
     });
 
     it('still runs from a checkout whose path has a # in it, instead of exiting 0 unchecked', () => {

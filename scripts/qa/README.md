@@ -5,13 +5,21 @@ The checks every theme change is held to (ticket 16; spec "Testing Decisions", s
 | Gate | Command | Runs in CI | Runs before each push |
 |---|---|---|---|
 | Bundle limits | `node scripts/check-bundle.mjs <bundle.zip>` | yes | yes (release.sh) |
-| Unit tests for this tooling | `npm run test:scripts` | yes | yes |
-| axe | `npm run qa:axe` | no | yes, in `qa:prepush` |
-| Raw HTML (curl) | `npm run qa:raw-html` | no | yes, in `qa:prepush` |
+| Unit tests for this tooling | `npm run test:scripts` | yes | yes (release.sh) |
+| axe | `npm run qa:axe` | no | not yet: `release.sh` doesn't run `qa:prepush` (below) |
+| Raw HTML (curl) | `npm run qa:raw-html` | no | not yet: `release.sh` doesn't run `qa:prepush` (below) |
 | Screenshot diffs | `npm run qa:screens` | no | no: after each upstream merge, and in each template ticket |
 | Quick view | `npm run qa:quick-view` | no | no |
 
-CI has no store credentials, so anything that renders the storefront runs locally or from `release.sh`. `npm run qa:prepush` runs axe and then the raw-HTML check, runs both even when the first fails, and exits non-zero if either failed. `release.sh` calls it before each push (the lead wires that into ticket 05's script).
+CI has no store credentials, so anything that renders the storefront runs locally or from `release.sh`. `npm run qa:prepush` runs axe and then the raw-HTML check, runs both even when the first fails, and exits non-zero if either failed.
+
+**Not wired yet.** Ticket 05's `release.sh` (branch `release/script`) doesn't call `qa:prepush`, so axe and the raw-HTML check don't stop a release yet. Until it does, run `npm run qa:prepush` by hand before a release. The line goes in step 4 of `release.sh`, after `node scripts/check-bundle.mjs "$zip"` and before the dry-run exit and `release pre-push`:
+
+```sh
+npm run qa:prepush   # set -e stops the release on any serious or critical axe issue or failed raw-HTML check
+```
+
+It must come after the bundle check, for the reason in "Fresh start" below.
 
 ## Setup
 
@@ -32,7 +40,9 @@ Without `QA_BASE_URL`, each gate uses `npx stencil start -c $QA_CHANNEL -v "$QA_
 - **Ports.** Browsersync takes 3300 and the stencil server 3301. The gates talk to 3301, so Browsersync's injected script, its overlay and its websocket stay out of the results.
 - **Reuse.** A server already on 3301 is reused, but only if it renders `QA_CHANNEL` (read from `?debug=context`). Otherwise the run stops, so one channel's screenshots can never be compared with, or written as, another's.
 - **Fresh start.** A fresh server starts from an empty `assets/dist` and is ready once its webpack dev build is served. The gates stop the server again when they finish.
-  - **For release.sh:** this replaces the production build in `assets/dist` with a dev build, so run `check-bundle.mjs` before `qa:prepush`. The bundle zip is already built by then, so the push is unaffected.
+  - **The dev build stays in `assets/dist`.** That is about 2 MB of scripts with their sources inlined as source maps, and upstream's clean step never removes them. `stencil bundle` zips all of `assets/`, and so does `stencil push` without `-f`, which bundles again.
+  - **So after a gate run, run `rm -rf assets/dist` before you bundle or push by hand.** `check-bundle.mjs` fails a zip that ships dev-build scripts.
+  - **`release.sh` pushes exactly the zip it checked** (`stencil push -f <zip>`), so gates run after `check-bundle.mjs` can't change what ships. Keep both true when wiring in `qa:prepush`.
 
 **The channel-1 fallback.** ReelFlies_CA has no products and no tree-4 categories yet, so its product and category pages 404. Until they exist, `QA_CHANNEL=1` renders this repo's templates with live reelflies.ca data. It is read-only: stencil start only reads from the store. Channel 1 has only a product page and a category page pinned.
 
@@ -68,6 +78,7 @@ When a page is added for a channel, axe and the screenshots cover it on the next
 - **The ReelFlies CSS layer:** reported against the design's estimate of about 12,000 B, warning only, until ticket 26's spike sets a real figure.
   - It is measured by compiling `theme.scss` with stencil-cli's own compiler twice: as it is, and without its `@import "reelflies/..."` lines.
   - Until ticket 25 adds those imports, it reports that there is no layer yet.
+- **The zip's contents:** it fails on the bundle analyser's `report.html`, on a secrets file, and on any `assets/dist` script with an inline source map, which only a dev build (such as the one a QA gate's `stencil start` leaves) has.
 - **Usage:** `node scripts/check-bundle.mjs <bundle.zip> [--dist <dir>]`. `--dist` defaults to `assets/dist`.
 
 ## axe (`axe.spec.mjs`)

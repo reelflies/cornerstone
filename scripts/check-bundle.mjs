@@ -26,6 +26,10 @@
 //   ticket 26's spike sets a real figure.
 // - Fails when config.json is over CONFIG_LIMIT (the store rejects larger uploads).
 // - Fails when the zip contains the bundle analyser's report or a secrets file.
+// - Fails when the zip ships a dev-build script: one under assets/dist whose source map,
+//   with the original sources, is inlined as a data: URL. `stencil start` (and so every QA
+//   gate run) writes a dev build there, the webpack clean step never removes its files,
+//   and `stencil bundle` zips all of assets/. The production build links .map files.
 //
 // The checks are exported for scripts/check-bundle.test.mjs.
 
@@ -54,6 +58,8 @@ const REELFLIES_IMPORT = /^[ \t]*@import\s+["']reelflies\/[^"']*["'].*$/gm;
 const CHUNK_HEADER = /\.push\(\[\[(\d+(?:,\d+)*)\]/;
 const LOADS_TOGETHER = /Promise\.all\(\[((?:[\w$]+\.e\(\d+\),?)+)\]\)/g;
 const LOAD = /[\w$]+\.e\((\d+)\)/g;
+const SHIPPED_SCRIPT = /^assets\/dist\/.*\.js$/;
+const INLINE_SOURCE_MAP = /\/\/# sourceMappingURL=data:/;
 
 const bytes = n => `${n.toLocaleString('en-CA')} B`;
 
@@ -150,6 +156,16 @@ export function checkZipEntries(zip, entries) {
         : result('ok', `${zip}: ${entries.length} files, none forbidden`);
 }
 
+const readZipEntry = zip => entry => execFileSync('unzip', ['-p', zip, entry], { maxBuffer: 256 * 1024 * 1024 });
+
+export function checkZipScripts(zip, entries, read = readZipEntry(zip)) {
+    const dev = entries.filter(entry => SHIPPED_SCRIPT.test(entry) && INLINE_SOURCE_MAP.test(read(entry).toString('latin1')));
+    const list = `${dev.slice(0, 5).join(', ')}${dev.length > 5 ? ', …' : ''}`;
+    return dev.length
+        ? result('fail', `${zip} ships ${dev.length} dev-build script${dev.length > 1 ? 's' : ''} with an inline source map, left in assets/dist by stencil start: ${list}. Run rm -rf assets/dist, then bundle again`)
+        : result('ok', `${zip}: no dev-build scripts in assets/dist`);
+}
+
 // Compiles theme.scss with stencil-cli's own compiler. It uses the dart-sass engine,
 // which is plain JavaScript and so runs the same in CI as on a Mac; stencil start's
 // default, node-sass, needs a native binary per platform. The two differ by about 2%.
@@ -233,6 +249,7 @@ async function main() {
         cssLayer,
         checkConfig('config.json'),
         checkZipEntries(zip, entries),
+        checkZipScripts(zip, entries),
     ];
     results.forEach(report);
     process.exit(results.some(({ level }) => level === 'fail') ? 1 : 0);
