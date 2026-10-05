@@ -38,7 +38,7 @@ It must come after the bundle check, for the reason in "Fresh start" below.
 Without `QA_BASE_URL`, each gate uses `npx stencil start -c $QA_CHANNEL -v "$QA_VARIATION" -p 3300` (`scripts/qa/storefront.mjs`):
 
 - **Ports.** Browsersync takes 3300 and the stencil server 3301. The gates talk to 3301, so Browsersync's injected script, its overlay and its websocket stay out of the results.
-- **Reuse.** A server already on 3301 is reused, but only if it renders `QA_CHANNEL` (read from `?debug=context`). Otherwise the run stops, so one channel's screenshots can never be compared with, or written as, another's.
+- **Reuse.** A server already on 3301 is reused, but only if it renders `QA_CHANNEL` and `QA_VARIATION`. Both are read from `?debug=context`: `settings.channel_id`, and `settings.theme_config_id`, which stencil start sets from the variation's position in `config.json`. Otherwise the run stops, so one set's screenshots can never be compared with, or written as, another's.
 - **Fresh start.** A fresh server starts from an empty `assets/dist` and is ready once its webpack dev build is served. The gates stop the server again when they finish.
   - **The dev build stays in `assets/dist`.** That is about 2 MB of scripts with their sources inlined as source maps, and upstream's clean step never removes them. `stencil bundle` zips all of `assets/`, and so does `stencil push` without `-f`, which bundles again.
   - **So after a gate run, run `rm -rf assets/dist` before you bundle or push by hand.** `check-bundle.mjs` fails a zip that ships dev-build scripts.

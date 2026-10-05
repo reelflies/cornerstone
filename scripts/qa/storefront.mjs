@@ -38,9 +38,11 @@ export const slug = text => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').repla
 // Screenshot baselines live under scripts/qa/baselines/<channel>-<variation>/.
 export const BASELINE_SET = `${QA_CHANNEL}-${slug(QA_VARIATION)}`;
 
+const readConfig = () => JSON.parse(fs.readFileSync(path.join(ROOT, 'config.json'), 'utf8'));
+
 export function checkEnv() {
     if (!/^\d+$/.test(QA_CHANNEL)) throw new Error(`QA_CHANNEL must be a channel id, not "${QA_CHANNEL}"`);
-    const config = JSON.parse(fs.readFileSync(path.join(ROOT, 'config.json'), 'utf8'));
+    const config = readConfig();
     const names = (config.variations || []).map(variation => variation.name);
     if (!names.includes(QA_VARIATION)) throw new Error(`QA_VARIATION "${QA_VARIATION}" isn't a variation in config.json (${names.join(', ')})`);
 }
@@ -62,14 +64,37 @@ async function isUp(url) {
     }
 }
 
-// A server already listening on 3301 is reused, but only if it renders QA_CHANNEL:
-// screenshots of the wrong channel would fail, or worse, become the baselines.
-export async function assertLocalChannel() {
+// stencil start names the variation it renders in the page context: settings.theme_config_id
+// is a uuid of the variation's position in config.json, counted from 1 (stencil-cli's
+// renderer.module.js and int2uuid).
+const configIdOf = position => `00000000-0000-0000-0000-${String(position).padStart(12, '0')}`;
+
+// Why a running server, going by its `?debug=context`, can't serve this run: it must render
+// the run's channel and variation, or its screenshots would be compared with, or worse
+// become, another set's baselines. An empty list means it can.
+export function wrongServer(context, { channel = QA_CHANNEL, variation = QA_VARIATION, config = readConfig() } = {}) {
+    const problems = [];
+    const servedChannel = String(context.settings?.channel_id);
+    if (servedChannel !== channel) problems.push(`renders channel ${servedChannel}, not QA_CHANNEL ${channel}`);
+
+    const configId = context.settings?.theme_config_id;
+    const names = (config.variations || []).map(({ name }) => name);
+    if (configId !== configIdOf(names.indexOf(variation) + 1)) {
+        const served = names.find((name, index) => configIdOf(index + 1) === configId);
+        problems.push(served
+            ? `renders the variation "${served}", not QA_VARIATION "${variation}"`
+            : `renders an unknown variation (theme_config_id ${configId}), not QA_VARIATION "${variation}"`);
+    }
+    return problems;
+}
+
+// A server already listening on 3301 is reused only if it renders QA_CHANNEL and QA_VARIATION.
+export async function assertLocalServer() {
     if (!IS_LOCAL) return;
     const response = await fetch(`${LOCAL_URL}/?debug=context`, { headers: HEADERS });
-    const channel = String((await response.json()).settings?.channel_id);
-    if (channel !== QA_CHANNEL) {
-        throw new Error(`The stencil start on ${LOCAL_URL} renders channel ${channel}, not QA_CHANNEL ${QA_CHANNEL}. Stop it, or set QA_CHANNEL=${channel}.`);
+    const problems = wrongServer(await response.json());
+    if (problems.length) {
+        throw new Error(`The stencil start on ${LOCAL_URL} ${problems.join(' and ')}. Stop it, or set QA_CHANNEL and QA_VARIATION to match it.`);
     }
 }
 
@@ -79,7 +104,7 @@ export async function useStorefront({ timeout = 180000 } = {}) {
     checkEnv();
     if (!IS_LOCAL) return { baseUrl: BASE_URL, stop: () => {} };
     if (await isUp(READY_URL)) {
-        await assertLocalChannel();
+        await assertLocalServer();
         return { baseUrl: LOCAL_URL, stop: () => {} };
     }
 
@@ -106,6 +131,6 @@ export async function useStorefront({ timeout = 180000 } = {}) {
         await waitUntilUp();
     };
     await waitUntilUp();
-    await assertLocalChannel();
+    await assertLocalServer();
     return { baseUrl: LOCAL_URL, stop };
 }
