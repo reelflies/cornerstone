@@ -48,7 +48,7 @@ New ReelFlies files in upstream folders: `.github/workflows/reelflies-checks.yml
 
 ### Expected hooks (not made yet)
 
-From the review's upgrade-safe layering plan. Add a row above when each one lands.
+From the review's upgrade-safe layering plan and the design session ([ADR 0001](docs/adr/0001-scoped-theme-code.md) expects 25–30 files). Add a row above when each one lands.
 
 - `assets/scss/theme.scss`: two imports, `reelflies/settings` after line 47 and `reelflies/index` at the end (line 79)
 - `assets/js/app.js`: `customClasses` registrations
@@ -61,6 +61,16 @@ From the review's upgrade-safe layering plan. Add a row above when each one land
 - `templates/components/common/navigation-menu.html` and `header.html`
 - `templates/pages/errors/404.html`
 - `config.json`, `schema.json`, `schemaTranslations.json` and `lang/en.json`: the blocks described above
+
+Added by the design session (spec, "Hook count"), with the ticket that adds each:
+
+- `templates/components/common/navigation.html` (27) and `navigation-list.html` (28, 29)
+- `templates/components/category/sidebar.html` (32) and `faceted-search/facets/multi.html` (33)
+- `templates/components/products/description-tabs.html` and `tabs.html` (39)
+- `templates/pages/cart.html`, `templates/components/cart/totals.html` and `cart/status-messages.html` (41)
+- `templates/components/common/footer.html` (50)
+- `templates/components/products/schema.html` (40)
+- `templates/layout/base.html`: `lang="en-CA"`, `<main>`, the shared live region and fonts (25)
 
 ## Upgrading to a new Cornerstone release
 

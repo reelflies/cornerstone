@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # ReelFlies code lives in its own folders; upstream Cornerstone files get only listed hooks
@@ -10,7 +10,7 @@ Stencil has no child themes, so the ReelFlies theme is a git fork of Cornerstone
 
 - **No theme code (Theme Styles and Page Builder only).** This can't deliver the launch fixes: explicit image parameters, buying-path guards and an inline add confirmation, the quick-search rewrite, the menu toggle as a button, and later quick add. Rejected.
 - **Edit upstream files freely.** This is the fastest to write, but every Cornerstone release becomes a hand-merge across dozens of files, so in practice the fork stops taking releases. Rejected.
-- **New folders plus listed hooks.** Chosen. Expect 15–20 touched upstream files, most of them by one or two lines.
+- **New folders plus listed hooks.** Chosen. Expect 25–30 touched upstream files, most of them by one or two lines. The design session raised the estimate from 15–20 (ticket 02).
 
 ## Consequences
 
