@@ -15,9 +15,9 @@ const SCRIPT = fileURLToPath(new URL('./release.sh', import.meta.url));
 const NOTHING_RAN = /Step 1|Step 2|npm ci|Capturing/;
 const CA = ['--channel', '1895766', '--variation', 'ReelFlies CA'];
 
-function run(args, env = {}) {
+function run(args, env = {}, script = SCRIPT) {
     const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(RF_(RELEASE|BC)_|GITHUB_ACTIONS$)/.test(key)));
-    const result = spawnSync('bash', [SCRIPT, ...args], {
+    const result = spawnSync('bash', [script, ...args], {
         encoding: 'utf8',
         env: { ...inherited, PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH}`, ...env },
         timeout: 60000,
@@ -69,6 +69,21 @@ const BASE_SETTINGS = { 'body-bg': '#ffffff', 'color-textBase': '#545454', show_
 
 const tempDirs = [];
 after(() => tempDirs.forEach(dir => fs.rmSync(dir, { recursive: true, force: true })));
+
+test('release.sh and step 3\'s contrast check still run from a checkout whose path has # or % in it', () => {
+    const root = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'rf-release-test-')), 'theme #1 %41');
+    tempDirs.push(path.dirname(root));
+    fs.mkdirSync(path.join(root, 'scripts'), { recursive: true });
+    const scripts = path.dirname(SCRIPT);
+    fs.readdirSync(scripts).filter(name => /^(release(-[a-z-]+)?\.(mjs|sh)|check-contrast\.mjs)$/.test(name)).forEach(name => {
+        fs.copyFileSync(path.join(scripts, name), path.join(root, 'scripts', name));
+    });
+    assertRefused(run([...CA, '-allc', '--dry-run'], {}, path.join(root, 'scripts', 'release.sh')), /all channels/);
+
+    const config = fileURLToPath(new URL('../config.json', import.meta.url));
+    const contrast = spawnSync(process.execPath, [path.join(root, 'scripts', 'check-contrast.mjs'), config], { encoding: 'utf8' });
+    assert.match(contrast.stdout, /ReelFlies CA: \d+\/\d+ pass/, 'the check ran instead of exiting 0 with no output');
+});
 
 // Writes a repo config and a live capture (the shape release.sh writes to config.<slug>.live.json).
 // published: values where the published Theme Styles differ from the saved (live) ones.

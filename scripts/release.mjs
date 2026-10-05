@@ -25,6 +25,7 @@
 import { execFileSync } from 'child_process';
 import crypto from 'crypto';
 import fs from 'fs';
+import { pathToFileURL } from 'url';
 import { parseReleaseArgs, resolveTarget, USAGE } from './release-args.mjs';
 import {
     captureLive, describeLiveTheme, getStoreHash, isThisFork,
@@ -475,7 +476,8 @@ async function main([step, ...rest]) {
     await STEPS[step](rest);
 }
 
-const isMain = process.argv[1] && import.meta.url === new URL(`file://${fs.realpathSync(process.argv[1])}`).href;
+// pathToFileURL escapes '#' and '%' in the checkout's path the way import.meta.url does.
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(fs.realpathSync(process.argv[1])).href;
 
 if (isMain) {
     main(process.argv.slice(2)).catch(error => {

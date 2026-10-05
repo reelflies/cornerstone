@@ -12,6 +12,7 @@
 // colour can't be read.
 
 import fs from 'fs';
+import { pathToFileURL } from 'url';
 
 const TEXT = 4.5;
 const UI = 3;
@@ -142,7 +143,8 @@ function checkConfig(path) {
     return { unexpected, unreadable };
 }
 
-const isMain = process.argv[1] && import.meta.url === new URL(`file://${fs.realpathSync(process.argv[1])}`).href;
+// pathToFileURL escapes '#' and '%' in the checkout's path the way import.meta.url does.
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(fs.realpathSync(process.argv[1])).href;
 
 if (isMain) {
     const paths = process.argv.slice(2);

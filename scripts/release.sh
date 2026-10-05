@@ -31,6 +31,10 @@ if [ "$(release state stopBeforeBuild)" = true ]; then
     exit 0
 fi
 dry_run="$(release state dryRun)"
+if [ "$dry_run" != true ] && [ "$dry_run" != false ]; then
+    echo "STOP     scripts/release.mjs recorded no release state (dryRun is \"$dry_run\"), so its checks didn't run: nothing was built or pushed" >&2
+    exit 1
+fi
 bundle_name="$(release state bundleName)"
 zip="$bundle_name.zip"
 
