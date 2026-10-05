@@ -7,9 +7,10 @@
 //   QA_CHANNEL=1 npm run qa:raw-html                     # read-only channel-1 fallback
 //   QA_BASE_URL=https://<prelaunch host> QA_PREVIEW_COOKIE='<name>=<value>' npm run qa:raw-html
 //
-// - Pages: the RAW_HTML_PAGES kinds (home, product, category) pinned for QA_CHANNEL
-//   in scripts/qa/pages.mjs. A kind the channel has no page for yet is reported and
-//   skipped, not failed.
+// - Pages: every page pinned for QA_CHANNEL in scripts/qa/pages.mjs. Each must answer
+//   200, or 404 for the 404 page. A channel must pin a product and a category page
+//   (RAW_HTML_REQUIRED), or give the reason it can't yet in notPinnedYet, which is
+//   reported as a warning.
 // - Host: QA_BASE_URL, or else a local `stencil start` (scripts/qa/storefront.mjs),
 //   reused when one is running and started and stopped here when not.
 // - Assertions: every module in scripts/qa/raw-html/assertions/, loaded by file name,
@@ -21,7 +22,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
-import { RAW_HTML_PAGES, pinnedPages } from './pages.mjs';
+import { RAW_HTML_REQUIRED, expectedStatus, pinnedChannel } from './pages.mjs';
 import {
     BASE_URL, HEADERS, IS_LOCAL, PREVIEW_COOKIE, QA_CHANNEL, useStorefront,
 } from './storefront.mjs';
@@ -52,9 +53,9 @@ export function checkPage(page, assertions) {
         status,
         problems,
     });
-    if (page.status !== 200) {
+    if (page.status !== expectedStatus(page.kind)) {
         return [
-            result({ id: 'page-renders', ticket: 16, description: 'the page renders' }, 'fail', [`${page.path} returned HTTP ${page.status}`]),
+            result({ id: 'page-renders', ticket: 16, description: 'the page renders as its template' }, 'fail', [`${page.path} returned HTTP ${page.status}, not ${expectedStatus(page.kind)}`]),
             ...assertions.map(assertion => result(assertion, 'skip')),
         ];
     }
@@ -65,10 +66,15 @@ export function checkPage(page, assertions) {
     });
 }
 
-export function pagesToFetch(pinned, kinds = RAW_HTML_PAGES) {
+// Every pinned page; the required kinds that are missing (a failure) or that the channel
+// says it can't pin yet (a warning); and reasons left over for kinds now pinned.
+export function pagesToFetch({ pages, notPinnedYet = {} }) {
+    const unpinned = RAW_HTML_REQUIRED.filter(kind => !pages[kind]);
     return {
-        fetch: kinds.filter(kind => pinned[kind]).map(kind => ({ kind, path: pinned[kind] })),
-        missing: kinds.filter(kind => !pinned[kind]),
+        fetch: Object.entries(pages).map(([kind, pagePath]) => ({ kind, path: pagePath })),
+        missing: unpinned.filter(kind => !notPinnedYet[kind]),
+        waiting: unpinned.filter(kind => notPinnedYet[kind]).map(kind => ({ kind, reason: notPinnedYet[kind] })),
+        stale: Object.keys(notPinnedYet).filter(kind => pages[kind]),
     };
 }
 
@@ -119,9 +125,14 @@ async function main() {
     let failures = 0;
     try {
         const assertions = await loadAssertions();
-        const { fetch: pages, missing } = pagesToFetch(pinnedPages(QA_CHANNEL));
-        console.log(`Raw HTML on channel ${QA_CHANNEL} at ${storefront.baseUrl}: ${assertions.length} assertions`);
-        missing.forEach(kind => warn(`no ${kind} page is pinned for channel ${QA_CHANNEL} in scripts/qa/pages.mjs, so it isn't checked`));
+        const {
+            fetch: pages, missing, waiting, stale,
+        } = pagesToFetch(pinnedChannel(QA_CHANNEL));
+        console.log(`Raw HTML on channel ${QA_CHANNEL} at ${storefront.baseUrl}: ${pages.length} pages, ${assertions.length} assertions`);
+        waiting.forEach(({ kind, reason }) => warn(`no ${kind} page is checked on channel ${QA_CHANNEL}: ${reason} (notPinnedYet in scripts/qa/pages.mjs)`));
+        stale.forEach(kind => warn(`channel ${QA_CHANNEL} pins a ${kind} page now: delete its notPinnedYet entry in scripts/qa/pages.mjs`));
+        missing.forEach(kind => fail(`no ${kind} page is pinned for channel ${QA_CHANNEL}: pin one in scripts/qa/pages.mjs, or say why not yet in its notPinnedYet`));
+        failures += missing.length;
 
         for (const entry of pages) {
             const page = await fetchPage(storefront.baseUrl, entry); // eslint-disable-line no-await-in-loop

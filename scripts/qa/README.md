@@ -53,8 +53,9 @@ Without `QA_BASE_URL`, each gate uses `npx stencil start -c $QA_CHANNEL -v "$QA_
 - **Page keys** are the spec's template names: `home`, `fly-type`, `species`, `species-hub`, `product`, `cart`, `hook-chart`, `404` and `brand`, plus `category` for the stock category template until ticket 32.
 - **Test products are pinned** by URL. Pick ones that will stay in the catalogue.
 - **Every pinned page must answer as its template:** HTTP 404 for `404`, and 200 for every other page. Otherwise axe, the screenshots and the raw-HTML check fail the page instead of checking an error page. A renamed product or a mistyped pin shows up as that failure.
+- **`notPinnedYet`** is for a product or category page that a channel can't pin yet, with the reason. See "Raw HTML" below.
 
-When a page is added for a channel, axe and the screenshots cover it on the next run. The raw-HTML check fetches the `RAW_HTML_PAGES` kinds: home, product and category.
+When a page is pinned for a channel, axe, the screenshots and the raw-HTML check all cover it on the next run.
 
 **What the screenshots mask** (`masksFor(channel, template)`):
 
@@ -143,10 +144,11 @@ Every pinned page, at 375 and 1280, runs with the tags WCAG 2.0–2.2 A and AA p
 
 This is spec seam 2: what a crawler gets, with no JavaScript.
 
-- It fetches the pinned home, product and category pages with `Accept-Language: en-CA`; stencil start's renderer fails without it.
-- It runs every registered assertion on each page.
-- A page that doesn't return 200 fails.
-- A page kind with no pinned page is reported as a warning and isn't checked.
+- It fetches every page pinned for the channel in `pages.mjs`, with `Accept-Language: en-CA`; stencil start's renderer fails without it.
+- It runs every registered assertion on each page. An assertion's `pages` and `notOn` pick the page kinds it applies to.
+- A page that doesn't answer as its template fails: 404 for `404`, and 200 for every other page.
+- **A product and a category page are required** (`RAW_HTML_REQUIRED`), because spec seam 2 checks those two. A channel without one fails, unless its `notPinnedYet` gives the reason, which is reported as a warning on every run. ReelFlies_CA has no products or tree-4 categories until refactor tickets 13 and 14. When they land, pin both and delete its `notPinnedYet`; a run warns while an entry is left over.
+- **To check a new page kind** (for example the Fly Type page for ticket 40, or the cart for ticket 52), pin it in `CHANNELS`. Then name it in the assertion's `pages`, if the assertion applies only to some kinds.
 
 **The assertion registry** is the folder `scripts/qa/raw-html/assertions/`. Every `.mjs` file in it except `*.test.mjs` is loaded, so a ticket adds an assertion by adding a file, without touching the harness:
 
@@ -178,7 +180,7 @@ export default {
 
 | Assertion | Ticket | Checks |
 |---|---|---|
-| `one-canonical` | 16 | exactly one canonical link; not asked of the cart or 404 |
+| `one-canonical` | 16 | exactly one canonical link; not asked of the cart or the 404 page, which have none in stock Cornerstone |
 | `json-ld-parses` | 16 | every `application/ld+json` block parses |
 | `no-region-prompt` | 16, then 52 | no element carries `data-rf-region-prompt` |
 
@@ -187,7 +189,7 @@ export default {
 - one `<h1>` (ticket 27)
 - the tree-4 nav links in the header `<nav>` (28)
 - facet links with `_bc_fsnf=1` and `rel="nofollow"` (33)
-- the structured data's contents, and the home page (40)
+- the structured data's contents (40). The home page is already fetched wherever it is pinned.
 - the prompt's copy (52)
 
 **The outside-Canada prompt marker** is the attribute `data-rf-region-prompt`. Ticket 52 puts it on the prompt's root element, which is only ever created in the browser. A string in a script that builds the card isn't markup and doesn't count.
@@ -201,6 +203,8 @@ QA_BASE_URL=https://<prelaunch host> QA_PREVIEW_COOKIE='<name>=<value>' npm run 
 ```
 
 It exits 1 on a failed check and 2 when the storefront can't be reached.
+
+**Not run on prelaunch yet.** The product and category runs so far were on channel 1 through `stencil start -c 1`. The prelaunch run needs the preview cookie (ticket 11) and ReelFlies_CA's product and category pins (refactor tickets 13 and 14).
 
 ## Quick view (`quick-view.spec.mjs`)
 

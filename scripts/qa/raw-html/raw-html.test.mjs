@@ -120,9 +120,42 @@ describe('the harness', () => {
         assert.equal(checkPage(fixture('good-product.html', 'product'), [productOnly])[0].status, 'fail');
     });
 
-    it('fetches the pinned home, product and category pages, and skips the kinds a channel has none of yet', () => {
-        const { fetch, missing } = pagesToFetch({ home: '/', cart: '/cart.php' });
-        assert.deepEqual(fetch, [{ kind: 'home', path: '/' }]);
+    it('fails a page that answers 404 when its template should render', () => {
+        const page = { ...fixture('good-product.html'), status: 404 };
+        assert.match(checkPage(page, assertions)[0].problems[0], /returned HTTP 404, not 200/);
+    });
+
+    it('checks the 404 page, which must answer 404, and fails it when it answers 200', () => {
+        const notFound = { ...fixture('good-product.html', '404'), status: 404 };
+        assert.deepEqual(failed(checkPage(notFound, assertions)), []);
+        assert.ok(checkPage(notFound, assertions).some(result => result.status === 'pass'));
+        assert.deepEqual(failed(checkPage({ ...notFound, status: 200 }, assertions)), ['page-renders']);
+    });
+
+    it('fetches every page pinned for the channel, so a ticket adds a page kind by pinning it', () => {
+        const { fetch } = pagesToFetch({
+            pages: {
+                home: '/', cart: '/cart.php', 404: '/missing/', product: '/p/', category: '/c/',
+            },
+        });
+        assert.deepEqual(fetch.map(({ kind }) => kind).sort(), ['404', 'cart', 'category', 'home', 'product']);
+        assert.deepEqual(fetch.find(({ kind }) => kind === 'cart'), { kind: 'cart', path: '/cart.php' });
+    });
+
+    it('fails a channel with no product or category page pinned, the spec\'s two raw-HTML pages', () => {
+        const { missing, waiting } = pagesToFetch({ pages: { home: '/' } });
         assert.deepEqual(missing, ['product', 'category']);
+        assert.deepEqual(waiting, []);
+    });
+
+    it('only warns about a product or category page the channel says it can\'t pin yet, and why', () => {
+        const { missing, waiting } = pagesToFetch({ pages: { home: '/' }, notPinnedYet: { product: 'no products until refactor 13', category: 'no tree 4 until refactor 14' } });
+        assert.deepEqual(missing, []);
+        assert.deepEqual(waiting, [{ kind: 'product', reason: 'no products until refactor 13' }, { kind: 'category', reason: 'no tree 4 until refactor 14' }]);
+    });
+
+    it('says when a page listed as not pinned yet is pinned now, so the entry can go', () => {
+        const { stale } = pagesToFetch({ pages: { product: '/p/' }, notPinnedYet: { product: 'no products until refactor 13' } });
+        assert.deepEqual(stale, ['product']);
     });
 });

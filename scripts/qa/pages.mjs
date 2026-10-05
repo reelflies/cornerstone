@@ -7,20 +7,27 @@
 // ticket adds its page here when it lands; the screenshot and axe runs then cover it.
 //
 // Each channel has:
-//   pages  template -> path
-//   mask   optional, template -> selectors the screenshots also mask on that page:
-//          content these pins can't hold still, such as a live product list
+//   pages         template -> path. axe and the screenshots visit every one, and so does
+//                 the raw-HTML check, whose assertions pick the kinds they apply to.
+//   notPinnedYet  optional, template -> why the channel can't pin it yet. Only for the
+//                 RAW_HTML_REQUIRED kinds: the raw-HTML check fails a channel that pins
+//                 neither the page nor a reason here.
+//   mask          optional, template -> selectors the screenshots also mask on that page:
+//                 content these pins can't hold still, such as a live product list
 
 export const CHANNELS = {
     1895766: {
         name: 'ReelFlies_CA prelaunch',
-        // No products and no tree-4 categories yet (refactor tickets 13 and 14), so
-        // there is no product or category page to pin. Pin them when those land.
         pages: {
             home: '/',
             cart: '/cart.php',
             brand: '/brands/ReelFlies.html',
             404: '/rf-qa-missing-page/',
+        },
+        // Pin both, and delete these lines, when refactor tickets 13 and 14 land.
+        notPinnedYet: {
+            product: 'ReelFlies_CA has no products until refactor ticket 13',
+            category: 'ReelFlies_CA has no tree-4 categories until refactor ticket 14',
         },
     },
     1: {
@@ -41,8 +48,9 @@ export const CHANNELS = {
     },
 };
 
-// The page kinds the raw-HTML harness fetches, when the channel has them pinned.
-export const RAW_HTML_PAGES = ['home', 'product', 'category'];
+// The page kinds the raw-HTML check needs on every channel: spec seam 2 fetches one
+// product page and one category page.
+export const RAW_HTML_REQUIRED = ['product', 'category'];
 
 // The status each pinned page must return. A gate that got anything else would be
 // checking an error page instead of the template, so the run fails.
@@ -82,8 +90,10 @@ export function masksFor(channel, template) {
     return [...LIVE_DATA, ...(CHANNELS[channel]?.mask?.[template] || [])];
 }
 
-export function pinnedPages(channel) {
+export function pinnedChannel(channel) {
     const entry = CHANNELS[channel];
     if (!entry) throw new Error(`No pages are pinned for channel ${channel} in scripts/qa/pages.mjs`);
-    return entry.pages;
+    return entry;
 }
+
+export const pinnedPages = channel => pinnedChannel(channel).pages;
