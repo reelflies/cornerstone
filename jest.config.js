@@ -160,6 +160,8 @@ module.exports = {
     // testPathIgnorePatterns: [
     //   "/node_modules/"
     // ],
+    // ReelFlies: scripts/ holds node --test and Playwright files (*.test.mjs, *.spec.mjs), which Jest 30 also matches.
+    testPathIgnorePatterns: ['/node_modules/', '<rootDir>/scripts/'],
 
     // The regexp pattern or array of patterns that Jest uses to detect test files
     // testRegex: [],

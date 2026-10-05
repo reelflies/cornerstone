@@ -40,6 +40,7 @@ This repo is Cornerstone (`upstream`, bigcommerce/cornerstone) plus ReelFlies co
 | `webpack.common.js` | `BundleAnalyzerPlugin` runs only when `ANALYZE` is set | Stop writing a ~423 KB `report.html` into `assets/dist` on every build | 01 |
 | `package.json`, `package-lock.json` | `@bigcommerce/stencil-cli` 9.1.0 as an exact devDependency | Pin the CLI; 9.2 and later need Node 24, and `.nvmrc` pins 20.18.1 | 01 |
 | `package.json` | `test:scripts` script: runs `scripts/test-scripts.mjs` | Unit tests for the release and QA tooling run with `node --test`, in CI too | 05, 15, 16 |
+| `jest.config.js` | `testPathIgnorePatterns` ignores `scripts/` (plus Jest's default `/node_modules/`) | Jest 30's default `testMatch` also matches `*.test.mjs` and `*.spec.mjs`, so it tried to run the `node --test` and Playwright files under `scripts/` and failed to parse them | 15 |
 | `.github/workflows/pull_request_review.yml` | Deleted | Replaced by `reelflies-checks.yml`; it installed an unpinned stencil-cli | 06 |
 | `.github/CODEOWNERS` | Deleted | It named `@bigcommerce/team-trac` | 06 |
 | `config.json` | `variations`: Light, Bold and Warm replaced by "ReelFlies CA" and "ReelFlies US", both with empty settings for now and Light's screenshots as placeholders | One thin variation per storefront, so releases push and activate by name; shared values stay in `settings` | 04 |
