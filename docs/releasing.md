@@ -29,6 +29,7 @@ A dry run writes nothing that git tracks, but it isn't read-only for the checkou
 
 - It deletes and rebuilds `assets/dist`, and reinstalls `node_modules` with `npm ci`, like a real release (step 2).
 - It writes the gitignored capture (`config.ca.live.json`) and the bundle zip.
+- The storefront gates start `stencil start` on ports 3300 and 3301 and leave its dev build in `assets/dist`. The zip was checked before that, and the push sends that zip.
 
 So don't run it while `stencil start`, another build or another release is using the same checkout.
 
@@ -44,7 +45,7 @@ scripts/release.sh --channel 1895766 --variation 'ReelFlies CA'
 | Release guard | Checks the module switches (`rf_*`) and the menu category ids. See [The release guard](#the-release-guard). | A switch differs from the live theme or exists only there, or a set menu id isn't in the channel's category tree. |
 | 2. Clean build | `rm -rf assets/dist`, then `npm ci`. Upstream's webpack clean step never deletes anything, so stale chunks would otherwise ship. | `npm ci` fails. |
 | 3. Checks | Jest, `npm run test:scripts`, ESLint, Stylelint, the contrast check, and `config.json` against stencil-cli's full theme config schema. `stencil bundle` uses a looser schema, so it accepts a variation without `demo_url`. | Any check fails. |
-| 4. Bundle | `npx stencil bundle --name reelflies-<slug>-<version>-<commit>`, which runs the production webpack build, then `scripts/check-bundle.mjs`. | The zip has forbidden files, or `config.json` is over the upload limit. |
+| 4. Bundle and storefront gates | `npx stencil bundle --name reelflies-<slug>-<version>-<commit>`, which runs the production webpack build, then `scripts/check-bundle.mjs`. Then `npm run qa:prepush` on a local `stencil start` of the target channel and variation: axe and the raw-HTML check ([scripts/qa/README.md](../scripts/qa/README.md)). | The zip has forbidden files, is over a size limit, or `config.json` is over the upload limit; axe finds a serious or critical issue; a raw-HTML assertion fails. |
 | 5. Push | Shows the push summary and asks you to type the channel id. Only then does it capture the channel again and check that nothing changed since steps 1 and 4: the commit and the tree, the zip's size and sha256, the live theme and variation, and the saved and published Theme Styles. A switch toggled while the prompt waited is caught there. Then it runs `npx stencil push -f <zip> -a '<variation>' -c <channel>`, which pushes the zip that was checked. | You type anything but the channel id or close stdin (Ctrl-D), something listed here changed since step 1 or 4, or My Themes is full. |
 | 6. Verify | Captures again. Checks that the channel runs the new theme with the target variation, and that its saved Theme Styles equal `config.json`'s. | Never: it reports problems, and the release exits non-zero after step 7. The theme is already live, so fix forward. |
 | 7. Log | Appends an entry to `RELEASES.md`. Commit it. | — |

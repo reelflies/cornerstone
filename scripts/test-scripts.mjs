@@ -4,7 +4,7 @@
 //   npm run test:scripts
 //
 // Tests are files named *.test.mjs anywhere under scripts/. Playwright specs are
-// *.spec.mjs, so neither this runner nor Jest picks them up.
+// *.spec.mjs, so this runner skips them; jest.config.js keeps Jest out of scripts/.
 //
 // The files are passed by path because `node --test <dir>` works only on Node 20,
 // and `node --test '<glob>'` only on Node 21 and later.

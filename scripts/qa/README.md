@@ -6,20 +6,14 @@ The checks every theme change is held to (ticket 16; spec "Testing Decisions", s
 |---|---|---|---|
 | Bundle limits | `node scripts/check-bundle.mjs <bundle.zip>` | yes | yes (release.sh) |
 | Unit tests for this tooling | `npm run test:scripts` | yes | yes (release.sh) |
-| axe | `npm run qa:axe` | no | not yet: `release.sh` doesn't run `qa:prepush` (below) |
-| Raw HTML (curl) | `npm run qa:raw-html` | no | not yet: `release.sh` doesn't run `qa:prepush` (below) |
+| axe | `npm run qa:axe` | no | yes (release.sh, through `qa:prepush`) |
+| Raw HTML (curl) | `npm run qa:raw-html` | no | yes (release.sh, through `qa:prepush`) |
 | Screenshot diffs | `npm run qa:screens` | no | no: after each upstream merge, and in each template ticket |
 | Quick view | `npm run qa:quick-view` | no | no |
 
 CI has no store credentials, so anything that renders the storefront runs locally or from `release.sh`. `npm run qa:prepush` runs axe and then the raw-HTML check, runs both even when the first fails, and exits non-zero if either failed.
 
-**Not wired yet.** Ticket 05's `release.sh` (branch `release/script`) doesn't call `qa:prepush`, so axe and the raw-HTML check don't stop a release yet. Until it does, run `npm run qa:prepush` by hand before a release. The line goes in step 4 of `release.sh`, after `node scripts/check-bundle.mjs "$zip"` and before the dry-run exit and `release pre-push`:
-
-```sh
-npm run qa:prepush   # set -e stops the release on any serious or critical axe issue or failed raw-HTML check
-```
-
-It must come after the bundle check, for the reason in "Fresh start" below.
+`release.sh` runs it in step 4 on the release's channel and variation (`QA_CHANNEL` and `QA_VARIATION`), after `check-bundle.mjs` and before the dry-run exit and the push, so a serious or critical axe issue or a failed raw-HTML check stops a release. It must stay after the bundle check, for the reason in "Fresh start" below; `scripts/release-sh.test.mjs` checks the order.
 
 ## Setup
 
@@ -42,7 +36,7 @@ Without `QA_BASE_URL`, each gate uses `npx stencil start -c $QA_CHANNEL -v "$QA_
 - **Fresh start.** A fresh server starts from an empty `assets/dist` and is ready once its webpack dev build is served. The gates stop the server again when they finish.
   - **The dev build stays in `assets/dist`.** That is about 2 MB of scripts with their sources inlined as source maps, and upstream's clean step never removes them. `stencil bundle` zips all of `assets/`, and so does `stencil push` without `-f`, which bundles again.
   - **So after a gate run, run `rm -rf assets/dist` before you bundle or push by hand.** `check-bundle.mjs` fails a zip that ships dev-build scripts.
-  - **`release.sh` pushes exactly the zip it checked** (`stencil push -f <zip>`), so gates run after `check-bundle.mjs` can't change what ships. Keep both true when wiring in `qa:prepush`.
+  - **`release.sh` pushes exactly the zip it checked** (`stencil push -f <zip>`), so gates run after `check-bundle.mjs` can't change what ships. Keep both true if the order in `release.sh` changes.
 
 **The channel-1 fallback.** ReelFlies_CA has no products and no tree-4 categories yet, so its product and category pages 404. Until they exist, `QA_CHANNEL=1` renders this repo's templates with live reelflies.ca data. It is read-only: stencil start only reads from the store. Channel 1 has only a product page and a category page pinned.
 

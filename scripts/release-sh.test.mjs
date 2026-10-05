@@ -326,3 +326,23 @@ test('a set menu id without RF_BC_API_TOKEN stops before any catalogue call, nam
     assert.equal(result.status, 1, result.output);
     assert.match(result.stderr, /RF_BC_API_TOKEN.*Products: read-only/);
 });
+
+// --- Order of the build steps ---------------------------------------------------------------
+
+test('the storefront gates (axe, raw HTML) run on the target channel after the bundle check and before the dry-run exit and the push', () => {
+    const lines = fs.readFileSync(SCRIPT, 'utf8').split('\n');
+    const lineOf = pattern => {
+        const index = lines.findIndex(line => pattern.test(line) && !/^\s*#/.test(line));
+        assert.notEqual(index, -1, `release.sh has no line matching ${pattern}`);
+        return index;
+    };
+    const bundleCheck = lineOf(/node scripts\/check-bundle\.mjs "\$zip"/);
+    const gates = lineOf(/npm run qa:prepush/);
+    const dryRunExit = lineOf(/release dry-run-report/);
+    const push = lineOf(/release pre-push/);
+    // The gates' stencil start swaps assets/dist for a dev build, so they come after the zip is
+    // checked; the push sends that checked zip (stencil push -f).
+    assert.ok(bundleCheck < gates && gates < dryRunExit && dryRunExit < push, 'check-bundle, then qa:prepush, then the dry-run exit, then the push');
+    assert.match(lines[gates], /QA_CHANNEL="\$\(release state channel\)"/);
+    assert.match(lines[gates], /QA_VARIATION="\$\(release state variation\)"/);
+});

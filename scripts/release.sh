@@ -5,7 +5,7 @@
 #
 #   1 capture the channel's live Theme Styles (read-only) and diff them against config.json,
 #     then the release guard: rf_* module switches and menu category ids
-#   2 clean build      3 checks      4 bundle and check the zip
+#   2 clean build      3 checks      4 bundle, check the zip, then axe and the raw-HTML check
 #   5 push (never in a dry run: a dry run prints the push command and the log entry, then stops)
 #   6 verify           7 log the release in RELEASES.md
 #
@@ -58,6 +58,11 @@ rm -f "$zip"
 npx stencil bundle --name "$bundle_name"
 node scripts/check-bundle.mjs "$zip"
 release bundle-info "$zip"
+
+# axe and the raw-HTML check (scripts/qa, ticket 16) on a local stencil start of the target.
+# Its dev build replaces assets/dist, so this runs after the zip is checked; the push sends that zip.
+step "Step 4 · Storefront gates"
+QA_CHANNEL="$(release state channel)" QA_VARIATION="$(release state variation)" npm run qa:prepush
 
 if [ "$dry_run" = true ]; then
     release dry-run-report
