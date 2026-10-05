@@ -28,6 +28,7 @@ import { execFileSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { pathToFileURL } from 'url';
 import zlib from 'zlib';
 
 export const MAIN_JS_LIMIT = 300 * 1024;
@@ -175,5 +176,6 @@ async function main() {
     process.exit(results.some(({ level }) => level === 'fail') ? 1 : 0);
 }
 
-const isMain = process.argv[1] && import.meta.url === new URL(`file://${fs.realpathSync(process.argv[1])}`).href;
+// pathToFileURL escapes '#' and '%' in the checkout's path the way import.meta.url does.
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(fs.realpathSync(process.argv[1])).href;
 if (isMain) main();

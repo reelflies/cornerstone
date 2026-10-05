@@ -157,4 +157,14 @@ describe('the command line', () => {
         assert.equal(status, 1);
         assert.match(stderr, /::error::theme-bundle\.main\.js is 307,607 B, over the 307,200 B limit/);
     });
+
+    it('still runs from a checkout whose path has a # in it, instead of exiting 0 unchecked', () => {
+        const dir = path.join(tempDir(), 'reel#flies');
+        fs.mkdirSync(dir);
+        const copy = path.join(dir, 'check-bundle.mjs');
+        fs.copyFileSync(SCRIPT, copy);
+        const { status, stderr } = spawnSync(process.execPath, [copy], { encoding: 'utf8' });
+        assert.equal(status, 2, 'no zip given: it prints its usage and exits 2');
+        assert.match(stderr, /Usage: node scripts\/check-bundle\.mjs/);
+    });
 });
