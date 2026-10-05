@@ -25,7 +25,12 @@ A dry run does every step except the push, then prints:
 - the exact push command
 - the `RELEASES.md` entry it would write
 
-It writes only the gitignored capture (`config.ca.live.json`) and bundle zip.
+A dry run writes nothing that git tracks, but it isn't read-only for the checkout:
+
+- It deletes and rebuilds `assets/dist`, and reinstalls `node_modules` with `npm ci`, like a real release (step 2).
+- It writes the gitignored capture (`config.ca.live.json`) and the bundle zip.
+
+So don't run it while `stencil start`, another build or another release is using the same checkout.
 
 ## Real release
 
