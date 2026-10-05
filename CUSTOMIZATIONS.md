@@ -44,6 +44,7 @@ This repo is Cornerstone (`upstream`, bigcommerce/cornerstone) plus ReelFlies co
 | `.github/workflows/pull_request_review.yml` | Deleted | Replaced by `reelflies-checks.yml`; it installed an unpinned stencil-cli | 06 |
 | `.github/CODEOWNERS` | Deleted | It named `@bigcommerce/team-trac` | 06 |
 | `config.json` | `variations`: Light, Bold and Warm replaced by "ReelFlies CA" and "ReelFlies US", both with empty settings for now and Light's screenshots as placeholders | One thin variation per storefront, so releases push and activate by name; shared values stay in `settings` | 04 |
+| `assets/js/theme/global.js` | Lines 12 and 25: imports and starts `reelflies/lazy-quick-view` instead of `global/quick-view` | Quick view, ProductDetails and reviews load as `theme-bundle.chunk.quick-view.js` on the first Quick view click, which takes main.js from 307,607 B to under the 300 KiB limit | 16 |
 
 New ReelFlies files in upstream folders: `.github/workflows/reelflies-checks.yml`, `.gitleaksignore`, and `RELEASES.md` at the repo root (the release log, written by `scripts/release.sh`, and the Switch toggles log; tickets 05 and 15). `stencil bundle` zips only `README.md` and `CHANGELOG.md` from the root's Markdown files, so `RELEASES.md` never ships.
 
