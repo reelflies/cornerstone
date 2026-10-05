@@ -52,9 +52,19 @@ Without `QA_BASE_URL`, each gate uses `npx stencil start -c $QA_CHANNEL -v "$QA_
 
 - **Page keys** are the spec's template names: `home`, `fly-type`, `species`, `species-hub`, `product`, `cart`, `hook-chart`, `404` and `brand`, plus `category` for the stock category template until ticket 32.
 - **Test products are pinned** by URL. Pick ones that will stay in the catalogue.
-- **`LIVE_DATA`** lists the selectors that screenshots mask: prices, stock and SKU lines, ratings, cart counts and totals, product grids and carousels, pagination, marketing banners and widgets. Masking them means a price or catalogue change doesn't fail a diff.
-
 When a page is added for a channel, axe and the screenshots cover it on the next run. The raw-HTML check fetches the `RAW_HTML_PAGES` kinds: home, product and category.
+
+**What the screenshots mask** (`masksFor(channel, template)`):
+
+- **`LIVE_DATA`, on every page:** prices, stock and SKU lines, ratings and review counts, sale and sold-out badges, cart counts and totals, pagination, and store content edited outside the theme (marketing banners and widgets).
+- **A channel's `mask`, on one page only:** content that the pin can't hold still. Channel 1's category page masks its whole `.productGrid`, and its product page masks the related products, because the live reelflies.ca catalogue decides which products they list.
+- **Everything else is diffed:** product cards (photo, name, layout), grids and carousels stay visible, so a change to a card or to a grid's layout fails the run.
+
+**To get a listing's cards into a baseline** (for example ticket 31's category grid, or ticket 48's home bands), the listing must hold still:
+
+- Pin a page whose products don't change: a dedicated test category on ReelFlies_CA, or a fixed sort such as `?sort=alphaasc` on a category nobody edits.
+- Then drop that page's entry from its channel's `mask`, if it has one.
+- Never mask cards globally. If a card shows a new live value, add just that value's selector to `LIVE_DATA`.
 
 ## Bundle limits (`scripts/check-bundle.mjs`)
 
@@ -104,7 +114,7 @@ Every pinned page, at 375 and 1280, runs with the tags WCAG 2.0–2.2 A and AA p
 
 1. Each page scrolls once so lazy images load.
 2. The store's cookie banner is dismissed ("Reject all"), because it is fixed to the viewport and would cover the template.
-3. A full-page screenshot is compared with the baseline, with `LIVE_DATA` masked.
+3. A full-page screenshot is compared with the baseline, with `masksFor(channel, template)` masked.
 
 **The threshold** is in `playwright.config.mjs`. A pixel counts as changed when its colour moves more than 0.2 (Playwright's `threshold`). A run fails when more than 0.2% of the pixels change (`maxDiffPixelRatio`).
 
@@ -121,7 +131,7 @@ Every pinned page, at 375 and 1280, runs with the tags WCAG 2.0–2.2 A and AA p
 1. Pin its page in `pages.mjs` under each channel where it renders.
 2. Run `npm run qa:screens -- --update-snapshots` (and `QA_CHANNEL=1` if it needs the fallback).
 3. Review the new PNGs and commit them with the template.
-4. If the page shows new live data, add its selector to `LIVE_DATA`.
+4. If the page shows new live data, add its selector to `LIVE_DATA`. If part of the page can't be pinned, mask it for that page only, in its channel's `mask`.
 
 **Per variation:** run with `QA_VARIATION="ReelFlies US"` to make or check that variation's set. Only the ReelFlies CA sets exist today. Both variations still have empty settings, so a US set would be identical.
 

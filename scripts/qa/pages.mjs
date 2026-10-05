@@ -5,6 +5,11 @@
 // species-hub, product, cart, hook-chart, 404 and brand, plus category for the stock
 // category template until ticket 32 builds the Fly Type and Species pages. A template
 // ticket adds its page here when it lands; the screenshot and axe runs then cover it.
+//
+// Each channel has:
+//   pages  template -> path
+//   mask   optional, template -> selectors the screenshots also mask on that page:
+//          content these pins can't hold still, such as a live product list
 
 export const CHANNELS = {
     1895766: {
@@ -27,18 +32,25 @@ export const CHANNELS = {
             product: '/realistic-flying-hot-butt-hopper-brown/', // the reference page's hero product (6178)
             category: '/flies/realistic-trout-flies/', // tree 1; 12 cards with Quick view, and facets
         },
+        // The live catalogue decides which products these pages list, so the lists can't
+        // be pinned here. Pin a listing that holds still before unmasking one.
+        mask: {
+            category: ['.productGrid'],
+            product: ['#tab-related', '#tab-similar'], // Related Products, Customers Also Viewed
+        },
     },
 };
 
 // The page kinds the raw-HTML harness fetches, when the channel has them pinned.
 export const RAW_HTML_PAGES = ['home', 'product', 'category'];
 
-// Live data the screenshots mask, so they don't fail on catalogue or price changes:
-// prices, stock and SKU lines, ratings and review counts, cart counts and totals, the
-// product lists and page counts that change with the catalogue, and store content
-// edited outside the theme: marketing banners and Page Builder or Widgets API widgets.
-// Tickets 46-49 replace the widget mask with pinned widget content when the home
-// page's widgets are synced from widgets/.
+// Live data the screenshots mask on every page, so they don't fail on price, stock or
+// catalogue changes: prices, stock and SKU lines, ratings and review counts, sale and
+// sold-out badges, cart counts and totals, page counts, and store content edited outside
+// the theme (marketing banners, and Page Builder or Widgets API widgets). Product cards,
+// grids and carousels stay visible; a page whose list isn't pinned masks it through its
+// channel's `mask`. Tickets 46-49 replace the widget mask with pinned widget content when
+// the home page's widgets are synced from widgets/.
 export const LIVE_DATA = [
     '.banners',
     '[data-widget-id]',
@@ -51,16 +63,20 @@ export const LIVE_DATA = [
     '.productView-info',
     '.productView-rating',
     '.productView-reviewLink',
+    '.rating--small',
+    '[class*="sale-flag"]',
+    '[class*="sold-out-flag"]',
+    '.starwrap',
     '.countPill',
     '.cart-quantity',
     '.cart-item-value',
     '.cart-total-value',
-    '.productGrid',
-    '.productCarousel',
-    '.productView-thumbnails',
-    '[data-similar-product-id]',
-    '.tabs-contents [data-product-related]',
 ];
+
+// Everything the screenshot of one pinned page masks.
+export function masksFor(channel, template) {
+    return [...LIVE_DATA, ...(CHANNELS[channel]?.mask?.[template] || [])];
+}
 
 export function pinnedPages(channel) {
     const entry = CHANNELS[channel];
