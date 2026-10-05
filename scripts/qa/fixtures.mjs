@@ -5,12 +5,16 @@
 // - storefrontPage(page, template) opens the template's pinned page, fails unless it
 //   answers with the template's status (404 for the 404 page, 200 for every other), and
 //   waits until it stops moving: fonts loaded, lazy images in, network quiet, at the top.
+//   A page that answers 5xx is opened once more after 2 s, and the output says so
+//   (RETRY_DELAY_MS in storefront.mjs says why).
 // - dismissCookieBanner(page) closes the store's cookie banner without moving the pointer.
 
 /* eslint-env browser */ // the page.evaluate callbacks run in the page
 
 import { test as base, expect } from '@playwright/test';
-import { QA_CHANNEL, previewCookies } from './storefront.mjs';
+import {
+    QA_CHANNEL, RETRY_DELAY_MS, previewCookies, worthRetrying,
+} from './storefront.mjs';
 import { expectedStatus, pinnedPages } from './pages.mjs';
 
 export const test = base.extend({
@@ -26,7 +30,12 @@ export { expect };
 export const PAGES = pinnedPages(QA_CHANNEL);
 
 export async function storefrontPage(page, template, pagePath = PAGES[template]) {
-    const response = await page.goto(pagePath, { waitUntil: 'load' });
+    let response = await page.goto(pagePath, { waitUntil: 'load' });
+    if (worthRetrying(response?.status())) {
+        console.log(`RETRY    the ${template} page ${pagePath} returned HTTP ${response.status()}; opening it once more in ${RETRY_DELAY_MS / 1000} s (stencil start's request to the store can drop)`);
+        await page.waitForTimeout(RETRY_DELAY_MS);
+        response = await page.goto(pagePath, { waitUntil: 'load' });
+    }
     // Anything else is an error page: checking it, or recording it as a baseline, would
     // pass the gate without looking at the template. Fix the pin in pages.mjs.
     const status = response?.status();

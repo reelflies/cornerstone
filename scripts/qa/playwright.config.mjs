@@ -8,13 +8,23 @@
 // Specs are *.spec.mjs, which neither Jest nor `npm run test:scripts` picks up, and
 // none of this runs in CI, which has no store credentials. Without QA_BASE_URL the
 // run reuses the `stencil start` on port 3301, or starts one (scripts/qa/storefront.mjs).
+// With QA_FRESH_SERVER=1 (release.sh) it never reuses one: it starts its own, and stops
+// before that if anything already answers on 3300 or 3301.
 
 import { defineConfig } from '@playwright/test';
 import {
-    BASE_URL, IS_LOCAL, READY_URL, ROOT, START_COMMAND, checkEnv, previewCookies,
+    BASE_URL, FRESH_SERVER, HEADERS, IS_LOCAL, READY_URL, ROOT, START_COMMAND, checkEnv, planLocalServer, previewCookies,
 } from './storefront.mjs';
 
 checkEnv();
+
+// The webServer starts before globalSetup, so the ports are checked here, once, by the
+// runner. Each worker loads this config again while the server is up, and skips the check
+// through the RF_QA_PORTS_CHECKED it inherits.
+if (IS_LOCAL && FRESH_SERVER && !process.env.RF_QA_PORTS_CHECKED) {
+    await planLocalServer();
+    process.env.RF_QA_PORTS_CHECKED = '1';
+}
 
 export default defineConfig({
     testDir: '.',
@@ -28,6 +38,9 @@ export default defineConfig({
     retries: 0,
     timeout: 90000,
     reporter: [['list'], ['html', { outputFolder: 'results/report', open: 'never' }]],
+    // A missing baseline fails instead of being written, so no run can make one that every
+    // later run then passes unreviewed. `-- --update-snapshots` writes them on purpose.
+    updateSnapshots: 'none',
     expect: {
         timeout: 15000,
         toHaveScreenshot: {
@@ -46,7 +59,7 @@ export default defineConfig({
         baseURL: BASE_URL,
         locale: 'en-CA',
         timezoneId: 'America/Toronto',
-        extraHTTPHeaders: { 'Accept-Language': 'en-CA,en;q=0.9' },
+        extraHTTPHeaders: HEADERS,
         // A trace records every request's headers, the Cookie header too, so a run that
         // sends the prelaunch preview cookie keeps none: it would sit in results/.
         trace: previewCookies().length ? 'off' : 'retain-on-failure',
@@ -59,7 +72,8 @@ export default defineConfig({
         command: START_COMMAND,
         url: READY_URL,
         cwd: ROOT,
-        reuseExistingServer: true,
+        // Reused only when it renders QA_CHANNEL and QA_VARIATION (global-setup.mjs).
+        reuseExistingServer: !FRESH_SERVER,
         timeout: 180000,
         stdout: 'ignore',
         stderr: 'pipe',

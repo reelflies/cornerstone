@@ -8,12 +8,12 @@ The checks every theme change is held to (ticket 16; spec "Testing Decisions", s
 | Unit tests for this tooling | `npm run test:scripts` | yes | yes (release.sh) |
 | axe | `npm run qa:axe` | no | yes (release.sh, through `qa:prepush`) |
 | Raw HTML (curl) | `npm run qa:raw-html` | no | yes (release.sh, through `qa:prepush`) |
-| Screenshot diffs | `npm run qa:screens` | no | no: after each upstream merge, and in each template ticket |
+| Screenshot diffs | `npm run qa:screens` | no | yes (release.sh, through `qa:prepush`); also after each upstream merge, and in each template ticket |
 | Quick view | `npm run qa:quick-view` | no | no |
 
-CI has no store credentials, so anything that renders the storefront runs locally or from `release.sh`. `npm run qa:prepush` runs axe and then the raw-HTML check, runs both even when the first fails, and exits non-zero if either failed.
+CI has no store credentials, so anything that renders the storefront runs locally or from `release.sh`. `npm run qa:prepush` (`prepush.mjs`) runs axe, the raw-HTML check and the screenshot diffs, in that order. It runs all three even when one fails, exits non-zero if any failed, and ends with each gate's result.
 
-`release.sh` runs it in step 4 on the release's channel and variation (`QA_CHANNEL` and `QA_VARIATION`), after `check-bundle.mjs` and before the dry-run exit and the push, so a serious or critical axe issue or a failed raw-HTML check stops a release. It must stay after the bundle check, for the reason in "Fresh start" below; `scripts/release-sh.test.mjs` checks the order.
+`release.sh` runs it in step 4 on the release's channel and variation (`QA_CHANNEL` and `QA_VARIATION`), with `QA_FRESH_SERVER=1`, after `check-bundle.mjs` and before the dry-run exit and the push. So a serious or critical axe issue, a failed raw-HTML check, a screenshot diff or a missing baseline stops a release, and every gate runs on a stencil start of the commit being pushed ("Reuse" below). It must stay after the bundle check, for the reason in "Fresh start" below; `scripts/release-sh.test.mjs` checks the order.
 
 ## Setup
 
@@ -28,12 +28,14 @@ CI has no store credentials, so anything that renders the storefront runs locall
 | `QA_VARIATION` | `ReelFlies CA` | Theme variation; it must exist in `config.json` |
 | `QA_BASE_URL` | none | Test this host (for example the prelaunch host) instead of a local `stencil start` |
 | `QA_PREVIEW_COOKIE` | none | Cookie for the prelaunch host, as `name=value; name2=value2`. It goes only to `QA_BASE_URL` and is never printed. A run that sends it keeps no Playwright traces, because a trace records every request's Cookie header. |
+| `QA_FRESH_SERVER` | none | `1` (`release.sh` sets it): never reuse a running server. Each gate starts its own, and the run stops if anything already answers on 3300 or 3301. |
 
 Without `QA_BASE_URL`, each gate uses `npx stencil start -c $QA_CHANNEL -v "$QA_VARIATION" -p 3300` (`scripts/qa/storefront.mjs`):
 
 - **Ports.** Browsersync takes 3300 and the stencil server 3301. The gates talk to 3301, so Browsersync's injected script, its overlay and its websocket stay out of the results.
 - **Reuse.** A server already on 3301 is reused, but only if it renders `QA_CHANNEL` and `QA_VARIATION`. Both are read from `?debug=context`: `settings.channel_id`, and `settings.theme_config_id`, which stencil start sets from the variation's position in `config.json`. Otherwise the run stops, so one set's screenshots can never be compared with, or written as, another's.
-- **Fresh start.** A fresh server starts from an empty `assets/dist` and is ready once its webpack dev build is served. The gates stop the server again when they finish.
+- **No reuse with `QA_FRESH_SERVER=1`.** A server already running could come from another checkout, worktree or branch, even with the right channel and variation, and the gates would then pass on code other than the commit being pushed. So nothing is reused: each gate starts its own server from this checkout. If anything already answers on 3300 or 3301, the run stops before starting one, names the port, and says to stop that server first. `qa:prepush` checks once before the first gate, and each gate checks again for itself (`serverPlan` in `storefront.mjs`; the Playwright config checks before its `webServer` starts).
+- **Fresh start.** A fresh server starts from an empty `assets/dist` and is ready once its webpack dev build is served. The gates stop the server again when they finish, with its whole process group. With `QA_FRESH_SERVER=1`, `qa:prepush` then waits until 3300 and 3301 are free (up to 15 s) before the next gate starts, and fails the gate if they aren't.
   - **The dev build stays in `assets/dist`.** That is about 2 MB of scripts with their sources inlined as source maps, and upstream's clean step never removes them. `stencil bundle` zips all of `assets/`, and so does `stencil push` without `-f`, which bundles again.
   - **So after a gate run, run `rm -rf assets/dist` before you bundle or push by hand.** `check-bundle.mjs` fails a zip that ships dev-build scripts.
   - **`release.sh` pushes exactly the zip it checked** (`stencil push -f <zip>`), so gates run after `check-bundle.mjs` can't change what ships. Keep both true if the order in `release.sh` changes.
@@ -47,6 +49,7 @@ Without `QA_BASE_URL`, each gate uses `npx stencil start -c $QA_CHANNEL -v "$QA_
 - **Page keys** are the spec's template names: `home`, `fly-type`, `species`, `species-hub`, `product`, `cart`, `hook-chart`, `404` and `brand`, plus `category` for the stock category template until ticket 32.
 - **Test products are pinned** by URL. Pick ones that will stay in the catalogue.
 - **Every pinned page must answer as its template:** HTTP 404 for `404`, and 200 for every other page. Otherwise axe, the screenshots and the raw-HTML check fail the page instead of checking an error page. A renamed product or a mistyped pin shows up as that failure.
+- **A 5xx is asked once more.** stencil start proxies each page to the store, and a dropped upstream connection (`AxiosError: stream has been aborted` in its log) can make one request answer 500. A page that answers 5xx is opened again about 2 s later (`RETRY_DELAY_MS` in `storefront.mjs`), and the output says so in a `RETRY` line. A second 5xx fails as before. A 4xx, or a 200 where a 404 belongs, is the page's real answer and is never asked again.
 - **`notPinnedYet`** is for a product or category page that a channel can't pin yet, with the reason. See "Raw HTML" below.
 
 When a page is pinned for a channel, axe, the screenshots and the raw-HTML check all cover it on the next run.
@@ -106,6 +109,7 @@ Every pinned page, at 375 and 1280, runs with the tags WCAG 2.0–2.2 A and AA p
 
 - The projects are `phone-375` and `desktop-1280`.
 - The platform suffix keeps a Mac's font rendering from being compared with Linux's. Baselines are made and checked on the Mac that runs `release.sh`.
+- **A missing baseline fails the run.** A plain run never writes one (`updateSnapshots: 'none'` in `playwright.config.mjs`), so no run can make a baseline that later runs pass unreviewed. The failure names the missing file and the command that makes it. A release to a channel or variation without its set stops at the screenshots until the set is made and reviewed.
 
 **How a run works:**
 
@@ -130,7 +134,7 @@ Every pinned page, at 375 and 1280, runs with the tags WCAG 2.0–2.2 A and AA p
 3. Review the new PNGs and commit them with the template.
 4. If the page shows new live data, add its selector to `LIVE_DATA`. If part of the page can't be pinned, mask it for that page only, in its channel's `mask`.
 
-**Per variation:** run with `QA_VARIATION="ReelFlies US"` to make or check that variation's set. Only the ReelFlies CA sets exist today. Both variations still have empty settings, so a US set would be identical.
+**Per variation:** run with `QA_VARIATION="ReelFlies US"` to make or check that variation's set. Only the ReelFlies CA sets exist today, so a release with ReelFlies US fails at the screenshots until its set is made. Both variations still have empty settings, so a US set would be identical.
 
 **After an upstream merge**, run `npm run qa:screens` and `QA_CHANNEL=1 npm run qa:screens`, as in CUSTOMIZATIONS.md, "Upgrading".
 
@@ -140,7 +144,7 @@ This is spec seam 2: what a crawler gets, with no JavaScript.
 
 - It fetches every page pinned for the channel in `pages.mjs`, with `Accept-Language: en-CA`; stencil start's renderer fails without it.
 - It runs every registered assertion on each page. An assertion's `pages` and `notOn` pick the page kinds it applies to.
-- A page that doesn't answer as its template fails: 404 for `404`, and 200 for every other page.
+- A page that doesn't answer as its template fails: 404 for `404`, and 200 for every other page. A 5xx is fetched once more first, as in "Pinned pages and live data".
 - **A product and a category page are required** (`RAW_HTML_REQUIRED`), because spec seam 2 checks those two. A channel without one fails, unless its `notPinnedYet` gives the reason, which is reported as a warning on every run. ReelFlies_CA has no products or tree-4 categories until refactor tickets 13 and 14. When they land, pin both and delete its `notPinnedYet`; a run warns while an entry is left over.
 - **To check a new page kind** (for example the Fly Type page for ticket 40, or the cart for ticket 52), pin it in `CHANNELS`. Then name it in the assertion's `pages`, if the assertion applies only to some kinds.
 
@@ -196,7 +200,7 @@ QA_CHANNEL=1 npm run qa:raw-html                          # product and category
 QA_BASE_URL=https://<prelaunch host> QA_PREVIEW_COOKIE='<name>=<value>' npm run qa:raw-html
 ```
 
-It exits 1 on a failed check and 2 when the storefront can't be reached.
+It exits 1 on a failed check, and 2 when the storefront can't be reached or, with `QA_FRESH_SERVER=1`, when something already answers on 3300 or 3301.
 
 **Not run on prelaunch yet.** The product and category runs so far were on channel 1 through `stencil start -c 1`. The prelaunch run needs the preview cookie (ticket 11) and ReelFlies_CA's product and category pins (refactor tickets 13 and 14).
 
@@ -213,7 +217,7 @@ It needs a category page with products, so run it with `QA_CHANNEL=1` until Reel
 ## Which runner picks up what
 
 - Playwright runs `scripts/qa/*.spec.mjs` with this folder's config.
-- `harness-selftest.spec.mjs` runs with `qa:axe`, `qa:screens` and `qa:quick-view`, on pages it serves itself. It proves that a pinned page answering with the wrong status fails the run, and that dismissing the cookie banner leaves nothing hovered.
+- `harness-selftest.spec.mjs` runs with `qa:axe`, `qa:screens` and `qa:quick-view`, on pages it serves itself. It proves that a pinned page answering with the wrong status fails the run without being asked again, that one answering 5xx twice fails, and that dismissing the cookie banner leaves nothing hovered. Its 5xx retry case answers the pinned 404 page (or the channel's first page) with a 500 once and then lets the request through, so the second answer is the storefront's real one.
 - `npm run test:scripts` runs every `scripts/**/*.test.mjs` with `node --test`.
 - Jest runs `assets/js/test-unit/`. `jest.config.js` ignores `scripts/`, because Jest 30 would otherwise match `*.test.mjs` and `*.spec.mjs` too.
 - Playwright writes its report, traces and failed diffs to `scripts/qa/results/`, which is ignored by git. A run with `QA_PREVIEW_COOKIE` writes no traces, so the cookie never lands there.

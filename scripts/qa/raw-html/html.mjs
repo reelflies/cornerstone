@@ -8,7 +8,7 @@
 //   as 'application/ld+json', skipping scripts inside comments.
 
 const ATTRIBUTES = String.raw`((?:[^>"']|"[^"]*"|'[^']*')*)`;
-const COMMENT_OR_TEXT_ELEMENT = /<!--[\s\S]*?-->|<(script|style|textarea|title)\b((?:[^>"']|"[^"]*"|'[^']*')*)>[\s\S]*?<\/\1\s*>/gi;
+const COMMENT_OR_TEXT_ELEMENT = new RegExp(String.raw`<!--[\s\S]*?-->|<(script|style|textarea|title)\b${ATTRIBUTES}>[\s\S]*?<\/\1\s*>`, 'gi');
 const ATTRIBUTE = /([^\s"'>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
 
 export function parseAttributes(source) {

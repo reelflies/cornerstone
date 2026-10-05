@@ -81,7 +81,7 @@
     "qa:screens": "npx playwright test --config scripts/qa/playwright.config.mjs screens harness-selftest",
     "qa:quick-view": "npx playwright test --config scripts/qa/playwright.config.mjs quick-view.spec harness-selftest --project desktop-1280",
     "qa:raw-html": "node scripts/qa/raw-html.mjs",
-    "qa:prepush": "npm run qa:axe; axe=$?; npm run qa:raw-html; raw=$?; [ $axe -eq 0 ] && [ $raw -eq 0 ]",
+    "qa:prepush": "node scripts/qa/prepush.mjs",
     "stylelint": "npx stylelint **/*.scss",
     "stylelint:fix": "npx stylelint --fix **/*.scss"
   }
