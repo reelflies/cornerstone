@@ -70,10 +70,11 @@ module.exports = {
             jQuery: 'jquery',
             'window.jQuery': 'jquery',
         }),
-        new BundleAnalyzerPlugin({
+        // ReelFlies: the analyser writes ~423 KB report.html into assets/dist, so only run it when ANALYZE is set.
+        ...(process.env.ANALYZE ? [new BundleAnalyzerPlugin({
             analyzerMode: 'static',
             openAnalyzer: false,
-        }),
+        })] : []),
     ],
     resolve: {
         fallback: { url: require.resolve('url/') },

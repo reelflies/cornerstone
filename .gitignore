@@ -11,3 +11,10 @@ vendor/bundle
 *.js.map
 *.zip
 .idea/
+
+# ReelFlies: Stencil CLI output and pulled live configs (secrets.stencil.json,
+# config.stencil.json, assets/dist and *.zip are already ignored above).
+/parsed/
+/stencil_context/
+/manifest.json
+config.*.live.json
