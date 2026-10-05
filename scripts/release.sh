@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Releases the theme to one storefront channel with one named variation (ticket 05).
+# Releases the theme to one storefront channel with one named variation (tickets 05 and 15).
 #
 #   scripts/release.sh --channel <id> --variation "<name>" [--dry-run] [--first-release] [--accept-live | --overwrite-live]
 #
-#   1 capture the channel's live Theme Styles (read-only) and diff them against config.json
+#   1 capture the channel's live Theme Styles (read-only) and diff them against config.json,
+#     then the release guard: rf_* module switches and menu category ids
 #   2 clean build      3 checks      4 bundle and check the zip
 #   5 push (never in a dry run: a dry run prints the push command and the log entry, then stops)
 #   6 verify           7 log the release in RELEASES.md
@@ -22,7 +23,7 @@ export RF_RELEASE_STATE="$STATE_DIR/state.json"
 release() { node scripts/release.mjs "$@"; }
 step() { printf '\n== %s\n' "$1"; }
 
-# Refusals (before any network call or build), then step 1: capture and diff.
+# Refusals (before any network call or build), step 1 (capture and diff), then the release guard.
 release prepare "$@"
 
 if [ "$(release state stopBeforeBuild)" = true ]; then

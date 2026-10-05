@@ -1,22 +1,35 @@
-// Formats the push summary and the RELEASES.md entry for scripts/release.sh (ticket 05, step 7).
-// Pure: no network, no files.
+// Formats the push summary and the RELEASES.md entry for scripts/release.sh (ticket 05, step 7,
+// with ticket 15's rf_* values, new switches and Switch toggles section). Pure: no network, no files.
 //
 //   import { formatPushSummary, formatReleaseEntry, addReleaseEntry } from './release-log.mjs';
 //
 // A release: { timestamp, channel, channelName, variation, theme: { uuid, name, version },
 //   git: { sha, branch }, bundle: { file, bytes, sha256, mainJsBytes },
-//   step1: { replacing, overwritten, unpublished }, verify: { problems } | null, operator }
+//   step1: { replacing, overwritten, unpublished }, guard: { values, newSwitches },
+//   verify: { problems } | null, operator }
+
+import { displayValue } from './release-diff.mjs';
 
 export const RELEASES_TEMPLATE = `# Release log
 
 Every theme push to a storefront goes through \`scripts/release.sh\` ([docs/releasing.md](docs/releasing.md)), which appends an entry under "Releases" after the push. Don't edit the entries by hand.
 
 ## Releases
+
+## Switch toggles
+
+Log every module switch (\`rf_*\`) toggled in a storefront's Theme Styles here, one row per toggle, in this format. From T-14 to T+30, switch toggles and widget unpublishing are the only changes allowed, apart from P1 fixes through \`scripts/release.sh\` (SCOPE-3).
+
+After a toggle, change \`config.json\` to match and commit it. Otherwise the next release stops on the difference (the release guard, ticket 15).
+
+| Date | Channel | Switch | From | To | Who | Reason |
+|---|---|---|---|---|---|---|
 `;
 
 const bytes = count => `${count.toLocaleString('en-CA')} B`;
 const utc = iso => `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
 const codeList = keys => keys.map(key => `\`${key}\``).join(', ');
+const valueList = (values, code) => values.map(({ key, value }) => `${code ? `\`${key}\`` : key} = ${displayValue(key, value)}`).join(', ') || 'none';
 
 export function describeStep1({ replacing, overwritten, unpublished }) {
     let text = 'no differences from the live saved settings';
@@ -44,6 +57,8 @@ export function formatReleaseEntry(release) {
         `- Bundle: \`${bundle.file}\`, ${bytes(bundle.bytes)}, sha256 \`${bundle.sha256}\``,
         `- main.js: ${bytes(bundle.mainJsBytes)}`,
         `- Step 1: ${describeStep1(release.step1)}`,
+        `- rf_* values pushed: ${valueList(release.guard.values, true)}`,
+        `- New switches: ${codeList(release.guard.newSwitches) || 'none'}`,
         `- Verify: ${describeVerify(release.verify)}`,
         `- Operator: ${release.operator}`,
         '',
@@ -63,12 +78,15 @@ export function addReleaseEntry(markdown, entry) {
 }
 
 export function formatPushSummary(release) {
-    const line = (label, value) => `  ${label.padEnd(10)} ${value}`;
+    const line = (label, value) => `  ${label.padEnd(11)} ${value}`;
+    const { newSwitches } = release.guard;
     return [
         'Push summary',
         line('target', `channel ${release.channel} (${release.channelName})`),
         line('variation', release.variation),
         line('step 1', describeStep1(release.step1)),
+        line('rf_* values', valueList(release.guard.values, false)),
+        ...(newSwitches.length ? newSwitches.map(key => line('new switch', key)) : [line('new switch', 'none')]),
         line('bundle', `${release.bundle.file}, ${bytes(release.bundle.bytes)}`),
         line('main.js', bytes(release.bundle.mainJsBytes)),
     ].join('\n');

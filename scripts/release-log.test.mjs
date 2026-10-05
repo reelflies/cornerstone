@@ -16,8 +16,16 @@ const release = {
         file: 'reelflies-ca-6.22.0-1be9fb2.zip', bytes: 9876543, sha256: 'ab12', mainJsBytes: 307607,
     },
     step1: { replacing: null, overwritten: [], unpublished: false },
+    guard: { values: [], newSwitches: [] },
     verify: { problems: [] },
     operator: 'Shaun Bathgate',
+};
+const withSwitches = {
+    ...release,
+    guard: {
+        values: [{ key: 'rf_cart_state', value: true }, { key: 'rf_menu_type_ids', value: '' }, { key: 'rf_quick_add', value: false }],
+        newSwitches: ['rf_cart_state'],
+    },
 };
 
 test('a release entry records where, what, from which commit and bundle, step 1 and who', () => {
@@ -29,10 +37,18 @@ test('a release entry records where, what, from which commit and bundle, step 1 
         '- Bundle: `reelflies-ca-6.22.0-1be9fb2.zip`, 9,876,543 B, sha256 `ab12`',
         '- main.js: 307,607 B',
         '- Step 1: no differences from the live saved settings',
+        '- rf_* values pushed: none',
+        '- New switches: none',
         '- Verify: the live saved settings match config.json',
         '- Operator: Shaun Bathgate',
         '',
     ].join('\n'));
+});
+
+test('the entry lists every rf_* value pushed and the new switches (ticket 15)', () => {
+    const entry = formatReleaseEntry(withSwitches);
+    assert.match(entry, /\n- rf_\* values pushed: `rf_cart_state` = true, `rf_menu_type_ids` = "", `rf_quick_add` = false\n/);
+    assert.match(entry, /\n- New switches: `rf_cart_state`\n/);
 });
 
 test('a dry-run entry says the theme uuid is assigned at push and that nothing was verified', () => {
@@ -61,7 +77,6 @@ test('the first entry creates RELEASES.md with its header and a Releases section
     const first = addReleaseEntry(null, formatReleaseEntry(release));
     assert.match(first, /^# Release log\n/);
     assert.match(first, /\n## Releases\n\n### 2026-10-05 18:04 UTC/);
-    assert.ok(first.endsWith('- Operator: Shaun Bathgate\n'));
 
     const second = addReleaseEntry(first, formatReleaseEntry({ ...release, timestamp: '2026-10-06T09:00:00.000Z' }));
     assert.ok(second.indexOf('2026-10-05 18:04 UTC') < second.indexOf('2026-10-06 09:00 UTC'), 'entries are in date order');
@@ -70,11 +85,31 @@ test('the first entry creates RELEASES.md with its header and a Releases section
 
 test('the push summary shows the target, the variation, step 1 and the sizes before the operator confirms', () => {
     const summary = formatPushSummary({ ...release, bundle: { ...release.bundle } });
-    assert.match(summary, /target {5}channel 1895766 \(ReelFlies_CA\)/);
-    assert.match(summary, /variation {2}ReelFlies CA/);
-    assert.match(summary, /step 1 {5}no differences from the live saved settings/);
-    assert.match(summary, /bundle {5}reelflies-ca-6\.22\.0-1be9fb2\.zip, 9,876,543 B/);
-    assert.match(summary, /main\.js {4}307,607 B/);
+    assert.match(summary, /target {6}channel 1895766 \(ReelFlies_CA\)/);
+    assert.match(summary, /variation {3}ReelFlies CA/);
+    assert.match(summary, /step 1 {6}no differences from the live saved settings/);
+    assert.match(summary, /bundle {6}reelflies-ca-6\.22\.0-1be9fb2\.zip, 9,876,543 B/);
+    assert.match(summary, /main\.js {5}307,607 B/);
+});
+
+test('the push summary lists the rf_* values and each new switch', () => {
+    const summary = formatPushSummary(withSwitches);
+    assert.match(summary, /rf_\* values rf_cart_state = true, rf_menu_type_ids = "", rf_quick_add = false/);
+    assert.match(summary, /new switch {2}rf_cart_state/);
+    assert.match(formatPushSummary(release), /new switch {2}none/);
+});
+
+test('a release entry goes at the end of Releases, before the Switch toggles section', () => {
+    const markdown = addReleaseEntry(null, formatReleaseEntry(release));
+    const toggles = markdown.indexOf('\n## Switch toggles\n');
+    assert.ok(toggles > markdown.indexOf('### 2026-10-05 18:04 UTC'), 'the entry is above Switch toggles');
+    assert.match(markdown, /- Operator: Shaun Bathgate\n\n## Switch toggles\n/);
+});
+
+test('the Switch toggles section has its fixed format: date, channel, switch, from, to, who, reason', () => {
+    for (const markdown of [addReleaseEntry(null, formatReleaseEntry(release)), fs.readFileSync(new URL('../RELEASES.md', import.meta.url), 'utf8')]) {
+        assert.match(markdown, /\n## Switch toggles\n(.|\n)*\n\| Date \| Channel \| Switch \| From \| To \| Who \| Reason \|\n\|---\|---\|---\|---\|---\|---\|---\|\n/);
+    }
 });
 
 test('the repo\'s RELEASES.md takes a release entry at the end of its Releases section', () => {

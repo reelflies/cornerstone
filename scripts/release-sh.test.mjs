@@ -16,7 +16,7 @@ const NOTHING_RAN = /Step 1|Step 2|npm ci|Capturing/;
 const CA = ['--channel', '1895766', '--variation', 'ReelFlies CA'];
 
 function run(args, env = {}) {
-    const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^RF_(RELEASE|BC)_/.test(key)));
+    const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(RF_(RELEASE|BC)_|GITHUB_ACTIONS$)/.test(key)));
     const result = spawnSync('bash', [SCRIPT, ...args], {
         encoding: 'utf8',
         env: { ...inherited, PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH}`, ...env },
@@ -117,6 +117,7 @@ test('the test-only overrides are refused without --dry-run, so a real push alwa
     const { env } = fixtures();
     assertRefused(run(CA, env), /RF_RELEASE_CONFIG.*--dry-run|--dry-run.*RF_RELEASE/);
     assertRefused(run(CA, { RF_RELEASE_LIVE_FIXTURE: env.RF_RELEASE_LIVE_FIXTURE }), /RF_RELEASE_LIVE_FIXTURE/);
+    assertRefused(run(CA, { RF_RELEASE_TREE_FIXTURE: env.RF_RELEASE_LIVE_FIXTURE }), /RF_RELEASE_TREE_FIXTURE/);
 });
 
 test('with no live differences, step 1 passes and a fixture run stops before the clean build', () => {
@@ -195,4 +196,68 @@ test('a full My Themes (20) is a warning in a dry run, because a real release wo
     const result = run([...CA, '--dry-run'], env);
     assert.equal(result.status, 0, result.output);
     assert.match(result.stdout, /My Themes holds 20 themes.*never deletes themes.*A real release stops here/);
+});
+
+// --- The release guard (ticket 15) ----------------------------------------------------------
+
+test('with today\'s config.json (no rf_* keys, no menu ids) the guard passes', () => {
+    const config = JSON.parse(fs.readFileSync(new URL('../config.json', import.meta.url), 'utf8'));
+    const ca = config.variations.find(variation => variation.name === 'ReelFlies CA');
+    const { env } = fixtures({ live: { ...config.settings, ...ca.settings } });
+    const result = run([...CA, '--dry-run'], { ...env, RF_RELEASE_CONFIG: fileURLToPath(new URL('../config.json', import.meta.url)) });
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.stdout, /rf_\* values to push: none/);
+    assert.match(result.stdout, /guard: pass/);
+});
+
+test('a live rf_quick_add that is off while config.json has it on stops release.sh before the build', () => {
+    const { env } = fixtures({ repo: { rf_quick_add: true }, live: { rf_quick_add: false } });
+    const result = run([...CA, '--dry-run'], env);
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.stdout, /rf_quick_add: live false, config\.json true/);
+    assert.match(result.stderr, /release guard.*nothing was built or pushed/);
+    assert.doesNotMatch(result.output, /Step 2|npm ci|stopped before the clean build/);
+});
+
+test('a switch only in config.json passes and is listed as a new switch', () => {
+    const { env } = fixtures({ caSettings: { rf_cart_state: true } });
+    const result = run([...CA, '--dry-run'], env);
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.stdout, /new switch {2}rf_cart_state/);
+    assert.match(result.stdout, /rf_\* values to push: rf_cart_state = true/);
+});
+
+test('a switch only on the live side stops the release', () => {
+    const { env } = fixtures({ live: { rf_region_prompt: true } });
+    const result = run([...CA, '--dry-run'], env);
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.stdout, /rf_region_prompt is only on the live theme \(true\): removing a switch must be deliberate/);
+});
+
+function treeFixture(ids) {
+    const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'rf-release-test-')), 'tree.json');
+    tempDirs.push(path.dirname(file));
+    fs.writeFileSync(file, JSON.stringify(ids));
+    return file;
+}
+
+test('a set menu id that isn\'t in the channel\'s tree stops the release, naming the id', () => {
+    const { env } = fixtures({ caSettings: { rf_menu_type_ids: '23,77', rf_menu_species_root_id: '' } });
+    const result = run([...CA, '--dry-run'], { ...env, RF_RELEASE_TREE_FIXTURE: treeFixture([23, 24, 25]) });
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.stdout, /rf_menu_type_ids: category 77 isn't in channel 1895766's category tree/);
+});
+
+test('set menu ids that are in the channel\'s tree pass', () => {
+    const { env } = fixtures({ caSettings: { rf_menu_type_ids: '23,24', rf_menu_species_root_id: '25' } });
+    const result = run([...CA, '--dry-run'], { ...env, RF_RELEASE_TREE_FIXTURE: treeFixture([23, 24, 25]) });
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.stdout, /guard: pass/);
+});
+
+test('a set menu id without RF_BC_API_TOKEN stops before any catalogue call, naming the token scope', () => {
+    const { env } = fixtures({ caSettings: { rf_menu_species_root_id: '25' } });
+    const result = run([...CA, '--dry-run'], env);
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.stderr, /RF_BC_API_TOKEN.*Products: read-only/);
 });

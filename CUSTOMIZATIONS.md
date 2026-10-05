@@ -44,7 +44,7 @@ This repo is Cornerstone (`upstream`, bigcommerce/cornerstone) plus ReelFlies co
 | `.github/CODEOWNERS` | Deleted | It named `@bigcommerce/team-trac` | 06 |
 | `config.json` | `variations`: Light, Bold and Warm replaced by "ReelFlies CA" and "ReelFlies US", both with empty settings for now and Light's screenshots as placeholders | One thin variation per storefront, so releases push and activate by name; shared values stay in `settings` | 04 |
 
-New ReelFlies files in upstream folders: `.github/workflows/reelflies-checks.yml`, `.gitleaksignore`, and `RELEASES.md` at the repo root (the release log, written by `scripts/release.sh`; ticket 05). `stencil bundle` zips only `README.md` and `CHANGELOG.md` from the root's Markdown files, so `RELEASES.md` never ships.
+New ReelFlies files in upstream folders: `.github/workflows/reelflies-checks.yml`, `.gitleaksignore`, and `RELEASES.md` at the repo root (the release log, written by `scripts/release.sh`, and the Switch toggles log; tickets 05 and 15). `stencil bundle` zips only `README.md` and `CHANGELOG.md` from the root's Markdown files, so `RELEASES.md` never ships.
 
 `meta/desktop_bold.png`, `mobile_bold.png`, `desktop_warm.png` and `mobile_warm.png` are now unused but still ship in every bundle (about 6 MB). Delete them, and point the variations at their own screenshots, once the skin has screenshots.
 

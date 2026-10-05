@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// The node steps of scripts/release.sh (ticket 05). release.sh calls one step at a time:
+// The node steps of scripts/release.sh (tickets 05 and 15). release.sh calls one step at a time:
 //
-//   node scripts/release.mjs prepare <release.sh arguments>   refusals, then step 1 (capture and diff)
+//   node scripts/release.mjs prepare <release.sh arguments>   refusals, step 1 (capture and diff), the guard
 //   node scripts/release.mjs state <key>                      prints one value from the release state
 //   node scripts/release.mjs validate-config                  step 3: config.json against stencil-cli's schema
 //   node scripts/release.mjs bundle-info <zip>                step 4: records the zip's bytes and sha256
@@ -19,6 +19,8 @@
 //   RF_RELEASE_CONFIG=<file>         a theme config to diff instead of config.json; the run stops
 //                                    before the clean build, because the build would use config.json
 //   RF_RELEASE_LIVE_FIXTURE=<file>   a capture (config.<slug>.live.json shape) instead of the store
+//   RF_RELEASE_TREE_FIXTURE=<file>   a JSON array of the channel's category ids, instead of the
+//                                    catalogue API, for the guard's menu id rule
 
 import { execFileSync } from 'child_process';
 import crypto from 'crypto';
@@ -26,19 +28,23 @@ import fs from 'fs';
 import readline from 'readline';
 import { isDeepStrictEqual } from 'util';
 import { parseReleaseArgs, resolveTarget, USAGE } from './release-args.mjs';
-import { captureLive, describeLiveTheme, isThisFork } from './release-capture.mjs';
+import {
+    captureLive, describeLiveTheme, getStoreHash, isThisFork,
+} from './release-capture.mjs';
 import {
     acceptLiveValues, blockingDifferences, diffSettings, displayValue, effectiveSettings, verifyRelease,
 } from './release-diff.mjs';
+import { checkRelease, menuIdsSet } from './release-guard.mjs';
 import { addReleaseEntry, formatPushSummary, formatReleaseEntry } from './release-log.mjs';
 import { redact } from './release-redact.mjs';
 import { validateThemeConfig } from './release-schema.mjs';
 import { buildPushArgs } from './release-targets.mjs';
+import { fetchChannelCategoryIds, tokenGetJson } from './release-tree-ids.mjs';
 
 const MAX_THEMES = 20; // My Themes holds at most 20; the release never deletes one (-d)
 const MAIN_JS = 'assets/dist/theme-bundle.main.js';
 const RELEASES = 'RELEASES.md';
-const OVERRIDES = ['RF_RELEASE_CONFIG', 'RF_RELEASE_LIVE_FIXTURE'];
+const OVERRIDES = ['RF_RELEASE_CONFIG', 'RF_RELEASE_LIVE_FIXTURE', 'RF_RELEASE_TREE_FIXTURE'];
 
 const inActions = Boolean(process.env.GITHUB_ACTIONS);
 const say = (label, message) => console.log(`${label.padEnd(8)} ${message}`);
@@ -216,6 +222,44 @@ async function diffStep(state, live, config) {
     return blocking.map(entry => entry.key);
 }
 
+// --- prepare: the release guard (ticket 15) -----------------------------------------------
+
+async function readCategoryIds(state, repoSettings) {
+    if (!menuIdsSet(repoSettings)) return null;
+    const fixture = process.env.RF_RELEASE_TREE_FIXTURE;
+    if (fixture) {
+        say('fixture', `category ids from ${fixture} (RF_RELEASE_TREE_FIXTURE)`);
+        return readJson(fixture, 'the category id fixture');
+    }
+    const token = process.env.RF_BC_API_TOKEN;
+    if (!token) {
+        throw new Stop(`a menu id is set, so the guard must read channel ${state.channel}'s category tree: set RF_BC_API_TOKEN to a store API token with Products: read-only (store_v2_products_read_only), created under Settings > Store-level API accounts`);
+    }
+    say('', `Reading channel ${state.channel}'s category tree read-only…`);
+    try {
+        return await fetchChannelCategoryIds({ channelId: state.channel, storeHash: await getStoreHash(), getJson: tokenGetJson(token) });
+    } catch (error) {
+        throw new Stop(`reading channel ${state.channel}'s category tree failed: ${error.message}`);
+    }
+}
+
+async function guardStep(state, live, config) {
+    heading(`Release guard: rf_* switches and menu ids for channel ${state.channel}`);
+    const repoSettings = effectiveSettings(config, state.variation);
+    const categoryIds = await readCategoryIds(state, repoSettings);
+    const result = checkRelease({
+        repoSettings, liveSettings: live.settings, channelId: state.channel, categoryIds,
+    });
+    result.reasons.forEach(reason => say('FAIL', reason));
+    result.notices.forEach(notice => say('note', notice));
+    const values = result.values.map(({ key, value }) => `${key} = ${displayValue(key, value)}`);
+    say('', `rf_* values to push: ${values.length ? values.join(', ') : 'none'}`);
+    result.newSwitches.forEach(key => say('', `new switch  ${key} (only in config.json: its module's first release)`));
+    if (!result.pass) throw new Stop(`release guard: ${result.reasons.length} reason(s) above, so nothing was built or pushed`);
+    say('ok', 'guard: pass');
+    return { values: result.values, newSwitches: result.newSwitches };
+}
+
 async function prepare(argv) {
     const options = readOptions(argv);
     const configPath = process.env.RF_RELEASE_CONFIG || 'config.json';
@@ -245,11 +289,13 @@ async function prepare(argv) {
     checkThemeCount(live.capture.themeCount, state.dryRun);
     const replacing = foreignTheme(state, live, config);
     const overwritten = replacing ? [] : await diffStep(state, live, config);
+    const guard = await guardStep(state, live, config);
     writeState({
         ...state,
         liveFile,
         capture: live.capture,
         step1: { replacing, overwritten, unpublished: !live.capture.savedEqualsActive },
+        guard,
     });
 }
 
@@ -299,6 +345,7 @@ function releaseRecord(state, { themeUuid = null, verified = null } = {}) {
         git: { sha: state.git.sha, branch: state.git.branch },
         bundle: state.bundle,
         step1: state.step1,
+        guard: state.guard,
         verify: verified,
         operator: operator(),
     };
