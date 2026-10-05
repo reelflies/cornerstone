@@ -33,7 +33,7 @@ test('the diff lists changed, live-only and repo-only keys with both values', ()
     assert.deepEqual(diff.repoOnly, [{ key: 'rf_quick_add', repo: true }]);
 });
 
-test('only changed and live-only keys outside rf_* stop step 1; the guard owns rf_* keys', () => {
+test('changed and live-only keys stop step 1, except the rf_* switches, which the guard owns', () => {
     const diff = diffSettings(
         { 'body-bg': '#ffffff', rf_quick_add: true, new_setting: 1 },
         {
@@ -41,6 +41,17 @@ test('only changed and live-only keys outside rf_* stop step 1; the guard owns r
         },
     );
     assert.deepEqual(blockingDifferences(diff).map(entry => entry.key), ['body-bg', 'old_setting']);
+});
+
+test('the menu ids aren\'t switches, so a changed or live-only menu id stops step 1', () => {
+    const diff = diffSettings(
+        { rf_menu_type_ids: '23,24' },
+        { rf_menu_type_ids: '23', rf_menu_species_root_id: '25' },
+    );
+    assert.deepEqual(blockingDifferences(diff), [
+        { key: 'rf_menu_species_root_id', live: '25' },
+        { key: 'rf_menu_type_ids', repo: '23,24', live: '23' },
+    ]);
 });
 
 test('accepting live values writes them into the variation and keeps the file\'s formatting', () => {

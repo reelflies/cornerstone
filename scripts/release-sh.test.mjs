@@ -255,6 +255,32 @@ test('set menu ids that are in the channel\'s tree pass', () => {
     assert.match(result.stdout, /guard: pass/);
 });
 
+test('a live menu id that differs from config.json stops step 1, like any other Theme Styles edit', () => {
+    const { env } = fixtures({ caSettings: { rf_menu_type_ids: '24' }, live: { rf_menu_type_ids: '23' } });
+    const result = run([...CA, '--dry-run'], { ...env, RF_RELEASE_TREE_FIXTURE: treeFixture([23, 24]) });
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.stdout, /changed {4}rf_menu_type_ids: live "23", config\.json "24"/);
+    assert.match(result.stderr, /--accept-live.*--overwrite-live/);
+    assert.doesNotMatch(result.output, /guard: pass|Step 2/);
+});
+
+test('a menu id only on the live side stops step 1, so the push can\'t drop it unannounced', () => {
+    const { env } = fixtures({ live: { rf_menu_species_root_id: '25' } });
+    const result = run([...CA, '--dry-run'], env);
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.stdout, /live only {2}rf_menu_species_root_id: "25"/);
+    assert.doesNotMatch(result.output, /guard: pass/);
+});
+
+test('--overwrite-live lists a differing menu id, and the guard still checks config.json\'s ids', () => {
+    const { env } = fixtures({ caSettings: { rf_menu_type_ids: '24' }, live: { rf_menu_type_ids: '23' } });
+    const result = run([...CA, '--dry-run', '--overwrite-live'], { ...env, RF_RELEASE_TREE_FIXTURE: treeFixture([23, 24]) });
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.stdout, /rf_menu_type_ids: live "23", config\.json "24"/);
+    assert.match(result.stdout, /a real release asks you to type the channel id here, then overwrites these 1 value/);
+    assert.match(result.stdout, /guard: pass/);
+});
+
 test('a set menu id without RF_BC_API_TOKEN stops before any catalogue call, naming the token scope', () => {
     const { env } = fixtures({ caSettings: { rf_menu_species_root_id: '25' } });
     const result = run([...CA, '--dry-run'], env);

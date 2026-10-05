@@ -207,7 +207,7 @@ async function diffStep(state, live, config) {
     const blocking = blockingDifferences(diff);
     if (diff.repoOnly.length) say('new', `${diff.repoOnly.length} setting(s) only in config.json pass: ${diff.repoOnly.map(entry => entry.key).slice(0, 10).join(', ')}`);
     if (!blocking.length) {
-        say('ok', 'no differences from the live saved settings outside rf_* (the release guard checks rf_*)');
+        say('ok', 'no differences from the live saved settings, apart from the rf_* switches (the release guard checks those)');
         return [];
     }
     printEntries(blocking);
@@ -251,7 +251,6 @@ async function guardStep(state, live, config) {
         repoSettings, liveSettings: live.settings, channelId: state.channel, categoryIds,
     });
     result.reasons.forEach(reason => say('FAIL', reason));
-    result.notices.forEach(notice => say('note', notice));
     const values = result.values.map(({ key, value }) => `${key} = ${displayValue(key, value)}`);
     say('', `rf_* values to push: ${values.length ? values.join(', ') : 'none'}`);
     result.newSwitches.forEach(key => say('', `new switch  ${key} (only in config.json: its module's first release)`));

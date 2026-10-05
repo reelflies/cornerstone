@@ -5,8 +5,13 @@
 
 import { isDeepStrictEqual } from 'util';
 
-// Module switches and other ReelFlies values. Step 1 leaves them to the release guard.
-export const isModuleKey = key => key.startsWith('rf_');
+// The menu category ids (ticket 15, rule 2). They aren't switches, so step 1 diffs them like any
+// other setting, and the release guard checks that set ids are in the channel's category tree.
+export const MENU_ID_KEYS = ['rf_menu_type_ids', 'rf_menu_species_root_id'];
+
+// Module switches and other rf_* values: the release guard's rule 1, which no flag overrides.
+// Step 1 leaves them to the guard.
+export const isSwitchKey = key => key.startsWith('rf_') && !MENU_ID_KEYS.includes(key);
 
 export const formatValue = value => JSON.stringify(value);
 
@@ -46,7 +51,7 @@ export function diffSettings(repo, live) {
 
 // Live values a push would overwrite or drop. Repo-only keys are new settings, so they pass.
 export function blockingDifferences(diff) {
-    return [...diff.changed, ...diff.liveOnly].filter(entry => !isModuleKey(entry.key)).sort((a, b) => a.key.localeCompare(b.key));
+    return [...diff.changed, ...diff.liveOnly].filter(entry => !isSwitchKey(entry.key)).sort((a, b) => a.key.localeCompare(b.key));
 }
 
 // Writes live values into the variation's settings, keeping config.json's 2-space formatting.

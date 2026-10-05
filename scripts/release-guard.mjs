@@ -3,7 +3,7 @@
 //
 //   import { checkRelease, menuIdsSet } from './release-guard.mjs';
 //   checkRelease({ repoSettings, liveSettings, channelId, categoryIds })
-//     -> { pass, reasons, newSwitches, values, notices }
+//     -> { pass, reasons, newSwitches, values }
 //
 // repoSettings: config.json's settings for the target variation (base settings, variation on top).
 // liveSettings: the channel's live saved Theme Styles (scripts/release-capture.mjs).
@@ -13,15 +13,14 @@
 // fails, and no flag overrides it. A key only in config.json passes as a new switch (a module's
 // first release). A key only on the live side fails, because removing a switch must be deliberate.
 // Rule 2: rf_menu_type_ids (comma-separated) and rf_menu_species_root_id. Empty passes, because
-// the menu falls back to the stock markup. A set id that isn't in the channel's tree fails.
+// the menu falls back to the stock markup. A set id that isn't in the channel's tree fails. A live
+// menu id that differs from config.json, or exists only on the live side, is step 1's: it stops
+// there like any other Theme Styles edit (scripts/release-diff.mjs blockingDifferences).
 
 import { isDeepStrictEqual } from 'util';
-import { displayValue } from './release-diff.mjs';
-
-export const MENU_ID_KEYS = ['rf_menu_type_ids', 'rf_menu_species_root_id'];
+import { displayValue, isSwitchKey, MENU_ID_KEYS } from './release-diff.mjs';
 
 const has = (settings, key) => Object.prototype.hasOwnProperty.call(settings, key);
-const isSwitch = key => key.startsWith('rf_') && !MENU_ID_KEYS.includes(key);
 const menuIds = value => (value === undefined || value === null ? [] : String(value).split(',').map(id => id.trim()).filter(Boolean));
 
 export function menuIdsSet(settings) {
@@ -31,7 +30,7 @@ export function menuIdsSet(settings) {
 function checkSwitches(repo, live) {
     const reasons = [];
     const newSwitches = [];
-    const keys = [...new Set([...Object.keys(repo), ...Object.keys(live)])].filter(isSwitch).sort();
+    const keys = [...new Set([...Object.keys(repo), ...Object.keys(live)])].filter(isSwitchKey).sort();
     for (const key of keys) {
         if (!has(live, key)) {
             newSwitches.push(key);
@@ -61,12 +60,6 @@ function checkMenuIds(repo, channelId, categoryIds) {
     return reasons;
 }
 
-function menuIdNotices(repo, live) {
-    return MENU_ID_KEYS
-        .filter(key => has(live, key) && has(repo, key) && !isDeepStrictEqual(repo[key], live[key]))
-        .map(key => `${key}: live ${displayValue(key, live[key])}, config.json ${displayValue(key, repo[key])}; the push sets config.json's value`);
-}
-
 export function checkRelease({
     repoSettings, liveSettings, channelId, categoryIds,
 }) {
@@ -78,6 +71,5 @@ export function checkRelease({
         reasons,
         newSwitches: switches.newSwitches,
         values,
-        notices: menuIdNotices(repoSettings, liveSettings),
     };
 }

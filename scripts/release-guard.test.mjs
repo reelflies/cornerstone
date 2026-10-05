@@ -119,10 +119,10 @@ test('set menu ids without the channel\'s category ids fail', () => {
     assert.match(guard({ repo: { rf_menu_species_root_id: '40' }, categoryIds: null }).reasons[0], /category tree wasn't read/);
 });
 
-test('menu ids aren\'t switches: a live value that differs is a notice, and the push sets config.json\'s', () => {
+test('menu ids aren\'t switches: a live value that differs is left to step 1, which stops on it', () => {
     const result = guard({ repo: { rf_menu_type_ids: '23' }, live: { rf_menu_type_ids: '24' } });
     assert.equal(result.pass, true);
-    assert.deepEqual(result.notices, ['rf_menu_type_ids: live "24", config.json "23"; the push sets config.json\'s value']);
+    assert.deepEqual(result.reasons, []);
 });
 
 test('the guard runs unchanged for another channel and its tree', () => {

@@ -82,7 +82,7 @@ The targets are in `scripts/release-targets.mjs`. Any channel that isn't listed 
 - **The channel runs another theme.** ReelFlies_CA runs Cavio until the first push. A diff against another theme means nothing, so the release stops.
   - Rerun with `--first-release` to replace that theme. The release reports the theme being replaced, which keeps its own Theme Styles in My Themes.
   - `--first-release` is refused on a channel that already runs this fork, because it would skip the diff.
-- **A live value outside `rf_*` differs from `config.json`.** The release lists each changed or live-only key with both values. Settings that only `config.json` has are new, so they pass. The `rf_*` keys are the release guard's. Rerun with one of:
+- **A live value differs from `config.json`.** The release lists each changed or live-only key with both values. Settings that only `config.json` has are new, so they pass. The `rf_*` module switches are the release guard's, so step 1 skips them. The two menu ids aren't switches, so step 1 checks them like any other setting. Rerun with one of:
   - `--accept-live`, which copies the live values of every differing key, `rf_*` included, into the variation's `settings` in `config.json`, keeping its formatting, then stops. Review the change with `git diff config.json`, commit it, and rerun. In a dry run it shows the values and writes nothing.
   - `--overwrite-live`, which lists the keys and asks you to type the channel id, then lets the push overwrite them. The overwritten keys go into the `RELEASES.md` entry. A dry run lists them and asks nothing.
 - **The channel has unpublished Theme Styles edits** (its saved configuration differs from the published one). The release says so and diffs against the saved settings, which a push overwrites too.
@@ -102,7 +102,7 @@ The release guard (ticket 15, `scripts/release-guard.mjs`) runs after step 1 and
 
 - An empty id passes, because the menu then falls back to the stock markup. This keeps prelaunch pushes working before tree 4 exists.
 - A set id that isn't in the target channel's category tree stops the release, naming the id. One bad id in `rf_menu_type_ids` stops the whole push.
-- A live menu id that differs from `config.json` is only a note: the push sets `config.json`'s value.
+- A live menu id that differs from `config.json`, or exists only on the live theme, stops step 1 like any other Theme Styles edit. Clear it with `--accept-live` or `--overwrite-live`.
 
 **The token for rule 2.** When a menu id is set, the release reads the channel's category tree with two read-only calls: `GET /v3/catalog/trees?channel_id:in=<channel>`, then every page of `GET /v3/catalog/trees/categories?tree_id:in=<tree>`.
 
