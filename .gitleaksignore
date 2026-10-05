@@ -1,0 +1,2 @@
+# Upstream Cornerstone history (2015), not ours: a CI registry token in .travis.yml.
+e4f49548ccec5927690ecd8d198d7675a1da9e29:.travis.yml:generic-api-key:13
