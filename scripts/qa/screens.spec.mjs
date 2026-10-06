@@ -22,10 +22,15 @@ import {
 import {
     PAGES, dismissCookieBanner, expect, screenshotStylePath, storefrontPage, test,
 } from './fixtures.mjs';
+import { shotAnnotation, themeShot } from './review/manifest.mjs';
 
 for (const [template, pagePath] of Object.entries(PAGES)) {
     test(`${template} (${pagePath}) matches its baseline`, async ({ page }, testInfo) => {
         const baseline = testInfo.snapshotPath(BASELINE_SET, `${template}.png`, { kind: 'screenshot' });
+        // The review pages read every shot from scripts/qa/results/manifest.json (W0-10).
+        testInfo.annotations.push(shotAnnotation(themeShot({
+            template, pagePath, baseline, testInfo, channel: QA_CHANNEL, variation: QA_VARIATION,
+        })));
         if (testInfo.config.updateSnapshots === 'none' && !fs.existsSync(baseline)) {
             throw new Error(`there is no ${template} baseline for channel ${QA_CHANNEL}, "${QA_VARIATION}" at ${testInfo.project.name}: ${path.relative(ROOT, baseline)} doesn't exist. `
                 + `Make it with \`QA_CHANNEL=${QA_CHANNEL} QA_VARIATION="${QA_VARIATION}" npm run qa:screens -- --update-snapshots\`, then review the PNG and commit it.`);
