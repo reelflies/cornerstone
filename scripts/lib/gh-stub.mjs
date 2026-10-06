@@ -20,7 +20,14 @@ const REPO = 'reelflies/reelflies-cornerstone';
 const args = process.argv.slice(2);
 fs.appendFileSync(process.env.RF_GH_STUB_LOG, JSON.stringify(args) + '\\n');
 const fx = JSON.parse(fs.readFileSync(process.env.RF_GH_STUB, 'utf8'));
-const out = value => { process.stdout.write(typeof value === 'string' ? value : JSON.stringify(value)); process.exit(0); };
+// A pipe write is asynchronous on macOS, and exit would cut a long answer short, so write it all first.
+const out = value => {
+    const data = Buffer.from(typeof value === 'string' ? value : JSON.stringify(value));
+    for (let at = 0; at < data.length;) {
+        try { at += fs.writeSync(1, data, at); } catch (error) { if (error.code !== 'EAGAIN') throw error; }
+    }
+    process.exit(0);
+};
 const fail = (message, code = 1) => { process.stderr.write(message + '\\n'); process.exit(code); };
 const flag = (...names) => { const i = args.findIndex(a => names.includes(a)); return i < 0 ? undefined : args[i + 1]; };
 

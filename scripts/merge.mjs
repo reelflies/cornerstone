@@ -7,13 +7,14 @@
 //
 //   1 the PR is open, not a draft, targets master and comes from this repo
 //   2 its branch contains master's tip
-//   3 every CI check on the head sha passed, and "checks" and "baseline-scope" ran
+//   3 every CI check on the head sha passed, and "checks" and "baseline-scope" succeeded
 //   4 the sign-off statuses are "success" on the head sha: rf/gates, rf/standards, rf/spec
 //     and rf/skeptic, or rf/review alone for a docs-only PR; and no other status failed
 //   5 a PR that touches a guarded path (scripts/guarded-paths.txt, master's copy and this
 //     checkout's) also has rf/safety
 //   6 no review thread is unresolved, and no reviewer asked for changes
-//   7 the PR body's "Baselines:" line covers every changed baseline (check-baseline-scope.mjs)
+//   7 GitHub listed every file the PR changes, so no path goes unseen
+//   8 the PR body's "Baselines:" line covers every changed baseline (check-baseline-scope.mjs)
 
 import fs from 'fs';
 import path from 'path';
@@ -23,15 +24,16 @@ import {
 } from './lib/gh.mjs';
 import { GUARDED_PATHS_FILE, guardedFiles, parseGuardedPaths } from './lib/guarded-paths.mjs';
 import { isMain } from './lib/is-main.mjs';
-import {
-    LockHeldError, acquireLock, lockRoot, readLockOwner,
-} from './lib/lock.mjs';
+import { acquireLock, lockRoot, readLockOwner } from './lib/lock.mjs';
 
 export const SIGN_OFFS = ['rf/gates', 'rf/standards', 'rf/spec', 'rf/skeptic'];
 export const DOCS_SIGN_OFF = 'rf/review';
 export const SAFETY = 'rf/safety';
+// These two must succeed. Any other check may also finish neutral or skipped.
 export const REQUIRED_CHECKS = ['checks', 'baseline-scope'];
 const PASSING_CONCLUSIONS = ['success', 'neutral', 'skipped'];
+// GitHub's pulls/<n>/files lists at most this many files.
+export const FILES_API_LIMIT = 3000;
 
 const USAGE = 'usage: scripts/merge.sh [--check | --lock-held] <pr number>';
 
@@ -52,7 +54,9 @@ export function parseArgs(argv) {
 }
 
 // Markdown anywhere, or anything under docs/: research notes, the spike doc, release logs.
-export const isDocsOnly = files => files.length > 0 && files.every(file => file.endsWith('.md') || file.startsWith('docs/'));
+// A CLAUDE.md or AGENTS.md steers agents, so it is never docs, wherever it is.
+const AGENT_INSTRUCTIONS = /(^|\/)(claude|claude\.local|agents)\.md$/i;
+export const isDocsOnly = files => files.length > 0 && files.every(file => !AGENT_INSTRUCTIONS.test(file) && (file.endsWith('.md') || file.startsWith('docs/')));
 
 const short = sha => String(sha || '').slice(0, 7);
 const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
@@ -79,12 +83,15 @@ export function gather(number) {
             return undefined;
         }
     };
-    facts.pr = read(`PR #${number}`, () => ghPr(['view', String(number), '--json', 'number,state,isDraft,baseRefName,headRefName,headRefOid,isCrossRepository,title,url,body,reviewDecision']));
+    facts.pr = read(`PR #${number}`, () => ghPr(['view', String(number), '--json', 'number,state,isDraft,baseRefName,headRefName,headRefOid,isCrossRepository,title,url,body,reviewDecision,changedFiles']));
     if (!facts.pr) return facts;
     const sha = facts.pr.headRefOid;
     facts.compare = read(`how ${short(sha)} compares with master`, () => ghApi(`compare/master...${sha}`));
-    facts.files = read(`PR #${number}'s files`, () => ghApi(`pulls/${number}/files?per_page=100`, ['--paginate', '--slurp'])
-        .flat().flatMap(file => [file.filename, file.previous_filename].filter(Boolean)));
+    const listed = read(`PR #${number}'s files`, () => ghApi(`pulls/${number}/files?per_page=100`, ['--paginate', '--slurp']).flat());
+    if (listed) {
+        facts.listedFiles = listed.length;
+        facts.files = listed.flatMap(file => [file.filename, file.previous_filename].filter(Boolean));
+    }
     facts.checkRuns = read(`the CI checks on ${short(sha)}`, () => {
         const answer = ghApi(`commits/${sha}/check-runs?per_page=100`);
         if (answer.total_count > answer.check_runs.length) throw new Error(`${answer.total_count} check runs, more than one page of 100`);
@@ -145,10 +152,28 @@ export function evaluate(facts) {
         }
         if (facts.checkRuns.length) {
             for (const name of REQUIRED_CHECKS) {
-                if (!facts.checkRuns.some(check => check.name === name)) refusals.push(`check "${name}" didn't run on ${head}`);
+                const runs = facts.checkRuns.filter(check => check.name === name);
+                if (!runs.length) refusals.push(`check "${name}" didn't run on ${head}`);
+                for (const check of runs) {
+                    if (check.status === 'completed' && check.conclusion !== 'success' && PASSING_CONCLUSIONS.includes(check.conclusion)) {
+                        refusals.push(`check "${name}" is ${check.conclusion} on ${head}; merge.sh needs it to succeed: ${check.html_url}`);
+                    }
+                }
             }
         }
         if (refusals.length === ciBefore) oks.push(`CI passed on ${head} (${facts.checkRuns.map(check => check.name).join(', ')})`);
+    }
+
+    if (facts.files) {
+        // The files API stops at 3000, so a path past that would go unseen: no rf/safety for a
+        // guarded file, no scope check for a baseline.
+        if (!Number.isInteger(pr.changedFiles)) {
+            refusals.push(`couldn't tell how many files PR #${pr.number} changes: GitHub's answer has no changedFiles`);
+        } else if (pr.changedFiles >= FILES_API_LIMIT) {
+            refusals.push(`PR #${pr.number} changes ${pr.changedFiles} files, and GitHub lists at most ${FILES_API_LIMIT}, so merge.sh can't be sure it sees every path: split the PR`);
+        } else if (facts.listedFiles !== pr.changedFiles) {
+            refusals.push(`GitHub lists ${facts.listedFiles} of the ${pr.changedFiles} files PR #${pr.number} changes, so merge.sh can't see every path: run it again, or split the PR`);
+        }
     }
 
     const files = facts.files || [];
@@ -196,7 +221,13 @@ export function evaluate(facts) {
 }
 
 function holdsLock(number) {
-    const dir = path.join(lockRoot(), 'merge');
+    let root;
+    try {
+        root = lockRoot();
+    } catch (error) {
+        return error.message;
+    }
+    const dir = path.join(root, 'merge');
     if (!fs.existsSync(dir)) return `--lock-held, but no merge lock is held (${dir})`;
     const owner = readLockOwner(dir) || '';
     if (!new RegExp(`PR #${number}(?!\\d)`).test(owner)) return `--lock-held, but the merge lock's owner.txt doesn't name PR #${number} (it says: ${owner.split('\n').join(' | ') || 'nothing'}); write "PR #${number}" in it when you take the lock`;
@@ -255,7 +286,7 @@ function main(argv) {
     try {
         lock = acquireLock('merge', `scripts/merge.sh PR #${options.pr}`);
     } catch (error) {
-        if (!(error instanceof LockHeldError)) throw error;
+        // Held by someone else, RF_LOCK_ROOT outside a test, or a lock folder it can't write.
         refuse([error.message]);
         return 1;
     }

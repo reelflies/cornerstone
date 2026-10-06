@@ -66,13 +66,14 @@ function good() {
     };
 }
 
-function run(args, fixture = good()) {
+function run(args, fixture = good(), { env: extra = {} } = {}) {
+    if (fixture.pr && fixture.pr.changedFiles === undefined) fixture.pr.changedFiles = (fixture.files || []).length;
     gh.write(fixture);
     const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('RF_')));
     const result = spawnSync('bash', [SCRIPT, ...args], {
         encoding: 'utf8',
         env: {
-            ...env, ...gh.env, RF_LOCK_ROOT: LOCKS, PATH: `${gh.dir}${path.delimiter}${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH}`,
+            ...env, ...gh.env, RF_LOCK_ROOT: LOCKS, PATH: `${gh.dir}${path.delimiter}${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH}`, ...extra,
         },
         timeout: 30000,
     });
@@ -130,6 +131,34 @@ test('a docs-only PR merges with CI and rf/review alone', () => {
     assert.ok(merged(result.calls));
 });
 
+test('a release log changes RELEASES.md, which the release tooling reads, so it needs rf/safety beside rf/review', () => {
+    const log = fixture => {
+        fixture.files = [{ filename: 'RELEASES.md', status: 'modified' }];
+        fixture.pr.body = 'Release log.\n\nBaselines: none\n';
+    };
+    assertRefused(run(['12'], mutate(fixture => {
+        log(fixture);
+        fixture.statuses = statuses(['rf/review']);
+    })), /guarded paths \(RELEASES\.md\), so it needs rf\/safety too/);
+    const result = run(['12'], mutate(fixture => {
+        log(fixture);
+        fixture.statuses = statuses(['rf/review', 'rf/safety']);
+    }));
+    assert.equal(result.status, 0, result.output);
+    assert.ok(merged(result.calls));
+});
+
+test('a CLAUDE.md or AGENTS.md anywhere steers agents, so it is never docs-only', () => {
+    assertRefused(run(['12'], mutate(fixture => {
+        fixture.files = [{ filename: 'docs/qa/CLAUDE.md', status: 'added' }];
+        fixture.statuses = statuses(['rf/review']);
+    })), /rf\/gates has no status/);
+    assertRefused(run(['12'], mutate(fixture => {
+        fixture.files = [{ filename: 'AGENTS.md', status: 'added' }];
+        fixture.statuses = statuses([...FULL]);
+    })), /guarded paths \(AGENTS\.md\), so it needs rf\/safety too/);
+});
+
 test('a docs-only PR with no rf/review is refused', () => {
     assertRefused(run(['12'], mutate(fixture => {
         fixture.files = [{ filename: 'docs/x.md', status: 'added' }];
@@ -164,6 +193,15 @@ const refusals = [
     ['a failed CI check', fixture => { fixture.checkRuns[0].conclusion = 'failure'; }, /check "checks" is failure/],
     ['a CI check still running', fixture => { fixture.checkRuns[0].status = 'in_progress'; fixture.checkRuns[0].conclusion = null; }, /check "checks" hasn't finished/],
     ['no baseline-scope check', fixture => { fixture.checkRuns.pop(); }, /check "baseline-scope" didn't run on 0123456/],
+    ['a skipped checks job', fixture => { fixture.checkRuns[0].conclusion = 'skipped'; }, /check "checks" is skipped on 0123456; merge\.sh needs it to succeed/],
+    ['a neutral baseline-scope check', fixture => { fixture.checkRuns[1].conclusion = 'neutral'; }, /check "baseline-scope" is neutral on 0123456; merge\.sh needs it to succeed/],
+    ['a file list GitHub cut short', fixture => { fixture.pr.changedFiles = 3; }, /GitHub lists 2 of the 3 files PR #12 changes/],
+    ['a PR GitHub can\'t list in full', fixture => {
+        fixture.files = Array.from({ length: 3000 }, (_, i) => ({ filename: `node_modules/x/${i}.js`, status: 'added' }));
+        fixture.pr.body = 'Baselines: none';
+    }, /PR #12 changes 3000 files.*at most 3000/],
+    ['a PR view with no changedFiles', fixture => { fixture.pr.changedFiles = null; }, /couldn't tell how many files PR #12 changes/],
+    ['a guarded folder spelled in another case', fixture => { fixture.files.push({ filename: '.Claude/settings.json', status: 'added' }); }, /guarded paths \(\.Claude\/settings\.json\), so it needs rf\/safety too/],
     ['a missing sign-off', fixture => { fixture.statuses = statuses(['rf/gates', 'rf/standards', 'rf/skeptic']); }, /rf\/spec has no status on 0123456/],
     ['a failed sign-off', fixture => { fixture.statuses[3].state = 'failure'; }, /rf\/skeptic is failure on 0123456: rf\/skeptic verdict/],
     ['a pending gate status', fixture => { fixture.statuses[0].state = 'pending'; }, /rf\/gates is pending/],
@@ -185,6 +223,23 @@ for (const [name, change, reason] of refusals) {
         assertRefused(run(['12'], mutate(change)), reason);
     });
 }
+
+test('a CI check other than the two required ones may be skipped or neutral', () => {
+    const result = run(['12'], mutate(fixture => {
+        fixture.checkRuns.push({
+            name: 'optional', status: 'completed', conclusion: 'skipped', html_url: 'https://github.com/x/3',
+        });
+    }));
+    assert.equal(result.status, 0, result.output);
+});
+
+test('RF_LOCK_ROOT is a test seam: outside node --test merge.sh refuses it and takes no lock', () => {
+    const home = path.join(root, 'home');
+    fs.mkdirSync(home, { recursive: true });
+    const result = run(['12'], good(), { env: { NODE_TEST_CONTEXT: '', HOME: home } });
+    assertRefused(result, /RF_LOCK_ROOT is a test seam/);
+    assert.deepEqual(fs.readdirSync(home), [], 'nothing was made under HOME');
+});
 
 test('with no guarded list on master yet, this checkout\'s list applies', () => {
     const result = run(['12'], mutate(fixture => {
