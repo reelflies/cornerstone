@@ -23,9 +23,10 @@ const age = (dir, minutes) => {
     fs.utimesSync(path.join(dir, 'owner.txt'), then, then);
 };
 
-test('the locks live in ~/reelflies/theme/.locks unless RF_LOCK_ROOT moves them', () => {
+test('the locks live in ~/reelflies/theme/.locks, and RF_LOCK_ROOT moves them only under node --test', () => {
     assert.equal(lockRoot({}), path.join(os.homedir(), 'reelflies', 'theme', '.locks'));
-    assert.equal(lockRoot({ RF_LOCK_ROOT: '/tmp/x' }), '/tmp/x');
+    assert.equal(lockRoot({ RF_LOCK_ROOT: '/tmp/x', NODE_TEST_CONTEXT: 'child-v8' }), '/tmp/x');
+    assert.throws(() => lockRoot({ RF_LOCK_ROOT: '/tmp/x' }), /RF_LOCK_ROOT is a test seam.*unset it/);
     assert.equal(STALE_MINUTES, 45);
 });
 
@@ -99,4 +100,36 @@ test('a lock folder with no owner.txt goes stale by the folder\'s own age', () =
     const then = new Date(Date.now() - (STALE_MINUTES + 1) * 60000);
     fs.utimesSync(dir, then, then);
     acquireLock('merge', 'x', { root }).release();
+});
+
+test('of two processes breaking the same stale lock, only one holds it, and the other leaves it alone', () => {
+    const root = tempRoot();
+    const dir = path.join(root, 'merge');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'owner.txt'), `W0-4 2026-10-06T08:00\npid ${DEAD_PID} on ${os.hostname()}\n`);
+    age(dir, STALE_MINUTES + 1);
+    let first;
+    // The second process judges the lock stale; before it breaks it, the first breaks it and takes it.
+    const breakFirst = () => { first = acquireLock('merge', 'first PR #1', { root }); };
+    assert.throws(() => acquireLock('merge', 'second PR #2', { root, beforeBreak: breakFirst }), error => {
+        assert.ok(error instanceof LockHeldError, error.message);
+        assert.match(error.message, /merge lock/);
+        return true;
+    });
+    assert.ok(first, 'the first process took the lock');
+    assert.match(readLockOwner(dir), /^first PR #1$/m, 'the first holder\'s lock is untouched');
+    assert.deepEqual(fs.readdirSync(root), ['merge'], 'no tombstone is left behind');
+    first.release();
+    assert.ok(!fs.existsSync(dir));
+});
+
+test('release removes only the lock it took', () => {
+    const root = tempRoot();
+    const lock = acquireLock('merge', 'mine', { root });
+    fs.rmSync(lock.dir, { recursive: true, force: true }); // someone broke it by hand
+    const other = acquireLock('merge', 'theirs', { root });
+    lock.release();
+    assert.match(readLockOwner(other.dir), /^theirs$/m, 'the new holder keeps its lock');
+    other.release();
+    assert.ok(!fs.existsSync(other.dir));
 });
