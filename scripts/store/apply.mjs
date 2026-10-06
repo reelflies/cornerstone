@@ -581,10 +581,14 @@ async function main(argv) {
     }
     const secrets = [];
     const say = line => console.log(redact(line, secrets));
+    let lock = null;
     try {
         const root = storeRoot();
         const locked = lockedProblem(root);
         if (locked) throw new Refused(locked);
+        // One apply at a time, from its first read to its last row.
+        lock = acquireLock('store-write', `scripts/store/apply.mjs ${path.basename(files[0])}`, { releaseOnExit: true });
+        if (lock.brokeStale) say(lock.brokeStale);
         const planText = fs.readFileSync(files[0], 'utf8');
         const plan = readPlan(planText);
         const phase = phaseOn(readCalendar());
@@ -606,30 +610,26 @@ async function main(argv) {
         const storeHash = await commandStoreHash();
         if (storeHash !== plan.store_hash) throw new Refused(`the plan is for store ${plan.store_hash}, and this checkout's store is ${storeHash}`);
         const client = createClient({ storeHash, token, fetch: await commandFetch(root) });
-        const lock = acquireLock('store-write', `scripts/store/apply.mjs ${path.basename(files[0])}`, { releaseOnExit: true });
-        try {
-            if (lock.brokeStale) say(lock.brokeStale);
-            const result = await applyPlan({
-                planText,
-                client,
-                phase,
-                root,
-                operator: approved ? 'Shaun at his terminal (--approved)' : operatorName(),
-                approved,
-                confirm: approved ? ({ planSha }) => confirmPlanSha({ planSha }) : undefined,
-                log: say,
-            });
-            if (result.outcome === 'applied') say(`applied: ${result.count} request${result.count === 1 ? '' : 's'} on ${approved ? 'store-wide' : CHANNEL}; the log is ${path.join(root, 'log.jsonl')}`);
-            else say(`STOP     ${result.outcome} at request ${result.request + 1}: ${result.message}`);
-            if (approved) SMOKE_TESTS.forEach(say);
-            return result.outcome === 'applied' ? 0 : 1;
-        } finally {
-            lock.release();
-        }
+        const result = await applyPlan({
+            planText,
+            client,
+            phase,
+            root,
+            operator: approved ? 'Shaun at his terminal (--approved)' : operatorName(),
+            approved,
+            confirm: approved ? ({ planSha }) => confirmPlanSha({ planSha }) : undefined,
+            log: say,
+        });
+        if (result.outcome === 'applied') say(`applied: ${result.count} request${result.count === 1 ? '' : 's'} on ${approved ? 'store-wide' : CHANNEL}; the log is ${path.join(root, 'log.jsonl')}`);
+        else say(`STOP     ${result.outcome} at request ${result.request + 1}: ${result.message}`);
+        if (approved) SMOKE_TESTS.forEach(say);
+        return result.outcome === 'applied' ? 0 : 1;
     } catch (error) {
-        const tag = error.name === 'Refused' ? 'REFUSED' : 'STOP';
+        const tag = ['Refused', 'LockHeldError'].includes(error.name) ? 'REFUSED' : 'STOP';
         error.message.split('\n').forEach(line => console.error(redact(`${tag.padEnd(8)} ${line}`, secrets)));
         return 1;
+    } finally {
+        if (lock) lock.release();
     }
 }
 

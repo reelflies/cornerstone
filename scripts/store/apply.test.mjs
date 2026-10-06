@@ -10,6 +10,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { PassThrough } from 'node:stream';
 import { fileURLToPath } from 'node:url';
+import { acquireLock, limitMinutes } from '../lib/lock.mjs';
 import { parseCalendar, phaseOn } from '../lib/release-calendar.mjs';
 import {
     SMOKE_TESTS, applyPlan, askApprovedToken, confirmPlanSha, lockedProblem, readPlan,
@@ -729,6 +730,21 @@ test('apply.mjs refuses to write from a checkout whose store tooling isn\'t orig
     assert.match(result.stderr, /REFUSED +this checkout's store tooling differs from origin\/master's \(scripts\/store\/allowlist\.mjs\)/);
     assert.ok(!fs.existsSync(path.join(root, 'fixture-calls.jsonl')), 'nothing was read or written');
     assert.deepEqual(readLogRows(root), []);
+});
+
+test('one apply at a time: a held store-write lock refuses a second apply, naming its holder, before anything is read', () => {
+    const root = newRoot();
+    const held = acquireLock('store-write', 'scripts/store/apply.mjs other-plan.json', { root: path.join(root, 'locks'), ticket: '46' });
+    try {
+        const result = cli(APPLY, [path.join(root, 'no-such-plan.json')], { root });
+        assert.equal(result.status, 1, result.output);
+        assert.match(result.stderr, /REFUSED +the store-write lock is held by scripts\/store\/apply\.mjs other-plan\.json \(ticket 46\), pid \d+ on .*It isn't stale/);
+        assert.doesNotMatch(result.output, /no-such-plan/);
+    } finally {
+        held.release();
+    }
+    // Its stale limit is the locks' default, as the registers say (scripts/lib/lock.mjs, the QA README).
+    assert.equal(limitMinutes('store-write'), 45);
 });
 
 test('apply.mjs refuses while LOCKED exists, and plan.mjs warns of it', () => {
