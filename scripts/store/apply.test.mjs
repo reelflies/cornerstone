@@ -4,7 +4,8 @@
 
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { once } from 'node:events';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -173,6 +174,97 @@ test('a settings write is applied once its proof holds, and part 3 reads the glo
     const rows = readLogRows(root);
     assert.deepEqual(rows.map(row => [row.row, row.action, row.outcome]), [['intent', 'settings', undefined], ['result', 'settings', 'ok']]);
     assert.equal(lockedProblem(root), null);
+});
+
+// --- A lifted settings write is locked while it is in flight --------------------------------------
+
+test('LOCKED is on disk before a lifted settings PUT is sent, and removed once part 3 holds', async () => {
+    const { text } = await makePlan([labelOption], inventoryRoutes());
+    const root = newRoot();
+    let whileInFlight = null;
+    const { run } = await apply(text, inventoryRoutes({
+        'GET /v3/settings/inventory?channel_id=1895766': [{ body: inventory.channel_1895766 }, { body: inventory.channel_1895766_after }],
+        'PUT /v3/settings/inventory?channel_id=1895766': () => {
+            whileInFlight = lockedProblem(root);
+            return { body: inventory.put_response };
+        },
+    }), { root });
+    assert.equal((await run).outcome, 'applied');
+    assert.match(whileInFlight || '', /a settings write to \/v3\/settings\/inventory was in flight: part 3 isn't proved yet/);
+    assert.equal(lockedProblem(root), null, 'part 3 held, so the in-flight lock is gone');
+});
+
+test('a LOCKED that isn\'t this run\'s in-flight file is never removed, even when part 3 holds', async () => {
+    const { text } = await makePlan([labelOption], inventoryRoutes());
+    const root = newRoot();
+    const { run } = await apply(text, inventoryRoutes({
+        'GET /v3/settings/inventory?channel_id=1895766': [{ body: inventory.channel_1895766 }, { body: inventory.channel_1895766_after }],
+        'PUT /v3/settings/inventory?channel_id=1895766': () => {
+            fs.writeFileSync(path.join(root, 'LOCKED'), JSON.stringify({ reason: 'written by someone else' }));
+            return { body: inventory.put_response };
+        },
+    }), { root });
+    assert.equal((await run).outcome, 'applied');
+    assert.match(lockedProblem(root), /written by someone else/);
+});
+
+// The apply in a child process, as an agent's Bash call runs it: its PUT never answers, and the
+// child is killed (a tool's timeout, Ctrl-C, a closed session) before part 3 is read.
+const CHILD_APPLY = `
+import fs from 'node:fs';
+import { applyPlan } from ${JSON.stringify(new URL('./apply.mjs', import.meta.url).href)};
+import { acquireLock } from ${JSON.stringify(new URL('../lib/lock.mjs', import.meta.url).href)};
+import { parseCalendar, phaseOn } from ${JSON.stringify(new URL('../lib/release-calendar.mjs', import.meta.url).href)};
+import { createClient } from ${JSON.stringify(new URL('./client.mjs', import.meta.url).href)};
+import { FAKE_TOKEN, STORE_HASH, fixtureFetch } from ${JSON.stringify(new URL('./fixtures/store.mjs', import.meta.url).href)};
+const { planText, root, routes } = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+const answer = fixtureFetch(routes);
+const fetch = (url, init = {}) => {
+    if ((init.method || 'GET') === 'GET') return answer(url, init);
+    process.stdout.write('PUT sent\\n');
+    setInterval(() => {}, 1000);
+    return new Promise(() => {});
+};
+acquireLock('store-write', 'a child apply', { root: root + '/locks', ticket: '46', releaseOnExit: true });
+const phase = phaseOn(parseCalendar({ flip: null, status: 'provisional', source: 'ticket 10' }), '2026-10-06');
+await applyPlan({ planText, client: createClient({ storeHash: STORE_HASH, token: FAKE_TOKEN, fetch }), phase, root, operator: 'a child apply' });
+`;
+
+test('an apply killed while its lifted settings PUT hangs leaves LOCKED, so the next apply refuses', async () => {
+    const { text } = await makePlan([labelOption], inventoryRoutes());
+    const root = newRoot();
+    fs.mkdirSync(root, { recursive: true });
+    const input = path.join(root, 'child-input.json');
+    fs.writeFileSync(input, JSON.stringify({ planText: text, root, routes: inventoryRoutes() }));
+    const script = path.join(root, 'child-apply.mjs');
+    fs.writeFileSync(script, CHILD_APPLY);
+    const child = spawn(process.execPath, [script, input], { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stderr = '';
+    child.stderr.on('data', chunk => { stderr += chunk; });
+    const exited = once(child, 'exit');
+    await new Promise((resolve, reject) => {
+        let stdout = '';
+        const timer = setTimeout(() => reject(new Error(`the child sent no PUT within 20 s: ${stderr}`)), 20000);
+        child.stdout.on('data', chunk => {
+            stdout += chunk;
+            if (stdout.includes('PUT sent')) {
+                clearTimeout(timer);
+                resolve();
+            }
+        });
+        exited.then(([code]) => {
+            clearTimeout(timer);
+            reject(new Error(`the child exited ${code} before its PUT: ${stderr}`));
+        });
+    });
+    child.kill('SIGTERM');
+    await exited;
+    assert.deepEqual(readLogRows(root).map(row => [row.row, row.action]), [['intent', 'settings']], 'no result row: the run died mid-write');
+    assert.ok(!fs.existsSync(path.join(root, 'locks', 'store-write')), 'the store-write lock went with the process');
+    assert.match(lockedProblem(root), /a settings write to \/v3\/settings\/inventory was in flight: part 3 isn't proved yet/);
+    const next = await apply(text, inventoryRoutes(), { root });
+    await assert.rejects(next.run, /LOCKED exists: every apply refuses until Shaun removes it \(a settings write to \/v3\/settings\/inventory was in flight/);
+    assert.deepEqual(next.calls, []);
 });
 
 test('a settings write whose plan has no proof is refused, even when the digest was remade to match', async () => {

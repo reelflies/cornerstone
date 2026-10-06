@@ -9,8 +9,8 @@
 // In order, it:
 //
 // 1. refuses while ~/reelflies/store-snapshots/LOCKED exists (a failed or unproved part 3, a
-//    write whose response named another channel, or a script read back enabled). Shaun reads
-//    it, checks the store and removes it.
+//    settings write that never got as far as part 3, a write whose response named another
+//    channel, or a script read back enabled). Shaun reads it, checks the store and removes it.
 // 2. refuses a file that isn't a plan, or whose digest doesn't match. The digest catches an edit,
 //    but anyone could recompute it, so nothing below trusts the plan's own checks:
 // 3. checks every request again: the allowlist, the channel, and today's release calendar.
@@ -28,6 +28,9 @@
 //    - Part 3 is read after every settings write that was sent, whatever it answered, even
 //      none: a PUT that times out may still have landed. Each GET after a write is tried up
 //      to 3 times.
+//    - A lifted settings write is locked while it is in flight: LOCKED is written before the
+//      PUT is sent and removed only once part 3 holds. An apply that dies in between, however
+//      it dies, leaves the helper locked.
 //    - A failed part 3 puts back the snapshot's values at once (1895766's own first, then the
 //      global value and each live channel that changed), stops, and writes LOCKED.
 //    - A part 3 that can't be read (a scope still unreadable after its tries) is unproved: the
@@ -44,6 +47,7 @@
 // One apply runs at a time on this Mac: the store-write lock (scripts/lib/lock.mjs). And only
 // origin/master's store tooling writes (tooling.mjs): run it from the main clone at origin/master.
 
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
@@ -107,6 +111,31 @@ function writeLocked(root, details) {
         ...details,
         clear: 'Shaun removes this file once he has read it and checked the store. Until then every apply refuses, and the review page puts this failure first.',
     }, null, 2)}\n`, { mode: 0o600 });
+}
+
+// A lifted settings write is locked while it is in flight: LOCKED goes on disk before the PUT is
+// sent, and comes off only once part 3 holds, and only if it is still this run's file. So an
+// apply that dies in between (killed by a tool's timeout, Ctrl-C, a closed session, the Mac
+// sleeping, even SIGKILL) leaves the helper locked for Shaun, instead of a leak that the next
+// plan would take as its baseline.
+function writeInFlight(root, runId, details) {
+    fs.mkdirSync(root, { recursive: true, mode: 0o700 });
+    fs.writeFileSync(path.join(root, LOCKED_NAME), `${JSON.stringify({
+        ...details,
+        in_flight: runId,
+        clear: 'This apply stopped before part 3 was proved. Shaun checks the global value and channels 1 and 1855224 against the snapshot named here (log.jsonl has its intent row), then removes this file. Until then every apply refuses.',
+    }, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+}
+
+function clearInFlight(root, runId) {
+    const file = path.join(root, LOCKED_NAME);
+    let current;
+    try {
+        current = JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch {
+        return;
+    }
+    if (current && current.in_flight === runId) fs.rmSync(file);
 }
 
 export function readPlan(text) {
@@ -317,7 +346,7 @@ async function restoreSettings({
 // After a lifted settings write was sent, whatever it answered: the re-read of 1895766 and part
 // 3. Returns null to go on, or the outcome that stops the run. Every path writes the result row.
 async function afterLiftedSettingsWrite({
-    client, item, fresh, response, sendError, wait, result, lock, afterRecords, log, root, row, now,
+    client, item, fresh, response, sendError, wait, result, lock, afterRecords, log, root, row, now, runId,
 }) {
     const { index, request, what } = item;
     const status = response ? response.status : null;
@@ -362,6 +391,7 @@ async function afterLiftedSettingsWrite({
         return { outcome: 'locked', request: index, message };
     }
     log('part 3   the global value and channels 1 and 1855224 read back unchanged');
+    clearInFlight(root, runId);
     if (failure) {
         const message = `${failure.short}; part 3 held: the global value and channels 1 and 1855224 read back unchanged`;
         result({
@@ -525,6 +555,7 @@ export async function applyPlan({
         return { ...outcome, beforeFiles, afterFiles };
     };
 
+    const runId = crypto.randomUUID();
     const lock = (reason, details) => writeLocked(root, {
         locked: now().toISOString(), reason, plan: planSha, plan_created: plan.created, ticket: plan.ticket, ...details,
     });
@@ -545,6 +576,18 @@ export async function applyPlan({
             return finish({ outcome: 'failed', request: index, message: error.message });
         }
         appendLogRow(root, logRow({ row: 'intent', ...row, date: now().toISOString() }));
+        const liftedSettings = what.kind === 'settings' && mode === 'lifted';
+        if (liftedSettings) {
+            try {
+                writeInFlight(root, runId, {
+                    locked: now().toISOString(), reason: `a settings write to ${request.path} was in flight: part 3 isn't proved yet (if no result row follows its intent row in log.jsonl, the apply stopped mid-write)`, plan: planSha, plan_created: plan.created, ticket: plan.ticket, request: index, method: request.method, path: request.path,
+                });
+            } catch (error) {
+                const message = `not sent: the in-flight LOCKED couldn't be written (${error.code || error.message})`;
+                result({ status: null, outcome: 'failed', message });
+                return finish({ outcome: 'failed', request: index, message });
+            }
+        }
         log(`write    ${index + 1}. ${request.method} ${request.path}${queryString(request.query)}`);
         let response = null;
         let sendError = null;
@@ -558,10 +601,10 @@ export async function applyPlan({
             sendError = error;
         }
         const context = {
-            client, item, fresh, response, sendError, wait, result, lock, afterRecords, log, mode, created, root, row, now,
+            client, item, fresh, response, sendError, wait, result, lock, afterRecords, log, mode, created, root, row, now, runId,
         };
         // eslint-disable-next-line no-await-in-loop
-        const stop = what.kind === 'settings' && mode === 'lifted' ? await afterLiftedSettingsWrite(context) : await afterWrite(context);
+        const stop = liftedSettings ? await afterLiftedSettingsWrite(context) : await afterWrite(context);
         if (stop) return finish(stop);
     }
     return finish({ outcome: 'applied', count: items.length });
