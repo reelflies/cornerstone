@@ -8,8 +8,9 @@
 //
 // In order, it:
 //
-// 1. refuses while ~/reelflies/store-snapshots/LOCKED exists (a failed part 3, or a write whose
-//    response named another channel). Shaun reads it, checks the store and removes it.
+// 1. refuses while ~/reelflies/store-snapshots/LOCKED exists (a failed or unproved part 3, a
+//    write whose response named another channel, or a script read back enabled). Shaun reads
+//    it, checks the store and removes it.
 // 2. refuses a file that isn't a plan, or whose digest doesn't match. The digest catches an edit,
 //    but anyone could recompute it, so nothing below trusts the plan's own checks:
 // 3. checks every request again: the allowlist, the channel, and today's release calendar.
@@ -22,7 +23,8 @@
 //    check, the re-read, and for a settings write part 3: the global value and channels 1 and
 //    1855224 read back unchanged. Then the result row, whatever happened.
 //    - A refused write stops the run (outcome "failed"); nothing after it is sent.
-//    - A response or re-read naming another channel stops the run and writes LOCKED.
+//    - A response or re-read naming another channel stops the run and writes LOCKED, and so
+//      does a script that reads back anything but disabled.
 //    - Part 3 is read after every settings write that was sent, whatever it answered, even
 //      none: a PUT that times out may still have landed. Each GET after a write is tried up
 //      to 3 times.
