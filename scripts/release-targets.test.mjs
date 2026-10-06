@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPushArgs, findTarget } from './release-targets.mjs';
+import {
+    buildPushArgs, CONFIRM_NONPROD, CONFIRM_TYPED, findTarget, RELEASE_TARGETS,
+} from './release-targets.mjs';
 
 test('the push command names one zip, one variation and one channel', () => {
     assert.deepEqual(
@@ -34,4 +36,22 @@ test('live reelflies.ca, reelflies.com and unknown channels are refused, each wi
     assert.throws(() => findTarget(1), /ticket 53/);
     assert.throws(() => findTarget(1855224), /\.com stays on its own theme/);
     assert.throws(() => findTarget(42), /not a release target/);
+});
+
+// --- W0-1: production flags and confirmation modes ---------------------------------------------
+
+test('W0-1: every target declares production and its confirmation modes; a production target is typed only', () => {
+    for (const [id, target] of Object.entries(RELEASE_TARGETS)) {
+        assert.equal(typeof target.production, 'boolean', `channel ${id} declares production: true|false`);
+        assert.ok(Array.isArray(target.confirmation) && target.confirmation.includes(CONFIRM_TYPED), `channel ${id} can always be confirmed by typing`);
+        assert.deepEqual(target.confirmation.filter(mode => ![CONFIRM_TYPED, CONFIRM_NONPROD].includes(mode)), [], `channel ${id} has only known modes`);
+        if (target.production) assert.deepEqual(target.confirmation, [CONFIRM_TYPED], `production channel ${id} is typed only`);
+    }
+});
+
+test('W0-1: ReelFlies_CA is non-production while it is prelaunch, takes --confirm-nonprod, and becomes live reelflies.ca at the Flip', () => {
+    const target = findTarget(1895766);
+    assert.equal(target.production, false);
+    assert.deepEqual(target.confirmation, [CONFIRM_TYPED, CONFIRM_NONPROD]);
+    assert.equal(target.liveFromFlip, true);
 });
