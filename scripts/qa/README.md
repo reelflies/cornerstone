@@ -29,6 +29,14 @@ CI has no store credentials, so anything that renders the storefront runs locall
 | `QA_BASE_URL` | none | Test this host (for example the prelaunch host) instead of a local `stencil start` |
 | `QA_PREVIEW_COOKIE` | none | Cookie for the prelaunch host, as `name=value; name2=value2`. It goes only to `QA_BASE_URL` and is never printed. A run that sends it keeps no Playwright traces, because a trace records every request's Cookie header. |
 | `QA_FRESH_SERVER` | none | `1` (`release.sh` sets it): never reuse a running server. Each gate starts its own, and the run stops if anything already answers on 3300 or 3301. |
+| `QA_REFERENCE_HTML` | none | The reference page the review pages' reference screens are shot from, instead of `plan/design/reelflies-reference.html` above the checkout ("Review pages") |
+| `QA_MANIFEST` | `scripts/qa/results/manifest.json` | The screenshot manifest a run writes, for example a ticket worktree's from W0-8's overlay worktree ("Review pages") |
+
+**The preview cookie** is a control-panel login, so set it only in your own shell, where it isn't shown or kept in history, and never in a file or a chat (ticket 16):
+
+```sh
+read -rs QA_PREVIEW_COOKIE && export QA_PREVIEW_COOKIE    # paste name=value; name2=value2, then Return
+```
 
 Without `QA_BASE_URL`, each gate uses `npx stencil start -c $QA_CHANNEL -v "$QA_VARIATION" -p 3300` (`scripts/qa/storefront.mjs`):
 
@@ -228,7 +236,7 @@ export default {
 ```sh
 npm run qa:raw-html                                       # ReelFlies_CA through stencil start
 QA_CHANNEL=1 npm run qa:raw-html                          # product and category, read-only fallback
-QA_BASE_URL=https://<prelaunch host> QA_PREVIEW_COOKIE='<name>=<value>' npm run qa:raw-html
+QA_BASE_URL=https://<prelaunch host> npm run qa:raw-html    # with QA_PREVIEW_COOKIE read as above
 ```
 
 It exits 1 on a failed check, and 2 when the storefront can't be reached or, with `QA_FRESH_SERVER=1`, when something already answers on 3300 or 3301.
@@ -249,48 +257,60 @@ It needs a category page with products, so run it with `QA_CHANNEL=1` until Reel
 
 Review is per wave, through rolling checkpoints (W0-10 in `plan/build-pipeline.md`). The generator writes a local page with its images. It never publishes anything and never tags: the orchestrator publishes each checkpoint page as a private claude.ai artifact, keeps its source in `plan/reviews/review-NN/`, and cuts the checkpoint tag.
 
-**The manifest.** Every screenshot run records what it shot in `scripts/qa/results/manifest.json` (ignored by git):
+**The manifest.** Every screenshot run records what it shot in `scripts/qa/results/manifest.json` (ignored by git), or in the file `QA_MANIFEST` names:
 
 - `screens.spec.mjs` annotates each template shot (`shotAnnotation(themeShot(…))`), and the manifest reporter (`review/manifest-reporter.mjs`, in `playwright.config.mjs`) writes the entries with each test's status when the run ends. A run that annotates nothing, such as axe, leaves the file as it was.
-- Each entry has the page, path, width, channel, variation, overlay or state (W0-8 fills these), baseline path and reference anchor, plus the status, the commit and when it ran. A failed shot keeps a copy of its render in `results/manifest-actual/`, because the next run empties Playwright's output folder.
-- Runs add up: a run replaces the entries it shot again and keeps the rest, so the ReelFlies_CA run and the `QA_CHANNEL=1` run fill one manifest.
+- Each entry has the page, path, width, channel, variation, overlay or state (W0-8 fills these), baseline path and reference anchor, plus the status, the commit and when it ran. A failed shot keeps a copy of its render in `manifest-actual/` beside the manifest, because the next run empties Playwright's output folder, and the first line of its error.
+- Runs add up: a run replaces the entries it shot again and keeps the rest, so the ReelFlies_CA run and the `QA_CHANNEL=1` run fill one manifest. The generator leaves out shots of pages `pages.mjs` no longer pins, and says so. A checkpoint starts from an empty manifest (below).
+- **W0-8's overlay runs** happen in a throwaway worktree. Point `QA_MANIFEST` at the ticket worktree's manifest. Paths in it stay relative to the checkout that ran them, which a worktree of the same repo lays out the same way, so copy the overlay's baselines back to the same paths, as committing them needs anyway.
 
 **The reference screens.** `screens-reference.spec.mjs` runs with every `npm run qa:screens`. It shoots each storefront screen of the reference design, `plan/design/reelflies-reference.html`, at 375 and 1280 into `results/reference/`:
 
 - The page's Options are set first: "Heading face" Onest, the fly-type links row off, sage buy buttons, a visitor in Canada and no build notes (`REFERENCE_SETTINGS` in `review/reference.mjs`).
 - Each shot is the store frame alone, 1280 px wide on desktop and 375 on a phone.
 - The anchors are `home`, `fly-type` (Dry Flies), `species` (Trout Flies), `species-hub`, `hook-chart`, `product` (4877, Adams Parachute), `cart` and `brand` (`REFERENCE_ANCHORS`). A template is compared with the anchor of the same name. The stock `category` template is compared with `fly-type`, which ticket 32 turns it into, and `404` has no reference screen.
-- The page is found in `plan/design/` above the checkout, from the main clone or any worktree, or at `QA_REFERENCE_HTML`. Where it isn't (CI, another machine), the spec is skipped. Nothing here is a baseline or a gate.
+- The page is found in `plan/design/` above the checkout, from the main clone or any worktree, or at `QA_REFERENCE_HTML`. Where it isn't (CI, another machine), the spec is skipped.
+- **It can't fail the run.** `qa:screens` is the release's screenshot gate, and the reference page changes outside git, so nothing here is a baseline or a gate. A screen it can't shoot (an Option control gone, a hash route that no longer shows its screen, a `QA_REFERENCE_HTML` that isn't there, or its 120 s running out) is recorded in the manifest with the problem. The review page then says which screens weren't shot and why. `review/reference-run.test.mjs` proves it on a broken page.
 
-**The live home page.** Page baselines mask or hide widget regions, so section 6 of a checkpoint page has its own shot, with nothing masked:
+**Review renders** (`review-live.spec.mjs`) are pages shot as they render, with nothing masked and no baseline. No `qa:*` script runs them:
+
+- **ReelFlies_CA's home page with its widgets,** for section 6. Page baselines hide widget regions, so this is where they show.
+- **Every page pinned for reelflies.com (1855224),** for section 5. .com has no baselines, so these are its renders. `pages.mjs` pins its home page; pin a product and a category there too. Run it only once W0-6 has landed, which refuses writes and blocks analytics on live channels.
 
 ```sh
-npx playwright test --config scripts/qa/playwright.config.mjs review-live    # this checkout through stencil start
-QA_BASE_URL=https://<prelaunch host> QA_PREVIEW_COOKIE='…' npx playwright test --config scripts/qa/playwright.config.mjs review-live
+npx playwright test --config scripts/qa/playwright.config.mjs review-live    # ReelFlies_CA's home page, this checkout through stencil start
+QA_CHANNEL=1855224 QA_VARIATION='ReelFlies US' npx playwright test --config scripts/qa/playwright.config.mjs review-live    # .com, after W0-6
 ```
+
+The prelaunch host's own build can be shot too, but only after W0-6: its pages load GA4, which reports into live reelflies.ca. Read the cookie as in "The storefront the gates test", then run `QA_BASE_URL=https://<prelaunch host> npx playwright test --config scripts/qa/playwright.config.mjs review-live`.
 
 **A checkpoint page,** from a clean `master`, holding the stencil lock for the runs:
 
 ```sh
+rm -f scripts/qa/results/manifest.json   # start from this commit's shots only
 npm run qa:screens                       # ReelFlies_CA, with the reference screens
 QA_CHANNEL=1 npm run qa:screens          # channel 1's product and category
 npx playwright test --config scripts/qa/playwright.config.mjs review-live
+QA_CHANNEL=1855224 QA_VARIATION='ReelFlies US' npx playwright test --config scripts/qa/playwright.config.mjs review-live    # after W0-6
 rm -rf assets/dist
 node scripts/qa/review/review.mjs --input <notes.json>
 ```
 
-- **Name and range.** It names the page after the newest `review-NN` tag (`review-00` when there is none), and covers the baselines changed from that tag to `HEAD`. `--name review-NN` regenerates a page; `--since <tag>` or `--since none` sets the range by hand.
+- **Name and range.** It names the page after the newest `review-NN` tag (`review-00` when there is none). It covers everything merged from that tag to `HEAD`, and every baseline changed in that range. `--since <tag>` or `--since none` sets the range by hand.
+- **Regenerating a page** that is already tagged (`--name review-NN`) works only from the commit its tag is on, and covers the range up to the tag. From anywhere else it stops. Check the tag out in a worktree, run the screenshots there, and point `--root` at it. It prints no tag command then: republish the page in place.
 - **Output.** `results/review/<name>/index.html` is the page to publish, with its `images/` folder. `preview.html` is the same page inside the document claude.ai adds, to view it locally. `--inline` puts the images inside `index.html` instead, as `data:` URIs.
 - **Images** are re-encoded in Playwright's Chromium as WebP at about 200 KB each (JPEG for a page taller than WebP's 16,383 px). The run fails if the page and its images come to more than 16,000,000 B, the artifact limit.
 - **When it finishes,** it prints the tag command for the orchestrator: `git tag review-NN <sha> && git push origin review-NN`.
 
-The page shows, in this order:
+At the top, the page lists every PR merged since the last checkpoint (and any commit made on `master` directly), by ticket with its wave, whether or not it changed a baseline. The tickets come from its commits' titles, and the wave from the notes' `tickets` map (wave 0 for a `W0-n` item). A run note names each ticket the map has no wave for. The sections follow, in this order:
 
 1. For Shaun: approvals waiting, each with its diff; paired channel-1 releases pending; tokens and cookie sessions needed; DRAFT copy.
 2. The defaults taken since the last checkpoint, each marked revisitable, with its ticket and wave.
 3. Each template at 375 and 1280 beside its reference screen, or "No reference screen". Reference screens no template renders yet follow.
-4. Before and after for every baseline changed since the last checkpoint tag, grouped by the ticket named in the title of its newest commit. Re-baseline epochs are listed apart, with their cause: a commit the notes list under `epochs`, or one whose title says "epoch".
-5. reelflies.com: the build's uuid for the My Themes preview, and any channel 1855224 renders in the manifest.
+4. Before and after for every baseline changed since the last checkpoint tag, grouped by the ticket named in its commits' titles.
+   - **A baseline that several owners changed in turn** (a ticket, then an epoch, then another ticket, as rebasing onto an epoch makes it) gets one before-and-after per owner, each from where the one before it left the file. So it shows under each ticket and under the epoch.
+   - **Re-baseline epochs are listed apart, with their cause.** An epoch commit is one the notes list under `epochs`, one whose message has a `Baselines: epoch <cause>` line (put it in the commit as well as the PR body), or one whose title says "epoch". A run note names a listed epoch that changed no baseline in the range.
+5. reelflies.com: the build's uuid for the My Themes preview, and the .com review renders, each beside its reference screen.
 6. The live home page on 1895766, with its widgets.
 7. Criteria waiting on refactor 13 or 14, a token, the cookie or an approval.
 
@@ -331,5 +351,5 @@ It writes `results/review/pr-<number>/` with each baseline the working tree chan
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
 - `npm run test:scripts` runs every `scripts/**/*.test.mjs` with `node --test`.
 - Jest runs `assets/js/test-unit/`. `jest.config.js` ignores `scripts/`, because Jest 30 would otherwise match `*.test.mjs` and `*.spec.mjs` too.
-- `screens-reference.spec.mjs` runs with `qa:screens`, because its name matches the filter. `review-live.spec.mjs` runs only when named. Neither is a gate.
+- `screens-reference.spec.mjs` runs with `qa:screens`, because its name matches the filter, and never fails it. `review-live.spec.mjs` runs only when named. Neither is a gate. `review/manifest-reporter.test.mjs` checks both against `package.json`'s filters.
 - Playwright writes its report, traces and failed diffs to `scripts/qa/results/`, which is ignored by git. The manifest reporter writes `results/manifest.json` there too, and the review pages go to `results/review/`. A run with `QA_PREVIEW_COOKIE` writes no traces, so the cookie never lands there.
