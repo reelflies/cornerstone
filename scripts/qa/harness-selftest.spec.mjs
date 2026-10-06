@@ -13,16 +13,17 @@
 //   in a screenshot.
 // - The network guard (network-guard.mjs, W0-6) aborts a request to every analytics host on
 //   the list, and on a live channel refuses every cart write, failing the test at teardown:
-//   the GETs that add to the cart and the stock card's "Add to cart" link clicked among them.
-//   The read-only POSTs and a
+//   the GETs that add to the cart, the stock card's "Add to cart" link clicked, and writes
+//   through Playwright's request API and route.fetch() among them. The read-only POSTs and a
 //   test's own mocks go through, and it catches an analytics request that a route ahead of it
 //   let through. Those cases run in a context of their own whose first route answers
 //   everything itself, and send everything else to a .test origin that never resolves, so no
 //   request leaves the Mac. More prove that every gate test gets the guard through the
-//   fixture, again only towards that origin.
+//   fixture, its request fixture and page.request included, again only towards that origin.
 
 /* eslint-env browser */ // the page.evaluate callbacks run in the page
 
+import http from 'http';
 import { ANALYTICS_HOSTS, sampleUrl } from './analytics-hosts.mjs';
 import { LIVE_CHANNELS, guardChannel, installNetworkGuard } from './network-guard.mjs';
 import { expectedStatus } from './pages.mjs';
@@ -283,6 +284,48 @@ test.describe('the network guard (W0-6)', () => {
         await context.close();
     });
 
+    test('refuses writes through Playwright\'s request API and route.fetch() on a live channel, before they are sent', async ({ browser }) => {
+        const {
+            context, page, guard, reached, leaked,
+        } = await guardedPage(browser, { channel: '1' });
+        const refusal = /^the network guard refused (POST|PUT|DELETE|GET) http:\/\/rf-qa-selftest\.test\/.*, because channel 1 is live:/;
+        await expect(page.request.post(`${SELFTEST_ORIGIN}/remote/v1/cart/add`, { form: { action: 'add', product_id: SELFTEST_PRODUCT } })).rejects.toThrow(refusal);
+        await expect(context.request.fetch(`${SELFTEST_ORIGIN}/api/storefront/carts`, { method: 'POST', data: { lineItems: [{ productId: Number(SELFTEST_PRODUCT), quantity: 1 }] } })).rejects.toThrow(refusal);
+        await expect(context.request.delete(`${SELFTEST_ORIGIN}/api/storefront/carts/rf-selftest`)).rejects.toThrow(refusal);
+        await expect(page.request.get(`${SELFTEST_ORIGIN}/cart.php`, { params: { action: 'add', product_id: SELFTEST_PRODUCT } })).rejects.toThrow(refusal);
+
+        // A test's own route that sends the page's write on with route.fetch().
+        const fetched = [];
+        await page.route(`${SELFTEST_ORIGIN}/remote/v1/cart/update`, async route => {
+            fetched.push(await route.fetch().then(() => 'sent', error => error.message));
+            return route.fulfill({ status: 200, contentType: 'application/json', body: '{"rf":"mocked"}' });
+        });
+        await send(page, [{ method: 'POST', url: `${SELFTEST_ORIGIN}/remote/v1/cart/update`, body: 'items=1' }]);
+        expect(fetched).toHaveLength(1);
+        expect(fetched[0].replace(/^route\.fetch: /, ''), 'Playwright names the call it failed in').toMatch(refusal);
+
+        // A read is sent on, here to a server of the test's own on this Mac.
+        const server = http.createServer((request, response) => response.end('{"rf":"read"}'));
+        await new Promise(resolve => { server.listen(0, '127.0.0.1', resolve); });
+        try {
+            const read = await page.request.get(`http://127.0.0.1:${server.address().port}/api/storefront/carts`);
+            expect(await read.text()).toBe('{"rf":"read"}');
+        } finally {
+            server.close();
+        }
+
+        expect([...guard.refused].sort()).toEqual([
+            `DELETE ${SELFTEST_ORIGIN}/api/storefront/carts/rf-selftest`,
+            `GET ${SELFTEST_ORIGIN}/cart.php?action=add&product_id=${SELFTEST_PRODUCT}`,
+            `POST ${SELFTEST_ORIGIN}/api/storefront/carts`,
+            `POST ${SELFTEST_ORIGIN}/remote/v1/cart/add`,
+            `POST ${SELFTEST_ORIGIN}/remote/v1/cart/update`,
+        ]);
+        expect(reached).toEqual([]);
+        expect(leaked).toEqual([]);
+        await context.close();
+    });
+
     test('lets the read-only POSTs through on a live channel, and answers the consent POST itself', async ({ browser }) => {
         const {
             context, page, guard, reached, leaked,
@@ -368,6 +411,17 @@ test.describe('the network guard in every gate test, through the fixture (W0-6)'
             const write = `${SELFTEST_ORIGIN}/remote/v1/cart/add`;
             expect(await page.evaluate(([url, product]) => fetch(url, { method: 'POST', body: `action=add&product_id=${product}` }).then(() => 'answered', () => 'failed'), [write, SELFTEST_PRODUCT])).toBe('failed');
             expect(networkGuard.refused).toEqual([`POST ${write}`]);
+        });
+
+        test('guards Playwright\'s request fixture and page.request too', async ({ page, request, networkGuard }) => {
+            // Channel 1, or the run's own live channel, which the option never loosens.
+            const refusal = new RegExp(`^the network guard refused POST http://rf-qa-selftest\\.test/.*, because channel ${networkGuard.channel} is live:`);
+            await expect(request.post(`${SELFTEST_ORIGIN}/remote/v1/cart/add`, { form: { action: 'add', product_id: SELFTEST_PRODUCT } })).rejects.toThrow(refusal);
+            await expect(page.request.post(`${SELFTEST_ORIGIN}/api/storefront/carts`, { data: { lineItems: [] } })).rejects.toThrow(refusal);
+            expect(networkGuard.refused).toEqual([`POST ${SELFTEST_ORIGIN}/remote/v1/cart/add`, `POST ${SELFTEST_ORIGIN}/api/storefront/carts`]);
+            // Neither was sent. The case above proves a refused write fails the test at teardown,
+            // so clear the record here, and this test passes only on what it checked.
+            networkGuard.refused.splice(0);
         });
 
         test.describe('when a test asks to be guarded as ReelFlies_CA', () => {

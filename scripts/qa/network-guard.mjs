@@ -12,6 +12,11 @@
 //   stencil start passes every request to the live store, and mocking cart endpoints one by one
 //   fails open: one missed endpoint makes a real guest cart. The exceptions are the read-only
 //   POSTs and the gates' own answers in read-only-posts.mjs.
+// - Playwright's request API never passes through context.route: the `request` fixture,
+//   context.request, page.request (the same object) and route.fetch(). So the guard also checks
+//   each of their calls before it is sent (guardRequestContext): a write it would refuse, or an
+//   analytics URL it would block, throws instead, naming it, and a refused write also fails the
+//   test at teardown.
 // - A request a test mocks itself (page.route, or a context.route added after the guard) is
 //   answered by its mock and never reaches the guard. A mock may only fulfill, abort or call
 //   route.fallback(), which hands the request back to the guard. route.continue() sends it
@@ -80,7 +85,7 @@ export function guardNotice({
         : 'ANALYTICS blocked: no (QA_ANALYTICS=allow, on the prelaunch host)'];
     if (refuseWrites) {
         const { name, why } = liveTarget({ channel, storefront, flipped });
-        lines.push(`WRITES    refused: ${name} ${why}, so every write fails the test: every request but a GET, HEAD or OPTIONS, and the GETs that change the cart, a wish list or a sign-in (GET_WRITES). The exceptions are the read-only POSTs (scripts/qa/read-only-posts.mjs).`);
+        lines.push(`WRITES    refused: ${name} ${why}, so every write fails the test: every request but a GET, HEAD or OPTIONS, the GETs that change the cart, a wish list or a sign-in (GET_WRITES), and Playwright request API writes. The exceptions are the read-only POSTs (scripts/qa/read-only-posts.mjs).`);
     }
     return lines;
 }
@@ -94,10 +99,80 @@ const settle = async answer => {
     }
 };
 
-// Routes every request of `context` through the guard. Resolves to the guard: what it
-// blocked, answered and refused, and the analytics requests that completed while blocked, each
-// as "METHOD URL"; assertNoRefusedWrites() and assertNoAnalyticsCompleted() throw naming each
-// one (fixtures.mjs calls both at teardown).
+// The request an APIRequestContext call would send, as { method, url, postData }, from the
+// options its _innerFetch gets: { url } or { request } (route.fetch), with method, params and
+// data. `params` joins the URL's query, so a GET write in params is seen too.
+function apiRequest(options, baseURL) {
+    const method = String(options.method || options.request?.method() || 'GET').toUpperCase();
+    const target = options.url !== undefined ? options.url : options.request?.url();
+    let url;
+    try {
+        url = new URL(target, baseURL || undefined);
+    } catch {
+        return { method, url: String(target), postData: null };
+    }
+    const { params } = options;
+    if (params) {
+        const extra = typeof params === 'string' || params instanceof URLSearchParams
+            ? new URLSearchParams(params)
+            : new URLSearchParams(Object.entries(params).map(([name, value]) => [name, String(value)]));
+        extra.forEach((value, name) => url.searchParams.append(name, value));
+    }
+    let postData = null;
+    if (typeof options.data === 'string') {
+        postData = options.data;
+    } else if (Buffer.isBuffer(options.data)) {
+        postData = options.data.toString('utf8');
+    } else if (options.data !== undefined) {
+        postData = JSON.stringify(options.data);
+    } else if (!options.form && !options.multipart) {
+        try {
+            postData = options.request?.postData() ?? null;
+        } catch {
+            // a body that isn't text: no read-only POST has one
+        }
+    }
+    return { method, url: url.href, postData };
+}
+
+const GUARDED = Symbol('rf network guard');
+
+// Guards a Playwright APIRequestContext with `guard`: the `request` fixture, or context.request,
+// which is also page.request and what route.fetch() sends through. Every call (get, post,
+// fetch and the rest) goes through its _innerFetch in Playwright 1.59, which package.json pins;
+// harness-selftest.spec.mjs proves the hook on that version, and a version without it stops the
+// run here rather than leave the request API unguarded. A request the guard would refuse,
+// answer itself or block throws instead of being sent; a refused one also fails the test at
+// teardown. Guards each object once.
+export function guardRequestContext(api, guard, { baseURL } = {}) {
+    if (typeof api?._innerFetch !== 'function') {
+        throw new Error("The network guard can't check Playwright's request API: its APIRequestContext has no _innerFetch in this Playwright version, so a write through it would reach the store unchecked. Update guardRequestContext in scripts/qa/network-guard.mjs.");
+    }
+    if (api[GUARDED]) return api;
+    const innerFetch = api._innerFetch.bind(api);
+    api._innerFetch = async (options = {}) => { // eslint-disable-line no-param-reassign
+        const request = apiRequest(options, baseURL);
+        const { action } = requestAction(request, guard.options);
+        if (action === 'pass') return innerFetch(options);
+        const line = `${request.method} ${request.url}`;
+        if (action === 'block') {
+            guard.blocked.push(line);
+            throw new Error(`the network guard blocked ${line}: it is an analytics host (scripts/qa/analytics-hosts.mjs), and this run blocks the tags`);
+        }
+        // The gates' own answers are for the page; through the request API they are refused.
+        guard.refused.push(line);
+        const { name, why } = liveTarget(guard.options);
+        throw new Error(`the network guard refused ${line}, because ${name} ${why}: Playwright's request API never sends a write to a live store. Mock the page's request with page.route instead.`);
+    };
+    api[GUARDED] = true; // eslint-disable-line no-param-reassign
+    return api;
+}
+
+// Routes every request of `context` through the guard, and guards its request API
+// (context.request, page.request, route.fetch). Resolves to the guard: what it blocked,
+// answered and refused, and the analytics requests that completed while blocked, each as
+// "METHOD URL"; assertNoRefusedWrites() and assertNoAnalyticsCompleted() throw naming each one
+// (fixtures.mjs calls both at teardown).
 //   channel         the channel the test is guarded as (guardChannel)
 //   storefront      the storefront under test, its base URL
 //   local           whether that is a local stencil start
@@ -138,6 +213,7 @@ export async function installNetworkGuard(context, {
                 + 'A gate never writes to a live store: mock it in the test (page.route), or, if it only reads, add it to scripts/qa/read-only-posts.mjs with the reason.');
         },
     };
+    guardRequestContext(context.request, guard, { baseURL: storefront });
 
     // Any answer counts, even one the browser then fails to read (an opaque 204, say): the
     // request reached whatever answered it.

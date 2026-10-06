@@ -7,7 +7,9 @@
 //   On a live channel (1, 1855224), and on every channel from the Flip, every write but the
 //   read-only POSTs is refused, a GET that adds to the cart included, and fails the test at
 //   teardown, naming its method and URL; so does an analytics request that was answered while
-//   the tags are blocked. Each test records "analytics blocked" yes or no, and how
+//   the tags are blocked. Playwright's request API (the `request` fixture, page.request,
+//   context.request and route.fetch()) skips context.route, so the guard checks its calls
+//   too, and a refused one throws. Each test records "analytics blocked" yes or no, and how
 //   many analytics requests it blocked. Service workers are blocked, because a request one
 //   answers never reaches context.route. A self-test can make the guard stricter with
 //   test.use({ qaChannel: '1' }), never looser: on a live QA_CHANNEL every test stays live.
@@ -28,7 +30,7 @@ import path from 'path';
 import { test as base, expect } from '@playwright/test';
 import { IS_LOCAL, QA_CHANNEL, previewCookies } from './storefront.mjs';
 import { analyticsMode, isAfterFlip } from './analytics-hosts.mjs';
-import { guardChannel, installNetworkGuard } from './network-guard.mjs';
+import { guardChannel, guardRequestContext, installNetworkGuard } from './network-guard.mjs';
 import { expectedStatus, pinnedPages, screenshotStyle } from './pages.mjs';
 import { withRetries } from './retry.mjs';
 
@@ -58,6 +60,12 @@ export const test = base.extend({
         guard.assertNoRefusedWrites();
         guard.assertNoAnalyticsCompleted();
     }, { auto: true }],
+    // Playwright's own APIRequestContext for API calls, which no route sees: the same guard
+    // checks each of its calls.
+    request: async ({ request, networkGuard, baseURL }, use) => {
+        guardRequestContext(request, networkGuard, { baseURL });
+        await use(request);
+    },
 });
 
 export { expect };

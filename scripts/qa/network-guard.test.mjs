@@ -8,6 +8,9 @@
 //   OPTIONS, and the GETs that change the cart (GET_WRITES in read-only-posts.mjs). Only the
 //   read-only POSTs go through, and the gates answer the cookie banner's consent POST
 //   themselves. A request a test mocks itself never reaches the guard.
+// - Playwright's request API (the `request` fixture, context.request, page.request and
+//   route.fetch()) never passes through context.route, so the guard checks each of its calls
+//   before it is sent, and a refused one throws.
 //
 // harness-selftest.spec.mjs proves the same in a browser.
 //
@@ -17,7 +20,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { PRELAUNCH_URL } from './analytics-hosts.mjs';
 import {
-    LIVE_CHANNELS, guardChannel, guardNotice, installNetworkGuard, refusesWrites, requestAction,
+    LIVE_CHANNELS, guardChannel, guardNotice, guardRequestContext, installNetworkGuard, refusesWrites, requestAction,
 } from './network-guard.mjs';
 
 const LOCAL = 'http://localhost:3401';
@@ -156,12 +159,33 @@ describe('what happens to each request', () => {
     });
 });
 
-// A stand-in for a Playwright BrowserContext, its routes and its events.
+// A stand-in for Playwright's APIRequestContext: its methods all go through _innerFetch, as
+// Playwright 1.59's do, and route.fetch() calls the context's _innerFetch too.
+function fakeApi() {
+    const sent = [];
+    const api = {
+        sent,
+        async _innerFetch(options = {}) {
+            sent.push(options);
+            return { status: () => 200 };
+        },
+        fetch(urlOrRequest, options = {}) {
+            return api._innerFetch(typeof urlOrRequest === 'string' ? { url: urlOrRequest, ...options } : { request: urlOrRequest, ...options });
+        },
+    };
+    for (const method of ['get', 'head', 'post', 'put', 'patch', 'delete']) {
+        api[method] = (url, options = {}) => api._innerFetch({ url, ...options, method: method.toUpperCase() });
+    }
+    return api;
+}
+
+// A stand-in for a Playwright BrowserContext, its routes, its events and its request API.
 function fakeContext() {
     const routes = [];
     const listeners = {};
     return {
         routes,
+        request: fakeApi(),
         route: async (pattern, handler) => { routes.push({ pattern, handler }); },
         on: (event, handler) => { (listeners[event] ||= []).push(handler); },
         // An answer to a request, which no route stopped.
@@ -306,6 +330,104 @@ describe('the guard on a context', () => {
     });
 });
 
+describe('Playwright\'s request API (the request fixture, context.request, page.request, route.fetch)', () => {
+    const install = async ({ channel = '1', flipped = false } = {}) => {
+        const context = fakeContext();
+        const guard = await installNetworkGuard(context, {
+            channel, storefront: LOCAL, local: true, blockAnalytics: true, flipped,
+        });
+        return { context, api: context.request, guard };
+    };
+    const refusal = line => new RegExp(`^Error: the network guard refused ${line.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}, because channel 1 is live:`);
+
+    it('is guarded on the test\'s context as soon as the guard is installed', async () => {
+        const { api } = await install();
+        await assert.rejects(api.post('/remote/v1/cart/add', { form: { action: 'add', product_id: 6178 } }), /the network guard refused POST http:\/\/localhost:3401\/remote\/v1\/cart\/add/);
+        assert.deepEqual(api.sent, [], 'the refused write was never sent');
+    });
+
+    it('refuses every write on a live channel before it is sent, and fails the test for it at teardown', async () => {
+        const { api, guard } = await install();
+        const writes = [
+            [() => api.post('/remote/v1/cart/add', { form: { action: 'add' } }), `POST ${LOCAL}/remote/v1/cart/add`],
+            [() => api.post(`${LOCAL}/api/storefront/carts`, { data: { lineItems: [] } }), `POST ${LOCAL}/api/storefront/carts`],
+            [() => api.put('/api/storefront/carts/abc/items/def', { data: {} }), `PUT ${LOCAL}/api/storefront/carts/abc/items/def`],
+            [() => api.delete('/api/storefront/carts/abc'), `DELETE ${LOCAL}/api/storefront/carts/abc`],
+            [() => api.fetch('/api/storefront/carts/abc', { method: 'patch', data: {} }), `PATCH ${LOCAL}/api/storefront/carts/abc`],
+            [() => api.get('/cart.php', { params: { action: 'add', product_id: 6178 } }), `GET ${LOCAL}/cart.php?action=add&product_id=6178`],
+            [() => api.get('/cart.php?action=add', { params: 'product_id=6178' }), `GET ${LOCAL}/cart.php?action=add&product_id=6178`],
+            [() => api.post('/graphql', { data: { query: 'mutation { cart { createCart(input: {}) { cart { entityId } } } }' } }), `POST ${LOCAL}/graphql`],
+            [() => api.post('/api/storefront/consent', { data: '{}' }), `POST ${LOCAL}/api/storefront/consent`],
+        ];
+        for (const [send, line] of writes) await assert.rejects(send(), refusal(line), line); // eslint-disable-line no-await-in-loop
+        assert.deepEqual(api.sent, []);
+        assert.deepEqual(guard.refused, writes.map(([, line]) => line));
+        assert.throws(() => guard.assertNoRefusedWrites(), /^Error: The gates refused 9 writes on channel 1/);
+    });
+
+    it('refuses a write a test\'s own route sends on with route.fetch()', async () => {
+        const { api, guard } = await install();
+        // Route.fetch() is context.request._innerFetch({ request, data, ...options }).
+        const pageRequest = { method: () => 'POST', url: () => `${LOCAL}/remote/v1/cart/add`, postData: () => 'action=add' };
+        await assert.rejects(api._innerFetch({ request: pageRequest }), refusal(`POST ${LOCAL}/remote/v1/cart/add`));
+        await assert.rejects(api._innerFetch({ request: { ...pageRequest, method: () => 'GET' }, method: 'DELETE' }), refusal(`DELETE ${LOCAL}/remote/v1/cart/add`));
+        assert.deepEqual(api.sent, []);
+        assert.equal(guard.refused.length, 2);
+    });
+
+    it('sends the reads and the read-only POSTs on a live channel', async () => {
+        const { api, guard } = await install();
+        await api.get('/api/storefront/carts');
+        await api.get('/cart.php');
+        await api.head('/flies/realistic-trout-flies/');
+        await api.post('/remote/v1/product-attributes/6178', { form: { 'attribute[1]': 2 } });
+        await api.post('/graphql', { data: { query: '{ site { settings { storeName } } }' } });
+        await api.post('/graphql', { data: JSON.stringify({ query: '{ site { settings { storeName } } }' }) });
+        await api.fetch({ method: () => 'POST', url: () => `${LOCAL}/remote/v1/product-attributes/6178`, postData: () => 'a=1' });
+        assert.equal(api.sent.length, 7);
+        assert.deepEqual(guard.refused, []);
+        guard.assertNoRefusedWrites();
+    });
+
+    it('blocks the analytics hosts, on every channel', async () => {
+        for (const channel of ['1', '1895766']) {
+            const { api, guard } = await install({ channel }); // eslint-disable-line no-await-in-loop
+            await assert.rejects(api.get('https://www.google-analytics.com/collect?v=1'), /^Error: the network guard blocked GET https:\/\/www\.google-analytics\.com\/collect\?v=1: it is an analytics host/); // eslint-disable-line no-await-in-loop
+            assert.deepEqual(api.sent, []);
+            assert.deepEqual(guard.blocked, ['GET https://www.google-analytics.com/collect?v=1']);
+            assert.deepEqual(guard.refused, []);
+        }
+    });
+
+    it('sends writes on ReelFlies_CA before the Flip, and refuses them from the Flip', async () => {
+        const before = await install({ channel: '1895766' });
+        await before.api.post('/remote/v1/cart/add', { form: { action: 'add' } });
+        assert.equal(before.api.sent.length, 1);
+        const after = await install({ channel: '1895766', flipped: true });
+        await assert.rejects(after.api.post('/remote/v1/cart/add', { form: { action: 'add' } }), /refused POST .*, because channel 1895766 is live reelflies\.ca from the Flip on/);
+        assert.deepEqual(after.api.sent, []);
+    });
+
+    it('guards another request context with the same guard, such as Playwright\'s request fixture, once only', async () => {
+        const { guard } = await install();
+        const fixture = fakeApi();
+        guardRequestContext(fixture, guard, { baseURL: LOCAL });
+        guardRequestContext(fixture, guard, { baseURL: LOCAL });
+        await assert.rejects(fixture.post('/remote/v1/cart/add'), refusal(`POST ${LOCAL}/remote/v1/cart/add`));
+        assert.deepEqual(guard.refused, [`POST ${LOCAL}/remote/v1/cart/add`], 'guarded once, so recorded once');
+    });
+
+    it('stops the run when Playwright\'s request API no longer has the hook the guard needs', async () => {
+        const { guard } = await install();
+        assert.throws(() => guardRequestContext({ post: async () => {} }, guard, { baseURL: LOCAL }), /can't check Playwright's request API/);
+        const context = fakeContext();
+        delete context.request._innerFetch;
+        await assert.rejects(installNetworkGuard(context, {
+            channel: '1', storefront: LOCAL, local: true, blockAnalytics: true,
+        }), /can't check Playwright's request API/);
+    });
+});
+
 describe('the notice each run prints', () => {
     it('says whether analytics are blocked, and whether writes are refused', () => {
         assert.deepEqual(guardNotice({ blockAnalytics: true, refuseWrites: false, channel: '1895766' }), [
@@ -318,7 +440,7 @@ describe('the notice each run prints', () => {
             blockAnalytics: true, refuseWrites: true, channel: '1', storefront: LOCAL, local: true,
         }), [
             'ANALYTICS blocked: yes (scripts/qa/analytics-hosts.mjs; QA_ANALYTICS=allow lets them load on the prelaunch host only)',
-            'WRITES    refused: channel 1 is live, so every write fails the test: every request but a GET, HEAD or OPTIONS, and the GETs that change the cart, a wish list or a sign-in (GET_WRITES). The exceptions are the read-only POSTs (scripts/qa/read-only-posts.mjs).',
+            'WRITES    refused: channel 1 is live, so every write fails the test: every request but a GET, HEAD or OPTIONS, the GETs that change the cart, a wish list or a sign-in (GET_WRITES), and Playwright request API writes. The exceptions are the read-only POSTs (scripts/qa/read-only-posts.mjs).',
         ]);
         assert.match(guardNotice({
             blockAnalytics: true, refuseWrites: true, channel: '1895766', storefront: LOCAL, local: true, flipped: true,
