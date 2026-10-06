@@ -162,15 +162,21 @@ export function pairedChannel1Release({ target, phase }) {
 
 // Step 5's confirmation (W0-1). Without --confirm-nonprod it is `typed`, the typed channel id
 // exactly as before W0-1: no terminal still stops the release. With it there is no prompt and no
-// stdin is read; instead the refusals are checked again with `phase()`, today's phase read at step
-// 5, so a release whose build ran past midnight into T-21 stops before the push. Either way
-// pushGate's re-capture and checks run in full after it.
+// stdin is read. Instead `origin()` checks first that the commit is still judged by origin/master's
+// release tooling and calendar (release-origin.mjs stepFiveOrigin; one line per problem), and then
+// the refusals are checked again with `phase()`, today's phase read at step 5, so a release whose
+// build ran past midnight into T-21 stops before the push. Either way pushGate's re-capture and
+// checks run in full after it.
 export function pushConfirmation({
-    options, target, phase, typed,
+    options, target, phase, typed, origin,
 }) {
     if (!hasConfirmNonprod(options)) return typed;
     return async () => {
+        const refused = reasons => new Error(`--confirm-nonprod refused at step 5: ${reasons.join('; ')}`);
+        if (typeof origin !== 'function') throw refused(['no origin/master check was given']);
+        const problems = await origin();
+        if (problems.length) throw refused(problems);
         const reasons = confirmNonprodRefusals({ options, target, phase: phase() });
-        if (reasons.length) throw new Error(`--confirm-nonprod refused at step 5: ${reasons.join('; ')}`);
+        if (reasons.length) throw refused(reasons);
     };
 }

@@ -171,7 +171,7 @@ export function formatPushSummary(release) {
         line('bundle', `${release.bundle.file}, ${formatBytes(release.bundle.bytes)}`),
         line('main.js', formatBytes(release.bundle.mainJsBytes)),
         line('confirm', release.confirmation.mode === 'nonprod'
-            ? `${describeConfirmation(release.confirmation, false)}: requested; step 5 checks it again against today's calendar and asks no one, and the gate still captures the channel again and checks everything before the push`
+            ? `${describeConfirmation(release.confirmation, false)}: requested; step 5 checks it again against origin/master and today's calendar and asks no one, and the gate still captures the channel again and checks everything before the push`
             : describeConfirmation(release.confirmation, false)),
         line('calendar', release.calendar.line.replace(/^Release calendar: /, '')),
         ...(release.pairedChannel1 ? [line('channel 1', `paired release ${describePairedRelease(release.pairedChannel1)}`)] : []),

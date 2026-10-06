@@ -4,7 +4,8 @@
 #   scripts/release.sh --channel <id> --variation "<name>" [--dry-run] [--first-release] [--accept-live | --overwrite-live] [--confirm-nonprod <id>]
 #
 #   0 how step 5 is confirmed (typed, or --confirm-nonprod on a non-production target, W0-1) within
-#     the release calendar's limits (scripts/release-calendar.json)
+#     the release calendar's limits (scripts/release-calendar.json); --confirm-nonprod runs only from
+#     master at origin/master's tip (scripts/release-origin.mjs)
 #   1 capture the channel's live Theme Styles (read-only) and diff them against config.json and
 #     against config.json at the channel's last release in RELEASES.md (W0-2), report the live
 #     colours' contrast, then the release guard: rf_* module switches and menu ids
@@ -99,11 +100,11 @@ if [ "$dry_run" = true ]; then
 fi
 
 # Step 5: show the push summary and ask for the channel id, or, with --confirm-nonprod on a
-# non-production target, check the flag again against today's release calendar and ask nothing
-# (W0-1). Then the gate captures the channel again and checks that nothing changed since steps 1
-# and 4 (scripts/release-checks.mjs pushGate), and the push sends exactly the checked zip to one
-# channel with one named variation (scripts/release-targets.mjs buildPushArgs). push-args refuses
-# unless the gate passed.
+# non-production target, fetch origin/master and check the flag again against it and today's
+# release calendar, and ask nothing (W0-1). Then the gate captures the channel again and checks
+# that nothing changed since steps 1 and 4 (scripts/release-checks.mjs pushGate), and the push
+# sends exactly the checked zip to one channel with one named variation
+# (scripts/release-targets.mjs buildPushArgs). push-args refuses unless the gate passed.
 release pre-push
 release push-args > "$STATE_DIR/push-args"
 push_args=()

@@ -263,7 +263,7 @@ test('W0-1: the push summary says how the push is confirmed, and whether the cal
     const summary = formatPushSummary(agentPush);
     // "requested", not "no prompt": step 5 prints the summary before it checks the flag again, and a
     // calendar that has moved into T-21 by then stops the push right after this line.
-    assert.match(summary, /\n {2}confirm {5}non-interactive \(agent\), --confirm-nonprod 1895766: requested; step 5 checks it again against today's calendar and asks no one, and the gate still captures the channel again and checks everything before the push\n/);
+    assert.match(summary, /\n {2}confirm {5}non-interactive \(agent\), --confirm-nonprod 1895766: requested; step 5 checks it again against origin\/master and today's calendar and asks no one, and the gate still captures the channel again and checks everything before the push\n/);
     assert.doesNotMatch(summary, /no prompt/);
     assert.match(summary, /\n {2}calendar {4}Flip 2027-03-01 \(provisional; ticket 10 comment\)\. 2027-02-03 is in T-28/);
     assert.match(summary, /\n {2}channel 1 {3}paired release pending \(ticket 56\): channel 1 runs the same build from T-28/);

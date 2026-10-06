@@ -256,7 +256,7 @@ test('W0-1: channels 1 and 1855224 refuse the flag by id, even in an entry copie
 test('W0-1: step 5 refuses the flag on channels 1 and 1855224 by id too, before anything is captured', async () => {
     await Promise.all(LIVE_COPIES.map(copied => assert.rejects(
         pushConfirmation({
-            options: agent({ channel: copied.id, confirmNonprod: copied.id }), target: copied, phase: () => on('2026-10-06'), typed: async () => {},
+            options: agent({ channel: copied.id, confirmNonprod: copied.id }), target: copied, phase: () => on('2026-10-06'), typed: async () => {}, origin: () => [],
         })(),
         new RegExp(`--confirm-nonprod refused at step 5: channel ${copied.id} is`),
     )));
@@ -298,12 +298,17 @@ test('W0-1: without the flag, step 5 asks for the typed channel id exactly as be
 
 test('W0-1: with the flag, step 5 asks nothing and reads no stdin, and the gate still runs in full', async () => {
     let typedAsked = false;
+    let originChecked = false;
     const confirm = pushConfirmation({
         options: agent(),
         target: CA_TARGET,
         phase: () => on('2026-10-06'),
         typed: async () => {
             typedAsked = true;
+        },
+        origin: () => {
+            originChecked = true;
+            return [];
         },
     });
     const store = capture();
@@ -315,6 +320,7 @@ test('W0-1: with the flag, step 5 asks nothing and reads no stdin, and the gate 
         bundle: { step4: ZIP, read: () => ({ bytes: ZIP.bytes, sha256: 'ff99' }) },
     });
     assert.equal(typedAsked, false);
+    assert.equal(originChecked, true, 'step 5 checked origin/master again');
     assert.deepEqual(result.problems, [
         'the git tree has uncommitted changes now',
         `${ZIP.file} changed after step 4 checked it: sha256 ab12 then, ff99 now`,
@@ -325,7 +331,7 @@ test('W0-1: with the flag, step 5 asks nothing and reads no stdin, and the gate 
 
 test('W0-1: with the flag, step 5 checks the calendar again, so a release that runs past midnight into T-21 stops before the push', async () => {
     const confirm = pushConfirmation({
-        options: agent(), target: CA_TARGET, phase: () => on('2027-02-08'), typed: async () => {},
+        options: agent(), target: CA_TARGET, phase: () => on('2027-02-08'), typed: async () => {}, origin: () => [],
     });
     let captured = false;
     await assert.rejects(pushGate({
@@ -339,4 +345,63 @@ test('W0-1: with the flag, step 5 checks the calendar again, so a release that r
         bundle: { step4: ZIP, read: () => ({ bytes: ZIP.bytes, sha256: ZIP.sha256 }) },
     }), /--confirm-nonprod refused at step 5: .*T-21/);
     assert.equal(captured, false, 'nothing is captured or pushed after the refusal');
+});
+
+// Step 5 checks origin/master again before the calendar: a stale checkout's calendar says nothing
+// (release-origin.mjs). The typed path never runs the check: the person at the terminal decides.
+
+const gateWith = (confirm, captured) => pushGate({
+    confirm,
+    capture: async () => {
+        captured.push(true);
+        return capture();
+    },
+    step1: capture(),
+    git: { step1: { sha: SHA, dirty: false }, read: () => ({ sha: SHA, dirty: false }) },
+    bundle: { step4: ZIP, read: () => ({ bytes: ZIP.bytes, sha256: ZIP.sha256 }) },
+});
+
+test('W0-1: with the flag, step 5 checks origin/master first, and a problem there stops the push before the calendar and the capture', async () => {
+    const captured = [];
+    let phaseRead = false;
+    const confirm = pushConfirmation({
+        options: agent(),
+        target: CA_TARGET,
+        phase: () => {
+            phaseRead = true;
+            return on('2026-10-06');
+        },
+        typed: async () => {},
+        origin: async () => ['origin/master moved on to bbbbbbb while this release ran, and changed the release tooling or the calendar since aaaaaaa (scripts/release-calendar.json): pull and rerun the release'],
+    });
+    await assert.rejects(gateWith(confirm, captured), /^Error: --confirm-nonprod refused at step 5: origin\/master moved on to bbbbbbb .*scripts\/release-calendar\.json/);
+    assert.equal(phaseRead, false, 'a stale checkout\'s calendar isn\'t read');
+    assert.deepEqual(captured, [], 'nothing is captured or pushed after the refusal');
+});
+
+test('W0-1: with the flag and no origin/master check, step 5 fails closed', async () => {
+    const captured = [];
+    const confirm = pushConfirmation({
+        options: agent(), target: CA_TARGET, phase: () => on('2026-10-06'), typed: async () => {},
+    });
+    await assert.rejects(gateWith(confirm, captured), /--confirm-nonprod refused at step 5: no origin\/master check was given/);
+    assert.deepEqual(captured, []);
+});
+
+test('W0-1: without the flag, step 5 never checks origin/master: the typed prompt is exactly as before', async () => {
+    let originChecked = false;
+    const typed = async () => {};
+    const confirm = pushConfirmation({
+        options: agent({ confirmNonprod: null }),
+        target: CA_TARGET,
+        phase: () => on('2026-10-06'),
+        typed,
+        origin: () => {
+            originChecked = true;
+            return ['never'];
+        },
+    });
+    assert.equal(confirm, typed);
+    await gateWith(confirm, []);
+    assert.equal(originChecked, false);
 });

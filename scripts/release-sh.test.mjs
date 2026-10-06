@@ -12,6 +12,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { acquireLock, readHolder } from './lib/lock.mjs';
+import { phaseOn, readCalendar } from './lib/release-calendar.mjs';
+import { originRepo } from './release-origin-fixture.mjs';
 
 const SCRIPT = fileURLToPath(new URL('./release.sh', import.meta.url));
 const NOTHING_RAN = /Step 1|Step 2|npm ci|Capturing/;
@@ -663,15 +665,38 @@ test('W0-1: without the fixtures, a dry run reads scripts/release-calendar.json 
 });
 
 // Step 5 as release.sh runs it after a real release's build: `release.mjs pre-push`, on a state
-// file like the one prepare and bundle-info write. It runs in an empty folder, so a capture would
-// fail at once on the missing config.stencil.json: no test here reaches the store.
+// file like the one prepare and bundle-info write. It runs in a clone of a local bare origin, on
+// master at origin/master's tip (release-origin-fixture.mjs), which has no config.stencil.json, so
+// a capture fails at once: no test here reaches the store or a real remote.
 const RELEASE_MJS = fileURLToPath(new URL('./release.mjs', import.meta.url));
 
-function stepFive(changes = {}, env = {}) {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-release-step5-'));
+// The environment for release.mjs: none of the test-only overrides, tokens or GIT_* variables.
+function cleanEnv(env) {
+    const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(RF_(RELEASE|BC)_|GIT_)/.test(key)));
+    return { ...inherited, ...env };
+}
+
+const gitRepo = files => {
+    const repo = originRepo(files);
+    tempDirs.push(repo.root);
+    return repo;
+};
+
+function runReleaseMjs(step, args, { cwd, env = {}, state = null }) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-release-state-'));
     tempDirs.push(dir);
     const statePath = path.join(dir, 'state.json');
-    fs.writeFileSync(statePath, JSON.stringify({
+    if (state) fs.writeFileSync(statePath, JSON.stringify(state));
+    const result = spawnSync(process.execPath, [RELEASE_MJS, step, ...args], {
+        cwd, encoding: 'utf8', input: '', env: cleanEnv({ ...env, RF_RELEASE_STATE: statePath }), timeout: 60000,
+    });
+    return {
+        status: result.status, stdout: result.stdout, stderr: result.stderr, output: `${result.stdout}\n${result.stderr}`,
+    };
+}
+
+function stepFiveState(repo, changes) {
+    return {
         channel: 1895766,
         variation: 'ReelFlies CA',
         dryRun: false,
@@ -685,7 +710,7 @@ function stepFive(changes = {}, env = {}) {
         themeName: 'ReelFlies',
         version: '6.22.0',
         git: {
-            sha: RELEASED_SHA, shortSha: 'abc1234', branch: 'master', dirty: false,
+            sha: repo.head, shortSha: repo.head.slice(0, 7), branch: 'master', dirty: false,
         },
         bundle: {
             file: 'reelflies-ca-6.22.0-abc1234.zip', bytes: 100, sha256: 'ab12', mainJsBytes: 50,
@@ -695,22 +720,22 @@ function stepFive(changes = {}, env = {}) {
         },
         guard: { values: [], newSwitches: [] },
         ...changes,
-    }));
-    const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^RF_(RELEASE|BC)_/.test(key)));
-    const result = spawnSync(process.execPath, [RELEASE_MJS, 'pre-push'], {
-        cwd: dir, encoding: 'utf8', input: '', env: { ...inherited, ...env, RF_RELEASE_STATE: statePath }, timeout: 60000,
-    });
-    return {
-        status: result.status, stdout: result.stdout, stderr: result.stderr, output: `${result.stdout}\n${result.stderr}`,
     };
 }
 
+function stepFive(changes = {}, env = {}, repo = gitRepo()) {
+    return runReleaseMjs('pre-push', [], { cwd: repo.clone, env, state: stepFiveState(repo, changes) });
+}
+
 test('W0-1: step 5 without --confirm-nonprod asks for the typed channel id, and no terminal stops it before any capture', () => {
-    const result = stepFive();
+    const repo = gitRepo();
+    repo.git('remote', 'set-url', 'origin', path.join(repo.root, 'missing.git'));
+    const result = stepFive({}, {}, repo);
     assert.equal(result.status, 1, result.output);
     assert.match(result.stdout, /^ {2}confirm {5}channel id typed at the terminal$/m);
     assert.match(result.stderr, /needs an operator at a terminal/);
     assert.doesNotMatch(result.output, /Capturing channel/);
+    assert.doesNotMatch(result.output, /^origin |origin\/master|fetch/m, 'the typed path neither fetches nor checks origin/master');
 });
 
 test('W0-1: step 5 checks --confirm-nonprod again from the code, so an edited state file can\'t slip a refused flag past it', () => {
@@ -736,13 +761,14 @@ function describeLine(phase) {
     return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-test('W0-1: step 5 with --confirm-nonprod asks nothing, reads today\'s calendar again, then the gate captures the channel', async () => {
-    const { readCalendar: read, phaseOn: on } = await import('./lib/release-calendar.mjs');
-    const today = on(read());
-    const result = stepFive({ confirmNonprod: 1895766 });
+test('W0-1: step 5 with --confirm-nonprod asks nothing, checks origin/master and today\'s calendar again, then the gate captures the channel', () => {
+    const today = phaseOn(readCalendar());
+    const repo = gitRepo();
+    const result = stepFive({ confirmNonprod: 1895766 }, {}, repo);
     assert.equal(result.status, 1, result.output);
     assert.match(result.stdout, new RegExp(`^ {2}calendar {4}${describeLine(today)}`, 'm'));
     assert.match(result.stdout, /^ {2}confirm {5}non-interactive \(agent\), --confirm-nonprod 1895766: requested; step 5 checks it again/m);
+    assert.match(result.stdout, new RegExp(`^origin {3}${repo.head.slice(0, 7)} is still origin/master's tip$`, 'm'));
     if (today.limits.confirmNonprod) {
         assert.match(result.stdout, new RegExp(`^confirm {2}non-interactive \\(agent\\): --confirm-nonprod 1895766, checked again with ${today.date}'s calendar`, 'm'));
         assert.match(result.stdout, /Capturing channel 1895766 again/);
@@ -756,9 +782,8 @@ test('W0-1: step 5 with --confirm-nonprod asks nothing, reads today\'s calendar 
 
 // A real release refuses the calendar overrides at prepare. Step 5 doesn't read them either, as a
 // second lock: with a T-21 fixture calendar and date set, it still reads the committed calendar.
-test('W0-1: step 5 ignores RF_RELEASE_CALENDAR_FIXTURE and RF_RELEASE_DATE, and reads the committed calendar and today', async () => {
-    const { readCalendar: read, phaseOn: on } = await import('./lib/release-calendar.mjs');
-    const today = on(read());
+test('W0-1: step 5 ignores RF_RELEASE_CALENDAR_FIXTURE and RF_RELEASE_DATE, and reads the committed calendar and today', () => {
+    const today = phaseOn(readCalendar());
     const result = stepFive({ confirmNonprod: 1895766 }, {
         RF_RELEASE_CALENDAR_FIXTURE: calendarFixture({ flip: FLIP, status: 'set', source: 'ticket 10 comment, test' }),
         RF_RELEASE_DATE: '2027-02-08', // T-21 on that calendar
@@ -771,6 +796,121 @@ test('W0-1: step 5 ignores RF_RELEASE_CALENDAR_FIXTURE and RF_RELEASE_DATE, and 
         assert.match(result.stdout, new RegExp(`checked again with ${today.date}'s calendar`));
         assert.match(result.stdout, /Capturing channel 1895766 again/);
     }
+});
+
+// --- W0-1: an agent push runs only from master at origin/master's tip (release-origin.mjs) -------
+
+// The calendar and targets that judge --confirm-nonprod are read from the checkout, so a stale
+// checkout would be judged by stale rules (rf/safety and rf/skeptic on PR #18). These runs use a
+// clone of a local bare origin, and `release.mjs prepare` as a real release (no test-only
+// overrides): it stops at step 1's capture at the latest, because the clone has no
+// config.stencil.json.
+
+const releaseRepo = () => gitRepo({
+    'config.json': `${JSON.stringify(themeConfig({ settings: BASE_SETTINGS }), null, 2)}\n`,
+    '.nvmrc': `${process.version.slice(1)}\n`,
+});
+const AGENT_REAL = [...CA, '--confirm-nonprod', '1895766'];
+const prepareIn = (repo, args, env) => runReleaseMjs('prepare', args, { cwd: repo.clone, env });
+const flagAllowedToday = () => phaseOn(readCalendar()).limits.confirmNonprod;
+const ORIGIN_REFUSED = /^REFUSED {2}--confirm-nonprod needs this checkout on master at origin\/master's tip, so that origin\/master's calendar and targets judge it: /m;
+const NEW_CALENDAR = { 'scripts/release-calendar.json': '{"flip": "2026-10-27", "status": "set", "source": "ticket 10 comment, test"}\n' };
+
+test('W0-1: a real release with --confirm-nonprod fetches origin, and goes on from master at origin/master\'s tip', () => {
+    const repo = releaseRepo();
+    const result = prepareIn(repo, AGENT_REAL);
+    assert.match(result.stdout, new RegExp(`^origin {3}master at origin/master's tip ${repo.head.slice(0, 7)}, fetched just now`, 'm'));
+    if (flagAllowedToday()) {
+        assert.match(result.stdout, /Capturing channel 1895766/);
+        assert.match(result.stderr, /can't read config\.stencil\.json/, 'step 1 ran, and stopped only because the clone has no stencil config');
+    } else {
+        assert.match(result.stderr, /--confirm-nonprod is refused from T-21/);
+    }
+});
+
+test('W0-1: a real release with --confirm-nonprod is refused on a branch other than master, before step 1', () => {
+    const repo = releaseRepo();
+    repo.git('switch', '-q', '-c', 't99/old-ticket');
+    const result = prepareIn(repo, AGENT_REAL);
+    assert.equal(result.status, 2, result.output);
+    assert.match(result.stderr, ORIGIN_REFUSED);
+    assert.match(result.stderr, /this checkout is on branch t99\/old-ticket, not master/);
+    assert.doesNotMatch(result.output, /Capturing/);
+});
+
+test('W0-1: a real release with --confirm-nonprod is refused on a master that hasn\'t pulled a calendar change, whatever its own calendar says', () => {
+    const repo = releaseRepo();
+    const merged = repo.mergeOnOrigin(NEW_CALENDAR);
+    const result = prepareIn(repo, AGENT_REAL);
+    assert.equal(result.status, 2, result.output);
+    assert.match(result.stderr, ORIGIN_REFUSED);
+    assert.match(result.stderr, new RegExp(`HEAD ${repo.head.slice(0, 7)} isn't origin/master's tip ${merged.slice(0, 7)}: git pull --ff-only origin master, then rerun`));
+    assert.doesNotMatch(result.output, /Capturing/);
+});
+
+test('W0-1: a real release with --confirm-nonprod is refused when origin can\'t be fetched', () => {
+    const repo = releaseRepo();
+    repo.git('remote', 'set-url', 'origin', path.join(repo.root, 'missing.git'));
+    const result = prepareIn(repo, AGENT_REAL);
+    assert.equal(result.status, 2, result.output);
+    assert.match(result.stderr, ORIGIN_REFUSED);
+    assert.match(result.stderr, /couldn't fetch origin's master \(.*missing\.git/);
+    assert.doesNotMatch(result.output, /Capturing/);
+});
+
+test('W0-1: without the flag nothing is fetched or checked: a typed release runs from any checkout, as before', () => {
+    const repo = releaseRepo();
+    repo.git('switch', '-q', '-c', 't99/old-ticket');
+    repo.git('remote', 'set-url', 'origin', path.join(repo.root, 'missing.git'));
+    const result = prepareIn(repo, CA);
+    assert.doesNotMatch(result.output, /^origin |origin\/master|fetch/m);
+    assert.match(result.stdout, /Capturing channel 1895766/);
+});
+
+test('W0-1: a dry run with --confirm-nonprod fetches and checks too, but only warns, saying a real release stops there', () => {
+    const repo = releaseRepo();
+    repo.git('switch', '-q', '-c', 't99/old-ticket');
+    const merged = repo.mergeOnOrigin({ 'README.md': 'later\n' });
+    const result = prepareIn(repo, [...AGENT_REAL, '--dry-run']);
+    assert.match(result.stdout, new RegExp(`^WARNING {2}--confirm-nonprod needs this checkout on master at origin/master's tip, so that origin/master's calendar and targets judge it: this checkout is on branch t99/old-ticket, not master: run the release from the main clone, on master; HEAD ${repo.head.slice(0, 7)} isn't origin/master's tip ${merged.slice(0, 7)}: .*\\(a dry run goes on; a real release stops here\\)$`, 'm'));
+    assert.equal(repo.git('rev-parse', 'refs/remotes/origin/master'), merged, 'it fetched');
+    if (flagAllowedToday()) assert.match(result.stdout, /Capturing channel 1895766/);
+});
+
+test('W0-1: a dry run on the test-only overrides stays offline: it compares with origin/master as last fetched', () => {
+    const repo = releaseRepo();
+    repo.mergeOnOrigin({ 'README.md': 'later\n' });
+    const result = prepareIn(repo, AGENT, onDate('2026-10-06'));
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.stdout, /^fixture {2}origin\/master as last fetched: a dry run on the test-only overrides doesn't fetch$/m);
+    assert.match(result.stdout, new RegExp(`^origin {3}master at origin/master's tip ${repo.head.slice(0, 7)}: `, 'm'));
+    assert.equal(repo.git('rev-parse', 'refs/remotes/origin/master'), repo.head, 'nothing was fetched');
+});
+
+test('W0-1: step 5 with --confirm-nonprod goes on when origin/master moved on without touching the release tooling or the calendar', () => {
+    const repo = gitRepo();
+    const merged = repo.mergeOnOrigin({ 'templates/pages/home.html': 'home\n' });
+    const result = stepFive({ confirmNonprod: 1895766 }, {}, repo);
+    assert.match(result.stdout, new RegExp(`^origin {3}origin/master moved on to ${merged.slice(0, 7)} while this release ran, but changed none of the release tooling or the calendar, so the push sends ${repo.head.slice(0, 7)} as checked$`, 'm'));
+    if (flagAllowedToday()) assert.match(result.stdout, /Capturing channel 1895766 again/);
+});
+
+test('W0-1: step 5 with --confirm-nonprod stops before the capture when a calendar change merged while the release ran', () => {
+    const repo = gitRepo();
+    const merged = repo.mergeOnOrigin(NEW_CALENDAR);
+    const result = stepFive({ confirmNonprod: 1895766 }, {}, repo);
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.stderr, new RegExp(`--confirm-nonprod refused at step 5: origin/master moved on to ${merged.slice(0, 7)} while this release ran, and changed the release tooling or the calendar since ${repo.head.slice(0, 7)} \\(scripts/release-calendar\\.json\\): pull and rerun the release\\. Nothing was pushed`));
+    assert.doesNotMatch(result.output, /Capturing channel/);
+});
+
+test('W0-1: step 5 with --confirm-nonprod stops before the capture when origin can\'t be fetched again', () => {
+    const repo = gitRepo();
+    repo.git('remote', 'set-url', 'origin', path.join(repo.root, 'missing.git'));
+    const result = stepFive({ confirmNonprod: 1895766 }, {}, repo);
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.stderr, /--confirm-nonprod refused at step 5: couldn't fetch origin's master again \(.*missing\.git/);
+    assert.doesNotMatch(result.output, /Capturing channel/);
 });
 
 // --- Order of the build steps ---------------------------------------------------------------

@@ -55,6 +55,9 @@ import { checkRelease, menuIdsSet } from './release-guard.mjs';
 import {
     addReleaseEntry, describePairedRelease, formatPushSummary, formatReleaseEntry, lastRelease, releasedThemeUuids,
 } from './release-log.mjs';
+import {
+    checkoutProblems, gitIn, readCheckout, stepFiveOrigin,
+} from './release-origin.mjs';
 import { redact } from './release-redact.mjs';
 import { validateThemeConfig } from './release-schema.mjs';
 import { buildPushArgs, findTarget } from './release-targets.mjs';
@@ -176,14 +179,32 @@ function calendarFields(options, target, phase) {
     };
 }
 
-// Before step 1: how step 5 will be confirmed, and today's phase of the calendar. --confirm-nonprod
-// is refused here on a production target and from T-21 (release-checks.mjs confirmNonprodRefusals),
-// so a refused run captures nothing; step 5 checks again before the push.
+// An agent push runs only from master at origin/master's tip, so the calendar and targets that judge
+// --confirm-nonprod are origin/master's, never a stale checkout's (release-origin.mjs). A real
+// release refuses otherwise, and a dry run warns. A dry run on the test-only overrides stays
+// offline: it compares with origin/master as last fetched.
+function originStep(options) {
+    const offline = OVERRIDES.some(name => process.env[name]);
+    if (offline) say('fixture', 'origin/master as last fetched: a dry run on the test-only overrides doesn\'t fetch');
+    const checkout = readCheckout({ git: gitIn(), fetch: !offline });
+    const problems = checkoutProblems(checkout);
+    if (problems.length) {
+        stopOrWarn([`--confirm-nonprod needs this checkout on master at origin/master's tip, so that origin/master's calendar and targets judge it: ${problems.join('; ')}`], options.dryRun, refuse);
+        return;
+    }
+    say('origin', `master at origin/master's tip ${checkout.head.slice(0, 7)}${offline ? '' : ', fetched just now'}: the calendar and targets that judge --confirm-nonprod are origin/master's`);
+}
+
+// Before step 1: how step 5 will be confirmed, and today's phase of the calendar. With
+// --confirm-nonprod the checkout must be master at origin/master's tip, and the flag is refused on a
+// production target and from T-21 (release-checks.mjs confirmNonprodRefusals), so a refused run
+// captures nothing; step 5 checks both again before the push.
 function confirmationStep(options, target) {
     heading('Confirmation and the release calendar');
     const phase = readPhase({ fixtures: true });
     const fields = calendarFields(options, target, phase);
     say('calendar', fields.calendar.line);
+    if (hasConfirmNonprod(options)) originStep(options);
     const reasons = confirmNonprodRefusals({ options, target, phase });
     if (reasons.length) throw refuse(`--confirm-nonprod refused: ${reasons.join('; ')}`);
     say('confirm', hasConfirmNonprod(options)
@@ -591,10 +612,10 @@ function stepFiveCalendar(state) {
     }
 }
 
-// The operator confirms first (or, with --confirm-nonprod on a non-production target, the flag's
-// refusals are checked again with today's calendar, and no one is asked: W0-1). Then the gate
-// captures the channel again and checks it, the commit and the zip, so nothing slow sits between
-// the last check and the push.
+// The operator confirms first (or, with --confirm-nonprod on a non-production target, no one is
+// asked: origin/master is fetched again and the flag's refusals are checked again with today's
+// calendar, W0-1). Then the gate captures the channel again and checks it, the commit and the zip,
+// so nothing slow sits between the last check and the push.
 async function prePush() {
     const readBack = readState();
     heading(`Step 5 · Push to channel ${readBack.channel} (${readBack.target.name})`);
@@ -606,6 +627,11 @@ async function prePush() {
         target,
         phase: () => phase,
         typed: () => confirmOrStop(state.channel, `Type the channel id (${state.channel}) to push: `),
+        origin: () => {
+            const { problems, note } = stepFiveOrigin({ git: gitIn(), sha: state.git.sha });
+            if (note) say('origin', note);
+            return problems;
+        },
     });
     const { live, problems } = await pushGate({
         confirm: async () => {
