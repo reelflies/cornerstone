@@ -2,11 +2,13 @@
 // the macOS Keychain. Shaun adds the two Keychain items (W0-12); nothing else stores a token.
 //
 //   import { readStoreToken } from './lib/store-token.mjs';
-//   const { token, source } = readStoreToken('read');   // RF_BC_READ_TOKEN, else "reelflies-bc-read"
+//   const { token, source } = readStoreToken('read');   // RF_BC_READ_TOKEN or RF_BC_API_TOKEN, else "reelflies-bc-read"
 //   const { token } = readStoreToken('write');          // RF_BC_WRITE_TOKEN, else "reelflies-bc-write"
 //
 // - read: the read-only account (Information & Settings, Marketing, Products, Content and
 //   Channel settings). The store helper's plans read with it, and the release guard will too.
+//   W0-12 makes it the release guard's RF_BC_API_TOKEN, so that name is read as well, after
+//   RF_BC_READ_TOKEN: an exported RF_BC_API_TOKEN is never skipped for the Keychain.
 // - write: the writer account. Only the store helper, scripts/store/, may read it: the loader
 //   refuses when the script node was started with lives anywhere else. That is a tripwire, as
 //   the permission rules are; the real limits are the token scopes and the Keychain.
@@ -27,7 +29,9 @@ import { storeToolingProblem } from '../store/tooling.mjs';
 export const KEYCHAIN_ACCOUNT = 'reelflies';
 
 export const TOKENS = {
-    read: { env: 'RF_BC_READ_TOKEN', service: 'reelflies-bc-read', what: 'the read-only store API token' },
+    read: {
+        env: 'RF_BC_READ_TOKEN', aliases: ['RF_BC_API_TOKEN'], service: 'reelflies-bc-read', what: 'the read-only store API token',
+    },
     write: { env: 'RF_BC_WRITE_TOKEN', service: 'reelflies-bc-write', what: 'the writer store API token' },
 };
 
@@ -78,8 +82,8 @@ export function readStoreToken(kind, {
             throw refused;
         }
     }
-    const fromEnv = env[spec.env];
-    if (fromEnv) return checked(fromEnv, `$${spec.env}`);
+    const name = [spec.env, ...(spec.aliases || [])].find(variable => env[variable]);
+    if (name) return checked(env[name], `$${name}`);
     if (platform !== 'darwin') throw new Error(`no ${spec.env} in the environment, and no macOS Keychain on ${platform} to read ${spec.what} from`);
     if (security === runSecurity && env.NODE_TEST_CONTEXT) throw new Error(`under node --test the store tokens come from the environment only: the Keychain is never read (set ${spec.env})`);
     const { status, stdout, stderr } = security(keychainArgs(spec.service));

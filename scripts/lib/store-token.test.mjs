@@ -37,7 +37,9 @@ const options = (extra = {}) => ({
 
 test('the two tokens: an environment variable each, then a Keychain item each, under account "reelflies"', () => {
     assert.equal(KEYCHAIN_ACCOUNT, 'reelflies');
-    assert.deepEqual(TOKENS.read, { env: 'RF_BC_READ_TOKEN', service: 'reelflies-bc-read', what: 'the read-only store API token' });
+    assert.deepEqual(TOKENS.read, {
+        env: 'RF_BC_READ_TOKEN', aliases: ['RF_BC_API_TOKEN'], service: 'reelflies-bc-read', what: 'the read-only store API token',
+    });
     assert.deepEqual(TOKENS.write, { env: 'RF_BC_WRITE_TOKEN', service: 'reelflies-bc-write', what: 'the writer store API token' });
     assert.deepEqual(keychainArgs('reelflies-bc-write'), ['find-generic-password', '-a', 'reelflies', '-s', 'reelflies-bc-write', '-w']);
 });
@@ -125,6 +127,16 @@ test('the writer token goes only to store tooling identical to origin/master\'s:
     // The read-only token is never held to it: plans read anywhere, and so will the release guard.
     const unasked = () => { throw new Error('the tooling check ran for the read token'); };
     assert.equal(readStoreToken('read', options({ env: { RF_BC_READ_TOKEN: FAKE }, toolingProblem: unasked })).token, FAKE);
+});
+
+test('the read token also answers to RF_BC_API_TOKEN, the name the release guard uses (W0-12: the same account)', () => {
+    const stub = keychain({ 'reelflies-bc-read': 'keychaintoken0123456789abcdef', 'reelflies-bc-write': FAKE });
+    const other = 'apitoken0123456789abcdefghijklm';
+    assert.deepEqual(readStoreToken('read', options({ env: { RF_BC_API_TOKEN: other }, security: stub.security })), { token: other, source: '$RF_BC_API_TOKEN' });
+    assert.equal(readStoreToken('read', options({ env: { RF_BC_READ_TOKEN: FAKE, RF_BC_API_TOKEN: other }, security: stub.security })).token, FAKE, 'RF_BC_READ_TOKEN comes first');
+    assert.deepEqual(stub.calls, [], 'an exported RF_BC_API_TOKEN is never skipped for the Keychain');
+    // The writer token never takes it.
+    assert.equal(readStoreToken('write', options({ env: { RF_BC_API_TOKEN: other }, security: stub.security })).token, FAKE);
 });
 
 test('only the two kinds exist', () => {
