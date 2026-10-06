@@ -5,13 +5,28 @@
 // Deny by default: a channel that isn't in RELEASE_TARGETS is refused. Every push is to one
 // channel with one named variation, and never deletes a theme (-d) or targets all channels (-allc).
 
+// How step 5 may be confirmed (W0-1): the operator types the channel id at the terminal, or, on a
+// non-production target only, --confirm-nonprod <channel> stands in for the typing (an agent's push).
+export const CONFIRM_TYPED = 'typed';
+export const CONFIRM_NONPROD = 'nonprod';
+
 // Channel id -> target. `slug` names the bundle and the live capture file.
+//   production     true for a channel shoppers use. A production target is confirmed only by typing,
+//                  and a target that doesn't say `production: false` counts as one (W0-1).
+//   confirmation   the ways step 5 may be confirmed: [CONFIRM_TYPED], plus CONFIRM_NONPROD on a
+//                  non-production target.
+//   liveFromFlip   the channel becomes live reelflies.ca at the Flip, so --confirm-nonprod is refused
+//                  there from the Flip whatever `production` says (W0-1; ticket 57 marks it production
+//                  that day). Ticket 53's channel-1 entry will be production: true, typed only.
 export const RELEASE_TARGETS = {
     1895766: {
         name: 'ReelFlies_CA',
         slug: 'ca',
         variations: ['ReelFlies CA'],
         liveFile: 'config.ca.live.json',
+        production: false, // prelaunch until the Flip
+        confirmation: [CONFIRM_TYPED, CONFIRM_NONPROD],
+        liveFromFlip: true,
     },
 };
 

@@ -11,6 +11,7 @@ const release = {
     channelName: 'ReelFlies_CA',
     variation: 'ReelFlies CA',
     theme: { uuid: '9f0c2a10-0000-0000-0000-000000000001', name: 'Cornerstone', version: '6.22.0' },
+    previousThemeUuid: '9f0c2a10-0000-0000-0000-000000000001',
     git: { sha: '1be9fb20ffd985c26c59c5b5fcd28006418d9a08', branch: 'master' },
     bundle: {
         file: 'reelflies-ca-6.22.0-1be9fb2.zip', bytes: 9876543, sha256: 'ab12', mainJsBytes: 307607,
@@ -21,6 +22,9 @@ const release = {
     guard: { values: [], newSwitches: [] },
     verify: { problems: [] },
     operator: 'Shaun Bathgate',
+    confirmation: { mode: 'typed' },
+    calendar: { line: 'Release calendar: no Flip date yet (provisional; ticket 10: Flip date after ticket 26), so nothing is limited.' },
+    pairedChannel1: null,
 };
 const withSwitches = {
     ...release,
@@ -35,6 +39,7 @@ test('a release entry records where, what, from which commit and bundle, step 1 
         '### 2026-10-05 18:04 UTC · channel 1895766 (ReelFlies_CA) · ReelFlies CA',
         '',
         '- Theme: Cornerstone 6.22.0, uuid `9f0c2a10-0000-0000-0000-000000000001`',
+        '- New uuid: no, a new version of the theme the channel ran before the push',
         '- Commit: `1be9fb20ffd985c26c59c5b5fcd28006418d9a08` on `master`',
         '- Bundle: `reelflies-ca-6.22.0-1be9fb2.zip`, 9,876,543 B, sha256 `ab12`',
         '- main.js: 307,607 B',
@@ -44,6 +49,7 @@ test('a release entry records where, what, from which commit and bundle, step 1 
         '- New switches: none',
         '- Verify: the live saved settings match config.json',
         '- Operator: Shaun Bathgate',
+        '- Confirmation: channel id typed at the terminal',
         '',
     ].join('\n'));
 });
@@ -83,7 +89,7 @@ test('the first entry creates RELEASES.md with its header and a Releases section
 
     const second = addReleaseEntry(first, formatReleaseEntry({ ...release, timestamp: '2026-10-06T09:00:00.000Z' }));
     assert.ok(second.indexOf('2026-10-05 18:04 UTC') < second.indexOf('2026-10-06 09:00 UTC'), 'entries are in date order');
-    assert.match(second, /Operator: Shaun Bathgate\n\n### 2026-10-06 09:00 UTC/);
+    assert.match(second, /Confirmation: channel id typed at the terminal\n\n### 2026-10-06 09:00 UTC/);
 });
 
 test('RELEASES.md gives the uuids of the themes the release pushed', () => {
@@ -91,6 +97,22 @@ test('RELEASES.md gives the uuids of the themes the release pushed', () => {
     const markdown = addReleaseEntry(addReleaseEntry(null, formatReleaseEntry(release)), unknown);
     assert.deepEqual(releasedThemeUuids(markdown), ['9f0c2a10-0000-0000-0000-000000000001']);
     assert.deepEqual(releasedThemeUuids(null), []);
+});
+
+const CAVIO = '25121d00-0000-0000-0000-00000000cafe';
+
+test('W0-1: the entry says whether the push made a new theme uuid, or a new version of the theme the channel ran before it (decision 9)', () => {
+    assert.match(formatReleaseEntry(release), /\n- Theme: Cornerstone 6\.22\.0, uuid `9f0c2a10-0000-0000-0000-000000000001`\n- New uuid: no, a new version of the theme the channel ran before the push\n/);
+    assert.match(formatReleaseEntry({ ...release, previousThemeUuid: CAVIO }), new RegExp(`\\n- New uuid: yes; before the push the channel ran theme \`${CAVIO}\`\\n`));
+    assert.match(formatReleaseEntry({ ...release, theme: { ...release.theme, uuid: 'unknown' } }), /\n- New uuid: unknown: verify couldn't read the channel's theme after the push\n/);
+    assert.match(formatReleaseEntry({ ...release, previousThemeUuid: null }), /\n- New uuid: unknown: step 5 didn't record the channel's theme before the push\n/);
+    assert.match(formatReleaseEntry({ ...release, theme: { ...release.theme, uuid: null }, verify: null }), /\n- New uuid: known after the push \(dry run\)\n/);
+});
+
+test('W0-1: the theme the channel ran before the push never counts as one the release pushed', () => {
+    const markdown = addReleaseEntry(null, formatReleaseEntry({ ...release, previousThemeUuid: CAVIO }));
+    assert.deepEqual(releasedThemeUuids(markdown), ['9f0c2a10-0000-0000-0000-000000000001']);
+    assert.equal(lastRelease(markdown, 1895766).themeUuid, '9f0c2a10-0000-0000-0000-000000000001');
 });
 
 test('the push summary shows the target, the variation, step 1 and the sizes before the operator confirms', () => {
@@ -113,7 +135,7 @@ test('a release entry goes at the end of Releases, before the Switch toggles sec
     const markdown = addReleaseEntry(null, formatReleaseEntry(release));
     const toggles = markdown.indexOf('\n## Switch toggles\n');
     assert.ok(toggles > markdown.indexOf('### 2026-10-05 18:04 UTC'), 'the entry is above Switch toggles');
-    assert.match(markdown, /- Operator: Shaun Bathgate\n\n## Switch toggles\n/);
+    assert.match(markdown, /- Confirmation: channel id typed at the terminal\n\n## Switch toggles\n/);
 });
 
 test('the Switch toggles section has its fixed format: date, channel, switch, from, to, who, reason', () => {
@@ -228,4 +250,45 @@ test('W0-2: step 1 names the overwritten control-panel edits beside the repo\'s 
     assert.equal(describeStep1({
         replacing: null, overwritten: [], unpublished: [], changedInRepo: [], base: null,
     }), 'no differences from the live saved settings');
+});
+
+// --- W0-1: the confirmation, the release calendar and the paired channel-1 release ----------
+
+const agentPush = {
+    ...release,
+    confirmation: { mode: 'nonprod', channel: 1895766 },
+    calendar: { line: 'Release calendar: Flip 2027-03-01 (provisional; ticket 10 comment). 2027-02-03 is in T-28 (channel-1 parity) since 2027-02-01; next: T-21 on 2027-02-08.' },
+    pairedChannel1: {
+        phase: 'T-28', since: '2027-02-01', t28: '2027-02-01', flip: '2027-03-01', status: 'provisional',
+    },
+};
+
+test('W0-1: an agent push records "Confirmation: non-interactive (agent)" beside the operator, and the paired channel-1 release pending', () => {
+    const entry = formatReleaseEntry(agentPush);
+    assert.match(entry, /\n- Operator: Shaun Bathgate\n- Confirmation: non-interactive \(agent\), `--confirm-nonprod 1895766`\n/);
+    assert.match(entry, /\n- Paired channel-1 release: pending \(ticket 56\): channel 1 runs the same build from T-28 \(2027-02-01\) until the Flip, so push this commit there through ticket 53's target; calendar T-28, Flip 2027-03-01, provisional\n$/);
+});
+
+test('W0-1: a typed release records how it was confirmed, and no paired release when the calendar doesn\'t ask for one', () => {
+    const entry = formatReleaseEntry(release);
+    assert.match(entry, /\n- Confirmation: channel id typed at the terminal\n$/);
+    assert.doesNotMatch(entry, /Paired channel-1 release/);
+    const typedAtT21 = formatReleaseEntry({ ...agentPush, confirmation: { mode: 'typed' }, pairedChannel1: { ...agentPush.pairedChannel1, phase: 'T-21', since: '2027-02-08' } });
+    assert.match(typedAtT21, /\n- Confirmation: channel id typed at the terminal\n- Paired channel-1 release: pending \(ticket 56\).*calendar T-21, Flip 2027-03-01, provisional\n$/);
+});
+
+test('W0-1: the push summary says how the push is confirmed, and whether the calendar\'s dates are provisional or set', () => {
+    const summary = formatPushSummary(agentPush);
+    // "requested", not "no prompt": step 5 prints the summary before it checks the flag again, and a
+    // calendar that has moved into T-21 by then stops the push right after this line.
+    assert.match(summary, /\n {2}confirm {5}non-interactive \(agent\), --confirm-nonprod 1895766: requested; step 5 checks it again against origin\/master and today's calendar and asks no one, and the gate still captures the channel again and checks everything before the push\n/);
+    assert.doesNotMatch(summary, /no prompt/);
+    assert.match(summary, /\n {2}calendar {4}Flip 2027-03-01 \(provisional; ticket 10 comment\)\. 2027-02-03 is in T-28/);
+    assert.match(summary, /\n {2}channel 1 {3}paired release pending \(ticket 56\): channel 1 runs the same build from T-28/);
+    const typed = formatPushSummary(release);
+    assert.match(typed, /\n {2}confirm {5}channel id typed at the terminal\n/);
+    assert.match(typed, /\n {2}calendar {4}no Flip date yet \(provisional; ticket 10: Flip date after ticket 26\), so nothing is limited\.$/);
+    assert.doesNotMatch(typed, /channel 1 {3}/);
+    const set = formatPushSummary({ ...agentPush, calendar: { line: 'Release calendar: Flip 2027-03-01 (set; ticket 10 comment). 2027-01-02 is in build (building, before code complete); next: T-35 on 2027-01-25.' }, pairedChannel1: null });
+    assert.match(set, /calendar {4}Flip 2027-03-01 \(set;/);
 });

@@ -1,5 +1,7 @@
 // Reads scripts/release.sh's arguments and refuses anything but one channel and one named
-// variation (tickets 05 and 15). Pure: no network, no files.
+// variation (tickets 05 and 15), and --confirm-nonprod that doesn't name that channel (W0-1). Pure:
+// no network, no files. Whether the target and the release calendar allow --confirm-nonprod is
+// release-checks.mjs's confirmNonprodRefusals.
 //
 //   import { parseReleaseArgs, resolveTarget, USAGE } from './release-args.mjs';
 //
@@ -7,7 +9,7 @@
 
 import { findTarget } from './release-targets.mjs';
 
-export const USAGE = 'scripts/release.sh --channel <id> --variation "<name>" [--dry-run] [--first-release] [--accept-live | --overwrite-live]';
+export const USAGE = 'scripts/release.sh --channel <id> --variation "<name>" [--dry-run] [--first-release] [--accept-live | --overwrite-live] [--confirm-nonprod <id>]';
 
 // Flags that take no value (not the rf_* module switches, which the release guard checks).
 const BOOLEAN_FLAGS = {
@@ -16,7 +18,7 @@ const BOOLEAN_FLAGS = {
     '--accept-live': 'acceptLive',
     '--overwrite-live': 'overwriteLive',
 };
-const VALUE_FLAGS = { '--channel': 'channels', '--variation': 'variations' };
+const VALUE_FLAGS = { '--channel': 'channels', '--variation': 'variations', '--confirm-nonprod': 'confirmNonprods' };
 
 // stencil push flags (and look-alikes) that must never reach a release.
 const ALL_CHANNELS = 'pushing to all channels is never allowed: name one channel with --channel <id>';
@@ -40,7 +42,7 @@ function splitFlag(arg) {
 }
 
 function readFlags(argv) {
-    const found = { channels: [], variations: [] };
+    const found = { channels: [], variations: [], confirmNonprods: [] };
     for (let i = 0; i < argv.length; i++) {
         const [flag, inline] = splitFlag(argv[i]);
         if (FORBIDDEN[flag]) throw new Error(`${flag}: ${FORBIDDEN[flag]}`);
@@ -80,19 +82,39 @@ function readVariation(variations) {
     return variations[0];
 }
 
+// W0-1: --confirm-nonprod <channel> stands in for step 5's typed channel id. Its value must be
+// --channel's, so the flag confirms only the channel the release targets. Returns null without it.
+function readConfirmNonprod(values, channel) {
+    if (!values.length) return null;
+    if (values.length > 1) throw new Error(`one confirmation per release: --confirm-nonprod was given ${values.length} times`);
+    const value = values[0].trim();
+    if (!value) throw new Error(`--confirm-nonprod needs the channel id: --confirm-nonprod ${channel}, the same as --channel`);
+    if (!/^\d+$/.test(value)) throw new Error(`--confirm-nonprod: "${value}" isn't a channel id`);
+    if (Number(value) !== channel) throw new Error(`--confirm-nonprod ${value} isn't --channel ${channel}: it confirms only the channel this release targets`);
+    return channel;
+}
+
 export function parseReleaseArgs(argv) {
     const found = readFlags(argv);
+    const channel = readChannel(found.channels);
     const options = {
-        channel: readChannel(found.channels),
+        channel,
         variation: readVariation(found.variations),
         dryRun: Boolean(found.dryRun),
         firstRelease: Boolean(found.firstRelease),
         acceptLive: Boolean(found.acceptLive),
         overwriteLive: Boolean(found.overwriteLive),
+        confirmNonprod: readConfirmNonprod(found.confirmNonprods, channel),
     };
     if (options.acceptLive && options.overwriteLive) throw new Error('use either --accept-live or --overwrite-live, not both');
     if (options.firstRelease && (options.acceptLive || options.overwriteLive)) {
         throw new Error('--first-release can\'t be combined with --accept-live or --overwrite-live: a first release has no diff to accept or overwrite');
+    }
+    // Overwriting a control-panel edit and replacing another theme stay a person's choices.
+    for (const [flag, set] of [['--overwrite-live', options.overwriteLive], ['--first-release', options.firstRelease]]) {
+        if (options.confirmNonprod !== null && set) {
+            throw new Error(`--confirm-nonprod can't be combined with ${flag}: that choice stays with a person, who types the channel id at the terminal`);
+        }
     }
     return options;
 }
