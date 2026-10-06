@@ -9,14 +9,17 @@
 // - Every gate runs, even when one before it failed, so one run shows everything that
 //   would stop the push. The run exits 1 if any gate failed.
 // - Each gate uses its own local stencil start, or reuses a running one, as
-//   scripts/qa/storefront.mjs decides.
-// - With QA_FRESH_SERVER=1 nothing starts while anything answers on 3300 or 3301, and after
+//   scripts/qa/storefront.mjs decides, on QA_PORT and QA_PORT + 1 (3300 and 3301 by default).
+//   Each holds the port pair's lock while it runs, and a stencil start slot while its server
+//   runs (W0-7).
+// - With QA_FRESH_SERVER=1 nothing starts while anything answers on those ports, and after
 //   each gate its server must be gone, with both ports free, before the next one starts.
 
 import { spawnSync } from 'child_process';
+import { describeHolder, heldBy, portLockName } from '../lib/lock.mjs';
 import { isMain } from '../lib/is-main.mjs';
 import {
-    FRESH_SERVER, IS_LOCAL, QA_CHANNEL, QA_VARIATION, checkEnv, planLocalServer, waitForFreePorts,
+    FRESH_SERVER, IS_LOCAL, QA_CHANNEL, QA_PORT, QA_VARIATION, checkEnv, planLocalServer, waitForFreePorts,
 } from './storefront.mjs';
 
 export const GATES = [
@@ -56,14 +59,17 @@ async function runNpmGate(gate) {
 async function main() {
     try {
         checkEnv();
-        if (IS_LOCAL && FRESH_SERVER) await planLocalServer();
+        // Stop at once on a busy port, unless another gate run holds it: then each gate waits.
+        const portHolder = IS_LOCAL && FRESH_SERVER && heldBy(portLockName(QA_PORT));
+        if (portHolder) console.log(`WAIT     port ${QA_PORT} is in use by ${describeHolder(portHolder)}; each gate waits for it`);
+        else if (IS_LOCAL && FRESH_SERVER) await planLocalServer();
     } catch (error) {
         console.error(`STOP     ${error.message}`);
         process.exit(1);
     }
 
     const { ok, lines } = summary(await runGates(GATES, runNpmGate));
-    console.log(`\nStorefront gates on channel ${QA_CHANNEL}, "${QA_VARIATION}"${FRESH_SERVER ? ', each on a fresh stencil start' : ''}:`);
+    console.log(`\nStorefront gates on channel ${QA_CHANNEL}, "${QA_VARIATION}"${IS_LOCAL ? `, port ${QA_PORT}` : ''}${FRESH_SERVER ? ', each on a fresh stencil start' : ''}:`);
     lines.forEach(line => console.log(line));
     process.exit(ok ? 0 : 1);
 }
