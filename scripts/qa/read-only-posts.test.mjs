@@ -1,14 +1,14 @@
-// The POSTs the gates let through on a live channel, and the ones they answer themselves
-// (scripts/qa/read-only-posts.mjs, W0-6). Every other write a page makes on channel 1 or
-// 1855224 is refused (network-guard.mjs), so the list is short, and each entry says why it
-// only reads.
+// The POSTs the gates let through on a live channel, the ones they answer themselves, and the
+// GETs that count as writes (scripts/qa/read-only-posts.mjs, W0-6). Every other write a page
+// makes on channel 1 or 1855224 is refused (network-guard.mjs), so the lists are short, and
+// each entry says why it only reads, or why it changes something.
 //
 //   node --test scripts/qa/read-only-posts.test.mjs
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    LOCAL_ANSWERS, READ_ONLY_POSTS, isGraphqlQuery, localAnswer, readOnlyPost,
+    GET_WRITES, LOCAL_ANSWERS, READ_ONLY_POSTS, getWrite, isGraphqlQuery, localAnswer, readOnlyPost,
 } from './read-only-posts.mjs';
 
 const STOREFRONT = 'http://localhost:3401';
@@ -33,6 +33,11 @@ describe('read-only POSTs', () => {
             query('mutation{ login(email: "a", password: "b") { result } }'),
             JSON.stringify([{ query: '{ site { settings { storeName } } }' }, { query: 'mutation M { logout { result } }' }]),
             JSON.stringify({ query: '{ site { settings { storeName } } }', variables: { note: 'a mutation in a variable still counts' } }),
+            // JSON can spell the keyword with escapes, which only the parsed text shows.
+            '{"query":"\\u006dutation { cart { addCartLineItems(input: {}) { cart { entityId } } } }"}',
+            '{"query":"\\u006Dutation M { logout { result } }"}',
+            '[{"query":"{ site { settings { storeName } } }"},{"query":"\\u006dutation M { logout { result } }"}]',
+            '{"query":"query Q { a } m\\u0075tation M { b }","operationName":"M"}',
             JSON.stringify({ extensions: { persistedQuery: { version: 1, sha256Hash: 'abc' } } }),
             JSON.stringify({ query: '' }),
             JSON.stringify([]),
@@ -76,6 +81,66 @@ describe('read-only POSTs', () => {
             assert.equal(entry.method, 'POST', entry.id);
             assert.ok(entry.what.length > 20, entry.id);
         }
+    });
+});
+
+describe('writes sent as GETs', () => {
+    const get = (path, origin = STOREFRONT, method = 'GET') => ({ method, url: `${origin}${path}`, postData: null });
+
+    it('include the stock card\'s "Add to cart" link and every other cart link with an action', () => {
+        const writes = [
+            '/cart.php?action=add&product_id=6178',
+            '/cart.php?action=add&product_id=6178&pre_order=1',
+            '/cart.php?action=buy&sku=RF-6178-14',
+            '/cart.php?action=remove&item=abc',
+            '/cart.php?action=update&qty%5Babc%5D=2',
+            '/cart.php?action=removecoupon&couponcode=RF10',
+            '/cart.php?action=removegiftcertificate&giftcertificatecode=RF',
+            '/cart.php?action=remove_giftwrapping&itemid=abc',
+            '/cart.php?action=',
+            '/CART.PHP?action=add&product_id=6178',
+        ];
+        for (const path of writes) assert.equal(getWrite(get(path))?.id, 'cart-action', path);
+    });
+
+    it('include stencil-utils\' cart endpoints, the wish list\'s actions and signing out', () => {
+        assert.equal(getWrite(get('/remote/v1/cart/add?product_id=6178'))?.id, 'remote-cart');
+        assert.equal(getWrite(get('/remote/v1/cart/update'))?.id, 'remote-cart');
+        assert.equal(getWrite(get('/remote/v1/cart'))?.id, 'remote-cart');
+        assert.equal(getWrite(get('/wishlist.php?action=add&wishlistid=1&product_id=6178'))?.id, 'wishlist-action');
+        assert.equal(getWrite(get('/wishlist.php?action=addwishlist&product_id=6178'))?.id, 'wishlist-action');
+        assert.equal(getWrite(get('/login.php?action=logout'))?.id, 'logout');
+    });
+
+    it('count as writes on a HEAD too, and on every host, the live store\'s own included', () => {
+        assert.equal(getWrite(get('/cart.php?action=add&product_id=6178', STOREFRONT, 'HEAD'))?.id, 'cart-action');
+        assert.equal(getWrite(get('/cart.php?action=add&product_id=6178', 'https://reelflies.ca'))?.id, 'cart-action');
+        assert.equal(getWrite(get('/cart.php?action=add&product_id=6178', 'https://www.reelflies.com'))?.id, 'cart-action');
+    });
+
+    it('leave out the reads: the cart page, the cart\'s contents and the other pages', () => {
+        const reads = [
+            '/cart.php',
+            '/cart.php?suggest=6178',
+            '/api/storefront/carts',
+            '/api/storefront/carts?include=lineItems.physicalItems.options',
+            '/remote/v1/product-attributes/6178',
+            '/remote/v1/shipping-quote',
+            '/remote/v1/carts-of-a-kind',
+            '/login.php',
+            '/login.php?action=create_account',
+            '/wishlist.php',
+            '/flies/realistic-trout-flies/?action=add',
+            '/compare/6178/6179',
+        ];
+        for (const path of reads) assert.equal(getWrite(get(path)), null, path);
+        assert.equal(getWrite({ method: 'POST', url: `${STOREFRONT}/cart.php?action=add`, postData: null }), null, 'a POST is a write anyway');
+        assert.equal(getWrite(get('', 'data:text/html,cart.php?action=add')), null);
+        assert.equal(getWrite({ method: 'GET', url: 'not a url' }), null);
+    });
+
+    it('says why each one changes something', () => {
+        for (const entry of GET_WRITES) assert.ok(entry.what.length > 20, entry.id);
     });
 });
 
