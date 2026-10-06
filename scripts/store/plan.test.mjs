@@ -9,7 +9,7 @@ import path from 'node:path';
 import { parseCalendar, phaseOn } from '../lib/release-calendar.mjs';
 import { createClient } from './client.mjs';
 import {
-    PLAN_FORMAT, buildPlan, checkRequests, commandStoreHash, planDigest, writePlan,
+    PLAN_FORMAT, buildPlan, checkRequests, commandFetch, commandStoreHash, planDigest, writePlan,
 } from './plan.mjs';
 import { sha256 } from './snapshot.mjs';
 import {
@@ -272,4 +272,16 @@ test('the digest covers the whole plan, the diff a reviewer reads included', asy
         { ...made, writes: [{ ...made.writes[0], id: 'x' }] },
     ];
     for (const edited of edits) assert.notEqual(planDigest(edited), made.digest);
+});
+
+test('the fixture routes are a test seam: refused outside node --test, and required under it', async () => {
+    const routes = path.join(tmp, 'seam-routes.json');
+    fs.writeFileSync(routes, '{}');
+    // Outside node --test, a route file would answer a real run from fixtures and log made-up rows.
+    await assert.rejects(commandFetch(tmp, { RF_STORE_FIXTURES: routes, NODE_TEST_CONTEXT: '' }), /RF_STORE_FIXTURES is a test seam for node --test: unset it/);
+    await assert.rejects(commandFetch(tmp, { RF_STORE_FIXTURES: routes }), /RF_STORE_FIXTURES is a test seam/);
+    // Under node --test, a test that forgot its routes never reaches the real store.
+    await assert.rejects(commandFetch(tmp, { NODE_TEST_CONTEXT: 'child-v8', RF_STORE_ROOT: tmp }), /under node --test the store helper never reaches the network: set RF_STORE_FIXTURES/);
+    assert.equal(typeof await commandFetch(tmp, { NODE_TEST_CONTEXT: 'child-v8', RF_STORE_FIXTURES: routes }), 'function');
+    assert.equal(await commandFetch(tmp, {}), fetch, 'a real run uses the network');
 });

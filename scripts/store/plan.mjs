@@ -328,8 +328,13 @@ export function operatorName(env = process.env) {
 }
 
 // The fetch the commands use: the network, or under `node --test` only, RF_STORE_FIXTURES' routes.
+// Both ways fail closed: a real run refuses the routes, and a test without them never reaches
+// the network, so a test that moved RF_STORE_ROOT but forgot its routes can't write to the store.
 export async function commandFetch(root, env = process.env) {
-    if (!env.RF_STORE_FIXTURES) return fetch;
+    if (!env.RF_STORE_FIXTURES) {
+        if (env.NODE_TEST_CONTEXT) throw new Error('under node --test the store helper never reaches the network: set RF_STORE_FIXTURES to a route file');
+        return fetch;
+    }
     if (!env.NODE_TEST_CONTEXT) throw new Error('RF_STORE_FIXTURES is a test seam for node --test: unset it');
     const { fixtureFetch } = await import('./fixtures/store.mjs');
     const routes = JSON.parse(fs.readFileSync(env.RF_STORE_FIXTURES, 'utf8'));

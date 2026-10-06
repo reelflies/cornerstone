@@ -1,8 +1,12 @@
 // Tests scripts/lib/store-token.mjs (W0-11) with a stubbed Keychain: no test reads a real token,
 // and none runs `security`.
 
-import test from 'node:test';
+import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
     KEYCHAIN_ACCOUNT, TOKENS, keychainArgs, readStoreToken,
@@ -125,4 +129,22 @@ test('the writer token goes only to store tooling identical to origin/master\'s:
 
 test('only the two kinds exist', () => {
     assert.throws(() => readStoreToken('admin', options()), /"admin" isn't a store token kind \(read, write\)/);
+});
+
+test('under node --test the real Keychain is never read: a test that forgot its token variable is refused', () => {
+    // A stand-in `security` first on PATH, so even a broken loader can't reach the real Keychain.
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-store-token-'));
+    after(() => fs.rmSync(dir, { recursive: true, force: true }));
+    const marker = path.join(dir, 'security-ran');
+    fs.writeFileSync(path.join(dir, 'security'), `#!/bin/sh\ntouch '${marker}'\necho ${FAKE}\n`, { mode: 0o755 });
+    const loader = new URL('./store-token.mjs', import.meta.url).href;
+    const script = `import { readStoreToken } from '${loader}';
+try { readStoreToken('read', { env: { NODE_TEST_CONTEXT: 'child-v8' }, platform: 'darwin' }); console.log('READ'); }
+catch (error) { console.log(\`REFUSED \${error.message}\`); }`;
+    const result = spawnSync(process.execPath, ['--input-type=module', '-e', script], {
+        encoding: 'utf8', env: { PATH: dir, NODE_TEST_CONTEXT: 'child-v8', HOME: dir },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /^REFUSED under node --test the store tokens come from the environment only: the Keychain is never read/);
+    assert.ok(!fs.existsSync(marker), 'security never ran');
 });

@@ -15,7 +15,8 @@
 //
 // The Keychain is read only here, with `security find-generic-password -a reelflies -s <item> -w`.
 // A token is returned, never printed, and no error message ever carries one. Callers pass every
-// line they print through release-redact.mjs with the token they got.
+// line they print through release-redact.mjs with the token they got. Under `node --test` the
+// real Keychain is never read: tests give a token variable, or a stand-in for `security`.
 
 import { spawnSync } from 'child_process';
 import fs from 'fs';
@@ -80,6 +81,7 @@ export function readStoreToken(kind, {
     const fromEnv = env[spec.env];
     if (fromEnv) return checked(fromEnv, `$${spec.env}`);
     if (platform !== 'darwin') throw new Error(`no ${spec.env} in the environment, and no macOS Keychain on ${platform} to read ${spec.what} from`);
+    if (security === runSecurity && env.NODE_TEST_CONTEXT) throw new Error(`under node --test the store tokens come from the environment only: the Keychain is never read (set ${spec.env})`);
     const { status, stdout, stderr } = security(keychainArgs(spec.service));
     const source = `Keychain item "${spec.service}" (account "${KEYCHAIN_ACCOUNT}")`;
     if (status === 0) return checked(stdout.replace(/\r?\n$/, ''), source);
