@@ -21,6 +21,10 @@
 //   RF_RELEASE_LIVE_FIXTURE=<file>   a capture (config.<slug>.live.json shape) instead of the store
 //   RF_RELEASE_TREE_FIXTURE=<file>   a JSON array of the channel's category ids, instead of the
 //                                    catalogue API, for the guard's menu id rule
+//   RF_RELEASE_LOG_FIXTURE=<file>    a release log to read instead of RELEASES.md: the channel's last
+//                                    release (W0-2) and the themes the release pushed
+//   RF_RELEASE_BASE_FIXTURE=<file>   a theme config to use as config.json at the commit of the
+//                                    channel's last release, instead of reading it with git (W0-2)
 
 import { execFileSync } from 'child_process';
 import crypto from 'crypto';
@@ -36,11 +40,11 @@ import {
     confirmChannel, MAX_THEMES, pushGate, realReleaseStops, setupProblems, themeCapProblems,
 } from './release-checks.mjs';
 import {
-    acceptLiveValues, blockingDifferences, diffSettings, displayValue, effectiveSettings, verifyRelease,
+    acceptLiveValues, displayValue, effectiveSettings, threeWayDiff, verifyRelease,
 } from './release-diff.mjs';
 import { checkRelease, menuIdsSet } from './release-guard.mjs';
 import {
-    addReleaseEntry, formatPushSummary, formatReleaseEntry, releasedThemeUuids,
+    addReleaseEntry, formatPushSummary, formatReleaseEntry, lastRelease, releasedThemeUuids,
 } from './release-log.mjs';
 import { redact } from './release-redact.mjs';
 import { validateThemeConfig } from './release-schema.mjs';
@@ -49,7 +53,7 @@ import { fetchChannelCategoryIds, tokenGetJson } from './release-tree-ids.mjs';
 
 const MAIN_JS = 'assets/dist/theme-bundle.main.js';
 const RELEASES = 'RELEASES.md';
-const OVERRIDES = ['RF_RELEASE_CONFIG', 'RF_RELEASE_LIVE_FIXTURE', 'RF_RELEASE_TREE_FIXTURE'];
+const OVERRIDES = ['RF_RELEASE_CONFIG', 'RF_RELEASE_LIVE_FIXTURE', 'RF_RELEASE_TREE_FIXTURE', 'RF_RELEASE_LOG_FIXTURE', 'RF_RELEASE_BASE_FIXTURE'];
 
 const say = (label, message) => console.log(`${label.padEnd(8)} ${message}`);
 const warn = message => console.log(`WARNING  ${message}`);
@@ -177,9 +181,21 @@ function reportCapture(live) {
 
 const readReleases = () => (fs.existsSync(RELEASES) ? fs.readFileSync(RELEASES, 'utf8') : null);
 
+// The release log step 1 reads: RELEASES.md, or the test fixture. Step 7 always writes RELEASES.md.
+function readReleaseLog() {
+    const fixture = process.env.RF_RELEASE_LOG_FIXTURE;
+    if (!fixture) return readReleases();
+    say('fixture', `release log from ${fixture} (RF_RELEASE_LOG_FIXTURE)`);
+    try {
+        return fs.readFileSync(fixture, 'utf8');
+    } catch (error) {
+        throw refuse(`can't read the release log fixture ${fixture}: ${error.message}`);
+    }
+}
+
 // A channel that runs another theme has no diff to run. Returns the theme being replaced.
-function foreignTheme(state, live, config) {
-    const fork = isThisFork(live, config, releasedThemeUuids(readReleases()));
+function foreignTheme(state, live, config, releases) {
+    const fork = isThisFork(live, config, releasedThemeUuids(releases));
     if (fork && state.firstRelease) {
         throw refuse(`--first-release refused: channel ${state.channel} already runs this fork (${describeLiveTheme(live.capture)}), so the diff must run. Rerun without --first-release.`);
     }
@@ -193,15 +209,87 @@ function foreignTheme(state, live, config) {
     return replacing;
 }
 
-function printEntries(entries) {
-    for (const entry of entries) {
-        if ('repo' in entry) console.log(`  changed    ${entry.key}: live ${short(entry.key, entry.live)}, config.json ${short(entry.key, entry.repo)}`);
-        else console.log(`  live only  ${entry.key}: ${short(entry.key, entry.live)}`);
+// --- prepare: step 1's base, the channel's last release (W0-2) -------------------------------
+
+// config.json as committed at `sha`, or an Error saying why it can't be read. git's own message
+// goes into the Error, not straight to the terminal.
+function configAtCommit(sha) {
+    try {
+        return JSON.parse(execFileSync('git', ['show', `${sha}:config.json`], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+    } catch (error) {
+        const reason = String(error.stderr || error.message).trim().split('\n')[0];
+        return new Error(reason);
     }
 }
 
-function acceptLive(state, diff) {
-    const entries = [...diff.changed, ...diff.liveOnly];
+// The settings the channel's last release pushed: config.json at the commit of its newest
+// RELEASES.md entry, for that entry's variation. Returns { base: { sha, timestamp, variation,
+// themeUuid, settings } } or, when there is nothing to compare with, { base: null, note } and step 1
+// compares two ways as it did before W0-2: every live difference stops it.
+function readBase(state, releases) {
+    const entry = lastRelease(releases, state.channel);
+    if (!entry) return { base: null, note: `RELEASES.md records no release on channel ${state.channel}` };
+    if (!entry.sha) return { base: null, note: `the channel's last release in RELEASES.md (${entry.timestamp} UTC) has no readable commit` };
+    const sha7 = entry.sha.slice(0, 7);
+    const fixture = process.env.RF_RELEASE_BASE_FIXTURE;
+    let config;
+    if (fixture) {
+        say('fixture', `config.json at ${sha7} from ${fixture} (RF_RELEASE_BASE_FIXTURE)`);
+        config = readJson(fixture, 'the last-released config fixture');
+    } else {
+        config = configAtCommit(entry.sha);
+        if (config instanceof Error) return { base: null, note: `can't read config.json at ${sha7} (the channel's last release in RELEASES.md): ${config.message}` };
+    }
+    let settings;
+    try {
+        settings = effectiveSettings(config, entry.variation);
+    } catch {
+        return { base: null, note: `"${entry.variation}" isn't a variation in config.json at ${sha7}, the channel's last release` };
+    }
+    return {
+        base: {
+            sha: entry.sha, timestamp: entry.timestamp, variation: entry.variation, themeUuid: entry.themeUuid, settings,
+        },
+    };
+}
+
+function reportBase(base, note, live) {
+    if (!base) {
+        say('base', `none: ${note}, so every live difference stops step 1, as before W0-2`);
+        return;
+    }
+    say('base', `config.json at ${base.sha.slice(0, 7)}, the channel's last release (${base.timestamp} UTC, ${base.variation}). A key whose live value is still the one released there, and that config.json changed since, passes as "in repo".`);
+    if (base.themeUuid && base.themeUuid !== live.capture.themeUuid) {
+        say('NOTE', `the channel runs theme ${live.capture.themeUuid}, not ${base.themeUuid}, the theme its last release pushed. Step 1 still compares with that release: a live value that differs from it stops step 1.`);
+    }
+}
+
+// --- prepare: step 1, the diff ----------------------------------------------------------------
+
+function printEntries(entries) {
+    for (const entry of entries) {
+        const extra = [
+            'released' in entry ? `last released ${short(entry.key, entry.released)}` : null,
+            'published' in entry ? `published ${short(entry.key, entry.published)}` : null,
+        ].filter(Boolean).map(text => `, ${text}`).join('');
+        if ('repo' in entry) console.log(`  changed    ${entry.key}: live ${short(entry.key, entry.live)}, config.json ${short(entry.key, entry.repo)}${extra}`);
+        else console.log(`  live only  ${entry.key}: ${short(entry.key, entry.live)}${extra}`);
+    }
+}
+
+function printRepoChanges(entries) {
+    for (const entry of entries) {
+        if ('repo' in entry) console.log(`  in repo    ${entry.key}: live ${short(entry.key, entry.live)} (as last released), config.json ${short(entry.key, entry.repo)}`);
+        else console.log(`  in repo    ${entry.key}: removed from config.json; live ${short(entry.key, entry.live)} (as last released)`);
+    }
+}
+
+// Copies the live values of every differing key into config.json, except the ones config.json
+// changed since the last release (W0-2): taking those would undo the repo's own change.
+function acceptLive(state, diff, changedInRepo) {
+    const repoChanges = new Set(changedInRepo.map(entry => entry.key));
+    const entries = [...diff.changed, ...diff.liveOnly].filter(entry => !repoChanges.has(entry.key));
+    if (!entries.length && repoChanges.size) throw new Stop('--accept-live: there is nothing to accept: every live difference is a change made in the repo since the last release, which the push carries. Rerun without it.');
     if (!entries.length) throw new Stop('--accept-live: the live settings already match config.json, so there is nothing to accept. Rerun without it.');
     printEntries(entries);
     if (state.dryRun) throw new Stop(`--accept-live in a dry run writes nothing: rerun without --dry-run to write these ${entries.length} live value(s) into config.json's "${state.variation}" settings`);
@@ -210,25 +298,44 @@ function acceptLive(state, diff) {
     throw new Stop(`wrote ${entries.length} live value(s) into ${state.configPath}'s "${state.variation}" settings. Review them (git diff ${state.configPath}), commit, and rerun the release.`);
 }
 
-async function diffStep(state, live, config) {
-    const diff = diffSettings(effectiveSettings(config, state.variation), live.settings);
-    if (state.acceptLive) acceptLive(state, diff);
-    const blocking = blockingDifferences(diff);
+// Step 1 (ticket 05; three-way since W0-2). Returns step 1's outcome for the push summary and the
+// RELEASES.md entry: the overwritten keys, the keys changed in the repo since the last release, and
+// that release (or why there was none).
+async function diffStep(state, live, config, releases) {
+    const { base, note = null } = readBase(state, releases);
+    reportBase(base, note, live);
+    const { diff, blocking, changedInRepo } = threeWayDiff({
+        repo: effectiveSettings(config, state.variation),
+        live: live.settings,
+        published: live.capture.publishedSettings ?? live.settings,
+        released: base && base.settings,
+    });
+    const outcome = overwritten => ({
+        overwritten, changedInRepo: changedInRepo.map(entry => entry.key), base: base && { sha: base.sha, timestamp: base.timestamp }, baseNote: note,
+    });
+    if (state.acceptLive) acceptLive(state, diff, changedInRepo);
     if (diff.repoOnly.length) say('new', `${diff.repoOnly.length} setting(s) only in config.json pass: ${diff.repoOnly.map(entry => entry.key).slice(0, 10).join(', ')}`);
+    if (changedInRepo.length) {
+        say('in repo', `${changedInRepo.length} setting(s) changed in the repo since the last release pass; the push summary and the ${RELEASES} entry list them:`);
+        printRepoChanges(changedInRepo);
+    }
     if (!blocking.length) {
-        say('ok', 'no differences from the live saved settings, apart from the rf_* switches (the release guard checks those)');
-        return [];
+        say('ok', `${changedInRepo.length ? 'no Theme Styles edits since the last release' : 'no differences from the live saved settings'}, apart from the rf_* switches (the release guard checks those)`);
+        return outcome([]);
     }
     printEntries(blocking);
     if (!state.overwriteLive) {
-        throw new Stop(`${blocking.length} live Theme Styles value(s) differ from config.json for "${state.variation}". Rerun with --accept-live to copy them into config.json, or with --overwrite-live to replace them on the channel.`);
+        const differ = base
+            ? `differ from both config.json and the channel's last release (${base.sha.slice(0, 7)}) for "${state.variation}": they were edited in the control panel`
+            : `differ from config.json for "${state.variation}"`;
+        throw new Stop(`${blocking.length} live Theme Styles value(s) ${differ}. Rerun with --accept-live to copy them into config.json, or with --overwrite-live to replace them on the channel.`);
     }
     if (state.dryRun) {
         say('dry run', `--overwrite-live: a real release asks you to type the channel id here, then overwrites these ${blocking.length} value(s)`);
     } else {
         await confirmOrStop(state.channel, `Type the channel id (${state.channel}) to overwrite these ${blocking.length} live value(s): `);
     }
-    return blocking.map(entry => entry.key);
+    return outcome(blocking.map(entry => entry.key));
 }
 
 // Spec seam 3: the contrast check on each pulled config. It only reports: the push replaces the
@@ -317,14 +424,17 @@ async function prepare(argv) {
     const { live, file } = await readLive(state);
     reportCapture(live);
     stopOrWarn(themeCapProblems(live.capture.themeCount), state.dryRun, message => new Stop(message));
-    const replacing = foreignTheme(state, live, config);
-    const overwritten = replacing ? [] : await diffStep(state, live, config);
+    const releases = readReleaseLog();
+    const replacing = foreignTheme(state, live, config, releases);
+    const compared = replacing ? {
+        overwritten: [], changedInRepo: [], base: null, baseNote: null,
+    } : await diffStep(state, live, config, releases);
     reportLiveContrast(file, replacing);
     const guard = await guardStep(state, live, config);
     writeState({
         ...state,
         liveAtStep1: { settings: live.settings, capture: live.capture }, // step 5's gate compares with it
-        step1: { replacing, overwritten, unpublished: live.capture.savedEqualsActive ? [] : live.capture.unpublishedKeys || [] },
+        step1: { replacing, ...compared, unpublished: live.capture.savedEqualsActive ? [] : live.capture.unpublishedKeys || [] },
         guard,
     });
 }
