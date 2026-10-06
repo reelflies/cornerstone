@@ -150,6 +150,17 @@ function importClosure(entries) {
     return [...seen].sort();
 }
 
+test('everything merge.sh runs is guarded, and is the TOOLING list it checks against origin/master', () => {
+    const patterns = readGuardedPaths();
+    const mergeSh = fs.readFileSync(path.join(ROOT, 'scripts/merge.sh'), 'utf8');
+    const listed = /^TOOLING=\(([^)]*)\)/m.exec(mergeSh);
+    assert.ok(listed, 'merge.sh declares its TOOLING=( … ) list');
+    const tooling = [...listed[1].matchAll(/\S+/g)].map(([file]) => file).sort();
+    const runs = [...importClosure(['scripts/merge.mjs']), 'scripts/merge.sh', 'scripts/guarded-paths.txt'].sort();
+    assert.deepEqual(tooling, runs, 'merge.sh\'s TOOLING list must name merge.mjs, every module it imports, merge.sh and the guarded list');
+    for (const file of tooling) assert.ok(isGuarded(file, patterns), `${file} should be guarded`);
+});
+
 // check-contrast.mjs only reports the live colours' contrast in step 1, and tickets 25 and 50
 // own it, so it stays open (docs/guardrails.md, "What isn't guarded").
 const OPEN_RELEASE_IMPORTS = ['scripts/check-contrast.mjs'];

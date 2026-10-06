@@ -1,5 +1,8 @@
 // Tests scripts/merge.sh as an agent runs it, offline, against a stubbed gh (W0-13). Each
 // refusal must name its reason, merge nothing and leave the merge lock free.
+//
+// merge.sh judges every PR with origin/master's merge tooling, so each case runs a copy of
+// that tooling in a scratch clone whose origin is a local bare repo holding the same files.
 
 /* eslint-disable no-param-reassign -- each case edits a fresh copy of the passing fixture */
 
@@ -12,8 +15,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { makeGhStub } from './lib/gh-stub.mjs';
 
-const SCRIPT = fileURLToPath(new URL('./merge.sh', import.meta.url));
+const SOURCE = fileURLToPath(new URL('..', import.meta.url));
 const GUARDED = fs.readFileSync(new URL('./guarded-paths.txt', import.meta.url), 'utf8');
+const TOOLING = [.../^TOOLING=\(([^)]*)\)/m.exec(fs.readFileSync(new URL('./merge.sh', import.meta.url), 'utf8'))[1].matchAll(/\S+/g)].map(([file]) => file);
 const REPO = 'reelflies/reelflies-cornerstone';
 const SHA = '0123456789abcdef0123456789abcdef01234567';
 const MASTER = 'fedcba9876543210fedcba9876543210fedcba98';
@@ -25,6 +29,46 @@ after(() => fs.rmSync(root, { recursive: true, force: true }));
 const gh = makeGhStub(path.join(root, 'bin'));
 const LOCKS = path.join(root, 'locks');
 const LOCK = path.join(LOCKS, 'merge');
+
+function git(cwd, ...args) {
+    const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
+    assert.equal(result.status, 0, `git ${args.join(' ')}: ${result.stderr}`);
+    return result.stdout.trim();
+}
+
+const copyTooling = dir => {
+    for (const file of TOOLING) {
+        fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
+        fs.copyFileSync(path.join(SOURCE, file), path.join(dir, file));
+    }
+};
+
+// A clone at <name> whose origin (<name>.git) has a master. With tooling: false, master has
+// no merge tooling yet (the W0-13 bootstrap), and the clone has it on a branch.
+function clone(name, { tooling = true } = {}) {
+    const origin = path.join(root, `${name}.git`);
+    const dir = path.join(root, name);
+    git(root, 'init', '-q', '--bare', '-b', 'master', origin);
+    fs.mkdirSync(dir);
+    git(dir, 'init', '-q', '-b', 'master');
+    git(dir, 'config', 'user.email', 'test@example.com');
+    git(dir, 'config', 'user.name', 'test');
+    git(dir, 'remote', 'add', 'origin', origin);
+    if (tooling) copyTooling(dir);
+    else fs.writeFileSync(path.join(dir, 'README.md'), 'master before W0-13\n');
+    git(dir, 'add', '-A');
+    git(dir, 'commit', '-q', '-m', 'master');
+    git(dir, 'push', '-q', 'origin', 'master');
+    if (!tooling) {
+        git(dir, 'checkout', '-q', '-b', 'w0/13-guardrails');
+        copyTooling(dir);
+        git(dir, 'add', '-A');
+        git(dir, 'commit', '-q', '-m', 'merge tooling');
+    }
+    return dir;
+}
+
+const MAIN = clone('main');
 
 const statuses = (contexts, state = 'success') => contexts.map(context => ({
     context, state, description: `${context} verdict`, target_url: `https://github.com/${REPO}/pull/12#issuecomment-1`,
@@ -66,11 +110,11 @@ function good() {
     };
 }
 
-function run(args, fixture = good(), { env: extra = {} } = {}) {
+function run(args, fixture = good(), { checkout = MAIN, env: extra = {} } = {}) {
     if (fixture.pr && fixture.pr.changedFiles === undefined) fixture.pr.changedFiles = (fixture.files || []).length;
     gh.write(fixture);
     const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('RF_')));
-    const result = spawnSync('bash', [SCRIPT, ...args], {
+    const result = spawnSync('bash', [path.join(checkout, 'scripts', 'merge.sh'), ...args], {
         encoding: 'utf8',
         env: {
             ...env, ...gh.env, RF_LOCK_ROOT: LOCKS, PATH: `${gh.dir}${path.delimiter}${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH}`, ...extra,
@@ -231,6 +275,79 @@ test('a CI check other than the two required ones may be skipped or neutral', ()
         });
     }));
     assert.equal(result.status, 0, result.output);
+});
+
+// --- Master's rules, never the PR's -------------------------------------------------------
+
+const MERGE_FROM_MAIN = /differs from origin\/master's .*run merge\.sh from the main clone/;
+
+test('merge.sh refuses to run merge tooling that differs from origin/master\'s, before anything reaches GitHub', () => {
+    const file = path.join(MAIN, 'scripts', 'merge.mjs');
+    const before = fs.readFileSync(file, 'utf8');
+    fs.writeFileSync(file, before.replace('if (guarded.length) required.push(SAFETY);', ''));
+    try {
+        const result = run(['12'], mutate(fixture => {
+            fixture.files.push({ filename: 'scripts/merge.mjs', status: 'modified' });
+        }));
+        assertRefused(result, MERGE_FROM_MAIN);
+        assert.match(result.stderr, /scripts\/merge\.mjs/);
+        assert.deepEqual(result.calls, [], 'nothing reaches GitHub');
+    } finally {
+        fs.writeFileSync(file, before);
+    }
+});
+
+test('a PR branch that changes the guarded-path matcher can\'t merge itself from its own checkout', () => {
+    git(MAIN, 'checkout', '-q', '-b', 'pr/unguard');
+    try {
+        const file = path.join(MAIN, 'scripts', 'lib', 'guarded-paths.mjs');
+        fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace('export function isGuarded(file, patterns) {', 'export function isGuarded(file, patterns) {\n    if (file) return false;'));
+        git(MAIN, 'commit', '-q', '-am', 'unguard everything');
+        const result = run(['12'], mutate(fixture => {
+            fixture.files.push({ filename: 'scripts/lib/guarded-paths.mjs', status: 'modified' });
+        }));
+        assertRefused(result, MERGE_FROM_MAIN);
+        assert.match(result.stderr, /scripts\/lib\/guarded-paths\.mjs/);
+        for (const check of ['--check', '--lock-held']) {
+            const other = run([check, '12']);
+            assert.equal(other.status, 1, other.output);
+            assert.match(other.stderr, MERGE_FROM_MAIN);
+        }
+    } finally {
+        git(MAIN, 'checkout', '-q', 'master');
+        git(MAIN, 'branch', '-q', '-D', 'pr/unguard');
+    }
+});
+
+test('a checkout behind origin/master\'s merge tooling is refused, and told to pull', () => {
+    const behind = clone('behind');
+    const other = path.join(root, 'behind-other');
+    git(root, 'clone', '-q', path.join(root, 'behind.git'), other);
+    git(other, 'config', 'user.email', 'test@example.com');
+    git(other, 'config', 'user.name', 'test');
+    fs.appendFileSync(path.join(other, 'scripts', 'lib', 'lock.mjs'), '// a newer lock\n');
+    git(other, 'commit', '-q', '-am', 'newer lock on master');
+    git(other, 'push', '-q', 'origin', 'master');
+    const result = run(['12'], good(), { checkout: behind });
+    assertRefused(result, MERGE_FROM_MAIN);
+    assert.match(result.stderr, /scripts\/lib\/lock\.mjs/);
+    assert.match(result.stderr, /pull --ff-only/);
+});
+
+test('merge.sh refuses when it can\'t fetch origin/master to compare with', () => {
+    const lost = clone('lost');
+    git(lost, 'remote', 'set-url', 'origin', path.join(root, 'nowhere.git'));
+    const result = run(['12'], good(), { checkout: lost });
+    assertRefused(result, /couldn't fetch origin master/);
+    assert.deepEqual(result.calls, []);
+});
+
+test('while origin/master has no merge tooling (the W0-13 bootstrap), the checkout\'s own applies', () => {
+    const bootstrap = clone('bootstrap', { tooling: false });
+    const result = run(['12'], good(), { checkout: bootstrap });
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.stdout, /origin\/master has no scripts\/merge\.mjs yet/);
+    assert.ok(merged(result.calls));
 });
 
 test('RF_LOCK_ROOT is a test seam: outside node --test merge.sh refuses it and takes no lock', () => {

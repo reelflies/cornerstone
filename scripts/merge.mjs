@@ -3,7 +3,9 @@
 //
 // GitHub Free can't protect master on a private repo, so this script is the protection: it
 // merges only when every check below passes on the PR's head sha, and pins the merge to that
-// sha. Every refusal names its reason, and all of them are listed at once.
+// sha. Every refusal names its reason, and all of them are listed at once. merge.sh runs it
+// only when this file and everything it imports match origin/master's, so a PR is judged by
+// master's rules, never by its own.
 //
 //   1 the PR is open, not a draft, targets master and comes from this repo
 //   2 its branch contains master's tip
