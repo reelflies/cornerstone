@@ -173,10 +173,6 @@ The guard prints every `rf_*` value to be pushed and each new switch. The push s
 - From T-14 to T+30, switch toggles and widget unpublishing are the only changes allowed, apart from P1 fixes through the release (SCOPE-3). Tickets 57 and 58 run that window.
 - After a toggle, change `config.json` to match and commit it. Otherwise the next release stops on the difference.
 
-### Host runs
-
-`RELEASES.md` also has a "Host runs" section, which `npm run qa:prelaunch` writes (W0-6, [scripts/qa/README.md](../scripts/qa/README.md), "Host batch"). The release's own gates run on a local `stencil start`. Once per checkpoint, the operator runs them against the prelaunch host with the preview cookie, on the build ReelFlies_CA actually runs. Each run adds a row: the date, the theme uuid, the build's commit from its release entry, the gates, pass or fail, and whether the analytics tags were blocked. Commit new rows through the next release-log PR.
-
 ## Safety notes
 
 - **Why not `stencil pull`:** it crashes when `config.json` has no variation named like the live one (Cavio's "Natural"), and it silently skips live keys that `config.json` lacks. The capture in `scripts/release-capture.mjs` has neither problem.
