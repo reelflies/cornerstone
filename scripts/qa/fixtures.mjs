@@ -5,17 +5,21 @@
 // - storefrontPage(page, template) opens the template's pinned page, fails unless it
 //   answers with the template's status (404 for the 404 page, 200 for every other), and
 //   waits until it stops moving: fonts loaded, lazy images in, network quiet, at the top.
-//   A page that answers 5xx is opened once more after 2 s, and the output says so
-//   (RETRY_DELAY_MS in storefront.mjs says why).
+//   A page that answers 5xx is opened once more after 2 s, and one that answers 429 up to
+//   three times with backoff; the output says so each time (retry.mjs says why).
 // - dismissCookieBanner(page) closes the store's cookie banner without moving the pointer.
+// - screenshotStylePath(testInfo, channel, template) writes the stylesheet a page's
+//   screenshot applies (screenshotStyle in pages.mjs) and returns its path, for
+//   toHaveScreenshot's stylePath.
 
 /* eslint-env browser */ // the page.evaluate callbacks run in the page
 
+import fs from 'fs';
+import path from 'path';
 import { test as base, expect } from '@playwright/test';
-import {
-    QA_CHANNEL, RETRY_DELAY_MS, previewCookies, worthRetrying,
-} from './storefront.mjs';
-import { expectedStatus, pinnedPages } from './pages.mjs';
+import { QA_CHANNEL, previewCookies } from './storefront.mjs';
+import { expectedStatus, pinnedPages, screenshotStyle } from './pages.mjs';
+import { withRetries } from './retry.mjs';
 
 export const test = base.extend({
     context: async ({ context }, use) => {
@@ -30,12 +34,11 @@ export { expect };
 export const PAGES = pinnedPages(QA_CHANNEL);
 
 export async function storefrontPage(page, template, pagePath = PAGES[template]) {
-    let response = await page.goto(pagePath, { waitUntil: 'load' });
-    if (worthRetrying(response?.status())) {
-        console.log(`RETRY    the ${template} page ${pagePath} returned HTTP ${response.status()}; opening it once more in ${RETRY_DELAY_MS / 1000} s (stencil start's request to the store can drop)`);
-        await page.waitForTimeout(RETRY_DELAY_MS);
-        response = await page.goto(pagePath, { waitUntil: 'load' });
-    }
+    const response = await withRetries(() => page.goto(pagePath, { waitUntil: 'load' }), {
+        what: `the ${template} page ${pagePath}`,
+        verb: 'opening',
+        read: answer => ({ status: answer?.status(), retryAfter: answer?.headers()['retry-after'] }),
+    });
     // Anything else is an error page: checking it, or recording it as a baseline, would
     // pass the gate without looking at the template. Fix the pin in pages.mjs.
     const status = response?.status();
@@ -62,6 +65,15 @@ export async function storefrontPage(page, template, pagePath = PAGES[template])
         new Promise(resolve => { setTimeout(resolve, 10000); }),
     ]));
     return response;
+}
+
+// toHaveScreenshot reads a stylesheet only from a file, so each test writes its own into
+// its output folder (scripts/qa/results/, ignored by git).
+export function screenshotStylePath(testInfo, channel, template) {
+    const file = testInfo.outputPath(`screenshot-${channel}-${template}.css`);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, screenshotStyle(channel, template));
+    return file;
 }
 
 // BigCommerce's cookie banner (a store setting) is fixed to the viewport, so in a

@@ -1,0 +1,53 @@
+# Guarded paths (W0-13). A PR that changes, adds, deletes or renames any path below needs an
+# rf/safety sign-off on its head sha as well as the usual ones, and scripts/merge.sh refuses it
+# without one. docs/guardrails.md explains the rules.
+#
+# One repo-relative path per line. A trailing slash guards everything under that folder. `*`
+# matches within one path segment, and a pattern that matches a folder guards what is in it.
+# Matching ignores case, as the Mac's file system does. This file is itself guarded, and
+# merge.sh runs only with origin/master's copy of it and of the code that reads it, so a PR
+# can't unguard itself. docs/guardrails.md, "What isn't guarded", lists what is left open on
+# purpose.
+
+# The release tooling and its tests (tickets 05 and 15; W0-1 to W0-3), and the release log it
+# reads: which theme uuids are this fork's, and later which builds the prune may delete (W0-3)
+scripts/release.sh
+scripts/release*.mjs
+scripts/lib/format*.mjs
+RELEASES.md
+
+# Store and catalogue writes (W0-11; ticket 18)
+scripts/store/
+scripts/lib/store-token*.mjs
+scripts/catalogue/apply*
+
+# The merge tooling, every module it imports, the statuses it reads, and the checks behind
+# them (W0-13). scripts/lib/lock.mjs is the merge lock, which W0-7 extends.
+scripts/merge*
+scripts/status*
+scripts/guarded-paths.txt
+scripts/lib/guarded-paths*.mjs
+scripts/lib/gh*.mjs
+scripts/lib/lock*.mjs
+scripts/lib/is-main*.mjs
+scripts/check-baseline-scope*.mjs
+
+# The release calendar, which sets the freezes (W0-13)
+scripts/release-calendar.json
+scripts/lib/release-calendar*.mjs
+
+# Claude Code permission rules, the test that proves them, and what steers every agent (W0-13)
+.claude/
+scripts/claude-permissions*.mjs
+CLAUDE.md
+AGENTS.md
+docs/guardrails.md
+docs/permissions.md
+docs/releasing.md
+
+# CI, the runner that picks which script tests CI runs, and the secret scan's own config,
+# which gitleaks reads from the repo by itself
+.github/
+scripts/test-scripts.mjs
+.gitleaks.toml
+.gitleaksignore
