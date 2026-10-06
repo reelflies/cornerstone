@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
-    addReleaseEntry, describeStep1, formatPushSummary, formatReleaseEntry, lastRelease, releaseEntries, releasedThemeUuids, RELEASES_TEMPLATE,
+    addMyThemesRow, addReleaseEntry, describeStep1, formatMyThemesRow, formatPushSummary, formatReleaseEntry, lastRelease, MY_THEMES_HEADER, myThemesRows,
+    releaseBuilds, releaseEntries, releasedThemeUuids, RELEASES_TEMPLATE,
 } from './release-log.mjs';
 
 const release = {
@@ -291,4 +292,96 @@ test('W0-1: the push summary says how the push is confirmed, and whether the cal
     assert.doesNotMatch(typed, /channel 1 {3}/);
     const set = formatPushSummary({ ...agentPush, calendar: { line: 'Release calendar: Flip 2027-03-01 (set; ticket 10 comment). 2027-01-02 is in build (building, before code complete); next: T-35 on 2027-01-25.' }, pairedChannel1: null });
     assert.match(set, /calendar {4}Flip 2027-03-01 \(set;/);
+});
+
+// --- W0-3: the builds RELEASES.md records, and its "My Themes" section ------------------------
+
+test('W0-3: RELEASES.md gives each release\'s build: theme name, version and uuid, commit, zip sha256, and the theme the channel ran before', () => {
+    const [first] = releaseBuilds(fs.readFileSync(new URL('../RELEASES.md', import.meta.url), 'utf8'));
+    assert.deepEqual(first, {
+        timestamp: '2026-10-06 14:30',
+        order: 0,
+        channel: 1895766,
+        sha: '5d0d0cb8ca42405d8555de6a84f20843060d7cde',
+        themeUuid: '58abad50-a3c0-013f-e2b6-2ec98cc9ce73',
+        themeName: 'ReelFlies',
+        version: '6.22.0',
+        zipSha256: '367071ace794697e59a36129ba4f958a2d27daf85aa9bf73411d42c6cfc763dc',
+        ranBefore: null,
+    });
+    const markdown = addReleaseEntry(addReleaseEntry(null, formatReleaseEntry(release)), formatReleaseEntry({
+        ...release, timestamp: '2026-10-06T09:00:00.000Z', theme: { uuid: '9f0c2a10-0000-0000-0000-000000000002', name: 'Reel Flies CA', version: '6.22.0-rf.1' }, previousThemeUuid: CAVIO,
+    }));
+    assert.deepEqual(releaseBuilds(markdown).map(build => [build.order, build.themeName, build.version, build.themeUuid, build.zipSha256, build.ranBefore]), [
+        [0, 'Cornerstone', '6.22.0', '9f0c2a10-0000-0000-0000-000000000001', 'ab12', null],
+        [1, 'Reel Flies CA', '6.22.0-rf.1', '9f0c2a10-0000-0000-0000-000000000002', 'ab12', CAVIO],
+    ]);
+    assert.deepEqual(releaseBuilds(null), []);
+});
+
+test('W0-3: a release entry without a readable theme or bundle line gives nulls, never a guess', () => {
+    const broken = '### 2026-10-08 09:00 UTC · channel 1895766 (ReelFlies_CA) · ReelFlies CA\n\n- Theme: ReelFlies 6.22.0, uuid unknown\n- Commit: `bbbbbbb000000000000000000000000000000002` on `master`\n';
+    const [build] = releaseBuilds(addReleaseEntry(null, broken));
+    assert.equal(build.themeUuid, null);
+    assert.equal(build.themeName, null);
+    assert.equal(build.zipSha256, null);
+});
+
+const deletion = {
+    timestamp: '2026-10-09T10:15:42.000Z',
+    action: 'deleted (--prune-only)',
+    uuid: '9f0c2a10-0000-0000-0000-000000000001',
+    name: 'ReelFlies',
+    version: '6.22.0',
+    sha: '1be9fb20ffd985c26c59c5b5fcd28006418d9a08',
+    zipSha256: 'ab12',
+    operator: 'Shaun Bathgate',
+};
+
+test('W0-3: a My Themes row records the time, the action, the theme uuid, name and version, commit, zip sha256 and operator', () => {
+    assert.equal(MY_THEMES_HEADER, '| Time (UTC) | Action | Theme uuid | Name and version | Commit | Zip sha256 | Operator |');
+    assert.equal(formatMyThemesRow(deletion), '| 2026-10-09 10:15 | deleted (--prune-only) | `9f0c2a10-0000-0000-0000-000000000001` | ReelFlies 6.22.0 | `1be9fb20ffd985c26c59c5b5fcd28006418d9a08` | `ab12` | Shaun Bathgate |');
+    const unknown = {
+        ...deletion, sha: null, zipSha256: null, operator: 'a | b',
+    };
+    assert.match(formatMyThemesRow(unknown), /\| unknown \| unknown \| a \\\| b \|$/);
+    assert.equal(myThemesRows(addMyThemesRow(null, formatMyThemesRow(unknown)))[0].operator, 'a | b', 'and reads back');
+});
+
+test('W0-3: RELEASES.md and the template have a "My Themes" section with its table, after Switch toggles', () => {
+    for (const markdown of [RELEASES_TEMPLATE, fs.readFileSync(new URL('../RELEASES.md', import.meta.url), 'utf8')]) {
+        assert.ok(markdown.indexOf('\n## My Themes\n') > markdown.indexOf('\n## Switch toggles\n'), 'My Themes comes after Switch toggles');
+        assert.match(markdown, new RegExp(`\\n## My Themes\\n(.|\\n)*\\n${MY_THEMES_HEADER.replace(/[|()]/g, '\\\\$&')}\\n\\|---\\|---\\|---\\|---\\|---\\|---\\|---\\|\\n$`));
+        assert.deepEqual(myThemesRows(markdown), []);
+    }
+});
+
+test('W0-3: rows go at the end of the My Themes table, wherever the section is, and read back', () => {
+    const repo = fs.readFileSync(new URL('../RELEASES.md', import.meta.url), 'utf8');
+    const one = addMyThemesRow(repo, formatMyThemesRow(deletion));
+    const two = addMyThemesRow(one, formatMyThemesRow({ ...deletion, timestamp: '2026-10-09T10:16:00.000Z', uuid: '9f0c2a10-0000-0000-0000-000000000002' }));
+    assert.ok(two.startsWith(repo.slice(0, repo.indexOf('## My Themes'))), 'nothing above the section changes');
+    assert.deepEqual(myThemesRows(two).map(row => [row.time, row.action, row.uuid, row.nameAndVersion, row.sha, row.zipSha256, row.operator]), [
+        ['2026-10-09 10:15', 'deleted (--prune-only)', '9f0c2a10-0000-0000-0000-000000000001', 'ReelFlies 6.22.0', '1be9fb20ffd985c26c59c5b5fcd28006418d9a08', 'ab12', 'Shaun Bathgate'],
+        ['2026-10-09 10:16', 'deleted (--prune-only)', '9f0c2a10-0000-0000-0000-000000000002', 'ReelFlies 6.22.0', '1be9fb20ffd985c26c59c5b5fcd28006418d9a08', 'ab12', 'Shaun Bathgate'],
+    ]);
+    // A section added later below it (the orchestrator's "Store writes") keeps the rows in My Themes.
+    const later = `${one}\n## Store writes\n\n| Date | Channel |\n|---|---|\n| 2026-10-09 | 1895766 |\n`;
+    const added = addMyThemesRow(later, formatMyThemesRow({ ...deletion, uuid: '9f0c2a10-0000-0000-0000-000000000003' }));
+    assert.equal(myThemesRows(added).length, 2);
+    assert.match(added, /`9f0c2a10-0000-0000-0000-000000000003`[^\n]*\n\n## Store writes\n/);
+    // Release entries still go into Releases, and the rows never count as releases.
+    const withEntry = addReleaseEntry(two, formatReleaseEntry(release));
+    assert.equal(releaseEntries(withEntry).length, 2);
+    assert.deepEqual(myThemesRows(withEntry).length, 2);
+    assert.ok(!releasedThemeUuids(two).includes('9f0c2a10-0000-0000-0000-000000000002'), 'a deleted theme isn\'t a release');
+});
+
+test('W0-3: a RELEASES.md from before W0-3 gets its My Themes section with the first row', () => {
+    const old = addReleaseEntry(null, formatReleaseEntry(release)).replace(/\n## My Themes\n[^]*$/, '\n');
+    assert.doesNotMatch(old, /## My Themes/);
+    const added = addMyThemesRow(old, formatMyThemesRow(deletion));
+    assert.equal(myThemesRows(added).length, 1);
+    assert.match(added, /\n## Switch toggles\n[^]*\n## My Themes\n[^]*\| deleted \(--prune-only\) \|/);
+    assert.throws(() => addMyThemesRow('# Release log\n\n## My Themes\n\nNo table here.\n', formatMyThemesRow(deletion)), /My Themes section has no table/);
 });
