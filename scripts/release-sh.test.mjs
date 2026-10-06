@@ -742,7 +742,7 @@ test('W0-1: step 5 with --confirm-nonprod asks nothing, reads today\'s calendar 
     const result = stepFive({ confirmNonprod: 1895766 });
     assert.equal(result.status, 1, result.output);
     assert.match(result.stdout, new RegExp(`^ {2}calendar {4}${describeLine(today)}`, 'm'));
-    assert.match(result.stdout, /^ {2}confirm {5}non-interactive \(agent\), --confirm-nonprod 1895766: no prompt/m);
+    assert.match(result.stdout, /^ {2}confirm {5}non-interactive \(agent\), --confirm-nonprod 1895766: requested; step 5 checks it again/m);
     if (today.limits.confirmNonprod) {
         assert.match(result.stdout, new RegExp(`^confirm {2}non-interactive \\(agent\\): --confirm-nonprod 1895766, checked again with ${today.date}'s calendar`, 'm'));
         assert.match(result.stdout, /Capturing channel 1895766 again/);
