@@ -6,17 +6,41 @@
 //   const { themes, channels, activeByChannel } = await readMyThemes({ client, api, knownChannels });
 //   await themeDeleter({ client, api })(uuid);                        // a real prune only
 //
-// Reading is GETs only: GET /v3/themes, the store's channels (stencil-cli's getStoreChannels: GET
-// /v3/sites and /v3/channels) and GET /v3/channels/<id>/active-theme for every one of them and every
-// channel the caller knows. A channel whose active theme can't be read stops the read, so the
-// prune never guesses that a theme is unused. DELETE /v3/themes/<uuid> is the only write, through
-// themeDeleter; nothing here activates or uploads a theme. Errors carry stencil-cli's message,
-// never the request, which holds the token.
+// Reading is GETs only: GET /v3/themes; every storefront channel, with or without a site (GET
+// /v3/channels?type:in=storefront, every page); every site's channel (stencil-cli's
+// getStoreChannels); and GET /v3/channels/<id>/active-theme for each of them and every channel the
+// caller knows. Any read that fails stops the read, so the prune never guesses that a theme is
+// unused. DELETE /v3/themes/<uuid> is the only write, through themeDeleter; nothing here activates
+// or uploads a theme. Errors carry the status or stencil-cli's message, never the request, which
+// holds the token.
 
-export async function readMyThemes({ client, api, knownChannels = [] }) {
+const PAGE_SIZE = 250;
+
+// Every storefront channel's id. `request` is fetch, or a stand-in in the tests.
+export async function listStorefrontChannels({ api, request = fetch }) {
+    const ids = [];
+    let pages = 1;
+    for (let page = 1; page <= pages; page++) {
+        const url = `${api.apiHost}/stores/${api.storeHash}/v3/channels?type:in=storefront&limit=${PAGE_SIZE}&page=${page}`;
+        // Pages are read one after another, because each one says how many there are.
+        // eslint-disable-next-line no-await-in-loop
+        const response = await request(url, { method: 'GET', headers: { 'X-Auth-Token': api.accessToken, Accept: 'application/json' } });
+        if (!response.ok) throw new Error(`GET /v3/channels?type:in=storefront answered ${response.status} ${response.statusText}`);
+        // eslint-disable-next-line no-await-in-loop
+        const body = await response.json();
+        ids.push(...(body.data || []).map(channel => Number(channel.id)));
+        pages = (body.meta && body.meta.pagination && body.meta.pagination.total_pages) || 1;
+    }
+    return ids;
+}
+
+export async function readMyThemes({
+    client, api, knownChannels = [], listChannels = () => listStorefrontChannels({ api }),
+}) {
     const themes = await client.getThemes(api);
+    const storefronts = await listChannels();
     const sites = await client.getStoreChannels(api);
-    const channels = [...new Set([...sites.map(site => Number(site.channel_id)), ...knownChannels.map(Number)])]
+    const channels = [...new Set([...storefronts, ...sites.map(site => Number(site.channel_id)), ...knownChannels.map(Number)])]
         .filter(Number.isInteger)
         .sort((a, b) => a - b);
     const activeByChannel = {};

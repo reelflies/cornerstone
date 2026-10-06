@@ -104,15 +104,25 @@ test('W0-3: a uuid pushed twice (a new version of the same theme) counts once, a
     assert.equal(plan.builds.find(build => build.uuid === uuid(1)).record.timestamp, '2026-10-07 09:00');
 });
 
-test('W0-3: a theme active on any channel is kept, however old, and so is one My Themes flags is_active', () => {
-    const themes = sixThemes().map(item => (item.uuid === uuid(2) ? { ...item, is_active: true } : item));
-    const plan = planPrune({ themes, activeByChannel: active(uuid(6), { 1855224: uuid(1), 2000001: uuid(3) }), markdown: SIX });
-    assert.deepEqual(deleted(plan), []);
+test('W0-3: a theme active on any channel is kept, however old', () => {
+    const plan = planPrune({ themes: sixThemes(), activeByChannel: active(uuid(6), { 1855224: uuid(1), 2000001: uuid(3) }), markdown: SIX });
+    assert.deepEqual(deleted(plan), [uuid(2)]);
     const reasons = Object.fromEntries(plan.builds.map(build => [build.uuid, build.reasons.join('; ')]));
     assert.match(reasons[uuid(1)], /active on channel 1855224/);
-    assert.match(reasons[uuid(2)], /is_active/);
     assert.match(reasons[uuid(3)], /active on channel 2000001/);
     assert.match(reasons[uuid(6)], /active on channel 1895766/);
+});
+
+// The store flagged the build active on 1895766 is_active: true on 2026-10-06, and on 2026-10-05
+// old Hero builds that ran on none of the three storefronts too, while Cavio, active on 1895766,
+// showed false. The flag outlives an activation, so it decides nothing: the active-theme reads do.
+test('W0-3: My Themes\' is_active flag neither keeps a theme nor deletes one; the plan only shows it', () => {
+    const themes = sixThemes().map(item => (item.uuid === uuid(2) || item.uuid === uuid(5) ? { ...item, is_active: true } : item));
+    const plan = planPrune({ themes, activeByChannel: active(), markdown: SIX });
+    assert.deepEqual(deleted(plan), [uuid(1), uuid(2), uuid(3)]);
+    const text = describePlan(plan).join('\n');
+    assert.match(text, new RegExp(`delete {3}${uuid(2)} .*not a rollback \\(My Themes flags it is_active, which outlives an activation: the active-theme reads decide\\)`));
+    assert.doesNotMatch(text, new RegExp(`${uuid(1)} .*is_active`));
 });
 
 test('W0-3: a ReelFlies theme RELEASES.md doesn\'t record is never deleted', () => {
@@ -165,6 +175,7 @@ test('W0-3: the prune refuses a plan that didn\'t check channels 1, 1855224 and 
     const markdown = log(entry(1, day(1), { channel: 1855225 }), ...[2, 3, 4, 5, 6].map(n => entry(n, day(n))));
     assert.throws(() => planPrune({ themes: sixThemes(), activeByChannel: active(), markdown }), /didn't check channel 1855225/);
     assert.throws(() => planPrune({ themes: sixThemes(), activeByChannel: { ...active(), 1855224: null }, markdown: SIX }), /channel 1855224's active theme/);
+    assert.throws(() => planPrune({ themes: sixThemes(), activeByChannel: { ...active(), 1861300: '' }, markdown: SIX }), /couldn't read channel 1861300's active theme/, 'any channel read, not only the required ones');
 });
 
 test('W0-3: with three ReelFlies builds or fewer, nothing is deleted', () => {
@@ -180,6 +191,10 @@ test('W0-3: with three ReelFlies builds or fewer, nothing is deleted', () => {
 test('W0-3: the plan names each ReelFlies theme with its decision and reasons, and counts the others', () => {
     const text = describePlan(planPrune({ themes: sixThemes(), activeByChannel: active(), markdown: SIX })).join('\n');
     assert.match(text, /My Themes holds 10 of 20 themes; 6 named ReelFlies; channels checked: 1, 1855224, 1895766/);
+    // Which theme each channel runs, so a channel the store lists without a site shows what it runs.
+    assert.match(text, new RegExp(`\\n {2}each channel runs: 1 Hero-2024-2\\.9\\.5-US \\(7c519850\\), 1855224 Hero-2024-2\\.9\\.5-US \\(7c519850\\), 1895766 ReelFlies \\(${uuid(6).slice(0, 8)}\\)\\n`));
+    const unlisted = describePlan(planPrune({ themes: sixThemes(), activeByChannel: active(uuid(6), { 1861300: 'ffffffff-0000-0000-0000-000000000000' }), markdown: SIX })).join('\n');
+    assert.match(unlisted, /1861300 a theme not in My Themes \(ffffffff\)/);
     assert.match(text, new RegExp(`keep {5}${uuid(6)} ReelFlies 6\\.22\\.0, released 2026-10-06 09:00 UTC from 6666666: active on channel 1895766; the latest release on channel 1895766; one of the newest 3`));
     assert.match(text, new RegExp(`delete {3}${uuid(1)} ReelFlies 6\\.22\\.0, released 2026-10-01 09:00 UTC from 1111111: older than the newest 3, active on no channel, and not a rollback`));
     assert.match(text, /4 other theme\(s\) aren't named ReelFlies, so the prune never touches them: Cornerstone, Hero-2024-2\.9\.5, Hero-2024-2\.9\.5-US, Cavio/);

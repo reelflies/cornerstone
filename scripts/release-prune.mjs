@@ -14,8 +14,9 @@
 //     Hero-2024, Cavio or the Marketplace Cornerstone, whatever RELEASES.md says)
 //   - RELEASES.md records its uuid as a release (an unknown ReelFlies uuid is kept)
 //   - it is active on no channel: every channel's active theme was read (activeByChannel), and
-//     channels 1, 1855224, 1895766 and every channel RELEASES.md names must be among them
-//   - My Themes doesn't flag it is_active (the flag's meaning isn't documented, so it only keeps)
+//     channels 1, 1855224, 1895766 and every channel RELEASES.md names must be among them.
+//     My Themes' is_active flag decides nothing: it outlives an activation (the build active on
+//     1895766 and old Hero builds on no storefront both show true), so the plan only shows it
 //   - it isn't the latest or the previous release on 1895766 or channel 1, nor the theme either
 //     ran before its latest release: those are the rollback (ticket 53 reader)
 //   - it isn't one of the newest three, ranked by its newest entry's time in RELEASES.md (the file's
@@ -69,15 +70,19 @@ function requiredChannels(markdown) {
 }
 
 // themes: GET /v3/themes's data. activeByChannel: { channelId: active theme uuid } for every
-// channel read. markdown: RELEASES.md. Returns { themeCount, channels, builds, toDelete, others }:
+// channel read. markdown: RELEASES.md. Returns { themeCount, channels, running, builds, toDelete, others }:
 // builds are the ReelFlies themes, recorded ones newest first and then the unknown ones, each
-// { uuid, name, record, action: 'keep' | 'delete', reasons }; toDelete lists the ones to delete,
-// oldest first; others are the themes not named ReelFlies, which the prune never touches.
-// Throws when a required channel wasn't read: the prune never guesses a theme is unused.
+// { uuid, name, record, action: 'keep' | 'delete', reasons, flaggedActive }; toDelete lists the ones to delete,
+// oldest first; others are the themes not named ReelFlies, which the prune never touches; running
+// is each channel's active theme, { channel, uuid, name }, for the plan's text.
+// Throws when a required channel wasn't read, or a channel read has no active theme: the prune
+// never guesses a theme is unused.
 export function planPrune({ themes, activeByChannel, markdown }) {
     const channels = Object.keys(activeByChannel).map(Number).sort((a, b) => a - b);
     for (const channel of requiredChannels(markdown)) {
         if (!channels.includes(channel)) throw new Error(`the prune didn't check channel ${channel}'s active theme, so it can't tell what is unused`);
+    }
+    for (const channel of channels) {
         if (!activeByChannel[channel]) throw new Error(`couldn't read channel ${channel}'s active theme, so the prune can't tell what is unused`);
     }
     const activeOn = id => channels.filter(channel => activeByChannel[channel] === id);
@@ -90,18 +95,19 @@ export function planPrune({ themes, activeByChannel, markdown }) {
         const record = records.get(item.uuid) || null;
         const reasons = [
             ...activeOn(item.uuid).map(channel => `active on channel ${channel}`),
-            ...(item.is_active ? ['My Themes flags it is_active'] : []),
             ...(record ? [] : ['RELEASES.md doesn\'t record it as a release']),
             ...(rollback.get(item.uuid) || []),
             ...(record && recorded.indexOf(item) < KEEP_NEWEST ? [`one of the newest ${KEEP_NEWEST}`] : []),
         ];
         return {
-            uuid: item.uuid, name: item.name, record, action: reasons.length ? 'keep' : 'delete', reasons,
+            uuid: item.uuid, name: item.name, record, action: reasons.length ? 'keep' : 'delete', reasons, flaggedActive: item.is_active === true,
         };
     });
+    const names = new Map(themes.map(item => [item.uuid, item.name]));
     return {
         themeCount: themes.length,
         channels,
+        running: channels.map(channel => ({ channel, uuid: activeByChannel[channel], name: names.get(activeByChannel[channel]) || null })),
         builds,
         toDelete: builds.filter(build => build.action === 'delete').reverse(),
         others: themes.filter(item => item.name !== PRUNE_NAME).map(item => ({ uuid: item.uuid, name: item.name })),
@@ -114,12 +120,16 @@ const describeBuild = ({ uuid, name, record }) => (record
 
 // The plan as lines for the terminal: one per ReelFlies theme, then the others and the count.
 export function describePlan(plan) {
-    const lines = [`My Themes holds ${plan.themeCount} of ${MAX_THEMES} themes; ${plan.builds.length} named ${PRUNE_NAME}; channels checked: ${plan.channels.join(', ')}`];
+    const lines = [
+        `My Themes holds ${plan.themeCount} of ${MAX_THEMES} themes; ${plan.builds.length} named ${PRUNE_NAME}; channels checked: ${plan.channels.join(', ')}`,
+        `  each channel runs: ${plan.running.map(({ channel, uuid, name }) => `${channel} ${name || 'a theme not in My Themes'} (${uuid.slice(0, 8)})`).join(', ')}`,
+    ];
     for (const build of plan.builds) {
         const why = build.action === 'delete'
             ? `older than the newest ${KEEP_NEWEST}, active on no channel, and not a rollback`
             : build.reasons.join('; ');
-        lines.push(`  ${build.action.padEnd(8)} ${describeBuild(build)}: ${why}`);
+        const flag = build.flaggedActive ? ' (My Themes flags it is_active, which outlives an activation: the active-theme reads decide)' : '';
+        lines.push(`  ${build.action.padEnd(8)} ${describeBuild(build)}: ${why}${flag}`);
     }
     if (plan.others.length) {
         lines.push(`  ${plan.others.length} other theme(s) aren't named ${PRUNE_NAME}, so the prune never touches them: ${plan.others.map(other => other.name).join(', ')}`);
