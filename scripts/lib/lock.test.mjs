@@ -9,6 +9,8 @@
 //   by hand) goes stale on age alone, after its limit or 45 minutes, whichever is longer.
 // - At most three stencil starts run at once: each takes a slot, stencil-<1..3>, and waits
 //   for a free one.
+// - RF_LOCK_ROOT moves the locks only under node --test, so no real run can take a private
+//   lock. Breaking a stale lock removes only a lock folder, never anything else.
 //
 //   node --test scripts/lib/lock.test.mjs
 
@@ -18,7 +20,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
     LIMIT_MINUTES, LockHeldError, STALE_MINUTES, STENCIL_SLOTS, acquireLock, acquireSlot, heldBy, limitMinutes, lockRoot,
     readHolder, readLockOwner, waitForLock,
@@ -56,9 +58,12 @@ const deadLock = (root, name, minutes, owner = 'W0-5 gate on port 3400') => acqu
 const quiet = { log: () => {} };
 
 describe('where the locks live and how long they last', () => {
-    it('lives in ~/reelflies/theme/.locks unless RF_LOCK_ROOT moves it', () => {
+    it('lives in ~/reelflies/theme/.locks, and RF_LOCK_ROOT moves it only under node --test', () => {
         assert.equal(lockRoot({}), path.join(os.homedir(), 'reelflies', 'theme', '.locks'));
-        assert.equal(lockRoot({ RF_LOCK_ROOT: '/tmp/rf-locks' }), '/tmp/rf-locks');
+        assert.equal(lockRoot({ RF_LOCK_ROOT: '/tmp/rf-locks', NODE_TEST_CONTEXT: 'child-v8' }), '/tmp/rf-locks');
+        // A stray export would give a real release or gate run a lock, and slots, nobody else sees.
+        assert.throws(() => lockRoot({ RF_LOCK_ROOT: '/tmp/rf-locks' }), /RF_LOCK_ROOT is a test seam.*unset it/);
+        assert.throws(() => lockRoot({ RF_LOCK_ROOT: '/tmp/rf-locks', NODE_TEST_CONTEXT: '' }), /RF_LOCK_ROOT is a test seam/);
     });
 
     it('gives the release 90 minutes, a merge 15, a slot or a port 30, and anything else 45', () => {
@@ -157,6 +162,23 @@ describe('stale locks', () => {
         assert.throws(() => acquireLock('release', 'x', { root }), /still running/);
     });
 
+    it('checks the pid whatever host owner.json names, because the locks are always on this Mac\'s own disk', () => {
+        // macOS names the host from the network when no HostName is set, so the name can change
+        // while a release runs.
+        const root = tempRoot();
+        const lock = acquireLock('release', 'a release that outlived its host name', { root, now: Date.now() - 100 * MINUTE });
+        const file = path.join(lock.dir, 'owner.json');
+        fs.writeFileSync(file, JSON.stringify({ ...JSON.parse(fs.readFileSync(file, 'utf8')), host: 'some-other-name.local' }));
+        assert.throws(() => acquireLock('release', 'x', { root }), /still running/);
+
+        const gone = acquireLock('merge', 'a merge on a renamed host', { root, pid: DEAD_PID, now: Date.now() - 16 * MINUTE });
+        const json = path.join(gone.dir, 'owner.json');
+        fs.writeFileSync(json, JSON.stringify({ ...JSON.parse(fs.readFileSync(json, 'utf8')), host: 'some-other-name.local' }));
+        const merge = acquireLock('merge', 'x', { root });
+        assert.match(merge.brokeStale, /over its 15 min limit, and pid \d+ isn't running/, 'broken at its own limit, not 45 minutes');
+        merge.release();
+    });
+
     it('breaks a lock taken by hand (owner.txt, no pid) only after its limit or 45 minutes, whichever is longer', () => {
         const root = tempRoot();
         handLock(root, 'merge', 'W0-4 2026-10-06T08:00', 20);
@@ -187,6 +209,41 @@ describe('stale locks', () => {
         assert.throws(() => acquireLock('stencil-1', 'x', { root }), /no owner\.txt or owner\.json/);
         ageFile(dir, 46);
         acquireLock('stencil-1', 'x', { root }).release();
+    });
+
+    it('never removes something at a lock\'s path that isn\'t a lock folder, however old', () => {
+        const root = tempRoot();
+        fs.mkdirSync(root, { recursive: true });
+        const file = path.join(root, 'stencil-1');
+        fs.writeFileSync(file, 'not a lock\n');
+        ageFile(file, 600);
+        assert.throws(() => acquireLock('stencil-1', 'x', { root }), /stencil-1 isn't a lock folder/);
+        assert.equal(fs.readFileSync(file, 'utf8'), 'not a lock\n');
+
+        const dir = path.join(root, 'stencil-2');
+        fs.mkdirSync(path.join(dir, 'work'), { recursive: true });
+        fs.writeFileSync(path.join(dir, 'owner.txt'), 'W0-4 2026-10-06T08:00\n');
+        fs.writeFileSync(path.join(dir, 'notes.md'), 'keep me\n');
+        ageFile(path.join(dir, 'owner.txt'), 600);
+        assert.throws(() => acquireLock('stencil-2', 'x', { root }), /stencil-2 isn't a lock folder: it also holds notes\.md and work/);
+        assert.deepEqual(fs.readdirSync(dir).sort(), ['notes.md', 'owner.txt', 'work']);
+    });
+
+    it('of two runs breaking the same stale lock, only one holds it, and the other leaves it alone', () => {
+        const root = tempRoot();
+        handLock(root, 'merge', `W0-4 2026-10-06T08:00\npid ${DEAD_PID} on ${os.hostname()}`, 46);
+        let first;
+        // The second run judges the lock stale; before it breaks it, the first breaks it and takes it.
+        const breakFirst = () => { first = acquireLock('merge', 'first PR #1', { root }); };
+        assert.throws(() => acquireLock('merge', 'second PR #2', { root, beforeBreak: breakFirst }), error => {
+            assert.ok(error instanceof LockHeldError, error.message);
+            assert.match(error.message, /the merge lock is held by first PR #1/);
+            return true;
+        });
+        assert.match(first.brokeStale, /STALE.*W0-4 2026-10-06T08:00/);
+        assert.equal(readHolder(first.dir).owner, 'first PR #1', 'the first holder\'s lock is untouched');
+        assert.deepEqual(fs.readdirSync(root), ['merge'], 'nothing is left beside it');
+        first.release();
     });
 
     it('says who holds a lock, or null when it is free or stale', () => {
@@ -295,44 +352,126 @@ describe('a lock held for the life of a process', () => {
         assert.deepEqual(fs.readdirSync(root), []);
     });
 
-    it('stays when the process is killed, until it is stale', () => {
+    it('stays when the process is killed with SIGKILL, which can\'t be caught, until it is stale', () => {
         const root = tempRoot();
         assert.equal(child(root, 'process.kill(process.pid, "SIGKILL");').signal, 'SIGKILL');
         assert.throws(() => acquireLock('stencil-1', 'x', { root }), /isn't running.*under 30 min old|under 30 min old.*isn't running/);
     });
+
+    // A process that holds a slot and a port lock until it is stopped, as a gate does, with
+    // `code` run after it takes them. It prints "ready" once it holds both.
+    const holder = (root, code = '') => spawn(process.execPath, ['--input-type=module', '-e', `
+        import { acquireLock } from ${JSON.stringify(LOCK_MODULE)};
+        acquireLock('port-3400', 'gate', { root: ${JSON.stringify(root)}, releaseOnExit: true });
+        acquireLock('stencil-1', 'gate', { root: ${JSON.stringify(root)}, releaseOnExit: true });
+        ${code}
+        setInterval(() => {}, 1000);
+        console.log('ready');
+    `], { stdio: ['ignore', 'pipe', 'inherit'] });
+    // Sends `signal` once the process holds its locks. A process still running 5 s later is
+    // killed, so a run that never stops fails the case instead of hanging the suite.
+    const stopWith = (run, signal) => new Promise(resolve => {
+        let out = '';
+        const deadline = setTimeout(() => run.kill('SIGKILL'), 5000);
+        run.stdout.on('data', chunk => {
+            out += chunk;
+            if (out.includes('ready')) run.kill(signal);
+        });
+        run.on('exit', (code, exitSignal) => {
+            clearTimeout(deadline);
+            resolve({ code, signal: exitSignal, out });
+        });
+    });
+
+    for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+        it(`is released when the process is stopped with ${signal} (Ctrl-C, a kill, a tool's timeout or a closed terminal), and the process still stops`, async () => {
+            const root = tempRoot();
+            const result = await stopWith(holder(root), signal);
+            assert.equal(result.code, 128 + os.constants.signals[signal], `it exits as a shell reports ${signal}`);
+            assert.deepEqual(fs.readdirSync(root), []);
+        });
+    }
+
+    it('lets the process\'s other exit hooks run when a signal stops it (Playwright\'s runner stops its webServer in one)', async () => {
+        const root = tempRoot();
+        const marker = path.join(path.dirname(root), 'webserver-stopped');
+        const result = await stopWith(holder(root, `
+            import fs from 'node:fs';
+            process.on('exit', () => fs.writeFileSync(${JSON.stringify(marker)}, 'stopped'));
+        `), 'SIGTERM');
+        assert.equal(result.code, 143);
+        assert.ok(fs.existsSync(marker), 'the other exit hook ran');
+        assert.deepEqual(fs.readdirSync(root), []);
+    });
+
+    it('is released on a signal even when a loader has loaded the lock module twice', async () => {
+        const root = tempRoot();
+        const twice = `import { acquireLock as again } from ${JSON.stringify(`${pathToFileURL(LOCK_MODULE).href}?again`)};
+            again('stencil-2', 'gate', { root: ${JSON.stringify(root)}, releaseOnExit: true });`;
+        const result = await stopWith(holder(root, twice), 'SIGTERM');
+        assert.equal(result.code, 143, 'the process still stops');
+        assert.deepEqual(fs.readdirSync(root), []);
+    });
+
+    it('leaves the release to the exit, when something else in the process handles the signal and exits (Playwright\'s runner)', async () => {
+        const root = tempRoot();
+        const slot = JSON.stringify(path.join(root, 'stencil-1'));
+        const result = await stopWith(holder(root, `
+            import fs from 'node:fs';
+            process.on('SIGINT', () => {
+                console.log(fs.existsSync(${slot}) ? 'held while stopping' : 'released too soon');
+                setTimeout(() => process.exit(130), 50);
+            });
+        `), 'SIGINT');
+        assert.equal(result.code, 130);
+        assert.match(result.out, /held while stopping/);
+        assert.deepEqual(fs.readdirSync(root), []);
+    });
 });
 
 describe('the command line, for bash scripts', () => {
-    const cli = (...args) => spawnSync(process.execPath, [LOCK_MODULE, ...args], { encoding: 'utf8' });
+    const cliIn = (root, env, ...args) => spawnSync(process.execPath, [LOCK_MODULE, ...args], { encoding: 'utf8', env: { ...process.env, RF_LOCK_ROOT: root, ...env } });
 
     it('takes a lock for a given pid and drops it only for that pid', () => {
         const root = tempRoot();
-        const take = cli('take', 'release', '--root', root, '--pid', String(process.pid), '--owner', 'scripts/release.sh --channel 1895766 --dry-run');
+        const cli = (...args) => cliIn(root, {}, ...args);
+        const take = cli('take', 'release', '--pid', String(process.pid), '--owner', 'scripts/release.sh --channel 1895766 --dry-run');
         assert.equal(take.status, 0, take.stderr);
         assert.equal(readHolder(path.join(root, 'release')).pid, process.pid);
 
-        const second = cli('take', 'release', '--root', root, '--pid', String(process.pid), '--owner', 'another release');
+        const second = cli('take', 'release', '--pid', String(process.pid), '--owner', 'another release');
         assert.equal(second.status, 1);
         assert.match(second.stderr, /^STOP {5}the release lock is held by scripts\/release\.sh --channel 1895766 --dry-run/m);
         assert.match(second.stderr, /since \d{4}-\d\d-\d\dT/);
 
-        assert.equal(cli('drop', 'release', '--root', root, '--pid', '1').status, 0);
+        assert.equal(cli('drop', 'release', '--pid', '1').status, 0);
         assert.ok(fs.existsSync(path.join(root, 'release')), 'another pid\'s drop leaves it');
-        assert.equal(cli('drop', 'release', '--root', root, '--pid', String(process.pid)).status, 0);
+        assert.equal(cli('drop', 'release', '--pid', String(process.pid)).status, 0);
         assert.ok(!fs.existsSync(path.join(root, 'release')));
     });
 
     it('breaks a stale lock and says so', () => {
         const root = tempRoot();
         deadLock(root, 'release', 91, 'scripts/release.sh --channel 1895766');
-        const take = cli('take', 'release', '--root', root, '--pid', String(process.pid), '--owner', 'next');
+        const take = cliIn(root, {}, 'take', 'release', '--pid', String(process.pid), '--owner', 'next');
         assert.equal(take.status, 0, take.stderr);
         assert.match(take.stdout, /^STALE {4}broke the release lock/m);
     });
 
+    it('refuses RF_LOCK_ROOT outside node --test, and takes no lock', () => {
+        const root = tempRoot();
+        const take = cliIn(root, { NODE_TEST_CONTEXT: '' }, 'take', 'release', '--pid', String(process.pid), '--owner', 'a real release');
+        assert.equal(take.status, 2);
+        assert.match(take.stderr, /^STOP {5}RF_LOCK_ROOT is a test seam/m);
+        assert.ok(!fs.existsSync(root));
+    });
+
     it('refuses a call it doesn\'t understand', () => {
-        assert.equal(cli('take', 'release').status, 2);
-        assert.equal(cli('grab', 'release', '--pid', '1').status, 2);
-        assert.equal(cli('take', '../x', '--pid', '1').status, 2);
+        const root = tempRoot();
+        assert.equal(cliIn(root, {}, 'take', 'release').status, 2);
+        assert.equal(cliIn(root, {}, 'grab', 'release', '--pid', '1').status, 2);
+        assert.equal(cliIn(root, {}, 'take', '../x', '--pid', '1').status, 2);
+        // The folder is RF_LOCK_ROOT's (tests only), never an option a caller can point anywhere.
+        assert.equal(cliIn(root, {}, 'take', 'release', '--pid', '1', '--root', '/tmp').status, 2);
     });
 });

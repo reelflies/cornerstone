@@ -442,6 +442,16 @@ test('a stale release lock (over 90 minutes old, its pid gone) is broken with a 
     assert.deepEqual(fs.readdirSync(root), [], 'and dropped its own lock when it ended');
 });
 
+test('a real run refuses RF_LOCK_ROOT, so no release takes a lock, or gate slots, that other runs can\'t see', () => {
+    const root = path.join(lockRoot(), 'private');
+    // Outside node --test: NODE_TEST_CONTEXT is what node --test gives the processes it runs.
+    const result = run([...CA, '--dry-run'], { RF_LOCK_ROOT: root, NODE_TEST_CONTEXT: '' });
+    assertRefused(result, /RF_LOCK_ROOT is a test seam.*unset it/);
+    assert.doesNotMatch(result.stderr, /Another release or dry run is running/, 'it doesn\'t blame another release');
+    assert.match(result.stderr, /the release lock couldn't be taken, so nothing ran/);
+    assert.ok(!fs.existsSync(root), 'no lock was taken there');
+});
+
 test('release.sh drops its lock when it ends, after a refusal or a fixture run', () => {
     const root = lockRoot();
     assertRefused(run([...CA, '-allc', '--dry-run'], { RF_LOCK_ROOT: root }), /all channels/);

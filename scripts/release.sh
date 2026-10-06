@@ -17,17 +17,26 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 STATE_DIR=""
-trap 'node scripts/lib/lock.mjs drop release --pid "$$" || true; if [ -n "$STATE_DIR" ]; then rm -rf "$STATE_DIR"; fi' EXIT
+LOCK_TAKEN=""
+trap 'if [ -n "$LOCK_TAKEN" ]; then node scripts/lib/lock.mjs drop release --pid "$$" || true; fi; if [ -n "$STATE_DIR" ]; then rm -rf "$STATE_DIR"; fi' EXIT
 
 # One release or dry run at a time on this Mac (W0-7): the release lock,
 # ~/reelflies/theme/.locks/release, held for this script's pid until it exits. A held lock stops
 # this run before anything else, naming its holder and start time; one over 90 minutes old whose
-# pid has gone is broken, with a STALE line. scripts/lib/lock.mjs has the rules.
-if ! node scripts/lib/lock.mjs take release --pid "$$" --owner "scripts/release.sh $*"; then
+# pid has gone is broken, with a STALE line. scripts/lib/lock.mjs has the rules. It exits 1 when
+# another run holds the lock, and 2 when it can't take it at all (RF_LOCK_ROOT outside a test,
+# or something at the lock's path that isn't a lock).
+lock_status=0
+node scripts/lib/lock.mjs take release --pid "$$" --owner "scripts/release.sh $*" || lock_status=$?
+if [ "$lock_status" -eq 1 ]; then
     echo "Another release or dry run is running on this Mac, or holds its lock, so nothing ran. Run this again once it has finished." >&2
     echo "If you took this lock by hand under wave 0's rule, remove it first: release.sh takes this lock itself (W0-7)." >&2
     exit 1
+elif [ "$lock_status" -ne 0 ]; then
+    echo "STOP     the release lock couldn't be taken, so nothing ran (above says why)." >&2
+    exit 1
 fi
+LOCK_TAKEN=1
 
 STATE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/rf-release.XXXXXX")"
 export RF_RELEASE_STATE="$STATE_DIR/state.json"
