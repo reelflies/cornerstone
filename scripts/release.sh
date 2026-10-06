@@ -112,7 +112,10 @@ if [ "${#push_args[@]}" -ne 7 ]; then
     echo "STOP     the push command isn't the expected 7 arguments; nothing was pushed" >&2
     exit 1
 fi
-npx stencil "${push_args[@]}" 2>&1 | release redact
+# stdin is /dev/null: with -a and -c the push asks nothing, unless My Themes is full, when stencil-cli
+# asks which theme(s) to delete. That prompt then fails closed instead of reading an agent's piped
+# input or a key pressed at the terminal: the release never deletes a theme.
+npx stencil "${push_args[@]}" </dev/null 2>&1 | release redact
 
 release verify
 release write-log

@@ -778,6 +778,35 @@ test('the storefront gates (axe, raw HTML and screenshots) run on a fresh server
     assert.match(lines[gates], /QA_PORT=3300 /);
 });
 
+// stencil push asks nothing with -a and -c, except when My Themes is full: then it shows a checkbox,
+// "Which theme(s) would you like to delete?" (stencil-cli lib/stencil-push.utils.js). With
+// --confirm-nonprod no one is at a terminal, and piped keystrokes could pick a theme to delete
+// (rf/safety, PR #18). The push reads /dev/null instead, so any prompt fails closed.
+test('the push reads its stdin from /dev/null, so a stencil-cli prompt can\'t be answered by piped input', () => {
+    const lines = fs.readFileSync(SCRIPT, 'utf8').split('\n').filter(line => !/^\s*#/.test(line));
+    const pushes = lines.filter(line => /npx stencil /.test(line) && /push_args/.test(line));
+    assert.equal(pushes.length, 1, pushes.join('\n'));
+    assert.match(pushes[0], /^npx stencil "\$\{push_args\[@\]\}" <\/dev\/null 2>&1 \| release redact$/);
+});
+
+test('stencil-cli\'s theme-deletion prompt, given /dev/null, deletes nothing: it exits non-zero with no answer', () => {
+    const stencilCli = fileURLToPath(new URL('../node_modules/@bigcommerce/stencil-cli/package.json', import.meta.url));
+    const probe = `
+        const { createRequire } = require('module');
+        const inquirer = createRequire(${JSON.stringify(stencilCli)}).resolve('inquirer');
+        import(require('url').pathToFileURL(inquirer).href).then(({ default: Inquirer }) => Inquirer.prompt([{
+            type: 'checkbox', name: 'themeIdsToDelete', message: 'Which theme(s) would you like to delete?',
+            choices: [{ name: 'ReelFlies', value: 'uuid-1' }], validate: val => val.length > 0 || 'You must delete at least one theme',
+        }])).then(answers => console.log('ANSWERED', JSON.stringify(answers)));
+    `;
+    const result = spawnSync(process.execPath, ['-e', probe], {
+        encoding: 'utf8', stdio: [fs.openSync('/dev/null', 'r'), 'pipe', 'pipe'], timeout: 20000,
+    });
+    assert.match(result.stdout, /Which theme\(s\) would you like to delete\?/, `the prompt ran: ${result.stderr}`);
+    assert.doesNotMatch(result.stdout, /ANSWERED/);
+    assert.notEqual(result.status, 0, `exit ${result.status}, signal ${result.signal}`);
+});
+
 // --- The release lock (W0-7) -------------------------------------------------------------------
 
 // A pid no process can have, so it is never running.
