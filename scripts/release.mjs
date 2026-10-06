@@ -6,7 +6,8 @@
 //   node scripts/release.mjs validate-config                  step 3: config.json against stencil-cli's schema
 //   node scripts/release.mjs bundle-info <zip>                step 4: records the zip's bytes and sha256
 //   node scripts/release.mjs dry-run-report                   a dry run's push summary, command and log entry
-//   node scripts/release.mjs pre-push                         step 5: summary, typed confirmation, then the gate
+//   node scripts/release.mjs pre-push                         step 5: summary, confirmation (typed, or W0-1's
+//                                                             --confirm-nonprod), then the gate
 //   node scripts/release.mjs push-args                        step 5: the push arguments, NUL-separated, once the gate passed
 //   node scripts/release.mjs redact                           step 5: filters tokens out of the push output
 //   node scripts/release.mjs verify                           step 6: capture again and compare
@@ -25,6 +26,10 @@
 //                                    release (W0-2) and the themes the release pushed
 //   RF_RELEASE_BASE_FIXTURE=<file>   a theme config to use as config.json at the commit of the
 //                                    channel's last release, instead of reading it with git (W0-2)
+//   RF_RELEASE_CALENDAR_FIXTURE=<file>  a release calendar to read instead of
+//                                    scripts/release-calendar.json (W0-1); step 5 never reads it
+//   RF_RELEASE_DATE=<YYYY-MM-DD>     today's date for the calendar, instead of today in Toronto (W0-1);
+//                                    step 5 never reads it
 
 import { execFileSync } from 'child_process';
 import crypto from 'crypto';
@@ -32,28 +37,37 @@ import fs from 'fs';
 import { checkContrast } from './check-contrast.mjs';
 import { formatBytes } from './lib/format.mjs';
 import { isMain } from './lib/is-main.mjs';
+import {
+    describePhase, phaseOn, readCalendar, todayInToronto,
+} from './lib/release-calendar.mjs';
 import { parseReleaseArgs, resolveTarget, USAGE } from './release-args.mjs';
 import {
     captureLive, describeLiveTheme, getStoreHash, isThisFork,
 } from './release-capture.mjs';
 import {
-    confirmChannel, MAX_THEMES, pushGate, realReleaseStops, setupProblems, themeCapProblems,
+    confirmChannel, confirmNonprodRefusals, hasConfirmNonprod, MAX_THEMES, pairedChannel1Release, pushConfirmation, pushGate,
+    realReleaseStops, setupProblems, themeCapProblems,
 } from './release-checks.mjs';
 import {
     acceptLiveValues, displayValue, effectiveSettings, threeWayDiff, verifyRelease,
 } from './release-diff.mjs';
 import { checkRelease, menuIdsSet } from './release-guard.mjs';
 import {
-    addReleaseEntry, formatPushSummary, formatReleaseEntry, lastRelease, releasedThemeUuids,
+    addReleaseEntry, describePairedRelease, formatPushSummary, formatReleaseEntry, lastRelease, releasedThemeUuids,
 } from './release-log.mjs';
+import {
+    checkoutProblems, gitIn, readCheckout, stepFiveOrigin,
+} from './release-origin.mjs';
 import { redact } from './release-redact.mjs';
 import { validateThemeConfig } from './release-schema.mjs';
-import { buildPushArgs } from './release-targets.mjs';
+import { buildPushArgs, findTarget } from './release-targets.mjs';
 import { fetchChannelCategoryIds, tokenGetJson } from './release-tree-ids.mjs';
 
 const MAIN_JS = 'assets/dist/theme-bundle.main.js';
 const RELEASES = 'RELEASES.md';
-const OVERRIDES = ['RF_RELEASE_CONFIG', 'RF_RELEASE_LIVE_FIXTURE', 'RF_RELEASE_TREE_FIXTURE', 'RF_RELEASE_LOG_FIXTURE', 'RF_RELEASE_BASE_FIXTURE'];
+const OVERRIDES = [
+    'RF_RELEASE_CONFIG', 'RF_RELEASE_LIVE_FIXTURE', 'RF_RELEASE_TREE_FIXTURE', 'RF_RELEASE_LOG_FIXTURE', 'RF_RELEASE_BASE_FIXTURE', 'RF_RELEASE_CALENDAR_FIXTURE', 'RF_RELEASE_DATE',
+];
 
 const say = (label, message) => console.log(`${label.padEnd(8)} ${message}`);
 const warn = message => console.log(`WARNING  ${message}`);
@@ -128,6 +142,78 @@ function readOptions(argv) {
         throw refuse(`${overrides.join(' and ')} ${overrides.length > 1 ? 'are' : 'is'} test-only and need${overrides.length > 1 ? '' : 's'} --dry-run: a real push always captures the live theme`);
     }
     return options;
+}
+
+// --- prepare and step 5: the confirmation and the release calendar (W0-1) --------------------
+
+// Today's phase of the release calendar (scripts/release-calendar.json, W0-13; today in Toronto).
+// A dry run may read RF_RELEASE_CALENDAR_FIXTURE and RF_RELEASE_DATE instead; step 5 never does.
+// A calendar that can't be read refuses the release, so a typo never reads as "no Flip date".
+function readPhase({ fixtures }) {
+    const file = fixtures ? process.env.RF_RELEASE_CALENDAR_FIXTURE : undefined;
+    const date = fixtures ? process.env.RF_RELEASE_DATE : undefined;
+    if (file) say('fixture', `release calendar from ${file} (RF_RELEASE_CALENDAR_FIXTURE)`);
+    if (date) say('fixture', `today is ${date} (RF_RELEASE_DATE)`);
+    let calendar;
+    try {
+        calendar = file ? readCalendar(file) : readCalendar();
+    } catch (error) {
+        throw refuse(`the release calendar: ${error.message}`);
+    }
+    try {
+        return phaseOn(calendar, date || todayInToronto());
+    } catch (error) {
+        throw refuse(`${date ? 'RF_RELEASE_DATE: ' : ''}${error.message}`);
+    }
+}
+
+// What the push summary and the RELEASES.md entry say about step 5's confirmation, the calendar
+// and the paired channel-1 release (ticket 56).
+function calendarFields(options, target, phase) {
+    return {
+        confirmation: hasConfirmNonprod(options) ? { mode: 'nonprod', channel: options.confirmNonprod } : { mode: 'typed' },
+        calendar: {
+            line: describePhase(phase), phase: phase.phase, flip: phase.flip, status: phase.status,
+        },
+        pairedChannel1: pairedChannel1Release({ target, phase }),
+    };
+}
+
+// An agent push runs only from master at origin/master's tip, so the calendar and targets that judge
+// --confirm-nonprod are origin/master's, never a stale checkout's (release-origin.mjs). A real
+// release refuses otherwise, and a dry run warns. A dry run on the test-only overrides stays
+// offline: it compares with origin/master as last fetched.
+function originStep(options) {
+    const offline = OVERRIDES.some(name => process.env[name]);
+    if (offline) say('fixture', 'origin/master as last fetched: a dry run on the test-only overrides doesn\'t fetch');
+    const checkout = readCheckout({ git: gitIn(), fetch: !offline });
+    const problems = checkoutProblems(checkout);
+    if (problems.length) {
+        stopOrWarn([`--confirm-nonprod needs this checkout on master at origin/master's tip, so that origin/master's calendar and targets judge it: ${problems.join('; ')}`], options.dryRun, refuse);
+        return;
+    }
+    say('origin', `master at origin/master's tip ${checkout.head.slice(0, 7)}${offline ? '' : ', fetched just now'}: the calendar and targets that judge --confirm-nonprod are origin/master's`);
+}
+
+// Before step 1: how step 5 will be confirmed, and today's phase of the calendar. With
+// --confirm-nonprod the checkout must be master at origin/master's tip, and the flag is refused on a
+// production target and from T-21 (release-checks.mjs confirmNonprodRefusals), so a refused run
+// captures nothing; step 5 checks both again before the push.
+function confirmationStep(options, target) {
+    heading('Confirmation and the release calendar');
+    const phase = readPhase({ fixtures: true });
+    const fields = calendarFields(options, target, phase);
+    say('calendar', fields.calendar.line);
+    if (hasConfirmNonprod(options)) originStep(options);
+    const reasons = confirmNonprodRefusals({ options, target, phase });
+    if (reasons.length) throw refuse(`--confirm-nonprod refused: ${reasons.join('; ')}`);
+    say('confirm', hasConfirmNonprod(options)
+        ? `non-interactive (agent): --confirm-nonprod ${options.confirmNonprod} replaces step 5's typed channel id; step 5's gate still captures the channel again and checks everything before the push`
+        : 'typed: step 5 asks the operator to type the channel id, and stops without a terminal');
+    if (fields.pairedChannel1) {
+        say('paired', `a paired channel-1 release is ${describePairedRelease(fields.pairedChannel1)}. The ${RELEASES} entry records it for Shaun.`);
+    }
+    return fields;
 }
 
 function checkSetup(options) {
@@ -407,9 +493,11 @@ async function prepare(argv) {
     } catch (error) {
         throw refuse(error.message);
     }
+    const confirmation = confirmationStep(options, target);
     const repo = checkSetup(options);
     const state = {
         ...options,
+        ...confirmation,
         configPath,
         target,
         git: repo,
@@ -483,12 +571,16 @@ function releaseRecord(state, { themeUuid = null, verified = null } = {}) {
         channelName: state.target.name,
         variation: state.variation,
         theme: { uuid: themeUuid, name: state.themeName, version: state.version },
+        previousThemeUuid: state.beforePush ? state.beforePush.themeUuid : null, // step 5's capture
         git: { sha: state.git.sha, branch: state.git.branch },
         bundle: state.bundle,
         step1: state.step1,
         guard: state.guard,
         verify: verified,
         operator: operator(),
+        confirmation: state.confirmation,
+        calendar: state.calendar,
+        pairedChannel1: state.pairedChannel1,
     };
 }
 
@@ -509,14 +601,48 @@ function dryRunReport() {
     say('dry run', 'finished before the push. Nothing was pushed, and RELEASES.md is unchanged.');
 }
 
-// The operator confirms first, then the gate captures the channel again and checks it, the commit
-// and the zip, so nothing slow sits between the last check and the push.
+// Today's phase, read again at step 5 from the committed calendar: a release can run past
+// midnight into another phase. The target comes from release-targets.mjs again, not the state file.
+function stepFiveCalendar(state) {
+    try {
+        const target = findTarget(state.channel);
+        const phase = readPhase({ fixtures: false });
+        return { target, phase, fields: calendarFields(state, target, phase) };
+    } catch (error) {
+        throw new Stop(`step 5: ${error.message}. Nothing was pushed`);
+    }
+}
+
+// The operator confirms first (or, with --confirm-nonprod on a non-production target, no one is
+// asked: origin/master is fetched again and the flag's refusals are checked again with today's
+// calendar, W0-1). Then the gate captures the channel again and checks it, the commit and the zip,
+// so nothing slow sits between the last check and the push.
 async function prePush() {
-    const state = readState();
-    heading(`Step 5 · Push to channel ${state.channel} (${state.target.name})`);
+    const readBack = readState();
+    heading(`Step 5 · Push to channel ${readBack.channel} (${readBack.target.name})`);
+    const { target, phase, fields } = stepFiveCalendar(readBack);
+    const state = { ...readBack, ...fields };
     console.log(formatPushSummary(releaseRecord(state)));
+    const confirm = pushConfirmation({
+        options: state,
+        target,
+        phase: () => phase,
+        typed: () => confirmOrStop(state.channel, `Type the channel id (${state.channel}) to push: `),
+        origin: () => {
+            const { problems, note } = stepFiveOrigin({ git: gitIn(), sha: state.git.sha });
+            if (note) say('origin', note);
+            return problems;
+        },
+    });
     const { live, problems } = await pushGate({
-        confirm: () => confirmOrStop(state.channel, `Type the channel id (${state.channel}) to push: `),
+        confirm: async () => {
+            try {
+                await confirm();
+            } catch (error) {
+                throw error instanceof Stop ? error : new Stop(`${error.message}. Nothing was pushed`);
+            }
+            if (state.confirmation.mode === 'nonprod') say('confirm', `non-interactive (agent): --confirm-nonprod ${state.confirmNonprod}, checked again with ${phase.date}'s calendar`);
+        },
         capture: () => {
             say('', `Capturing channel ${state.channel} again, and checking the commit and the zip…`);
             return captureOrStop(state.channel);

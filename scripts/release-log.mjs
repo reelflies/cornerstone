@@ -3,14 +3,19 @@
 // (W0-2: step 1 compares with the channel's last release). Pure: no network, no files.
 //
 //   import { formatPushSummary, formatReleaseEntry, addReleaseEntry, releasedThemeUuids, releaseEntries, lastRelease } from './release-log.mjs';
+//   import { describeConfirmation, describePairedRelease } from './release-log.mjs'; // W0-1
 //
 // A release: { timestamp, channel, channelName, variation, theme: { uuid, name, version },
-//   git: { sha, branch }, bundle: { file, bytes, sha256, mainJsBytes },
+//   previousThemeUuid, git: { sha, branch }, bundle: { file, bytes, sha256, mainJsBytes },
 //   step1: { replacing, overwritten: [keys], unpublished: [keys], changedInRepo: [keys],
 //     base: { sha, timestamp } | null, baseNote }, guard: { values, newSwitches },
-//   verify: { problems } | null, operator }
+//   verify: { problems } | null, operator,
+//   confirmation: { mode: 'typed' } | { mode: 'nonprod', channel }, calendar: { line },
+//   pairedChannel1: { phase, since, t28, flip, status } | null }
 // step1.base is the channel's last release, which step 1 compared with; baseNote says why there was
-// none.
+// none. previousThemeUuid, confirmation, calendar and pairedChannel1 are W0-1's: the theme the
+// channel ran just before the push (step 5's capture), how step 5 was confirmed, the release
+// calendar's describePhase line, and the paired channel-1 release pending from T-28 (ticket 56).
 
 import { formatBytes } from './lib/format.mjs';
 import { describeLiveTheme } from './release-capture.mjs';
@@ -62,6 +67,30 @@ export function describeRepoChanges({
     return `${changedInRepo.map(mark).join(', ')} (since ${since})`;
 }
 
+// W0-1: how step 5 was confirmed. `code` marks the flag as code for RELEASES.md.
+export function describeConfirmation(confirmation, code = true) {
+    if (confirmation.mode === 'typed') return 'channel id typed at the terminal';
+    if (confirmation.mode !== 'nonprod') throw new Error(`unknown confirmation mode "${confirmation.mode}"`);
+    const flag = `--confirm-nonprod ${confirmation.channel}`;
+    return `non-interactive (agent), ${code ? `\`${flag}\`` : flag}`;
+}
+
+// W0-1: the paired channel-1 release a push queues for Shaun from T-28 (ticket 56).
+export function describePairedRelease(paired) {
+    return `pending (ticket 56): channel 1 runs the same build from T-28 (${paired.t28}) until the Flip, so push this commit there through ticket 53's target; calendar ${paired.phase}, Flip ${paired.flip}, ${paired.status}`;
+}
+
+// W0-1 (decision 9): whether the push made a new theme in My Themes, or a new version of the theme
+// the channel ran before it. The earlier uuid isn't written as "uuid `…`", so releasedThemeUuids and
+// releaseEntries never take it for a theme the release pushed.
+function describeNewUuid({ theme, previousThemeUuid, verify }) {
+    if (!verify) return 'known after the push (dry run)';
+    if (!theme.uuid || theme.uuid === 'unknown') return 'unknown: verify couldn\'t read the channel\'s theme after the push';
+    if (!previousThemeUuid) return 'unknown: step 5 didn\'t record the channel\'s theme before the push';
+    if (previousThemeUuid === theme.uuid) return 'no, a new version of the theme the channel ran before the push';
+    return `yes; before the push the channel ran theme \`${previousThemeUuid}\``;
+}
+
 function describeVerify(verify) {
     if (!verify) return 'not run (dry run)';
     if (!verify.problems.length) return 'the live saved settings match config.json';
@@ -74,6 +103,7 @@ export function formatReleaseEntry(release) {
         `### ${utc(release.timestamp)} · channel ${release.channel} (${release.channelName}) · ${release.variation}`,
         '',
         `- Theme: ${theme.name} ${theme.version}, uuid ${theme.uuid ? `\`${theme.uuid}\`` : 'assigned at push'}`,
+        `- New uuid: ${describeNewUuid(release)}`,
         `- Commit: \`${git.sha}\` on \`${git.branch}\``,
         `- Bundle: \`${bundle.file}\`, ${formatBytes(bundle.bytes)}, sha256 \`${bundle.sha256}\``,
         `- main.js: ${formatBytes(bundle.mainJsBytes)}`,
@@ -83,6 +113,8 @@ export function formatReleaseEntry(release) {
         `- New switches: ${codeList(release.guard.newSwitches) || 'none'}`,
         `- Verify: ${describeVerify(release.verify)}`,
         `- Operator: ${release.operator}`,
+        `- Confirmation: ${describeConfirmation(release.confirmation)}`,
+        ...(release.pairedChannel1 ? [`- Paired channel-1 release: ${describePairedRelease(release.pairedChannel1)}`] : []),
         '',
     ].join('\n');
 }
@@ -151,5 +183,10 @@ export function formatPushSummary(release) {
         ...(newSwitches.length ? newSwitches.map(key => line('new switch', key)) : [line('new switch', 'none')]),
         line('bundle', `${release.bundle.file}, ${formatBytes(release.bundle.bytes)}`),
         line('main.js', formatBytes(release.bundle.mainJsBytes)),
+        line('confirm', release.confirmation.mode === 'nonprod'
+            ? `${describeConfirmation(release.confirmation, false)}: requested; step 5 checks it again against origin/master and today's calendar and asks no one, and the gate still captures the channel again and checks everything before the push`
+            : describeConfirmation(release.confirmation, false)),
+        line('calendar', release.calendar.line.replace(/^Release calendar: /, '')),
+        ...(release.pairedChannel1 ? [line('channel 1', `paired release ${describePairedRelease(release.pairedChannel1)}`)] : []),
     ].join('\n');
 }

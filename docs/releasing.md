@@ -11,7 +11,7 @@ Every `stencil push` creates a theme whose Theme Styles start from `config.json`
   - A dry run works with the "local development only" Stencil-CLI token.
   - A real push needs a token at the "publish theme" level.
 - A real release needs a clean, committed tree, and records the commit's full sha. A dry run may run on a dirty tree: it warns, and the bundle name ends in `-dirty`.
-- A real push needs Shaun's go-ahead (HANDOFF, "Read-only on BigCommerce until Shaun approves").
+- A real push needs Shaun's go-ahead (HANDOFF, "Rules for every session"), except an agent's push to 1895766 with `--confirm-nonprod` from `master` at `origin/master`'s tip, which his answers of 2026-10-06 allow within the limits in [Agent pushes](#agent-pushes---confirm-nonprod).
 
 ## Dry run
 
@@ -58,20 +58,23 @@ scripts/release.sh --channel 1895766 --variation 'ReelFlies CA'
 | 2. Clean build | `rm -rf assets/dist`, then `npm ci`. Upstream's webpack clean step never deletes anything, so stale chunks would otherwise ship. | `npm ci` fails. |
 | 3. Checks | Jest, `npm run test:scripts`, ESLint, Stylelint, the contrast check, and `config.json` against stencil-cli's full theme config schema. `stencil bundle` uses a looser schema, so it accepts a variation without `demo_url`. | Any check fails. |
 | 4. Bundle and storefront gates | `npx stencil bundle --name reelflies-<slug>-<version>-<commit>`, which runs the production webpack build, then `scripts/check-bundle.mjs`. Then `npm run qa:prepush` on a local `stencil start` of the target channel and variation: axe, the raw-HTML check and the screenshot diffs ([scripts/qa/README.md](../scripts/qa/README.md)). It runs with `QA_FRESH_SERVER=1`, so each gate starts its own `stencil start` and never checks a server left running from another checkout or an older build. | The zip has forbidden files, is over a size limit, or `config.json` is over the upload limit; axe finds a serious or critical issue; a raw-HTML assertion fails; a screenshot differs from its baseline, or the channel and variation have no baseline for a template; a `stencil start` is already running. |
-| 5. Push | Shows the push summary and asks you to type the channel id. Only then does it capture the channel again and check that nothing changed since steps 1 and 4: the commit and the tree, the zip's size and sha256, the live theme and variation, and the saved and published Theme Styles. A switch toggled while the prompt waited is caught there. Then it runs `npx stencil push -f <zip> -a '<variation>' -c <channel>`, which pushes the zip that was checked. | You type anything but the channel id or close stdin (Ctrl-D), something listed here changed since step 1 or 4, or My Themes is full. |
+| 5. Push | Shows the push summary and asks you to type the channel id; with [`--confirm-nonprod`](#agent-pushes---confirm-nonprod) it asks nothing, and instead fetches `origin/master` again and checks the flag again against it, the target and today's [release calendar](#the-release-calendar). Only then does it capture the channel again and check that nothing changed since steps 1 and 4: the commit and the tree, the zip's size and sha256, the live theme and variation, and the saved and published Theme Styles. A switch toggled while the prompt waited is caught there. Then it runs `npx stencil push -f <zip> -a '<variation>' -c <channel>`, which pushes the zip that was checked. The push reads its stdin from `/dev/null`, so stencil-cli's own prompt, which asks which themes to delete when My Themes is full, fails closed instead of reading piped input or a key press. | You type anything but the channel id or close stdin (Ctrl-D), stdin isn't a terminal and there is no `--confirm-nonprod`, the calendar refuses the flag by now, `origin` can't be fetched or `origin/master` changed the release tooling or the calendar since the release started (with the flag), something listed here changed since step 1 or 4, or My Themes is full. |
 | 6. Verify | Captures again. Checks that the channel runs the new theme with the target variation, and that its saved Theme Styles equal `config.json`'s. | Never: it reports problems, and the release exits non-zero after step 7. The theme is already live, so fix forward. |
 | 7. Log | Appends an entry to `RELEASES.md`. Commit it. | — |
 
 The `RELEASES.md` entry records:
 
 - the time (UTC), the channel and the variation
-- the theme's uuid, name and version
+- the theme's uuid, name and version, and whether the push made a new theme uuid or a new version of the theme the channel ran just before it (`New uuid`, decision 9; W0-1)
 - the commit sha and branch
 - the bundle file, its size and sha256, and the size of `main.js`
 - step 1's outcome and verify's result
 - the settings `config.json` changed since the channel's last release, with that release's commit ("Changed in repo"), or why there was nothing to compare with
 - every `rf_*` value pushed, and the new switches
-- the operator (`git config user.name`)
+- the operator (`git config user.name`), and beside it how step 5 was confirmed: `Confirmation: channel id typed at the terminal`, or `Confirmation: non-interactive (agent)` with the flag (W0-1)
+- from T-28 until the Flip, on a non-production target: `Paired channel-1 release: pending`, which the review page lists for Shaun ([the release calendar](#the-release-calendar))
+
+The push summary also says how step 5 is confirmed, and gives the release calendar's line: the Flip date, whether it is provisional or set, and today's phase.
 
 ## Refusals
 
@@ -83,19 +86,72 @@ The release refuses these before any network call or build, with a one-line reas
 - a variation that isn't in `config.json`
 - a channel that isn't a release target, or a variation that the channel doesn't take
 - `--accept-live` together with `--overwrite-live`, or either one with `--first-release`
-- for a real release: a dirty tree, the wrong Node version, or a test-only `RF_RELEASE_*` override
+- `--confirm-nonprod` with no channel id, given twice, naming another channel than `--channel`, or together with `--overwrite-live` or `--first-release`; on a production target or a channel that isn't a target; or while the release calendar refuses it ([Agent pushes](#agent-pushes---confirm-nonprod))
+- a release calendar that can't be read or isn't valid, with or without `--confirm-nonprod`, so a typo never reads as "no Flip date"
+- for a real release: a dirty tree, the wrong Node version, or a test-only `RF_RELEASE_*` override (the calendar's `RF_RELEASE_CALENDAR_FIXTURE` and `RF_RELEASE_DATE` too)
+- for a real release with `--confirm-nonprod`: a checkout that isn't `master` at `origin/master`'s tip, freshly fetched, or a fetch that fails ([Agent pushes](#agent-pushes---confirm-nonprod)); a dry run warns instead
 - another release or dry run holding the release lock ([One release at a time](#one-release-at-a-time)); this is checked first, before the arguments
 
 ### Release targets
 
 The targets are in `scripts/release-targets.mjs`. Any channel that isn't listed there is refused.
 
-| Channel | Storefront | Variations | Capture file |
-|---|---|---|---|
-| 1895766 | ReelFlies_CA (prelaunch) | ReelFlies CA | `config.ca.live.json` |
+| Channel | Storefront | Variations | Capture file | Production | Step 5's confirmation |
+|---|---|---|---|---|---|
+| 1895766 | ReelFlies_CA (prelaunch) | ReelFlies CA | `config.ca.live.json` | no, until the Flip | typed, or `--confirm-nonprod 1895766` |
 
-- **Channel 1 (live reelflies.ca)** is refused. It is pushed only through ticket 53's guarded channel-1 target, which will add its own entry.
+- Each target declares `production` and its `confirmation` modes. A production target is typed only, and a target that doesn't declare `production: false` counts as production.
+- Channels 1 and 1855224 are typed only by their id, whatever their entry declares (`LIVE_CHANNELS` in `release-checks.mjs`). So a channel-1 entry copied from 1895766's by mistake, with `production: false`, still refuses `--confirm-nonprod`. A test also holds the targets that take the flag to exactly 1895766.
+- 1895766 also declares `liveFromFlip`: it becomes live reelflies.ca at the Flip, so `--confirm-nonprod` is refused there from the Flip whatever its `production` value. Ticket 57 marks it `production: true` on Flip day, which ends agent pushes there twice over.
+
+- **Channel 1 (live reelflies.ca)** is refused. It is pushed only through ticket 53's guarded channel-1 target, which will add its own entry, `production: true` and typed only.
 - **Channel 1855224 (reelflies.com)** is refused. .com stays on its own theme until it moves to the fork, which is out of scope.
+
+## Agent pushes: `--confirm-nonprod`
+
+```sh
+scripts/release.sh --channel 1895766 --variation 'ReelFlies CA' --dry-run --confirm-nonprod 1895766
+scripts/release.sh --channel 1895766 --variation 'ReelFlies CA' --confirm-nonprod 1895766
+```
+
+Step 5 asks a person to type the channel id, and stops when stdin isn't a terminal, so an agent can't answer it (Claude Code's auto mode blocks that). Agents may push to 1895766 while it is prelaunch (HANDOFF, "Rules for every session"), so W0-1 gives them a confirmation of their own instead of a way round the prompt: `--confirm-nonprod <channel>` replaces the typed channel id at step 5, and only there.
+
+- **It is taken only when** the target is non-production and lists the non-interactive mode (today only 1895766), and the flag's value equals `--channel`. Everything else in the release runs as without it: step 1's diff, the guard, the clean build, the checks, the bundle, the storefront gates, and step 5's re-capture and checks of the commit, the tree, the zip's sha256, the live theme and variation, and the saved and published Theme Styles.
+- **It is refused** before anything runs:
+  - on channels 1 and 1855224 by their id, whatever `release-targets.mjs` declares, and on any other production target, so channel 1 keeps its typed prompt today and after ticket 53
+  - on a channel that isn't a target (1855224)
+  - with `--overwrite-live` or `--first-release`, because those choices stay with a person
+  - while the release calendar refuses it (below)
+  - on a real release, unless the checkout is `master` at `origin/master`'s tip (below)
+- **Without the flag** nothing changes: step 5 asks for the typed channel id, and no terminal still stops the release. `--overwrite-live`'s own prompt in step 1 is always typed.
+- **It runs only from `master` at `origin/master`'s tip.** The flag is judged by the calendar and the targets in the checkout that runs the release, so a stale checkout would be judged by stale rules: a main clone that hasn't pulled the calendar PR, or ticket 57's Flip-day `production: true`, would push past the code freeze or the Flip with no one typing. So, as `merge.sh` does for merges, the release judges an agent push by `origin/master`'s rules (`scripts/release-origin.mjs`):
+  - Before step 1, it fetches `origin`'s `master` (into `origin/master` only; the checkout isn't touched) and refuses the flag unless the checkout is on `master` and `HEAD` is `origin/master`'s tip. An agent push therefore sends merged code only. A fetch that fails refuses the flag too.
+  - Step 5 fetches again, because another PR can merge while the release builds. If `origin/master` has moved on, the push still sends the commit the release checked, but only if that commit is in `origin/master`'s history and none of the release tooling or the calendar changed since: `release.sh`, `release-calendar.json`, `release.mjs` and every module it imports (`RELEASE_TOOLING`, which a test keeps in step with the imports). Otherwise it stops before the capture, and nothing is pushed: pull and rerun.
+  - A dry run with the flag fetches and checks the same way, but only warns, saying a real release stops there. A dry run on the test-only overrides stays offline and compares with `origin/master` as last fetched.
+  - So run agent pushes from the main clone, `~/reelflies/theme/cornerstone`, on `master` after `git pull --ff-only origin master`. A typed push isn't checked: the person at the terminal decides what goes out.
+- **Step 5 checks the flag again** with today's calendar and the target in `release-targets.mjs`, not with the state file that steps 1 to 4 wrote, so a release whose build ran past midnight into T-21 stops before the push.
+- **The log:** the `RELEASES.md` entry says `Confirmation: non-interactive (agent)` beside the operator.
+- **The first real agent push carries no theme change.** It pushes `master` as it is, before ticket 25's push, so the first push without the typed prompt and the first repeat push of the same name and version aren't tried together with W0-2's first real use and 25's changes.
+  - The orchestrator runs it dry with `--confirm-nonprod 1895766`, then for real, and puts both outputs on the next review page. It doesn't wait for Shaun (his answers of 2026-10-06 in `plan/build-pipeline.md`).
+  - Its `RELEASES.md` entry's `New uuid` line records whether the push made a new theme uuid or a new version of the theme the channel ran before it (decision 9). It compares step 5's capture with verify's.
+  - The review page asks Shaun whether that uuid previews on ReelFlies.com (1855224), and with which variation. The entry is written at the push, before he answers, so the orchestrator records his answer as a dated comment on ticket 05, where W0-3 reads it: if it previews there, W0-3 needs no upload mode.
+  - If Claude Code's auto mode still blocks the command, Shaun runs that checkpoint's push in his terminal.
+
+### The release calendar
+
+`scripts/release-calendar.json` and `scripts/lib/release-calendar.mjs` (W0-13, [guardrails](guardrails.md#the-release-calendar)) set the Flip date and today's phase, in Toronto. Every release reads them before step 1, prints the `calendar` line, and puts it in the push summary, which says whether the date is provisional or set. A provisional date limits exactly as a set one.
+
+| Phase | `--confirm-nonprod` | Paired channel-1 release |
+|---|---|---|
+| no Flip date (`unset`) | allowed: nothing is limited | no |
+| before T-28 (`build`, `T-35`) | allowed | no |
+| from T-28 (channel-1 parity, ticket 56) | allowed | pending, for every push to a non-production target |
+| from T-21 (code freeze, ticket 57) | refused: every push is typed by Shaun | pending |
+| from T-14 (content freeze) | refused | pending |
+| from T-0 (the Flip) and T+30 | refused, and refused again on 1895766 because it is live reelflies.ca | no |
+
+- **The paired channel-1 release:** from T-28 until the Flip, channel 1 runs the same build as 1895766 (ticket 56:37). Each push to 1895766 then adds `Paired channel-1 release: pending` to its `RELEASES.md` entry, and the review page lists it for Shaun, who pushes the same commit to channel 1 through ticket 53's target. Typed pushes get the row too: from T-21 every push is typed, and its P1 fix belongs on channel 1 as well.
+- **A calendar that can't be read** (a typo, an unknown key, a date that doesn't exist) refuses every release, typed or not.
 
 ## When step 1 stops
 
@@ -185,12 +241,16 @@ The guard prints every `rf_*` value to be pushed and each new switch. The push s
 The release's tests are `scripts/release-*.test.mjs`. `npm run test:scripts` runs them, in CI too, with no store credentials.
 
 - `release-guard.test.mjs` covers the four refusals of the spec's seam 5 (more than one channel, no named variation, a switch difference, and a set-but-missing menu id) and each case of the guard's two rules.
-- `release-checks.test.mjs` covers the stops that only a real release reaches, which a dry run can't: the Node version and dirty-tree refusals, the My Themes cap, the typed channel id (a wrong answer, a closed stdin, no terminal), and step 5's gate (a switch toggled or a draft published while the prompt waits, another theme, a new commit, a changed or missing zip).
+- `release-checks.test.mjs` covers the stops that only a real release reaches, which a dry run can't: the Node version and dirty-tree refusals, the My Themes cap, the typed channel id (a wrong answer, a closed stdin, no terminal), and step 5's gate (a switch toggled or a draft published while the prompt waits, another theme, a new commit, a changed or missing zip). For W0-1 it covers each of `--confirm-nonprod`'s refusals with a calendar for every phase, channels 1 and 1855224 refused by id even in an entry that says `production: false`, the Flip lock on 1895766, the paired channel-1 release, and step 5 with the flag: no prompt, `origin/master` checked first and the calendar again, and the gate still run in full.
+- `release-origin.test.mjs` covers the origin check on temp clones of a local bare origin (`release-origin-fixture.mjs`): a branch, a detached `HEAD`, a `master` behind or ahead of `origin/master`, a failed fetch, and at step 5 a merge outside the release tooling (passes), a calendar or target change (stops) and a rewritten `origin/master` (stops). It also keeps `RELEASE_TOOLING` in step with `release.mjs`'s imports.
+- `release-args.test.mjs` covers what the arguments parse to, `--confirm-nonprod` included, and `release-targets.test.mjs` that every target declares `production` and its confirmation modes, a production one typed only, and that 1895766 is the only target that takes the flag.
 - `release-diff.test.mjs` covers the three-way diff's cases, and `release-log.test.mjs` reading the channel's last release back from `RELEASES.md` and the "Changed in repo" lines.
-- `release-sh.test.mjs` runs `scripts/release.sh` itself, in dry runs. It covers the release lock (a held lock, a lock taken by hand, a stale lock, and the lock dropped at the end), the argument refusals, step 1's stops (two-way and three-way), the live contrast report and the guard. Its runs take the release lock in a folder of their own (`RF_LOCK_ROOT`, which only `node --test` may set), and use five test-only overrides:
+- `release-sh.test.mjs` runs `scripts/release.sh` itself, in dry runs. It covers the release lock (a held lock, a lock taken by hand, a stale lock, and the lock dropped at the end), the argument refusals, step 1's stops (two-way and three-way), the live contrast report, the guard, and `--confirm-nonprod` on a calendar date in every phase. It also runs step 5 (`release.mjs pre-push`) in a clone of a local bare origin with no stencil config, where any capture fails at once, to show the typed prompt still stops without a terminal, that step 5 checks the flag again from the code, that it ignores the calendar overrides, and that it stops when a calendar change merged on `origin/master` while the release ran, or the fetch fails. It runs `release.mjs prepare` as a real release in such clones too, to show that `--confirm-nonprod` is refused on a branch, on a `master` behind `origin/master` and when the fetch fails, that a typed release isn't checked, and that a dry run only warns. Step 7 (`release.mjs write-log`) runs in an empty folder to show the `New uuid` line. It checks that the push reads its stdin from `/dev/null`, and that stencil-cli's theme-deletion prompt then exits without an answer. Its runs take the release lock in a folder of their own (`RF_LOCK_ROOT`, which only `node --test` may set), and use seven test-only overrides:
   - `RF_RELEASE_CONFIG=<file>` is a theme config to use instead of `config.json`. The run stops before the clean build.
   - `RF_RELEASE_LIVE_FIXTURE=<file>` is a capture to use instead of the store.
   - `RF_RELEASE_TREE_FIXTURE=<file>` is a JSON array of the channel's category ids, to use instead of the catalogue API.
   - `RF_RELEASE_LOG_FIXTURE=<file>` is a release log to read instead of `RELEASES.md`, for the channel's last release and the themes the release pushed. Step 7 always writes `RELEASES.md`.
   - `RF_RELEASE_BASE_FIXTURE=<file>` is a theme config to use as `config.json` at the last release's commit, instead of reading it with git.
-- All five overrides need `--dry-run`, so a real push always reads the live store, `RELEASES.md` and git.
+  - `RF_RELEASE_CALENDAR_FIXTURE=<file>` is a release calendar to read instead of `scripts/release-calendar.json` (W0-1).
+  - `RF_RELEASE_DATE=<YYYY-MM-DD>` is today's date for the calendar, instead of today in Toronto (W0-1).
+- All seven overrides need `--dry-run`, so a real push always reads the live store, `RELEASES.md`, git and the committed calendar. Step 5 never reads the calendar overrides, and a test runs it with both set to show it.
