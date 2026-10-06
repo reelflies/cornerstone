@@ -44,6 +44,10 @@ AGENTS.md
 docs/guardrails.md
 docs/permissions.md
 docs/releasing.md
+docs/store-writes.md
+
+# Git attributes, which can change how a guarded file merges or whether its diff shows (W0-11)
+.gitattributes
 
 # CI, the runner that picks which script tests CI runs, and the secret scan's own config,
 # which gitleaks reads from the repo by itself

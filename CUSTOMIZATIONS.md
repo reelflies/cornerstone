@@ -15,7 +15,7 @@ This repo is Cornerstone (`upstream`, bigcommerce/cornerstone) plus ReelFlies co
 | Hero widget template and schema (stored in BigCommerce) | `widgets/` |
 | Release, check and generator tooling (never bundled) | `scripts/` |
 | Decisions | `docs/adr/` |
-| Operator guides, such as [releasing](docs/releasing.md) and [guardrails](docs/guardrails.md) | `docs/` |
+| Operator guides, such as [releasing](docs/releasing.md), [guardrails](docs/guardrails.md) and [store writes](docs/store-writes.md) | `docs/` |
 | Claude Code permission rules: a draft until Shaun turns them on ([permissions](docs/permissions.md)) | `.claude/` |
 
 - **New theme settings** go in one block at the end of `schema.json`, `schemaTranslations.json` and the `settings` object in `config.json`.
