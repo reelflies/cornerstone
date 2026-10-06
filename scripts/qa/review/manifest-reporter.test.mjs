@@ -76,6 +76,24 @@ describe('the manifest reporter', () => {
         assert.equal(fs.readFileSync(path.join(root, recorded.actual), 'utf8'), 'png');
     });
 
+    it('keeps a failed render beside the manifest it writes, wherever that is, at the same path from its checkout', async () => {
+        const { root, reporter } = setup();
+        const other = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-reporter-ticket-'));
+        const file = path.join(other, 'scripts/qa/results/manifest.json');
+        const elsewhere = new ManifestReporter({
+            root, file, now: () => 'a', head: () => ({ sha: 'x', dirty: false }), log: () => {},
+        });
+        const actual = path.join(root, 'scripts/qa/results/output/home-actual.png');
+        fs.mkdirSync(path.dirname(actual), { recursive: true });
+        fs.writeFileSync(actual, 'png');
+        elsewhere.onTestEnd({}, result('failed', [entry('home')], [{ name: 'home-actual.png', path: actual, contentType: 'image/png' }]));
+        await elsewhere.onEnd({ status: 'failed' });
+        const [recorded] = readManifest(file).entries;
+        assert.match(recorded.actual, /^scripts\/qa\/results\/manifest-actual\/.+\.png$/);
+        assert.equal(fs.readFileSync(path.join(other, recorded.actual), 'utf8'), 'png');
+        assert.ok(reporter);
+    });
+
     it('writes nothing for a run that shot nothing for the review, such as axe', async () => {
         const { file, reporter } = setup();
         reporter.onTestEnd({}, result('passed', []));
@@ -95,6 +113,31 @@ describe('the gates\' Playwright config', () => {
         const reporters = JSON.parse(stdout.trim().split('\n').pop()).map(([name]) => name);
         assert.deepEqual(reporters.slice(0, 2), ['list', 'html']);
         assert.ok(reporters.some(name => /review\/manifest-reporter\.mjs$/.test(name)), reporters.join(', '));
+    });
+
+    // Playwright treats each filter after the config as a regular expression matched against
+    // the spec's path, so the reference shots join `npm run qa:screens` by their file name.
+    const filtersOf = script => {
+        const words = JSON.parse(fs.readFileSync(path.resolve('package.json'), 'utf8')).scripts[script].split(/\s+/);
+        const at = words.indexOf('test');
+        const filters = [];
+        for (let i = at + 1; i < words.length; i += 1) {
+            if (words[i].startsWith('--')) {
+                if (!words[i].includes('=') && words[i + 1] && !words[i + 1].startsWith('--')) i += 1;
+            } else filters.push(words[i]);
+        }
+        return filters;
+    };
+    const runsSpec = (script, spec) => filtersOf(script).some(filter => new RegExp(filter).test(path.resolve('scripts/qa', spec)));
+
+    it('shoots the reference screens in every `npm run qa:screens`, the same run as the theme shots', () => {
+        assert.ok(fs.existsSync(path.resolve('scripts/qa/screens-reference.spec.mjs')));
+        assert.ok(runsSpec('qa:screens', 'screens-reference.spec.mjs'), filtersOf('qa:screens').join(' '));
+        assert.ok(runsSpec('qa:screens', 'screens.spec.mjs'));
+    });
+
+    it('runs the review renders only when they are named, never in a gate', () => {
+        for (const script of ['qa:axe', 'qa:screens', 'qa:quick-view']) assert.ok(!runsSpec(script, 'review-live.spec.mjs'), script);
     });
 
     it('has the screenshot gate annotate each template shot for the manifest', () => {

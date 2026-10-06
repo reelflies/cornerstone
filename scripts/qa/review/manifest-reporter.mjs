@@ -5,15 +5,16 @@
 //
 // - Only tests that annotate a shot (shotAnnotation) add entries, so axe and Quick view
 //   runs leave the manifest as it was.
-// - A failed shot's actual render is copied to scripts/qa/results/manifest-actual/,
+// - A failed shot's actual render is copied to manifest-actual/ beside the manifest,
 //   because the next run empties Playwright's output folder.
+// - It writes scripts/qa/results/manifest.json, or the file QA_MANIFEST names (manifest.mjs).
 
 import { spawnSync } from 'child_process';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import {
-    MANIFEST, entriesFromResult, entryKey, mergeManifest, readManifest, writeManifest,
+    entriesFromResult, entryKey, manifestFile, mergeManifest, readManifest, writeManifest,
 } from './manifest.mjs';
 import { ROOT } from './reference.mjs';
 
@@ -25,11 +26,14 @@ function gitHead(root) {
 
 export default class ManifestReporter {
     constructor({
-        root = ROOT, file = MANIFEST, now = () => new Date().toISOString(), head = () => gitHead(root), log = console.log,
+        root = ROOT, file = manifestFile(), now = () => new Date().toISOString(), head = () => gitHead(root), log = console.log,
     } = {}) {
         Object.assign(this, {
             root, file, now, head, log, entries: [],
         });
+        // The manifest sits at scripts/qa/results/ in its own checkout, and a kept render's
+        // path is written from there, as every other path in it is.
+        this.manifestRoot = path.resolve(path.dirname(file), '..', '..', '..');
     }
 
     printsToStdio() {
@@ -37,16 +41,16 @@ export default class ManifestReporter {
     }
 
     onTestEnd(test, result) {
-        this.entries.push(...entriesFromResult(result));
+        this.entries.push(...entriesFromResult(result, { redact: [process.env.QA_PREVIEW_COOKIE] }));
     }
 
     keepActual(entry) {
         if (!entry.actual || !fs.existsSync(entry.actual)) return { ...entry, actual: null };
         const name = `${crypto.createHash('sha256').update(entryKey(entry)).digest('hex').slice(0, 12)}-${path.basename(entry.actual)}`;
-        const kept = path.join(this.root, 'scripts', 'qa', 'results', 'manifest-actual', name);
+        const kept = path.join(path.dirname(this.file), 'manifest-actual', name);
         fs.mkdirSync(path.dirname(kept), { recursive: true });
         fs.copyFileSync(entry.actual, kept);
-        return { ...entry, actual: path.relative(this.root, kept).split(path.sep).join('/') };
+        return { ...entry, actual: path.relative(this.manifestRoot, kept).split(path.sep).join('/') };
     }
 
     async onEnd() {

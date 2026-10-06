@@ -9,17 +9,24 @@
 //
 // An entry:
 //   kind       'theme' (a page baseline), 'reference' (a reference screen) or 'live' (a
-//              page shot with nothing hidden, such as the live home page with its widgets)
+//              review render with nothing hidden and no baseline: the live home page with
+//              its widgets, and every page pinned for reelflies.com)
 //   page, path the pinned page key and its path (theme, live)
 //   anchor     the reference anchor (reference; reference.mjs)
 //   project, width            the Playwright project and its viewport width
 //   channel, variation        what rendered it (theme, live)
 //   overlay, state            W0-8's overlay or UI state, or null
 //   baseline   the baseline PNG, relative to the repo (theme)
-//   image      the PNG shot, relative to the repo (reference, live)
-//   reference  the anchor of the reference screen it is compared with, or null (theme)
-//   status     the test's status; actual: a copy of the render when it failed its baseline
+//   image      the PNG shot, relative to the repo (reference, live); null for a reference
+//              screen that couldn't be shot, with `problem` saying why
+//   reference  the anchor of the reference screen it is compared with, or null (theme, live)
+//   status     the test's status; actual: a copy of the render when it failed its baseline;
+//              error: the first line of a failed test's error
 //   ranAt, commit, dirty      when, and from which checkout state
+//
+// QA_MANIFEST names another manifest file, such as a ticket worktree's for W0-8's overlay
+// runs in a throwaway worktree. Paths in it stay relative to the checkout that ran them,
+// which a worktree of the same repo lays out the same way.
 
 import fs from 'fs';
 import path from 'path';
@@ -28,6 +35,8 @@ import { ROOT, referenceFor } from './reference.mjs';
 export const MANIFEST_VERSION = 1;
 export const MANIFEST = path.join(ROOT, 'scripts', 'qa', 'results', 'manifest.json');
 export const SHOT_ANNOTATION = 'rf-review-shot';
+export const manifestFile = (env = process.env) => (env.QA_MANIFEST ? path.resolve(env.QA_MANIFEST) : MANIFEST);
+export const COM_CHANNEL = '1855224';
 
 const relative = file => path.relative(ROOT, file).split(path.sep).join('/');
 
@@ -50,18 +59,56 @@ export function themeShot({
     };
 }
 
+// The entry for one review render (review-live.spec.mjs): the page as it renders, nothing
+// hidden, compared with no baseline.
+export function liveShot({
+    template, pagePath, image, testInfo, channel, variation,
+}) {
+    return {
+        kind: 'live',
+        page: template,
+        path: pagePath,
+        project: testInfo.project.name,
+        width: testInfo.project.use.viewport.width,
+        channel: String(channel),
+        variation,
+        overlay: null,
+        state: null,
+        image: relative(image),
+        reference: referenceFor(template),
+    };
+}
+
+// The pages a channel's review renders cover: every pinned page on reelflies.com (section 5
+// of a checkpoint page; .com has no baselines), and the home page elsewhere (section 6).
+export const reviewRenderPages = (channel, pages) => (String(channel) === COM_CHANNEL
+    ? Object.keys(pages)
+    : Object.keys(pages).filter(template => template === 'home'));
+
 export const shotAnnotation = entry => ({ type: SHOT_ANNOTATION, description: JSON.stringify(entry) });
+
+// The first line of a failed test's error, for the review page's run notes: no colour codes,
+// and nothing in `redact` (the preview cookie).
+function firstErrorLine(result, redact) {
+    const error = result.errors?.[0] || result.error;
+    if (!error?.message) return null;
+    let line = String(error.message).replace(/\u001b\[[0-9;]*m/g, '').split('\n').map(text => text.trim()).find(Boolean) || null; // eslint-disable-line no-control-regex
+    for (const secret of redact.filter(Boolean)) line = line && line.split(secret).join('…');
+    return line && line.length > 300 ? `${line.slice(0, 299)}…` : line;
+}
 
 // The entries a finished test leaves, from its annotations, with its status. A failed
 // screenshot comparison attaches the render as "<name>-actual.png".
-export function entriesFromResult(result) {
+export function entriesFromResult(result, { redact = [] } = {}) {
     const actual = (result.attachments || []).find(({ name, path: file }) => file && /-actual\.png$/.test(name));
+    const error = result.status === 'passed' ? null : firstErrorLine(result, redact);
     return (result.annotations || [])
         .filter(({ type }) => type === SHOT_ANNOTATION)
         .map(({ description }) => ({
             ...JSON.parse(description),
             status: result.status,
             actual: result.status === 'passed' ? null : (actual?.path || null),
+            error,
         }));
 }
 

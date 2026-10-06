@@ -10,8 +10,8 @@ import path from 'path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    MANIFEST_VERSION, SHOT_ANNOTATION, entriesFromResult, entryKey, mergeManifest, readManifest,
-    shotAnnotation, themeShot, writeManifest,
+    MANIFEST, MANIFEST_VERSION, SHOT_ANNOTATION, entriesFromResult, entryKey, liveShot, manifestFile, mergeManifest, readManifest,
+    reviewRenderPages, shotAnnotation, themeShot, writeManifest,
 } from './manifest.mjs';
 
 const home375 = {
@@ -84,8 +84,54 @@ describe('the entries a finished test leaves', () => {
         assert.equal(entry.actual, actual);
     });
 
+    it('keep the first line of a failed test\'s error, without colour codes or the preview cookie', () => {
+        const failed = {
+            ...result('failed'),
+            errors: [{ message: '\u001b[31mError: the home page / returned HTTP 502, not 200 (cookie SHOP_TOKEN=s3cret)\u001b[39m\n    at storefrontPage' }],
+        };
+        const [entry] = entriesFromResult(failed, { redact: ['SHOP_TOKEN=s3cret'] });
+        assert.equal(entry.error, 'Error: the home page / returned HTTP 502, not 200 (cookie …)');
+        assert.equal(entriesFromResult(result('passed'))[0].error, null);
+    });
+
     it('ignore tests that shot nothing for the review', () => {
         assert.deepEqual(entriesFromResult({ status: 'passed', annotations: [], attachments: [] }), []);
+    });
+});
+
+describe('a review render', () => {
+    const testInfo = { project: { name: 'desktop-1280', use: { viewport: { width: 1280, height: 800 } } } };
+
+    it('records the page as rendered, with nothing hidden, beside the reference screen of its kind', () => {
+        assert.deepEqual(liveShot({
+            template: 'home', pagePath: '/', image: path.resolve('scripts/qa/results/live/1855224-reelflies-us/home-desktop-1280.png'), testInfo, channel: 1855224, variation: 'ReelFlies US',
+        }), {
+            kind: 'live',
+            page: 'home',
+            path: '/',
+            project: 'desktop-1280',
+            width: 1280,
+            channel: '1855224',
+            variation: 'ReelFlies US',
+            overlay: null,
+            state: null,
+            image: 'scripts/qa/results/live/1855224-reelflies-us/home-desktop-1280.png',
+            reference: 'home',
+        });
+    });
+
+    it('covers every pinned page on reelflies.com, and only the home page elsewhere', () => {
+        const pages = { home: '/', product: '/p/', category: '/c/' };
+        assert.deepEqual(reviewRenderPages('1855224', pages), ['home', 'product', 'category']);
+        assert.deepEqual(reviewRenderPages('1895766', pages), ['home']);
+        assert.deepEqual(reviewRenderPages('1', { product: '/p/' }), []);
+    });
+});
+
+describe('where the manifest is', () => {
+    it('is scripts/qa/results/manifest.json, or QA_MANIFEST, so an overlay worktree can write the ticket worktree\'s (W0-8)', () => {
+        assert.equal(manifestFile({}), MANIFEST);
+        assert.equal(manifestFile({ QA_MANIFEST: 'elsewhere/manifest.json' }), path.resolve('elsewhere/manifest.json'));
     });
 });
 
