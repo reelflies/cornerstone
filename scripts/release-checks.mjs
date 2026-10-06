@@ -4,7 +4,7 @@
 //
 //   import {
 //       setupProblems, themeCapProblems, realReleaseStops, confirmChannel, pushGate,
-//       confirmNonprodRefusals, pairedChannel1Release, pushConfirmation, LIVE_CHANNELS,
+//       confirmNonprodRefusals, hasConfirmNonprod, pairedChannel1Release, pushConfirmation, LIVE_CHANNELS,
 //   } from './release-checks.mjs';
 //
 // setupProblems and themeCapProblems return one line per problem. realReleaseStops turns them into

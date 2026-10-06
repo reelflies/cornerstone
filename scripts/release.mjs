@@ -45,7 +45,8 @@ import {
     captureLive, describeLiveTheme, getStoreHash, isThisFork,
 } from './release-capture.mjs';
 import {
-    confirmChannel, confirmNonprodRefusals, hasConfirmNonprod, MAX_THEMES, pairedChannel1Release, pushConfirmation, pushGate, realReleaseStops, setupProblems, themeCapProblems,
+    confirmChannel, confirmNonprodRefusals, hasConfirmNonprod, MAX_THEMES, pairedChannel1Release, pushConfirmation, pushGate,
+    realReleaseStops, setupProblems, themeCapProblems,
 } from './release-checks.mjs';
 import {
     acceptLiveValues, displayValue, effectiveSettings, threeWayDiff, verifyRelease,

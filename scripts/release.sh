@@ -101,9 +101,9 @@ fi
 # Step 5: show the push summary and ask for the channel id, or, with --confirm-nonprod on a
 # non-production target, check the flag again against today's release calendar and ask nothing
 # (W0-1). Then the gate captures the channel again and checks that nothing changed since steps 1
-# and 4 (scripts/release-checks.mjs pushGate),
-# and the push sends exactly the checked zip to one channel with one named variation
-# (scripts/release-targets.mjs buildPushArgs). push-args refuses unless the gate passed.
+# and 4 (scripts/release-checks.mjs pushGate), and the push sends exactly the checked zip to one
+# channel with one named variation (scripts/release-targets.mjs buildPushArgs). push-args refuses
+# unless the gate passed.
 release pre-push
 release push-args > "$STATE_DIR/push-args"
 push_args=()
