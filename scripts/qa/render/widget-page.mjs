@@ -5,7 +5,8 @@
 //   region its fixture names, on the page template it names: the real page template, inside the
 //   theme's real components/common/body, so the widget sits in the same boxes as on the
 //   storefront (a hero-block region outside .container, a page region inside it). The store's
-//   wrapper goes round it: data-widget-id, data-placement-id and data-placement-status.
+//   wrapper goes round it: data-widget-id, data-placement-id and data-placement-status. The
+//   fixture's page_context is the page's data, and "chrome": true adds the header and footer.
 // - compileThemeCss(variation) compiles theme.scss with the variation's settings, with
 //   stencil-cli's compiler and engine, as stencil start serves it to the page baselines.
 // - openWidget(page, widgetCase) opens that page in Playwright on a made-up origin that no
@@ -51,17 +52,24 @@ const NOT_FOUND = { status: 404, contentType: 'text/plain; charset=utf-8', body:
 
 const relative = file => path.relative(THEME_DIR, file);
 
+// The page template renders with the fixture's `page_context` as its store data (paper sets
+// `template` to the page itself), so a region inside a condition, such as cart.html's
+// cart_below_totals, can hold the widget. With `chrome: true` the theme's header and footer
+// render round it, as layout/base.html renders them, for a widget in a header or footer region.
 export async function renderWidgetPage(widgetCase, { variation = DEFAULT_VARIATION, themeDir = THEME_DIR } = {}) {
     const { fixture } = widgetCase;
     const widget = await renderWidget(widgetCase.widget, fixture, { root: widgetCase.root });
     const placed = `<div data-widget-id="${WIDGET_ID}" data-placement-id="${PLACEMENT_ID}" data-placement-status="ACTIVE">${widget}</div>`;
-    const html = await renderPartial(fixture.page, {}, {
+    const chrome = fixture.chrome === true;
+    const html = await renderPartial(fixture.page, { ...fixture.page_context, rf_fixture_chrome: chrome }, {
         variation, themeDir, overrides: { 'layout/base': LAYOUT }, regions: { [fixture.region]: placed },
     });
     if (!html.includes(`data-content-region="${fixture.region}"`)) {
         const regions = [...html.matchAll(/data-content-region="([^"]+)"/g)].map(([, name]) => name);
         throw new Error(`${relative(widgetCase.file)}: the region "${fixture.region}" isn't on ${fixture.page} as the fixture page renders it `
-            + `(the page template inside components/common/body, without the header and footer). Its regions: ${regions.join(', ') || 'none'}`);
+            + `(the page template inside components/common/body, ${chrome ? 'with' : 'without'} the header and footer, with the fixture's page_context). `
+            + `Its regions: ${regions.join(', ') || 'none'}. A region in the header or footer needs "chrome": true, `
+            + 'and a region inside a condition (cart_below_totals needs cart.items) needs a "page_context" that meets it.');
     }
     return html;
 }

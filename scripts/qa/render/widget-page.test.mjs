@@ -7,9 +7,10 @@
 //   node --test scripts/qa/render/widget-page.test.mjs
 
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { describe, it } from 'node:test';
+import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { findTags } from '../raw-html/html.mjs';
 import { unbalancedTags } from './html-checks.mjs';
@@ -25,6 +26,8 @@ const WIDGETS = path.join(HERE, 'fixtures/widgets');
 const SELFTEST = path.join(HERE, 'selftest/widgets');
 const band = () => widgetCases([WIDGETS]).find(({ name }) => name === 'two-in-stock');
 const inRegion = (widgetCase, region) => ({ ...widgetCase, fixture: { ...widgetCase.fixture, region } });
+const tempDirs = [];
+after(() => tempDirs.forEach(dir => fs.rmSync(dir, { recursive: true, force: true })));
 // Each needle must appear after the one before it.
 function assertInOrder(html, needles) {
     let from = 0;
@@ -59,12 +62,50 @@ describe('the fixture page around a widget', () => {
         assert.match(html, /data-content-region="home_below_menu"><\/div>/);
     });
 
-    it('fails on a region the page template doesn\'t render, naming the ones it does', async () => {
+    it('fails on a region the page template doesn\'t render, naming the ones it does and how to reach the others', async () => {
         await assert.rejects(renderWidgetPage(inRegion(band(), 'header_bottom--global')), error => {
             assert.match(error.message, /"header_bottom--global".*pages\/home/);
             assert.match(error.message, /home_below_menu, home_below_carousel, home_below_featured_products, home_below_top_products, home_below_new_products/);
+            assert.match(error.message, /"chrome": true/);
+            assert.match(error.message, /"page_context"/);
             return true;
         });
+    });
+
+    it('gives the page template the fixture\'s page_context, so a region inside a condition can hold the widget', async () => {
+        // cart.html renders cart_below_totals only inside {{#if cart.items.length}}.
+        const inCart = { ...band(), fixture: { ...band().fixture, page: 'pages/cart', region: 'cart_below_totals' } };
+        await assert.rejects(renderWidgetPage(inCart), /"cart_below_totals" isn't on pages\/cart/);
+        const cart = { cart: { quantity: 1, items: [{ id: 'line-1', name: 'Parachute Adams', quantity: 1 }] } };
+        const html = await renderWidgetPage({ ...inCart, fixture: { ...inCart.fixture, page_context: cart } });
+        assertInOrder(html, ['data-cart-totals', 'data-content-region="cart_below_totals"', `data-widget-id="${WIDGET_ID}"`, '<h2>Best sellers</h2>']);
+    });
+
+    it('sets template to the fixture\'s page, as the store does, whatever the page_context says', async () => {
+        // A theme whose only page prints `template`, with the real components (body.html among them).
+        const themeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-widget-page-'));
+        tempDirs.push(themeDir);
+        for (const name of ['config.json', 'lang']) fs.symlinkSync(path.join(THEME_DIR, name), path.join(themeDir, name));
+        fs.mkdirSync(path.join(themeDir, 'templates/pages'), { recursive: true });
+        fs.symlinkSync(path.join(THEME_DIR, 'templates/components'), path.join(themeDir, 'templates/components'), 'dir');
+        const page = '{{#partial "page"}}<p class="rf-template">{{template}}</p>{{{region name="rf_template"}}}{{/partial}}{{> layout/base}}';
+        fs.writeFileSync(path.join(themeDir, 'templates/pages/rf-template.html'), page);
+        const fixture = {
+            ...band().fixture, page: 'pages/rf-template', region: 'rf_template', page_context: { template: 'pages/home' },
+        };
+        const widgetCase = { ...band(), fixture };
+        assert.match(await renderWidgetPage(widgetCase, { themeDir }), /<p class="rf-template">pages\/rf-template<\/p>/);
+    });
+
+    it('with "chrome": true, renders the theme\'s header and footer round the page, so a widget can sit in a header region', async () => {
+        const html = await renderWidgetPage({ ...band(), fixture: { ...band().fixture, region: 'header_bottom--global', chrome: true } });
+        assertInOrder(html, ['<header class="header"', '</header>', 'data-content-region="header_bottom--global"', `data-widget-id="${WIDGET_ID}"`, 'id="main-content"', '<footer class="footer"']);
+        assert.deepEqual(findTags(html, 'script'), []);
+    });
+
+    it('without "chrome", renders no header and no footer', async () => {
+        const html = await renderWidgetPage(band());
+        assert.doesNotMatch(html, /<header|<footer/);
     });
 
     it('loads the theme\'s fonts and its compiled CSS, and no script', async () => {

@@ -284,4 +284,20 @@ describe('the widget fixtures', () => {
         fs.writeFileSync(path.join(root, 'hero/fixtures/default.json'), JSON.stringify({ configuration: { text: 'hi' } }));
         assert.throws(() => widgetCases([root]), /hero\/fixtures\/default\.json.*"page".*"region"/);
     });
+
+    it('fail when "page_context" isn\'t an object or "chrome" isn\'t true or false', () => {
+        const where = { page: 'pages/home', region: 'home_below_menu' };
+        for (const [bad, message] of [
+            [{ page_context: [] }, /hero\/fixtures\/default\.json.*"page_context"/],
+            [{ page_context: 'cart' }, /hero\/fixtures\/default\.json.*"page_context"/],
+            [{ chrome: 'yes' }, /hero\/fixtures\/default\.json.*"chrome"/],
+        ]) {
+            const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-widgets-'));
+            tempDirs.push(root);
+            fs.mkdirSync(path.join(root, 'hero/fixtures'), { recursive: true });
+            fs.writeFileSync(path.join(root, 'hero/template.html'), '<p>{{text}}</p>');
+            fs.writeFileSync(path.join(root, 'hero/fixtures/default.json'), JSON.stringify({ ...where, ...bad }));
+            assert.throws(() => widgetCases([root]), message, JSON.stringify(bad));
+        }
+    });
 });

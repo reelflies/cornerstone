@@ -2,7 +2,9 @@
     The page a widget element shot is taken on (W0-9; scripts/qa/render/widget-page.mjs). It
     stands in for templates/layout/base.html: the page template's blocks render inside the
     theme's own components/common/body, so the widget's region sits in the same boxes as on
-    the storefront. It loads the theme's fonts and compiled CSS, and no header, footer or script.
+    the storefront. It loads the theme's fonts and compiled CSS, and no script. The header and
+    footer render only for a fixture with "chrome": true (rf_fixture_chrome), as base.html
+    renders them.
 --~}}
 <!DOCTYPE html>
 <html class="js" lang="{{locale_name}}">
@@ -14,6 +16,8 @@
         <link data-stencil-stylesheet href="/assets/css/theme.css" rel="stylesheet">
     </head>
     <body>
+        {{#if rf_fixture_chrome}}{{> components/common/header}}{{/if}}
         {{> components/common/body}}
+        {{#if rf_fixture_chrome}}{{> components/common/footer}}{{/if}}
     </body>
 </html>

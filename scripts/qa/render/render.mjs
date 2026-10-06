@@ -269,6 +269,13 @@ function widgetCase(root, widget, file) {
     if (shot && (typeof fixture.page !== 'string' || typeof fixture.region !== 'string')) {
         throw new Error(`${relative(file)}: a fixture with an element shot names the "page" template and the "region" its widget sits in, for example "pages/home" and "home_below_menu"; a fixture for render tests only sets "shot": false`);
     }
+    const { page_context: pageContext, chrome } = fixture;
+    if (pageContext !== undefined && (typeof pageContext !== 'object' || pageContext === null || Array.isArray(pageContext))) {
+        throw new Error(`${relative(file)}: "page_context" is the page's store data, an object such as { "cart": { "items": [ … ] } }`);
+    }
+    if (chrome !== undefined && typeof chrome !== 'boolean') {
+        throw new Error(`${relative(file)}: "chrome" is true (render the theme's header and footer round the page) or false`);
+    }
     return {
         widget, name: path.basename(file, '.json'), root, file, shot, fixture,
     };

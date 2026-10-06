@@ -310,6 +310,8 @@ Ticket 46 adds the schema, the query and `channels/<channel>.json` beside `templ
 - `data` is the `storefront_api_query` result, which the template reads as `_.data`. Save a real response and keep its URLs: shots answer store CDN image URLs from `fixtures/files/` (below).
 - `_.id` is a fixed id, so a shot is the same on every run.
 - `page` and `region` say where the widget sits. A fixture for render tests only sets `"shot": false` instead.
+- `page_context` (optional) is the page's own store data, shaped as `?debug=context` shows it, for a region inside a condition. `cart.html` renders `cart_below_totals` only when the cart has items, so a widget there needs `"page_context": { "cart": { "quantity": 1, "items": [ … ] } }`. The page's `template` is always `page`, as on the store.
+- `"chrome": true` (optional) renders the theme's header and footer round the page, as `layout/base.html` does, for a widget in a header or footer region such as `header_bottom--global` (ticket 27's shipping strip). Use it only there: the phone header is fixed, so it could cover a widget lower down.
 
 `renderWidget(name, fixture, { root })` resolves to the template's output, for render tests under `node --test` (Jest ignores `scripts/`). For example, ticket 48's "a changed price in the fixture changes the rendered price" is a `renderWidget` call with the price changed (`render.test.mjs` has the same test on a test widget). Put a widget's render tests in `scripts/qa/render/widgets/<name>.test.mjs`.
 
@@ -321,7 +323,7 @@ Page baselines hide widget regions ("What the screenshots hide" above), because 
 
 - **Which fixtures:** every `widgets/<name>/fixtures/<case>.json` without `"shot": false`, at 375 and 1280, for `QA_VARIATION`.
 - **When:** its name ends in "screens", so `npm run qa:screens`, and so `qa:prepush` and `release.sh`, run it with the page shots, with the same thresholds. To run only the widget shots: `npx playwright test --config scripts/qa/playwright.config.mjs widget-screens`. Both start the storefront server as `qa:screens` does, although the widget shots don't use it.
-- **The page:** the fixture's page template, rendered inside the theme's own `components/common/body` (`render/widget-layout.html` stands in for `layout/base.html`). So the widget sits in the same boxes as on the storefront: `home_below_menu` outside `.container`, `home_below_top_products` inside `.container .main.full`. The store's wrapper goes round it (`data-widget-id`, `data-placement-id`, `data-placement-status`). The page loads the theme's Google Fonts and `theme.css`, compiled from this checkout for the variation with stencil-cli's compiler and engine, as stencil start compiles it. It has no header, footer or scripts.
+- **The page:** the fixture's page template, rendered inside the theme's own `components/common/body` (`render/widget-layout.html` stands in for `layout/base.html`). So the widget sits in the same boxes as on the storefront: `home_below_menu` outside `.container`, `home_below_top_products` inside `.container .main.full`. The store's wrapper goes round it (`data-widget-id`, `data-placement-id`, `data-placement-status`). The page loads the theme's Google Fonts and `theme.css`, compiled from this checkout for the variation with stencil-cli's compiler and engine, as stencil start compiles it. It has no scripts, and no header or footer unless the fixture sets `"chrome": true`.
 - **No request reaches the store.** The page is on a made-up origin, and Playwright answers each request itself:
   - the page and the compiled CSS
   - the theme's `assets/`, for the CSS's relative URLs
@@ -330,7 +332,7 @@ Page baselines hide widget regions ("What the screenshots hide" above), because 
 
   A blocked request, or a file that isn't in `fixtures/files/`, fails the shot and is named.
 - **Baselines:** `baselines/widgets/<variation>/<widget>-<case>-<project>-<platform>.png`, for example `baselines/widgets/reelflies-ca/home-lead-default-phone-375-darwin.png`. A missing baseline fails, as for pages. Make or update them with `npm run qa:screens -- --update-snapshots`, then look at each PNG. The PR's `Baselines:` line names them as `widget <name>` (section 6.6 of the build pipeline).
-- **What the page doesn't show:** layout containers Page Builder may add round a placement, the theme's scripts (lazysizes, carousels), and regions in the header or footer, which the page doesn't render. The review page shows the live home page with its widgets (W0-10).
+- **What the page doesn't show:** layout containers Page Builder may add round a placement, the theme's scripts (lazysizes, carousels), and the header and footer's own data (menus, logo, cart count), which a `chrome` page renders from an empty context. The review page shows the live home page with its widgets (W0-10).
 
 **The self-test** is the widget `rf-selftest`, in `render/selftest/widgets/`, outside `widgets/` so no sync ever uploads it. Its baselines are checked like any widget's, and four more tests prove that:
 
