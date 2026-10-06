@@ -47,8 +47,15 @@ const manifest = {
         ...['home', 'fly-type', 'species', 'species-hub', 'hook-chart', 'product', 'cart', 'brand'].flatMap(anchor => both(reference, anchor)),
     ],
 };
+// The pins the model checks shots against, fixed here so a change to scripts/qa/pages.mjs
+// doesn't move these tests.
+const PINNED = {
+    1895766: { pages: { home: '/', 404: '/rf-qa-missing-page/' } },
+    1: { pages: { product: '/p/', category: '/c/' } },
+    1855224: { pages: { home: '/' } },
+};
 const model = (overrides = {}) => buildCheckpointModel({
-    name: 'review-00', since: null, head: HEAD, manifest, changes: [], input: {}, generatedAt: '2026-10-06T12:00:00.000Z', ...overrides,
+    name: 'review-00', since: null, head: HEAD, manifest, changes: [], input: {}, generatedAt: '2026-10-06T12:00:00.000Z', pinned: PINNED, ...overrides,
 });
 
 describe('a checkpoint page', () => {
@@ -107,6 +114,45 @@ describe('a checkpoint page', () => {
         assert.equal(built.com.uuid, '58abad50-1111');
         assert.deepEqual(built.liveHome.shots.map(({ width }) => width), [1280]);
     });
+
+    it('shows .com\'s review renders, which have no baselines, in section 5 beside the reference, and never as the live home page', () => {
+        const comLive = (width, page = 'home') => ({
+            kind: 'live', page, path: '/', project: width === 375 ? 'phone-375' : 'desktop-1280', width, channel: '1855224', variation: 'ReelFlies US', image: `scripts/qa/results/live/1855224-reelflies-us/${page}-${width}.png`, status: 'passed', commit: HEAD.sha,
+        });
+        const built = model({ manifest: { version: 1, entries: [...manifest.entries, comLive(375), comLive(1280)] } });
+        assert.deepEqual(built.liveHome.shots, []);
+        const [row] = built.com.templates;
+        assert.equal(row.page, 'home');
+        assert.equal(row.channelName, 'reelflies.com (local render)');
+        assert.deepEqual(row.widths.map(({ theme: shot }) => shot.image.path), ['scripts/qa/results/live/1855224-reelflies-us/home-375.png', 'scripts/qa/results/live/1855224-reelflies-us/home-1280.png']);
+        assert.deepEqual(row.widths[0].reference.image, { kind: 'file', path: 'scripts/qa/results/reference/home-phone-375.png' });
+    });
+
+    it('leaves out shots of pages that are no longer pinned, and says so', () => {
+        const old = theme('1', 'old-category', 375);
+        const built = model({ manifest: { version: 1, entries: [...manifest.entries, old, { ...old, commit: 'f00d' }] } });
+        assert.ok(!built.templates.some(({ page }) => page === 'old-category'));
+        assert.ok(built.notes.some(note => /no longer pins.*old-category/.test(note)), built.notes.join('\n'));
+        assert.ok(!built.notes.some(note => /ran on f00d/.test(note)), built.notes.join('\n'));
+    });
+
+    it('says which reference screens weren\'t shot, and why, without failing anything', () => {
+        const problem = 'the reference page has no #linksToggle control any more';
+        const entries = [...manifest.entries.filter(({ kind, anchor }) => kind !== 'reference' || anchor !== 'home'),
+            { ...reference('home', 375), image: null, problem }, { ...reference('home', 1280), image: null, problem }];
+        const built = model({ manifest: { version: 1, entries } });
+        assert.equal(built.templates[0].widths[0].reference, null);
+        assert.ok(built.notes.some(note => note.includes('Home at 375 and 1280') && note.includes(problem)), built.notes.join('\n'));
+    });
+
+    it('calls a failed shot with no render a failure, not a mismatch, with its error', () => {
+        const failed = theme('1895766', 'home', 375, { status: 'failed', actual: null, error: 'the home page / returned HTTP 502, not 200' });
+        const { templates, notes } = model({ manifest: { version: 1, entries: [failed] } });
+        assert.equal(templates[0].widths[0].theme.mismatch, false);
+        assert.equal(templates[0].widths[0].theme.error, 'the home page / returned HTTP 502, not 200');
+        assert.ok(notes.some(note => /home at 375 failed in the last run before its screenshot was compared: the home page \/ returned HTTP 502/.test(note)), notes.join('\n'));
+        assert.ok(!notes.some(note => /didn't match/.test(note)), notes.join('\n'));
+    });
 });
 
 describe('the before-and-after section', () => {
@@ -131,7 +177,7 @@ describe('the before-and-after section', () => {
         assert.equal(model().changes.first, true);
     });
 
-    it('groups changed baselines by the ticket of their newest commit, with its wave', () => {
+    it('groups changed baselines by ticket, with its wave', () => {
         const built = model({
             since: 'review-00', changes, input: { tickets: { 25: { wave: '1', title: 'Skin foundation' }, 37: { wave: '3' } } },
         });
@@ -159,6 +205,104 @@ describe('the before-and-after section', () => {
     it('files a change whose commits name no ticket under "no ticket"', () => {
         const built = model({ since: 'review-00', changes: [change(HOME, 'M', [{ sha: 'eee', subject: 'Fix a typo' }])] });
         assert.deepEqual(built.changes.groups.map(({ ticket }) => ticket), [null]);
+    });
+
+    // Epochs land on master and every open ticket rebases onto them and re-records its own
+    // baselines (build pipeline 6.6), so one baseline often changes under a ticket, then an
+    // epoch, then another ticket, inside one checkpoint.
+    describe('when a ticket, an epoch and another ticket change the same baseline', () => {
+        const T25 = 'a25'.padEnd(40, '0');
+        const EPOCH = 'bbbbbbb'.padEnd(40, '0');
+        const T27 = 'c27'.padEnd(40, '0');
+        const sequence = change(HOME, 'M', [
+            { sha: T27, subject: 'Build the shipping strip (ticket 27)', status: 'M' },
+            { sha: EPOCH, subject: 'Re-baseline home after the hero widget', status: 'M' },
+            { sha: T25, subject: 'Skin the header (ticket 25)', status: 'M' },
+        ]);
+        const built = model({
+            since: 'review-00',
+            changes: [sequence],
+            input: { epochs: [{ commit: 'bbbbbbb', cause: 'The hero widget applied on 1895766 (ticket 46)' }], tickets: { 25: { wave: '1' }, 27: { wave: '2' } } },
+        });
+        const card = ticket => built.changes.groups.find(group => group.ticket === ticket).items[0];
+
+        it('shows each change as its own before and after, filed under its owner', () => {
+            assert.deepEqual(built.changes.groups.map(({ ticket, items }) => [ticket, items.length]), [['25', 1], ['27', 1]]);
+            assert.deepEqual(built.changes.epochs.map(({ cause, items }) => [cause, items.length]), [['The hero widget applied on 1895766 (ticket 46)', 1]]);
+        });
+
+        it('chains the sides: the checkpoint to 25, 25 to the epoch, the epoch to the head', () => {
+            const epoch = built.changes.epochs[0].items[0];
+            assert.deepEqual([card('25').before, card('25').after], [{ kind: 'git', ref: 'review-00', path: HOME }, { kind: 'git', ref: T25, path: HOME }]);
+            assert.deepEqual([epoch.before, epoch.after], [{ kind: 'git', ref: T25, path: HOME }, { kind: 'git', ref: EPOCH, path: HOME }]);
+            assert.deepEqual([card('27').before, card('27').after], [{ kind: 'git', ref: EPOCH, path: HOME }, { kind: 'git', ref: 'HEAD', path: HOME }]);
+            assert.deepEqual([card('25').beforeLabel, card('25').afterLabel], [null, T25.slice(0, 8)]);
+            assert.deepEqual([card('27').beforeLabel, card('27').afterLabel], [EPOCH.slice(0, 8), null]);
+            assert.deepEqual([card('25').part, card('27').part, epoch.part, epoch.parts], [1, 3, 2, 3]);
+            assert.deepEqual(epoch.commits.map(({ sha }) => sha), [EPOCH]);
+        });
+
+        it('takes an epoch from a "Baselines: epoch <cause>" line in its commit message', () => {
+            const declared = change(HOME, 'M', [
+                { sha: T27, subject: 'Build the shipping strip (ticket 27)' },
+                { sha: EPOCH, subject: 'Re-baseline the home page', body: 'Why.\n\nBaselines: epoch The aught rename (ticket 18)' },
+            ]);
+            const { changes: { epochs, groups } } = model({ since: 'review-00', changes: [declared] });
+            assert.deepEqual(epochs.map(({ cause }) => cause), ['The aught rename (ticket 18)']);
+            assert.deepEqual(groups.map(({ ticket }) => ticket), ['27']);
+        });
+
+        it('says when a listed epoch changed no baseline in the range', () => {
+            const { notes } = model({ since: 'review-00', changes: [sequence], input: { epochs: [{ commit: 'ddd0000', cause: 'A Web Page' }] } });
+            assert.ok(notes.some(note => /ddd0000.*A Web Page.*no baseline/.test(note)), notes.join('\n'));
+        });
+    });
+
+    it('fills a missing first side when the baseline is new, and a missing last side when it was removed', () => {
+        const added = change(CART, 'A', [{ sha: 'b2'.padEnd(40, '0'), subject: 'Restyle the cart (ticket 41)', status: 'M' }, { sha: 'b1'.padEnd(40, '0'), subject: 'Pin the cart (ticket 41)', status: 'A' }]);
+        const removed = change(HOME, 'D', [{ sha: 'd2'.padEnd(40, '0'), subject: 'Drop the pin (ticket 30)', status: 'D' }, { sha: 'd1'.padEnd(40, '0'), subject: 'Restyle (ticket 25)', status: 'M' }]);
+        const built = model({ since: 'review-00', changes: [added, removed] });
+        const items = built.changes.groups.flatMap(group => group.items.map(item => [group.ticket, item.before?.ref ?? null, item.after?.ref ?? null]));
+        assert.deepEqual(items, [['25', 'review-00', 'd1'.padEnd(40, '0')], ['30', 'd1'.padEnd(40, '0'), null], ['41', null, 'HEAD']]);
+    });
+});
+
+describe('the tickets a checkpoint covers', () => {
+    const merged = [
+        {
+            sha: '1'.repeat(40), pr: '20', title: 'Skin foundation', tickets: ['25'],
+        },
+        {
+            sha: '2'.repeat(40), pr: '23', title: 'Lighthouse budgets', tickets: ['17'],
+        },
+        {
+            sha: '3'.repeat(40), pr: '24', title: 'Review page fixes', tickets: ['W0-10'],
+        },
+        {
+            sha: '4'.repeat(40), pr: '25', title: 'Release log', tickets: [],
+        },
+    ];
+
+    it('list every PR merged since the last checkpoint, baselines or not, by ticket with its wave', () => {
+        const built = model({ since: 'review-00', merged, input: { tickets: { 25: { wave: '1', title: 'Skin foundation' }, 17: { wave: '1' } } } });
+        assert.equal(built.merged.count, 4);
+        assert.deepEqual(built.merged.groups.map(({ ticket, wave, merges }) => [ticket, wave, merges.map(({ pr }) => pr)]), [
+            ['W0-10', '0', ['24']], ['17', '1', ['23']], ['25', '1', ['20']], [null, null, ['25']],
+        ]);
+    });
+
+    it('say which tickets the notes give no wave for', () => {
+        const { notes } = model({
+            since: 'review-00',
+            merged,
+            changes: [{
+                path: 'scripts/qa/baselines/1895766-reelflies-ca/home-phone-375-darwin.png', status: 'M', commits: [{ sha: 'e'.repeat(40), subject: 'Strip (ticket 27)' }], before: { ref: 'review-00', path: 'x' }, after: { ref: 'HEAD', path: 'x' },
+            }],
+            input: { tickets: { 25: { wave: '1' } } },
+        });
+        const note = notes.find(text => /^No wave is given/.test(text));
+        assert.match(note, /for tickets 17 and 27 in the checkpoint notes/);
+        assert.doesNotMatch(note, /W0-10|\b25\b/);
     });
 });
 

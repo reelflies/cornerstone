@@ -97,6 +97,27 @@ describe('a later checkpoint', () => {
         assert.match(html, /Ticket 25/);
         assert.match(html, />Before</);
         assert.match(html, />After</);
+        assert.match(html, /<summary>1 direct commit merged since review-00, for 1 ticket<\/summary>/);
+        assert.match(run.stdout, /then tag the checkpoint: git tag review-01 /);
+    });
+
+    it('regenerates a tagged checkpoint only from the commit its tag is on', () => {
+        const run = review(['--name', 'review-00']);
+        assert.equal(run.status, 2, run.stderr + run.stdout);
+        assert.match(run.stderr, /review-00 is tagged at [0-9a-f]{8}, and this checkout is at [0-9a-f]{8}/);
+        assert.match(run.stderr, /--root/);
+    });
+
+    it('regenerates a tagged checkpoint from its tag\'s commit, covering the range up to its tag, with no tag to cut', () => {
+        git('checkout', '-q', 'review-00');
+        try {
+            const run = review(['--name', 'review-00']);
+            assert.equal(run.status, 0, run.stderr + run.stdout);
+            assert.doesNotMatch(run.stdout, /git tag review-00/);
+            assert.match(run.stdout, /review-00 is already tagged at [0-9a-f]{8}: republish it in place/);
+        } finally {
+            git('checkout', '-q', 'master');
+        }
     });
 });
 

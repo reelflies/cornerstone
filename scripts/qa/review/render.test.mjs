@@ -37,9 +37,11 @@ const manifest = {
     entries: [shot('home', 375), shot('home', 1280), shot('404', 375), ref('home', 375), ref('home', 1280), ref('cart', 375)],
 };
 const href = image => `images/${image.path.replace(/\W+/g, '-')}.webp`;
+const PINNED = { 1895766: { pages: { home: '/', 404: '/rf-qa-missing-page/' } }, 1855224: { pages: { home: '/' } } };
 const page = (input = {}, extra = {}) => renderReviewPage(buildCheckpointModel({
-    name: 'review-00', since: null, head: HEAD, manifest, changes: [], input, generatedAt: '2026-10-06T12:00:00.000Z', ...extra,
+    name: 'review-00', since: null, head: HEAD, manifest, changes: [], input, generatedAt: '2026-10-06T12:00:00.000Z', pinned: PINNED, ...extra,
 }), { href });
+const HOME = 'scripts/qa/baselines/1895766-reelflies-ca/home-phone-375-darwin.png';
 
 describe('a checkpoint page', () => {
     it('has the seven sections in the order W0-10 sets', () => {
@@ -99,6 +101,58 @@ describe('a checkpoint page', () => {
 
     it('names the commit it was made from', () => {
         assert.match(page(), /e48d369a/);
+    });
+
+    it('lists every PR merged since the last checkpoint, by ticket with its wave', () => {
+        const html = page({ tickets: { 25: { wave: '1', title: 'Skin foundation' } } }, {
+            since: 'review-00',
+            merged: [{
+                sha: 'a'.repeat(40), pr: '20', title: 'Skin the header', tickets: ['25'],
+            }, {
+                sha: 'b'.repeat(40), pr: '23', title: 'Lighthouse <budgets>', tickets: ['17'],
+            }],
+        });
+        const masthead = html.slice(0, html.indexOf('id="for-shaun"'));
+        assert.match(masthead, /<summary>2 PRs merged since review-00, for 2 tickets<\/summary>/);
+        const direct = page({}, {
+            since: 'review-00',
+            merged: [{
+                sha: 'c'.repeat(40), pr: null, title: 'Fix a typo (W0-13)', tickets: ['W0-13'],
+            }],
+        });
+        assert.match(direct, /<summary>1 direct commit merged since review-00, for 1 ticket<\/summary>/);
+        assert.match(direct, /<code>cccccccc<\/code> Fix a typo/);
+        assert.match(masthead, /Ticket 25[\s\S]*Skin foundation[\s\S]*Wave 1[\s\S]*#20<\/code> Skin the header/);
+        assert.match(masthead, /Lighthouse &lt;budgets&gt;/);
+    });
+
+    it('shows a baseline that several owners changed as one before and after each, labelled by commit', () => {
+        const T25 = 'a25'.padEnd(40, '0');
+        const html = page({ epochs: [{ commit: 'bbbbbbb', cause: 'The hero widget' }] }, {
+            since: 'review-00',
+            changes: [{
+                path: HOME,
+                status: 'M',
+                commits: [{ sha: 'bbbbbbb'.padEnd(40, '0'), subject: 'Re-baseline', status: 'M' }, { sha: T25, subject: 'Skin (ticket 25)', status: 'M' }],
+                before: { ref: 'review-00', path: HOME },
+                after: { ref: 'HEAD', path: HOME },
+            }],
+        });
+        assert.match(html, /Ticket 25[\s\S]*Change 1 of 2[\s\S]*<b>Before<\/b> review-00[\s\S]*<b>After<\/b> a2500000/);
+        assert.match(html, /Re-baseline epochs[\s\S]*The hero widget[\s\S]*Change 2 of 2[\s\S]*<b>Before<\/b> a2500000[\s\S]*<b>After<\/b> e48d369a/);
+    });
+
+    it('calls a failed shot with no render a failure, and one with a render a difference', () => {
+        const failing = (actual, error) => ({ version: 1, entries: [shot('home', 375, { status: 'failed', actual, error })] });
+        assert.match(page({}, { manifest: failing(null, 'HTTP 502') }), /chip fail">failed in the last run</);
+        assert.match(page({}, { manifest: failing('scripts/qa/results/manifest-actual/home.png') }), /chip fail">differs from its baseline</);
+    });
+
+    it('says how to make the .com renders when there are none', () => {
+        const html = page();
+        const com = html.slice(html.indexOf('id="com"'), html.indexOf('id="live-home"'));
+        assert.match(com, /QA_CHANNEL=1855224 QA_VARIATION='ReelFlies US' npx playwright test --config scripts\/qa\/playwright\.config\.mjs review-live/);
+        assert.match(com, /once W0-6 has landed/);
     });
 });
 

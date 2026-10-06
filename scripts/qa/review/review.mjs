@@ -7,9 +7,11 @@
 //
 //   node scripts/qa/review/review.mjs [--name review-NN] [--since <tag>|none] [--input notes.json] [--inline]
 //
-//   - The page covers the baselines changed since the last checkpoint tag (review-00,
-//     review-01 …) up to HEAD, grouped by ticket. --name defaults to the next number,
-//     --since to the newest tag numbered below it.
+//   - The page covers everything merged since the last checkpoint tag (review-00,
+//     review-01 …) up to HEAD, and each baseline changed in that range, grouped by ticket.
+//     --name defaults to the next number, --since to the newest tag numbered below it.
+//   - A checkpoint that is already tagged is regenerated only from its tag's commit, and
+//     covers the range up to its tag: check the tag out in a worktree, and point --root at it.
 //   - --input is the orchestrator's checkpoint notes (scripts/qa/README.md, "Review pages").
 //   - Output: scripts/qa/results/review/<name>/index.html (the page to publish), images/,
 //     and preview.html (the page inside the document claude.ai adds, to view locally).
@@ -25,7 +27,7 @@
 //
 // Both read scripts/qa/results/manifest.json, which every screenshot run writes. Exits 1
 // when the manifest is missing or the page is over the artifact limit, 2 on bad options
-// or notes.
+// or notes, or for a tagged checkpoint run from another commit.
 
 import crypto from 'crypto';
 import fs from 'fs';
@@ -33,7 +35,7 @@ import path from 'path';
 import { isMain } from '../../lib/is-main.mjs';
 import { formatBytes } from '../../lib/format.mjs';
 import {
-    changedBaselines, checkpointTags, headInfo, latestCheckpoint, mergeBase, nextCheckpointName, showFile,
+    changedBaselines, checkpointTags, headInfo, latestCheckpoint, mergeBase, mergedSince, nextCheckpointName, showFile, tagCommit,
 } from './git.mjs';
 import {
     PAGE_LIMIT_BYTES, checkBudget, copyEncoder, createChromiumEncoder, fitImage, imageFileName,
@@ -186,6 +188,7 @@ async function main() {
     const reviewDir = path.join(root, 'scripts', 'qa', 'results', 'review');
     let model;
     let name;
+    let tagged = null;
     if (args.pr !== undefined) {
         const base = args.base || 'origin/master';
         const since = mergeBase(base, 'HEAD', { cwd: root });
@@ -206,12 +209,22 @@ async function main() {
         const number = Number(name.slice('review-'.length));
         const earlier = tags.filter(tag => Number(tag.slice('review-'.length)) < number);
         const since = args.since === 'none' ? null : (args.since || latestCheckpoint(earlier));
+        // A tagged checkpoint is remade only as it was: its range ends at its tag, and its
+        // screenshots and baselines are that commit's.
+        tagged = tagCommit(name, { cwd: root });
+        if (tagged && tagged !== head.sha) {
+            console.error(`${name} is tagged at ${tagged.slice(0, 8)}, and this checkout is at ${head.short}. Regenerate it from its tag's commit: `
+                + `git worktree add <dir> ${name}, run the screenshots there, then node scripts/qa/review/review.mjs --root <dir> --name ${name} …`);
+            process.exit(2);
+        }
+        const until = tagged ? name : 'HEAD';
         model = buildCheckpointModel({
             name,
             since,
             head,
             manifest,
-            changes: since ? changedBaselines({ since, until: 'HEAD', cwd: root }) : [],
+            changes: since ? changedBaselines({ since, until, cwd: root }) : [],
+            merged: since ? mergedSince({ since, until, cwd: root }) : [],
             input,
             generatedAt,
         });
@@ -242,6 +255,8 @@ async function main() {
     for (const problem of budget.problems) console.log(`  ${budget.ok ? 'WARN' : 'FAIL'}  ${problem}`);
     if (model.mode === 'pr') {
         console.log('  Local only: never publish this page.');
+    } else if (tagged) {
+        console.log(`  ${name} is already tagged at ${tagged.slice(0, 8)}: republish it in place, to the same artifact (the orchestrator does).`);
     } else {
         console.log(`  Publish index.html${args.inline ? '' : ' with its images/ folder'} as a private claude.ai artifact (the orchestrator does), then tag the checkpoint: git tag ${name} ${head.short} && git push origin ${name}`);
     }

@@ -142,6 +142,10 @@ table { border-collapse: collapse; width: 100%; font-size: 14px; }
 th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 tr:last-child td { border-bottom: 0; }
+.merged { display: grid; gap: 10px; }
+.merged summary { cursor: pointer; font-weight: 500; }
+.merged .title { color: var(--muted); }
+.merges { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 footer.end { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 16px; }
 @media (max-width: 560px) { .proofs { grid-template-columns: minmax(0, 1fr); } .tpl { padding: 14px; } }
 @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
@@ -167,11 +171,14 @@ function proof(caption, image, href, alt, { note = '', missing = 'No image', fil
         : `<div class="shot none">${missing}</div>`}${file ? `<p class="file">${esc(file)}</p>` : ''}</figure>`;
 }
 
-const statusChip = status => {
+// A failed shot with a render differs from its baseline; one without failed before the
+// comparison (a page error, a missing baseline, a timeout).
+const statusChip = (status, mismatch) => {
     if (!status || status === 'passed') return '';
-    return status === 'failed'
+    if (status !== 'failed') return ` <span class="chip warn">${esc(status)}</span>`;
+    return mismatch
         ? ' <span class="chip fail">differs from its baseline</span>'
-        : ` <span class="chip warn">${esc(status)}</span>`;
+        : ' <span class="chip fail">failed in the last run</span>';
 };
 
 function templateRow(row, href) {
@@ -184,7 +191,7 @@ function templateRow(row, href) {
             width.theme.image,
             href,
             `${name}, ${row.channelName}, ${label}: the theme's baseline`,
-            { note: statusChip(width.theme.status), file: width.theme.baseline ? width.theme.baseline.split('/').pop() : '' },
+            { note: statusChip(width.theme.status, width.theme.mismatch), file: width.theme.baseline ? width.theme.baseline.split('/').pop() : '' },
         )];
         if (width.theme.actual) parts.push(proof('<b>Last run\'s render</b>', width.theme.actual, href, `${name} at ${label} as the last run rendered it`));
         parts.push(row.reference
@@ -199,15 +206,20 @@ function templateRow(row, href) {
 </article>`;
 }
 
+// One before-and-after. A baseline several owners changed in turn has one card per owner,
+// whose sides are the commits between them (item.beforeLabel, item.afterLabel).
 function changeCard(item, href, sinceLabel, afterLabel) {
     const name = `${pageName(item.page)}${item.width ? ` · ${widthLabel(item.width)}` : ''}`;
     const statusText = { A: 'new baseline', D: 'baseline removed', M: 'changed' }[item.status] || item.status;
+    const before = item.beforeLabel || sinceLabel;
+    const after = item.afterLabel || afterLabel;
+    const part = item.parts > 1 ? `<span class="chip warn">Change ${item.part} of ${item.parts}</span>` : '';
     const commits = item.commits.slice(0, 3).map(commit => `<li><code>${esc(commit.sha.slice(0, 8))}</code> ${esc(commit.subject)}</li>`).join('');
     return `<article class="tpl">
-<div class="tpl-head"><h3>${esc(name)}</h3><p class="where"><span>${esc(item.channel ? channelName(item.channel) : '')}</span><span class="chip">${esc(statusText)}</span></p></div>
+<div class="tpl-head"><h3>${esc(name)}</h3><p class="where"><span>${esc(item.channel ? channelName(item.channel) : '')}</span><span class="chip">${esc(statusText)}</span>${part}</p></div>
 <div class="proofs" style="--cols:3">
-${proof(`<b>Before</b> ${esc(sinceLabel)}`, item.before, href, `${name} before`, { missing: 'No baseline before' })}
-${proof(`<b>After</b> ${esc(afterLabel)}`, item.after, href, `${name} after`, { missing: 'Removed' })}
+${proof(`<b>Before</b> ${esc(before)}`, item.before, href, `${name} before`, { missing: 'No baseline before' })}
+${proof(`<b>After</b> ${esc(after)}`, item.after, href, `${name} after`, { missing: 'Removed' })}
 ${proof(`<b>Reference</b>${item.referenceLabel ? ` ${esc(item.referenceLabel)}` : ''}`, item.reference, href, `${item.referenceLabel || ''} in the reference design`, { missing: item.referenceLabel ? 'Reference screen not shot in this run' : 'No reference screen' })}
 </div>
 <p class="mono" style="font-size:12px;color:var(--muted);overflow-wrap:anywhere">${esc(item.path)}</p>
@@ -292,7 +304,7 @@ function comPart(model, href) {
         : '<p class="empty">No build uuid was given for your My Themes preview at this checkpoint.</p>';
     const renders = com.templates.length
         ? com.templates.map(row => templateRow(row, href)).join('\n')
-        : '<p class="empty">No .com renders are in this checkpoint. They come from <code>stencil start -c 1855224 -v \'ReelFlies US\'</code> once 1855224 has pinned pages.</p>';
+        : '<p class="empty">No .com renders are in this checkpoint. Make them, once W0-6 has landed, with <code>QA_CHANNEL=1855224 QA_VARIATION=\'ReelFlies US\' npx playwright test --config scripts/qa/playwright.config.mjs review-live</code>, which renders every page pinned for 1855224 through <code>stencil start</code>.</p>';
     return `${build}${com.note ? `<p>${inline(com.note)}</p>` : ''}${renders}`;
 }
 
@@ -310,6 +322,21 @@ function waitingPart(model) {
     return `<div class="table-wrap"><table><thead><tr><th scope="col">Ticket</th><th scope="col">Criterion</th><th scope="col">Waiting on</th></tr></thead><tbody>
 ${model.waiting.map(entry => `<tr><td>${ticketChip(String(entry.ticket ?? ''))}</td><td>${inline(entry.criterion)}</td><td>${inline(entry.trigger)}</td></tr>`).join('\n')}
 </tbody></table></div>`;
+}
+
+// Every PR merged since the last checkpoint, by ticket with its wave, in the masthead: the
+// page covers all of them, including those that changed no baseline.
+function mergedList(model) {
+    const { merged } = model;
+    if (!model.since || !merged.count) return '';
+    const rows = merged.groups.map(group => `<tr><td>${group.ticket ? ticketChip(group.ticket) : '<span class="empty">No ticket named</span>'}${group.title ? ` <span class="title">${esc(group.title)}</span>` : ''}</td><td>${waveChip(group.wave)}</td><td><ul class="merges">${group.merges.map(merge => `<li>${merge.pr ? `<code>#${esc(merge.pr)}</code>` : `<code>${esc(merge.sha.slice(0, 8))}</code>`} ${esc(merge.title)}</li>`).join('')}</ul></td></tr>`).join('\n');
+    const tickets = merged.groups.filter(group => group.ticket).length;
+    const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
+    const what = [merged.prs && plural(merged.prs, 'PR'), merged.direct && plural(merged.direct, 'direct commit')].filter(Boolean).join(' and ');
+    return `<details class="merged"><summary>${what} merged since ${esc(model.since)}, for ${plural(tickets, 'ticket')}</summary>
+<div class="table-wrap"><table><thead><tr><th scope="col">Ticket</th><th scope="col">Wave</th><th scope="col">Merged</th></tr></thead><tbody>
+${rows}
+</tbody></table></div></details>`;
 }
 
 function runNotes(notes) {
@@ -338,6 +365,7 @@ ${facts([
         ['Made', esc(model.date)],
     ])}
 ${model.intro ? `<p>${inline(model.intro)}</p>` : ''}
+${mergedList(model)}
 <nav class="toc" aria-label="Sections">${toc}</nav>
 </header>
 ${runNotes(model.notes)}
