@@ -82,6 +82,7 @@
     "qa:quick-view": "npx playwright test --config scripts/qa/playwright.config.mjs quick-view.spec harness-selftest --project desktop-1280",
     "qa:raw-html": "node scripts/qa/raw-html.mjs",
     "qa:prepush": "node scripts/qa/prepush.mjs",
+    "qa:prelaunch": "node scripts/qa/prelaunch.mjs",
     "stylelint": "npx stylelint **/*.scss",
     "stylelint:fix": "npx stylelint --fix **/*.scss"
   }
