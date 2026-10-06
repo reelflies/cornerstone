@@ -2,6 +2,14 @@
 //
 // - The preview cookie for QA_BASE_URL goes into the browser's cookie jar for that
 //   host only, so it never reaches fonts, the CDN or any other host.
+// - Every test's context goes through the network guard (network-guard.mjs, W0-6) before the
+//   test opens a page. Requests to the analytics hosts are aborted unless QA_ANALYTICS=allow.
+//   On a live channel (1, 1855224) every write but the read-only POSTs is refused, and fails
+//   the test at teardown, naming its method and URL; so does an analytics request that was
+//   answered while the tags are blocked. Each test records "analytics blocked" yes or no, and
+//   how many analytics requests it blocked. Service workers are blocked, because a request
+//   one answers never reaches context.route. A self-test sets the channel the guard sees with
+//   test.use({ qaChannel }).
 // - storefrontPage(page, template) opens the template's pinned page, fails unless it
 //   answers with the template's status (404 for the 404 page, 200 for every other), and
 //   waits until it stops moving: fonts loaded, lazy images in, network quiet, at the top.
@@ -17,16 +25,36 @@
 import fs from 'fs';
 import path from 'path';
 import { test as base, expect } from '@playwright/test';
-import { QA_CHANNEL, previewCookies } from './storefront.mjs';
+import { IS_LOCAL, QA_CHANNEL, previewCookies } from './storefront.mjs';
+import { analyticsMode } from './analytics-hosts.mjs';
+import { installNetworkGuard } from './network-guard.mjs';
 import { expectedStatus, pinnedPages, screenshotStyle } from './pages.mjs';
 import { withRetries } from './retry.mjs';
 
+// Whether this run blocks the analytics tags. The config's checkEnv has already refused a
+// QA_ANALYTICS the run may not use.
+export const ANALYTICS = analyticsMode();
+
 export const test = base.extend({
+    serviceWorkers: 'block',
+    qaChannel: [QA_CHANNEL, { option: true }],
     context: async ({ context }, use) => {
         const cookies = previewCookies();
         if (cookies.length) await context.addCookies(cookies);
         await use(context);
     },
+    networkGuard: [async ({ context, qaChannel, baseURL }, use, testInfo) => {
+        const guard = await installNetworkGuard(context, {
+            channel: qaChannel, storefront: baseURL, local: IS_LOCAL, blockAnalytics: ANALYTICS.blocked,
+        });
+        testInfo.annotations.push({ type: 'analytics blocked', description: guard.analyticsBlocked ? 'yes' : 'no' });
+        if (guard.refusesWrites) testInfo.annotations.push({ type: 'writes refused', description: `channel ${guard.channel}, through ${baseURL}` });
+        await use(guard);
+        if (guard.blocked.length) testInfo.annotations.push({ type: 'analytics requests blocked', description: String(guard.blocked.length) });
+        if (guard.answered.length) testInfo.annotations.push({ type: 'writes answered by the gates', description: guard.answered.join('; ') });
+        guard.assertNoRefusedWrites();
+        guard.assertNoAnalyticsCompleted();
+    }, { auto: true }],
 });
 
 export { expect };
