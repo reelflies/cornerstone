@@ -1,15 +1,23 @@
 // The stops that only a real release reaches (ticket 05), apart from scripts/release.mjs so they're
-// tested offline: the setup refusals, the My Themes cap, the typed channel id and step 5's gate.
+// tested offline: the setup refusals, the My Themes cap, the typed channel id and step 5's gate, and
+// W0-1's non-interactive confirmation for a non-production target with the release calendar's limits.
 //
-//   import { setupProblems, themeCapProblems, realReleaseStops, confirmChannel, pushGate } from './release-checks.mjs';
+//   import {
+//       setupProblems, themeCapProblems, realReleaseStops, confirmChannel, pushGate,
+//       confirmNonprodRefusals, pairedChannel1Release, pushConfirmation,
+//   } from './release-checks.mjs';
 //
 // setupProblems and themeCapProblems return one line per problem. realReleaseStops turns them into
 // stops for a real release and warnings for a dry run. confirmChannel and pushGate take their input,
 // the capture and the readers of git and the zip as arguments, so no test needs a terminal or a store.
+// confirmNonprodRefusals and pairedChannel1Release take the calendar's phase (scripts/lib/
+// release-calendar.mjs phaseOn), so each date is tested with a calendar object, never the real file.
 
 import readline from 'readline';
+import { describePhase } from './lib/release-calendar.mjs';
 import { describeLiveTheme } from './release-capture.mjs';
 import { changedKeys } from './release-diff.mjs';
+import { CONFIRM_NONPROD } from './release-targets.mjs';
 
 export const MAX_THEMES = 20; // My Themes holds at most 20; the release never deletes one (-d)
 
@@ -91,4 +99,68 @@ export async function pushGate({
         bundle: { step4: bundle.step4, now: bundle.read() },
     });
     return { live, problems };
+}
+
+// --- W0-1: --confirm-nonprod ----------------------------------------------------------------
+
+// A target that doesn't say `production: false` counts as production: deny by default.
+const isProduction = target => target.production !== false;
+// Whether the release was given --confirm-nonprod (a state file without the key counts as typed).
+export const hasConfirmNonprod = options => options.confirmNonprod !== null && options.confirmNonprod !== undefined;
+const flipReached = phase => Boolean(phase.milestones) && phase.date >= phase.milestones['T-0'];
+
+// Every reason --confirm-nonprod is refused for this release, or [] when it is allowed (or not
+// given). release-args.mjs refuses a value that isn't --channel and the combinations with
+// --overwrite-live and --first-release; they are checked again here, so step 5 never relies on
+// the arguments alone. The rest needs the target and the calendar's phase for today:
+//   - a production target is confirmed only by typing (channel 1, today and after ticket 53)
+//   - from T-21 every push is typed (ticket 57: P1 fixes only, and Shaun decides what is P1)
+//   - from the Flip, a target that becomes live reelflies.ca then (1895766) refuses it whatever its
+//     `production` flag, as a second lock beside ticket 57's Flip-day change
+export function confirmNonprodRefusals({ options, target, phase }) {
+    if (!hasConfirmNonprod(options)) return [];
+    const reasons = [];
+    if (Number(options.confirmNonprod) !== Number(options.channel)) {
+        reasons.push(`--confirm-nonprod ${options.confirmNonprod} isn't --channel ${options.channel}: it confirms only the channel this release targets`);
+    }
+    if (options.overwriteLive) reasons.push('--confirm-nonprod can\'t be combined with --overwrite-live: that choice stays with a person');
+    if (options.firstRelease) reasons.push('--confirm-nonprod can\'t be combined with --first-release: that choice stays with a person');
+    if (isProduction(target)) {
+        reasons.push(`channel ${target.id} (${target.name}) is a production target: its push is confirmed only by typing the channel id at the terminal`);
+    } else if (!(target.confirmation || []).includes(CONFIRM_NONPROD)) {
+        reasons.push(`channel ${target.id} (${target.name}) takes only the typed confirmation`);
+    }
+    if (!phase.limits.confirmNonprod) {
+        reasons.push(`${describePhase(phase)} --confirm-nonprod is refused from T-21: every push needs the channel id typed at the terminal`);
+    }
+    if (target.liveFromFlip && flipReached(phase)) {
+        reasons.push(`from the Flip (${phase.milestones['T-0']}), ${target.name} is live reelflies.ca: agents never push to it, whatever its production flag (ticket 57)`);
+    }
+    return reasons;
+}
+
+// From T-28 until the Flip, channel 1 runs the same build as 1895766 (ticket 56), so each push to
+// a non-production target queues a paired channel-1 release for Shaun: the RELEASES.md entry
+// records it, and the review page lists it. Typed pushes too: from T-21 every push is typed, and
+// those P1 fixes need channel 1 as well. Returns null when none is pending.
+export function pairedChannel1Release({ target, phase }) {
+    if (isProduction(target) || !phase.limits.pairedChannel1Release) return null;
+    return {
+        phase: phase.phase, since: phase.since, t28: phase.milestones['T-28'], flip: phase.flip, status: phase.status,
+    };
+}
+
+// Step 5's confirmation (W0-1). Without --confirm-nonprod it is `typed`, the typed channel id
+// exactly as before W0-1: no terminal still stops the release. With it there is no prompt and no
+// stdin is read; instead the refusals are checked again with `phase()`, today's phase read at step
+// 5, so a release whose build ran past midnight into T-21 stops before the push. Either way
+// pushGate's re-capture and checks run in full after it.
+export function pushConfirmation({
+    options, target, phase, typed,
+}) {
+    if (!hasConfirmNonprod(options)) return typed;
+    return async () => {
+        const reasons = confirmNonprodRefusals({ options, target, phase: phase() });
+        if (reasons.length) throw new Error(`--confirm-nonprod refused at step 5: ${reasons.join('; ')}`);
+    };
 }
