@@ -1,0 +1,65 @@
+{
+  "_about": "Pages, Scripts and custom template association responses, shaped on BigCommerce's documented responses. Not a capture of this store.",
+  "pages_list": {
+    "data": [
+      { "id": 42, "channel_id": 1895766, "name": "Shipping", "type": "page", "is_visible": true, "url": "/shipping-returns/", "body": "<p>Draft</p>", "parent_id": 0, "sort_order": 0, "is_homepage": false, "is_customers_only": false, "meta_title": "", "meta_description": "", "meta_keywords": "", "search_keywords": "" }
+    ],
+    "meta": { "pagination": { "total": 1, "count": 1, "per_page": 250, "current_page": 1, "total_pages": 1 } }
+  },
+  "page_item": {
+    "data": { "id": 42, "channel_id": 1895766, "name": "Shipping", "type": "page", "is_visible": true, "url": "/shipping-returns/", "body": "<p>Draft</p>", "parent_id": 0, "sort_order": 0, "is_homepage": false, "is_customers_only": false, "meta_title": "", "meta_description": "", "meta_keywords": "", "search_keywords": "" },
+    "meta": {}
+  },
+  "page_item_after": {
+    "data": { "id": 42, "channel_id": 1895766, "name": "Shipping", "type": "page", "is_visible": true, "url": "/shipping-returns/", "body": "<p>Free standard shipping in Canada on fly orders over $60.</p>", "parent_id": 0, "sort_order": 0, "is_homepage": false, "is_customers_only": false, "meta_title": "", "meta_description": "", "meta_keywords": "", "search_keywords": "" },
+    "meta": {}
+  },
+  "page_created": {
+    "data": [
+      { "id": 43, "channel_id": 1895766, "name": "Fly hook size chart", "type": "page", "is_visible": true, "url": "/fly-hook-size-chart/", "body": "<p>Chart</p>", "parent_id": 0, "sort_order": 0, "is_homepage": false, "is_customers_only": false }
+    ],
+    "meta": {}
+  },
+  "scripts_list": {
+    "data": [],
+    "meta": { "pagination": { "total": 0, "count": 0, "per_page": 250, "current_page": 1, "total_pages": 0 } }
+  },
+  "script_item_disabled": {
+    "data": { "uuid": "5c5c5c5c-1234-4abc-8def-0123456789ab", "name": "rf-web-vitals", "description": "", "html": "<script>/* vitals */</script>", "src": "", "auto_uninstall": false, "load_method": "default", "location": "footer", "visibility": "storefront", "kind": "script_tag", "consent_category": "analytics", "enabled": false, "channel_id": 1895766, "date_created": "2026-10-06T20:00:00.000Z", "date_modified": "2026-10-06T20:00:00.000Z" },
+    "meta": {}
+  },
+  "script_item_enabled": {
+    "data": { "uuid": "5c5c5c5c-1234-4abc-8def-0123456789ab", "name": "rf-web-vitals", "html": "<script>/* vitals */</script>", "kind": "script_tag", "enabled": true, "channel_id": 1895766 },
+    "meta": {}
+  },
+  "associations_list": {
+    "data": [
+      { "id": 9, "channel_id": 1895766, "entity_type": "category", "entity_id": 77, "file_name": "category.html", "is_valid": true, "date_created": "2026-10-01T12:00:00Z", "date_modified": "2026-10-01T12:00:00Z" }
+    ],
+    "meta": { "pagination": { "total": 1, "count": 1, "per_page": 250, "current_page": 1, "total_pages": 1 } }
+  },
+  "associations_list_after": {
+    "data": [
+      { "id": 9, "channel_id": 1895766, "entity_type": "category", "entity_id": 77, "file_name": "rf-noindex.html", "is_valid": true, "date_created": "2026-10-01T12:00:00Z", "date_modified": "2026-10-06T20:00:00Z" }
+    ],
+    "meta": { "pagination": { "total": 1, "count": 1, "per_page": 250, "current_page": 1, "total_pages": 1 } }
+  },
+  "associations_upserted": {
+    "data": [],
+    "meta": {}
+  },
+  "promotions_list": {
+    "data": [
+      { "id": 12, "name": "Free shipping on flies (.ca)", "status": "ENABLED", "redemption_type": "AUTOMATIC", "currency_code": "CAD", "channels": [{ "id": 1 }] }
+    ],
+    "meta": { "pagination": { "total": 1, "count": 1, "per_page": 250, "current_page": 1, "total_pages": 1 } }
+  },
+  "promotion_item": {
+    "data": { "id": 12, "name": "Free shipping on flies (.ca)", "status": "ENABLED", "redemption_type": "AUTOMATIC", "currency_code": "CAD", "channels": [{ "id": 1 }] },
+    "meta": {}
+  },
+  "promotion_item_after": {
+    "data": { "id": 12, "name": "Free shipping on flies (.ca)", "status": "ENABLED", "redemption_type": "AUTOMATIC", "currency_code": "CAD", "channels": [{ "id": 1 }, { "id": 1895766 }] },
+    "meta": {}
+  }
+}
