@@ -139,7 +139,49 @@ describe('the harness', () => {
             },
         });
         assert.deepEqual(fetch.map(({ kind }) => kind).sort(), ['404', 'cart', 'category', 'home', 'product']);
-        assert.deepEqual(fetch.find(({ kind }) => kind === 'cart'), { kind: 'cart', path: '/cart.php' });
+        assert.deepEqual(fetch.find(({ kind }) => kind === 'cart'), { key: 'cart', kind: 'cart', path: '/cart.php' });
+    });
+
+    it('fetches every pin of a kind, each named by its key and checked by its kind (W0-8)', () => {
+        const { fetch, missing } = pagesToFetch({
+            pages: {
+                product: '/p/', 'product@sold-out': '/sold-out/', 'category@alpha': '/c/?sort=alphaasc',
+            },
+        });
+        assert.deepEqual(fetch, [
+            { key: 'product', kind: 'product', path: '/p/' },
+            { key: 'product@sold-out', kind: 'product', path: '/sold-out/' },
+            { key: 'category@alpha', kind: 'category', path: '/c/?sort=alphaasc' },
+        ]);
+        assert.deepEqual(missing, [], 'a kind@name pin counts as that kind\'s page');
+    });
+
+    it('says a kind is pinned now when only a kind@name pin of it is', () => {
+        const { stale, waiting } = pagesToFetch({ pages: { 'product@5663': '/p/' }, notPinnedYet: { product: 'no products until refactor 13', category: 'no tree 4 until refactor 14' } });
+        assert.deepEqual(stale, ['product']);
+        assert.deepEqual(waiting.map(({ kind }) => kind), ['category']);
+    });
+
+    it('runs an assertion that names a kind on every pin of it, and one that names kind@name on that pin only (W0-8)', () => {
+        const pin = (key, name = 'good-product.html') => ({ ...fixture(name, key.split('@')[0]), key });
+        const everyProduct = {
+            id: 'offer', description: 'has an Offer', pages: ['product'], check: () => ['no Offer'],
+        };
+        const soldOutOnly = {
+            id: 'sold-out', description: 'says sold out', pages: ['product@sold-out'], check: () => ['no sold-out line'],
+        };
+        const notSoldOut = {
+            id: 'add-button', description: 'has an add button', pages: ['product'], notOn: ['product@sold-out'], check: () => ['no add button'],
+        };
+        const results = key => Object.fromEntries(checkPage(pin(key), [everyProduct, soldOutOnly, notSoldOut]).map(({ id, status }) => [id, status]));
+        assert.deepEqual(results('product'), { offer: 'fail', 'sold-out': 'skip', 'add-button': 'fail' });
+        assert.deepEqual(results('product@sold-out'), { offer: 'fail', 'sold-out': 'fail', 'add-button': 'skip' });
+        assert.deepEqual(results('product@5663'), { offer: 'fail', 'sold-out': 'skip', 'add-button': 'fail' });
+    });
+
+    it('expects 404 from a kind@name pin of the 404 kind', () => {
+        const typo = { ...fixture('good-product.html', '404'), key: '404@typo', status: 404 };
+        assert.deepEqual(failed(checkPage(typo, assertions)), []);
     });
 
     it('fails a channel with no product or category page pinned, the spec\'s two raw-HTML pages', () => {

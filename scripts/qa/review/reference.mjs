@@ -61,8 +61,9 @@ const TEMPLATE_REFERENCE = {
     brand: 'brand',
 };
 
-// A kind@name pin (W0-8, for example product@sold-out) is compared by its kind.
-export const referenceFor = template => TEMPLATE_REFERENCE[String(template).split('@')[0]] ?? null;
+// A kind@name pin (W0-8, for example product@sold-out) is compared by its kind, and so is a
+// changed baseline's page read from its file name, with its UI state (~) and overlay (+).
+export const referenceFor = template => TEMPLATE_REFERENCE[String(template).split(/[@~+]/)[0]] ?? null;
 
 export const REFERENCE_SETTINGS = {
     headFace: 'onest',

@@ -1,20 +1,28 @@
 // The pages every QA gate visits, pinned per channel in one place (ticket 16), so a
 // catalogue change can't quietly move a screenshot, an axe run or a raw-HTML check.
 //
-// Keys are template names from the spec's seam 1 list: home, fly-type, species,
-// species-hub, product, cart, hook-chart, 404 and brand, plus category for the stock
-// category template until ticket 32 builds the Fly Type and Species pages. A template
-// ticket adds its page here when it lands; the screenshot and axe runs then cover it.
+// Keys are page keys: a page kind, which is a template name from the spec's seam 1 list
+// (home, fly-type, species, species-hub, product, cart, hook-chart, 404 and brand, plus
+// category for the stock category template until ticket 32 builds the Fly Type and Species
+// pages), or kind@name for one more pin of the same kind (W0-8), such as product@5663 or
+// product@sold-out. A template ticket adds its page here when it lands; the screenshot and axe
+// runs then cover it.
+// - The kind decides what the page must answer (expectedStatus), which raw-HTML assertions
+//   apply (an assertion's `pages` and `notOn` name kinds, or one kind@name pin), which pin
+//   satisfies RAW_HTML_REQUIRED, and the reference screen it is shown beside.
+// - The whole key names its screenshot baseline (baselineName), and is what `mask`, `hold`
+//   and a UI state's `pages` (states.mjs) name: `mask: { category: [...] }` masks the plain
+//   category pin only, so a stable category@alpha pin beside it keeps its cards.
 //
 // Each channel has:
-//   pages         template -> path. axe and the screenshots visit every one, and so does
+//   pages         page key -> path. axe and the screenshots visit every one, and so does
 //                 the raw-HTML check, whose assertions pick the kinds they apply to.
 //   notPinnedYet  optional, template -> why the channel can't pin it yet. Only for the
 //                 RAW_HTML_REQUIRED kinds: the raw-HTML check fails a channel that pins
 //                 neither the page nor a reason here.
-//   mask          optional, template -> selectors the screenshots also mask on that page:
+//   mask          optional, page key -> selectors the screenshots also mask on that page:
 //                 content these pins can't hold still, such as a live product list
-//   hold          optional, template -> { selector: height in px }: live content whose
+//   hold          optional, page key -> { selector: height in px }: live content whose
 //                 height these pins can't hold still. The screenshot takes everything
 //                 inside each box out and holds the box at that height, so the page keeps
 //                 its size, and masks the box (screenshotStyle and masksFor below). A key
@@ -82,12 +90,36 @@ export const CHANNELS = {
 };
 
 // The page kinds the raw-HTML check needs on every channel: spec seam 2 fetches one
-// product page and one category page.
+// product page and one category page. A kind@name pin of the kind counts.
 export const RAW_HTML_REQUIRED = ['product', 'category'];
 
-// The status each pinned page must return. A gate that got anything else would be
-// checking an error page instead of the template, so the run fails.
-export const expectedStatus = template => (template === '404' ? 404 : 200);
+// A page key: a kind, or kind@name (W0-8). The same shapes the baseline-scope check reads in a
+// baseline's name (scripts/check-baseline-scope.mjs).
+export const PAGE_KEY = /^([a-z0-9][a-z0-9-]*)(?:@([A-Za-z0-9_-]+))?$/;
+
+export function pageKind(key) {
+    const match = PAGE_KEY.exec(String(key));
+    if (!match) throw new Error(`"${key}" isn't a page key: a kind such as product, or kind@name such as product@sold-out (scripts/qa/pages.mjs)`);
+    return match[1];
+}
+
+// The status each pinned page must return, by its kind. A gate that got anything else would
+// be checking an error page instead of the template, so the run fails.
+export const expectedStatus = key => (pageKind(key) === '404' ? 404 : 200);
+
+const STATE_PART = /^[a-z0-9][a-z0-9-]*$/;
+const OVERLAY_PART = /^[A-Za-z0-9_-]+$/;
+
+// The name a screenshot baseline is stored under in its set's folder:
+// <key>[~<state>][+<overlay>].png, which Playwright ends with -<project>-<platform>
+// (snapshotPathTemplate in playwright.config.mjs). A plain pin keeps its old name. The
+// baseline-scope check reads these parts back (W0-13), so each must keep its shape.
+export function baselineName({ key, state = null, overlay = null }) {
+    pageKind(key);
+    if (state !== null && !STATE_PART.test(state)) throw new Error(`"${state}" isn't a UI state name (lower-case letters, digits and -; states.mjs)`);
+    if (overlay !== null && !OVERLAY_PART.test(overlay)) throw new Error(`"${overlay}" isn't an overlay name (letters, digits, _ and -; overlays.mjs)`);
+    return `${key}${state ? `~${state}` : ''}${overlay ? `+${overlay}` : ''}.png`;
+}
 
 // Live data the screenshots mask on every page, so they don't fail on price, stock or
 // catalogue changes: prices, stock and SKU lines, ratings and review counts, sale and
@@ -136,11 +168,12 @@ const heldBoxes = (channel, template, channels = CHANNELS) => Object.entries(cha
 
 // Everything the screenshot of one pinned page masks: LIVE_DATA, its channel's masks, and
 // the boxes it holds, so a reviewer sees a held box as a mask rather than an empty space.
-export function masksFor(channel, template) {
+// `template` is the page key; `channels` is CHANNELS, or a stand-in in the tests.
+export function masksFor(channel, template, channels = CHANNELS) {
     return [
         ...LIVE_DATA,
-        ...(CHANNELS[channel]?.mask?.[template] || []),
-        ...heldBoxes(channel, template).map(([selector]) => selector),
+        ...(channels[channel]?.mask?.[template] || []),
+        ...heldBoxes(channel, template, channels).map(([selector]) => selector),
     ];
 }
 
