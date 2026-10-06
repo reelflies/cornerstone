@@ -55,10 +55,25 @@ export function parseBaselinePath(file) {
     };
 }
 
+// The commits that touched one file in a range, newest first, in the order they landed
+// (--topo-order, so commits from branches merged one after another never interleave). Each
+// has its sha, subject, message body and the file's status in it (A, M or D).
+function fileCommits(range, file, cwd) {
+    const log = git(['log', '--no-merges', '--topo-order', '--no-renames', '--name-status', '--format=%x1e%H%x1f%s%x1f%b%x1d', range, '--', file], { cwd });
+    return log.split('\x1e').filter(Boolean).map(record => {
+        const [head, tail = ''] = record.split('\x1d');
+        const [sha, subject, body = ''] = head.split('\x1f');
+        const line = tail.split('\n').find(entry => entry.endsWith(`\t${file}`));
+        return {
+            sha, subject, body: body.trim(), status: line ? line[0] : null,
+        };
+    });
+}
+
 // Each page baseline that differs between `since` and `until` (a ref; null for the working
-// tree, untracked new baselines included), newest commits first. `before` and `after` say
-// where to read each side: { ref, path }, with ref null for the working tree, or null when
-// that side has no file.
+// tree, untracked new baselines included), with the commits that changed it, newest first.
+// `before` and `after` say where to read each side: { ref, path }, with ref null for the
+// working tree, or null when that side has no file.
 export function changedBaselines({ since, until = 'HEAD', cwd = ROOT }) {
     const range = until ? [since, until] : [since];
     const changes = lines(git(['diff', '--name-status', '--no-renames', ...range, '--', BASELINES], { cwd })).map(line => {
@@ -73,15 +88,37 @@ export function changedBaselines({ since, until = 'HEAD', cwd = ROOT }) {
         .sort((a, b) => (a.path < b.path ? -1 : Number(a.path > b.path)))
         .map(change => ({
             ...change,
-            commits: lines(git(['log', '--no-merges', '--format=%H%x1f%s', until ? `${since}..${until}` : `${since}..HEAD`, '--', change.path], { cwd }))
-                .map(line => {
-                    const [sha, subject] = line.split('\x1f');
-                    return { sha, subject };
-                }),
+            commits: fileCommits(`${since}..${until || 'HEAD'}`, change.path, cwd),
             before: change.status === 'A' ? null : { ref: since, path: change.path },
             after: change.status === 'D' ? null : { ref: until, path: change.path },
         }));
 }
+
+// Everything that landed on the first-parent line since `since`, oldest first: each merged
+// PR (its number, its title from the merge commit's body, and the tickets its own commits
+// name) and each commit made on the line directly.
+export function mergedSince({ since, until = 'HEAD', cwd = ROOT }) {
+    const log = git(['log', '--first-parent', '--reverse', '--format=%x1e%H%x1f%P%x1f%s%x1f%b', `${since}..${until}`], { cwd });
+    return log.split('\x1e').filter(Boolean).map(record => {
+        const [sha, parents, subject, body = ''] = record.split('\x1f');
+        const [first, ...others] = parents.trim().split(/\s+/);
+        if (!others.length) {
+            return {
+                sha, pr: null, title: subject, tickets: ticketsOf(subject),
+            };
+        }
+        const subjects = lines(git(['log', '--no-merges', '--format=%s', `${first}..${sha}`], { cwd }));
+        return {
+            sha,
+            pr: /#(\d+)/.exec(subject)?.[1] || null,
+            title: body.split('\n').map(line => line.trim()).find(Boolean) || subject,
+            tickets: [...new Set(subjects.flatMap(ticketsOf))].sort(),
+        };
+    });
+}
+
+// The commit a checkpoint tag is on, or null when there is no such tag.
+export const tagCommit = (tag, { cwd = ROOT } = {}) => git(['rev-parse', '-q', '--verify', `refs/tags/${tag}^{commit}`], { cwd, allowFail: true })?.trim() || null;
 
 // A file as it was at `ref`, or null when it didn't exist there.
 export const showFile = (ref, file, { cwd = ROOT } = {}) => git(['show', `${ref}:${file}`], { cwd, encoding: 'buffer', allowFail: true });
