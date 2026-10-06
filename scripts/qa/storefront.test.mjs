@@ -14,10 +14,14 @@
 //   the stencil server, 3300 by default (W0-7). The start log is named by the port.
 // - Before it uses a local server, a gate takes its port pair's lock, so two runs on one port
 //   wait for each other; before it starts one, it also takes one of three stencil start slots.
+//   It checks the ports again once it has the slot, because the wait can last minutes.
+// - A gate trusts only the server it started: if that one has exited, whatever else answers on
+//   its port fails the run. Stopping the gate with a signal stops that server too.
 //
 //   node --test scripts/qa/storefront.test.mjs
 
 import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
@@ -27,7 +31,7 @@ import assert from 'node:assert/strict';
 import { acquireLock, readHolder } from '../lib/lock.mjs';
 import {
     assertServer, busyPorts, busyServerMessage, claimLocalServer, portWarning, qaPort, qaPortProblem, serverPlan, serverProblems,
-    startCommand, startLogPath, stopProcessGroup, waitForFreePorts,
+    startCommand, startLogPath, stopProcessGroup, waitForFreePorts, waitForOwnServer,
 } from './storefront.mjs';
 
 const config = { variations: [{ name: 'ReelFlies CA' }, { name: 'ReelFlies US' }] };
@@ -302,6 +306,30 @@ describe('stopping a server a gate started', () => {
         assert.deepEqual(await stopProcessGroup(child, { ports: [port], timeout: 500 }), []);
         assert.throws(() => process.kill(-child.pid, 0), { code: 'ESRCH' }, 'no process of the group is left');
     });
+
+    for (const signal of ['SIGINT', 'SIGTERM']) {
+        it(`stops the server's whole group when the gate itself is stopped with ${signal}`, async () => {
+            const port = await freePort();
+            const storefront = fileURLToPath(new URL('./storefront.mjs', import.meta.url));
+            const command = `${JSON.stringify(process.execPath)} -e "require('http').createServer().listen(${port}, '127.0.0.1')"`;
+            const gate = spawn(process.execPath, ['--input-type=module', '-e', `
+                import { startProcessGroup } from ${JSON.stringify(storefront)};
+                const server = startProcessGroup(${JSON.stringify(command)});
+                console.log(server.pid);
+                setInterval(() => {}, 1000);
+            `], { stdio: ['ignore', 'pipe', 'inherit'] });
+            const group = await new Promise(resolve => { gate.stdout.once('data', chunk => resolve(Number(String(chunk).trim()))); });
+            assert.deepEqual(await untilBusy(port), [port], 'the server came up');
+
+            const deadline = setTimeout(() => gate.kill('SIGKILL'), 5000);
+            gate.kill(signal);
+            const exitCode = await new Promise(resolve => { gate.on('exit', code => resolve(code)); });
+            clearTimeout(deadline);
+            assert.equal(exitCode, 128 + os.constants.signals[signal], 'the gate still stops on the signal');
+            assert.deepEqual(await waitForFreePorts({ ports: [port], timeout: 3000 }), [], 'its server is gone');
+            assert.throws(() => process.kill(-group, 0), { code: 'ESRCH' }, 'no process of the group is left');
+        });
+    }
 });
 
 describe('a port pair per worktree', () => {
@@ -405,7 +433,7 @@ describe('the locks a gate holds while it uses a local server', () => {
             },
             log: line => lines.push(line),
         });
-        assert.deepEqual(order, ['other run done', 'planned']);
+        assert.deepEqual(order, ['other run done', 'planned', 'planned'], 'it plans once the port is its own, and again once it has a slot');
         assert.match(lines[0], /^WAIT {5}the port-3400 lock is held by the gates on port 3400 in \/worktrees\/w0-5/);
         claimed.release();
     });
@@ -421,5 +449,75 @@ describe('the locks a gate holds while it uses a local server', () => {
         assert.match(lines.join('\n'), /SLOT {5}stencil start slot 2 of 3, for port 3400/);
         claimed.release();
         others.forEach(lock => lock.release());
+    });
+
+    // A plan that answers `first` before the wait for a slot, then `second` (a value, or an
+    // error to throw) once the slot is taken.
+    const plans = (first, second) => {
+        let calls = 0;
+        return async () => {
+            calls += 1;
+            if (calls === 1) return first;
+            if (second instanceof Error) throw second;
+            return second;
+        };
+    };
+
+    it('checks the ports again once it has a slot, and refuses a server that came up on them while it waited', async () => {
+        const root = tempRoot();
+        const others = [1, 2, 3].map(slot => acquireLock(`stencil-${slot}`, `the gates on port ${3400 + slot * 100}`, { root }));
+        setTimeout(() => others[1].release(), 200);
+        const busy = new Error('QA_FRESH_SERVER=1, and something already answers on ports 3400 and 3401');
+        await assert.rejects(claim(root, null, { plan: plans('start', busy) }), /already answers on ports 3400 and 3401/);
+        assert.deepEqual(held(root), ['stencil-1', 'stencil-3'], 'its port lock and the slot it took are released');
+        others.forEach(lock => lock.release());
+    });
+
+    it('gives the slot back when a server that renders the run came up while it waited, and reuses it', async () => {
+        const root = tempRoot();
+        const others = [1, 2, 3].map(slot => acquireLock(`stencil-${slot}`, `the gates on port ${3400 + slot * 100}`, { root }));
+        setTimeout(() => others[0].release(), 200);
+        const claimed = await claim(root, null, { plan: plans('start', 'reuse') });
+        assert.equal(claimed.plan, 'reuse');
+        assert.deepEqual(held(root), ['port-3400', 'stencil-2', 'stencil-3']);
+        claimed.release();
+        assert.deepEqual(held(root), ['stencil-2', 'stencil-3']);
+        others.forEach(lock => lock.release());
+    });
+});
+
+describe('trusting only the server a gate started', () => {
+    const exited = async () => {
+        const child = spawn(process.execPath, ['-e', 'process.exit(3)'], { stdio: 'ignore' });
+        await new Promise(resolve => { child.on('exit', resolve); });
+        return child;
+    };
+
+    it('fails at once when the server it started has exited, even though something else answers on its port', async () => {
+        const server = await exited();
+        let asked = 0;
+        await assert.rejects(waitForOwnServer(server, {
+            ready: async () => { asked += 1; return true; }, timeout: 5000, pollMs: 10,
+        }), /stencil start exited \(code 3\) before it was ready/);
+        assert.equal(asked, 0, 'whatever answers is never trusted');
+    });
+
+    it('fails when its server exits while another one answers its ready check', async () => {
+        const server = spawn(process.execPath, ['-e', 'setTimeout(() => process.exit(4), 100)'], { stdio: 'ignore' });
+        // The answer comes from elsewhere, and arrives just after this run's server has gone.
+        const ready = () => new Promise(resolve => { server.on('exit', () => resolve(true)); });
+        await assert.rejects(waitForOwnServer(server, { ready, timeout: 5000, pollMs: 10 }), /exited \(code 4\)/);
+    });
+
+    it('resolves once its own server is ready, and fails after the timeout if it never is', async () => {
+        const server = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 5000)'], { stdio: 'ignore' });
+        try {
+            let calls = 0;
+            await waitForOwnServer(server, { ready: async () => { calls += 1; return calls > 2; }, timeout: 5000, pollMs: 10 });
+            assert.equal(calls, 3);
+            await assert.rejects(waitForOwnServer(server, { ready: async () => false, timeout: 100, pollMs: 10 }), /didn't come up within/);
+        } finally {
+            server.kill('SIGKILL');
+        }
     });
 });

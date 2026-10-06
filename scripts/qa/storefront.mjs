@@ -18,7 +18,9 @@
 // "connected" overlay and its websocket stay out of screenshots, axe and the raw HTML.
 //
 // A gate that uses a local server holds its port pair's lock, and a stencil start slot when
-// it starts one (claimLocalServer, scripts/lib/lock.mjs), until it ends.
+// it starts one (claimLocalServer, scripts/lib/lock.mjs), until it ends. A server it starts is
+// trusted only while it runs (waitForOwnServer), and is stopped with the gate, even when the
+// gate is stopped by a signal (startProcessGroup).
 
 import { spawn } from 'child_process';
 import fs from 'fs';
@@ -27,7 +29,7 @@ import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import {
-    STENCIL_SLOTS, acquireSlot, currentTicket, lockRoot, portLockName, waitForLock,
+    STENCIL_SLOTS, acquireSlot, cleanupOnExit, currentTicket, lockRoot, portLockName, waitForLock,
 } from '../lib/lock.mjs';
 import { fetchWithRetries } from './retry.mjs';
 
@@ -230,7 +232,11 @@ export function portWarning({ env = process.env, checkout = ROOT } = {}) {
 // - a stencil start slot, stencil-<1..3>, only when it starts a server, so at most three run on
 //   the Mac at once. A run waits for a free one.
 // Then it plans with the port its own (`plan`, planLocalServer by default, which throws on
-// 'refuse'). Resolves to { plan, release }; both locks also go when the process exits.
+// 'refuse'), and plans again once it has a slot: the wait can last minutes, and a server that
+// takes no lock (a worktree from before W0-7, a stencil start run by hand) can come up on the
+// ports meanwhile. With QA_FRESH_SERVER=1 that one is refused; otherwise one that renders the
+// run is reused, and the slot given back. Resolves to { plan, release }; both locks also go
+// when the process exits or is stopped by a signal.
 export async function claimLocalServer({
     port = QA_PORT, plan = () => planLocalServer(), root = lockRoot(), checkout = path.resolve(ROOT), log = console.log, pollMs, timeoutMs,
 } = {}) {
@@ -241,19 +247,27 @@ export async function claimLocalServer({
         root, log, pollMs, timeoutMs, releaseOnExit: true, ticket: currentTicket(checkout), details: { port, checkout },
     };
     const portLock = await waitForLock(portLockName(port), owner, options);
+    let slot = null;
     try {
+        const first = await plan();
+        if (first !== 'start') return { plan: first, release: portLock.release };
+        slot = await acquireSlot(owner, options);
         const planned = await plan();
-        if (planned !== 'start') return { plan: planned, release: portLock.release };
-        const slot = await acquireSlot(owner, options);
+        if (planned !== 'start') {
+            slot.release();
+            return { plan: planned, release: portLock.release };
+        }
         log(`SLOT     stencil start slot ${slot.slot} of ${STENCIL_SLOTS}, for port ${port}`);
+        const taken = slot;
         return {
             plan: planned,
             release() {
-                slot.release();
+                taken.release();
                 portLock.release();
             },
         };
     } catch (error) {
+        slot?.release();
         portLock.release();
         throw error;
     }
@@ -264,17 +278,31 @@ export async function assertLocalServer() {
     if (IS_LOCAL) await assertServer(LOCAL_URL);
 }
 
+const signalGroup = (child, name) => {
+    try {
+        process.kill(-child.pid, name);
+    } catch {
+        // already gone
+    }
+};
+// The exit hooks of the groups startProcessGroup started and stopProcessGroup hasn't stopped yet.
+const groupHooks = new WeakMap();
+
+// Runs `command` in a process group of its own (sh, npx, stencil start and its webpack worker),
+// so stopProcessGroup can stop all of it. Until it has, the group gets a SIGTERM if this process
+// exits or is stopped by SIGINT, SIGTERM or SIGHUP first, so a gate stopped with Ctrl-C or a
+// tool's timeout leaves no stencil start behind.
+export function startProcessGroup(command, { cwd = ROOT, stdio = 'ignore' } = {}) {
+    const child = spawn('sh', ['-c', command], { cwd, detached: true, stdio });
+    groupHooks.set(child, cleanupOnExit(() => signalGroup(child, 'SIGTERM')));
+    return child;
+}
+
 // Stops a detached server's whole process group (sh, npx, stencil start and its webpack
 // worker): SIGTERM, then SIGKILL if any of it is left after `timeout` ms. Resolves once
 // none of it is left, to the `ports` still answering after that (empty when all are free).
 export async function stopProcessGroup(child, { ports = QA_PORTS, timeout = 10000 } = {}) {
-    const signal = name => {
-        try {
-            process.kill(-child.pid, name);
-        } catch {
-            // already gone
-        }
-    };
+    const signal = name => signalGroup(child, name);
     const gone = () => {
         try {
             process.kill(-child.pid, 0);
@@ -288,7 +316,34 @@ export async function stopProcessGroup(child, { ports = QA_PORTS, timeout = 1000
         signal('SIGKILL');
         await waitFor(gone, 5000);
     }
+    groupHooks.get(child)?.();
+    groupHooks.delete(child);
     return waitForFreePorts({ ports, timeout: 5000 });
+}
+
+const exitOf = child => {
+    if (child.exitCode !== null) return `code ${child.exitCode}`;
+    return child.signalCode ? `signal ${child.signalCode}` : null;
+};
+
+// Resolves once the stencil start this run spawned (`server`) is ready (`ready`: READY_URL
+// answers). Only that server is trusted: once it has exited, the run fails at once even if
+// something answers on its port, because that is another checkout's server, started while this
+// run waited for a slot or before its own could bind the port. `ready` and `pollMs` are for tests.
+export async function waitForOwnServer(server, { ready = () => isUp(READY_URL), timeout = 180000, pollMs = 1000 } = {}) {
+    const deadline = Date.now() + timeout;
+    const exited = () => {
+        const how = exitOf(server);
+        if (how) throw new Error(`stencil start exited (${how}) before it was ready, so whatever answers on ${LOCAL_URL} isn't this checkout's server`);
+    };
+    for (;;) {
+        exited();
+        const up = await ready(); // eslint-disable-line no-await-in-loop
+        exited();
+        if (up) return;
+        if (Date.now() > deadline) throw new Error(`stencil start didn't come up within ${Math.round(timeout / 1000)} s on ${LOCAL_URL}`);
+        await pause(pollMs); // eslint-disable-line no-await-in-loop
+    }
 }
 
 // For scripts outside Playwright: reuses a running local server, or starts one and
@@ -312,24 +367,19 @@ export async function useStorefront({ timeout = 180000 } = {}) {
     const log = startLogPath();
     const out = fs.openSync(log, 'w');
     console.log(`Starting: ${START_COMMAND} (log: ${log})`);
-    const server = spawn('sh', ['-c', START_COMMAND], { cwd: ROOT, detached: true, stdio: ['ignore', out, out] });
+    const server = startProcessGroup(START_COMMAND, { stdio: ['ignore', out, out] });
     const stop = async () => {
         const left = await stopProcessGroup(server);
         claim.release();
         if (left.length) console.error(`stencil start was stopped, but something still answers on port ${left.join(' and ')}`);
     };
 
-    const deadline = Date.now() + timeout;
-    const waitUntilUp = async () => {
-        if (await isUp(READY_URL)) return;
-        if (server.exitCode !== null || Date.now() > deadline) {
-            await stop();
-            throw new Error(`stencil start didn't come up on ${LOCAL_URL}; see ${log}`);
-        }
-        await pause(1000);
-        await waitUntilUp();
-    };
-    await waitUntilUp();
+    try {
+        await waitForOwnServer(server, { timeout });
+    } catch (error) {
+        await stop();
+        throw new Error(`${error.message}; see ${log}`);
+    }
     try {
         await assertLocalServer();
     } catch (error) {
