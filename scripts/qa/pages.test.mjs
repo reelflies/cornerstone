@@ -1,17 +1,28 @@
 // What the pinned pages in scripts/qa/pages.mjs make the gates see: the status each pin
 // must return, which parts of a page the screenshot diffs mask, and what their stylesheet
-// hides or holds at a fixed height. And W0-8's several pins per page kind (kind@name keys),
-// with the baseline names they, the UI states and the overlays give.
+// hides or holds at a fixed height. And W0-8's render modes, each in its own block below:
+// several pins per page kind (kind@name keys), the baseline names they and the UI states and
+// overlays give, the UI states registry, the overlays and the custom layouts.
 //
 //   node --test scripts/qa/pages.test.mjs
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { checkScope, parseBaselinePath } from '../check-baseline-scope.mjs';
 import {
     CHANNELS, HIDDEN, PAGE_KEY, baselineName, expectedStatus, masksFor, pageKind, screenshotStyle,
 } from './pages.mjs';
-import { knownIssue } from './axe-known-issues.mjs';
+import { STATE_NAME, UI_STATES, statesFor } from './states.mjs';
+import {
+    OVERLAYS_DIR, OVERLAY_NAME, listOverlays, readOverlay,
+} from './overlays.mjs';
+import {
+    CUSTOM_LAYOUTS_FILE, PAGE_TYPES, customLayoutProblems, readCustomLayouts,
+} from './custom-layouts.mjs';
+import { ROOT } from './storefront.mjs';
+import { KNOWN_ISSUES, knownIssue } from './axe-known-issues.mjs';
 
 // The boxes channel 1's product page holds: its related products' carousels.
 const RELATED = '#tab-related .productCarousel';
@@ -219,6 +230,27 @@ describe('several pins per page kind (W0-8)', () => {
         assert.equal(knownIssue('list', 'category', { issues }), undefined);
         assert.equal(knownIssue('region', 'cart', { issues }), undefined);
     });
+
+    it('lets an axe known issue listed for a UI state cover the page only with that state open, and one listed for none cover it in every state', () => {
+        const issues = [
+            { rule: 'region', templates: ['category'], ticket: 25 },
+            {
+                rule: 'target-size', templates: ['category'], states: ['panel-open'], ticket: 28,
+            },
+        ];
+        assert.ok(knownIssue('region', 'category', { issues, state: 'panel-open' }));
+        assert.ok(knownIssue('target-size', 'category', { issues, state: 'panel-open' }));
+        assert.equal(knownIssue('target-size', 'category', { issues }), undefined, 'not on the closed page');
+        assert.equal(knownIssue('target-size', 'category', { issues, state: 'drawer-open' }), undefined);
+    });
+
+    it('lists only known axe issues that name a ticket, a reason, page kinds or pins, and UI states the registry has', () => {
+        for (const issue of KNOWN_ISSUES) {
+            assert.ok(issue.why && issue.ticket && issue.templates.length, issue.rule);
+            for (const key of issue.templates) assert.match(key, PAGE_KEY, `${issue.rule} ${key}`);
+            for (const state of issue.states || []) assert.ok(UI_STATES[state], `${issue.rule}: ${state}`);
+        }
+    });
 });
 
 describe('baseline names (W0-8)', () => {
@@ -270,5 +302,82 @@ describe('baseline names (W0-8)', () => {
         assert.throws(() => baselineName({ key: 'home', state: 'drawer open' }), /isn't a UI state name/);
         assert.throws(() => baselineName({ key: 'home', overlay: 'rise~off' }), /isn't an overlay name/);
         assert.throws(() => baselineName({ key: 'home~x' }), /isn't a page key/);
+    });
+});
+
+describe('UI states (W0-8)', () => {
+    const PROJECTS = ['phone-375', 'desktop-1280']; // playwright.config.mjs
+
+    it('names each state so its baselines keep the scope check\'s shape', () => {
+        for (const name of Object.keys(UI_STATES)) assert.match(name, STATE_NAME, name);
+    });
+
+    it('opens each state with a function, says what it is and which ticket owns it, and shoots it only at the config\'s projects', () => {
+        for (const [name, state] of Object.entries(UI_STATES)) {
+            assert.equal(typeof state.open, 'function', `${name} open`);
+            assert.ok(state.description, `${name} description`);
+            assert.match(String(state.ticket), /^\d+$/, `${name} ticket`);
+            assert.ok(state.projects.length && state.projects.every(project => PROJECTS.includes(project)), `${name} projects`);
+            assert.ok(state.pages.every(key => PAGE_KEY.test(key)), `${name} pages`);
+        }
+    });
+
+    it('holds the phone drawer and the desktop panel, on pages some channel pins', () => {
+        assert.deepEqual(UI_STATES['drawer-open'].projects, ['phone-375']);
+        assert.deepEqual(UI_STATES['panel-open'].projects, ['desktop-1280']);
+        const pinned = Object.values(CHANNELS).flatMap(({ pages }) => Object.keys(pages));
+        for (const name of ['drawer-open', 'panel-open']) {
+            assert.ok(UI_STATES[name].pages.some(key => pinned.includes(key)), `${name} is shot on a pinned page`);
+        }
+    });
+
+    it('lists the states a pin is shot in, by its whole key', () => {
+        const states = {
+            'drawer-open': { pages: ['home', 'product@5663'] },
+            'panel-open': { pages: ['category'] },
+        };
+        assert.deepEqual(statesFor('home', states).map(([name]) => name), ['drawer-open']);
+        assert.deepEqual(statesFor('product@5663', states).map(([name]) => name), ['drawer-open']);
+        assert.deepEqual(statesFor('product', states), []);
+        assert.deepEqual(statesFor('category@alpha', states), []);
+    });
+});
+
+describe('overlays (W0-8)', () => {
+    const config = JSON.parse(fs.readFileSync(path.join(ROOT, 'config.json'), 'utf8'));
+
+    it('keeps each overlay as a JSON file in scripts/qa/overlays/, named so its baselines keep the scope check\'s shape', () => {
+        const names = listOverlays();
+        assert.ok(names.length, 'there are overlays');
+        for (const name of names) {
+            assert.match(name, OVERLAY_NAME, name);
+            const overlay = readOverlay(name);
+            assert.ok(overlay.description, `${name} says what it renders`);
+            assert.ok(Object.keys(overlay.settings).length, `${name} changes a setting`);
+        }
+        assert.ok(fs.existsSync(OVERLAYS_DIR));
+    });
+
+    it('has the switch-off and empty-id overlays waves 2 and 3 render', () => {
+        assert.deepEqual(readOverlay('rf_rise-off').settings, { rf_rise: false });
+        assert.deepEqual(readOverlay('menu-ids-empty').settings, { rf_menu_type_ids: '', rf_menu_species_root_id: '' });
+        assert.deepEqual(readOverlay('species-empty').settings, { rf_menu_species_root_id: '' });
+    });
+
+    it('never patches a setting with a value of another type than config.json\'s', () => {
+        for (const name of listOverlays()) {
+            for (const [key, value] of Object.entries(readOverlay(name).settings)) {
+                if (key in config.settings) assert.equal(typeof value, typeof config.settings[key], `${name} ${key}`);
+            }
+        }
+    });
+});
+
+describe('custom layouts (W0-8)', () => {
+    it('commits scripts/qa/custom-layouts.json with stencil-cli\'s four custom page types, each mapping a template that exists', () => {
+        assert.ok(fs.existsSync(path.join(ROOT, CUSTOM_LAYOUTS_FILE)));
+        const layouts = readCustomLayouts(ROOT);
+        assert.deepEqual(Object.keys(layouts).sort(), [...PAGE_TYPES].sort());
+        assert.deepEqual(customLayoutProblems(layouts, { dir: ROOT }), []);
     });
 });

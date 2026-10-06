@@ -347,10 +347,10 @@ describe('a port pair per worktree', () => {
         }
     });
 
-    it('starts stencil start on the port, so its server answers on the next one', () => {
+    it('starts stencil start on the port, so its server answers on the next one, after merging the custom layouts (W0-8)', () => {
         assert.equal(
             startCommand({ channel: '1895766', variation: 'ReelFlies CA', port: 3400 }),
-            'rm -rf assets/dist && npx stencil start -c 1895766 -v "ReelFlies CA" -p 3400',
+            'node scripts/qa/custom-layouts.mjs && rm -rf assets/dist && npx stencil start -c 1895766 -v "ReelFlies CA" -p 3400',
         );
     });
 
@@ -519,5 +519,46 @@ describe('trusting only the server a gate started', () => {
         } finally {
             server.kill('SIGKILL');
         }
+    });
+});
+
+describe('an overlay run (W0-8)', () => {
+    it('takes its own port pair, QA_PORT + 10, so it never shares a server with the worktree\'s plain runs', () => {
+        assert.equal(qaPort({ QA_PORT: '3400', QA_OVERLAY: 'rf_rise-off' }), 3410);
+        assert.equal(qaPort({ QA_OVERLAY: 'rf_rise-off' }), 3310);
+        assert.equal(qaPort({ QA_PORT: '3400', QA_OVERLAY: '' }), 3400);
+    });
+
+    it('refuses a QA_PORT whose overlay pair isn\'t a port', () => {
+        assert.equal(qaPortProblem('65524', { overlay: true }), null);
+        assert.match(qaPortProblem('65525', { overlay: true }), /an overlay run takes QA_PORT \+ 10 and the port after it/);
+        assert.equal(qaPortProblem('65525'), null);
+    });
+
+    // What `?debug=context` shows of an overlay: the marker setting the overlay writes into
+    // config.json (overlays.mjs), among theme_settings.
+    const marked = (overlay, context = served(1895766, 1)) => ({ ...context, theme_settings: { rf_qa_overlay: overlay } });
+
+    it('trusts a server only when it renders the run\'s overlay', () => {
+        assert.deepEqual(serverProblems(marked('rf_rise-off'), {
+            channel: '1895766', variation: 'ReelFlies CA', config, overlay: 'rf_rise-off',
+        }), []);
+        assert.deepEqual(serverProblems(served(1895766, 1), {
+            channel: '1895766', variation: 'ReelFlies CA', config, overlay: 'rf_rise-off',
+        }), ['renders no overlay, not QA_OVERLAY "rf_rise-off"']);
+        assert.deepEqual(serverProblems(marked('menu-ids-empty'), {
+            channel: '1895766', variation: 'ReelFlies CA', config, overlay: 'rf_rise-off',
+        }), ['renders the overlay "menu-ids-empty", not QA_OVERLAY "rf_rise-off"']);
+    });
+
+    it('keeps a plain run off a server that renders an overlay, so an overlay\'s render never becomes a plain baseline', () => {
+        assert.deepEqual(serverProblems(marked('rf_rise-off'), {
+            channel: '1895766', variation: 'ReelFlies CA', config, overlay: '',
+        }), ['renders the overlay "rf_rise-off", and this run has none']);
+    });
+
+    it('says why it refuses a busy port: it starts its own server, as a release does', () => {
+        assert.match(busyServerMessage([3410], { overlay: 'rf_rise-off' }), /^The overlay rf_rise-off renders on a stencil start of its own, and something already answers on port 3410\. Stop that server first/);
+        assert.match(busyServerMessage([3300]), /^QA_FRESH_SERVER=1, and something already answers on port 3300/);
     });
 });

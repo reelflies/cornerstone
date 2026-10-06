@@ -76,6 +76,8 @@ async function settle(page) {
 
 test.describe('reference screens for the review pages', () => {
     test.skip(!SOURCE && !sourceProblem, 'the reference page (plan/design/reelflies-reference.html) isn\'t on this machine; QA_REFERENCE_HTML can point at a copy');
+    // The reference design doesn't change with an overlay (W0-8), and the plain run shoots it.
+    test.skip(Boolean(process.env.QA_OVERLAY), 'the reference screens are shot by the plain run, not under an overlay');
 
     test('shoots every storefront screen of the reference design', async ({ page }, testInfo) => {
         test.setTimeout(BUDGET_MS + 30000);

@@ -13,6 +13,7 @@
 //   (retry.mjs). A channel must pin a product and a category page (RAW_HTML_REQUIRED; a
 //   kind@name pin counts), or give the reason it can't yet in notPinnedYet, which is reported
 //   as a warning.
+// - With QA_OVERLAY, the pages render with that overlay (W0-8; overlays.mjs).
 // - Host: QA_BASE_URL, or else a local `stencil start` (scripts/qa/storefront.mjs),
 //   reused when one is running (it must render QA_CHANNEL and QA_VARIATION), and started
 //   and stopped here when not. With QA_FRESH_SERVER=1 it is always started here.
@@ -33,7 +34,7 @@ import {
 } from './pages.mjs';
 import { fetchWithRetries } from './retry.mjs';
 import {
-    BASE_URL, HEADERS, IS_LOCAL, PREVIEW_COOKIE, QA_CHANNEL, useStorefront,
+    BASE_URL, HEADERS, IS_LOCAL, PREVIEW_COOKIE, QA_CHANNEL, QA_OVERLAY, useStorefront,
 } from './storefront.mjs';
 
 const ASSERTIONS_DIR = fileURLToPath(new URL('raw-html/assertions/', import.meta.url));
@@ -145,7 +146,7 @@ async function main() {
         const {
             fetch: pages, missing, waiting, stale,
         } = pagesToFetch(pinnedChannel(QA_CHANNEL));
-        console.log(`Raw HTML on channel ${QA_CHANNEL} at ${storefront.baseUrl}: ${pages.length} pages, ${assertions.length} assertions; no JavaScript runs, so no analytics tag loads`);
+        console.log(`Raw HTML on channel ${QA_CHANNEL}${QA_OVERLAY ? ` with the overlay ${QA_OVERLAY}` : ''} at ${storefront.baseUrl}: ${pages.length} pages, ${assertions.length} assertions; no JavaScript runs, so no analytics tag loads`);
         waiting.forEach(({ kind, reason }) => warn(`no ${kind} page is checked on channel ${QA_CHANNEL}: ${reason} (notPinnedYet in scripts/qa/pages.mjs)`));
         stale.forEach(kind => warn(`channel ${QA_CHANNEL} pins a ${kind} page now: delete its notPinnedYet entry in scripts/qa/pages.mjs`));
         missing.forEach(kind => fail(`no ${kind} page is pinned for channel ${QA_CHANNEL}: pin one in scripts/qa/pages.mjs, or say why not yet in its notPinnedYet`));
