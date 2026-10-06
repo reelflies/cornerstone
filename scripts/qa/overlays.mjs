@@ -166,10 +166,11 @@ export function snapshotCommit(checkout) {
     }
 }
 
-// The registered worktrees of the checkout's repo.
-const worktreesOf = checkout => git(checkout, ['worktree', 'list', '--porcelain']).stdout.split('\n')
-    .filter(line => line.startsWith('worktree '))
-    .map(line => line.slice('worktree '.length));
+// The registered worktrees of the checkout's repo, as { dir, detached }.
+const worktreesOf = checkout => git(checkout, ['worktree', 'list', '--porcelain']).stdout.split('\n\n')
+    .map(record => record.split('\n'))
+    .filter(lines => lines[0].startsWith('worktree '))
+    .map(lines => ({ dir: lines[0].slice('worktree '.length), detached: lines.includes('detached') }));
 
 // Removes one overlay worktree: its registration and its folder, links unlinked and never
 // followed (git and fs.rmSync both remove a link itself, not what it points at).
@@ -179,14 +180,18 @@ function removeWorktree(checkout, dir) {
     git(checkout, ['worktree', 'prune'], { allowFail: true });
 }
 
-const prefixFor = (port, name) => `${OVERLAY_PREFIX}${port}-${name}-`;
+// How the folder of an overlay's worktree on `port` begins (the run's pid and time follow).
+export const overlayCheckoutPrefix = (port, name) => `${OVERLAY_PREFIX}${port}-${name}-`;
 
-// Removes the overlay worktrees a stopped run left on `port`, in `scratch`. The caller holds
-// that port pair's lock, so no running gate uses them.
-export function removeStaleOverlayCheckouts({
-    checkout, port, scratch, log = console.log,
-}) {
-    const stale = worktreesOf(checkout).filter(dir => path.dirname(dir) === fs.realpathSync(scratch) && path.basename(dir).startsWith(`${OVERLAY_PREFIX}${port}-`));
+// Removes the overlay worktrees a stopped run left on `port`. The caller holds that port pair's
+// lock, so no running gate uses them. They are found by name among the repo's worktrees,
+// wherever they are, because each agent may point QA_SCRATCH_DIR at a scratch folder of its
+// own. Only a detached one counts, as createOverlayCheckout makes them: a worktree on a branch
+// is someone's checkout, whatever its folder is called.
+export function removeStaleOverlayCheckouts({ checkout, port, log = console.log }) {
+    const stale = worktreesOf(checkout)
+        .filter(({ dir, detached }) => detached && path.basename(dir).startsWith(`${OVERLAY_PREFIX}${port}-`))
+        .map(({ dir }) => dir);
     for (const dir of stale) {
         log(`STALE    removing the overlay worktree a stopped run left on port ${port}: ${dir}`);
         removeWorktree(checkout, dir);
@@ -218,11 +223,9 @@ export function createOverlayCheckout({
     if (problems.length) throw new Error(problems.join('; '));
 
     fs.mkdirSync(scratch, { recursive: true });
-    removeStaleOverlayCheckouts({
-        checkout, port, scratch, log,
-    });
+    removeStaleOverlayCheckouts({ checkout, port, log });
     const commit = snapshotCommit(checkout);
-    const dir = path.join(fs.realpathSync(scratch), `${prefixFor(port, overlay.name)}${process.pid}-${Date.now().toString(36)}`);
+    const dir = path.join(fs.realpathSync(scratch), `${overlayCheckoutPrefix(port, overlay.name)}${process.pid}-${Date.now().toString(36)}`);
     git(checkout, ['worktree', 'add', '--quiet', '--detach', dir, commit]);
     let removed = false;
     const remove = () => {

@@ -14,7 +14,8 @@
 //   it was.
 // - It is refused from the main clone, whose node_modules the release's npm ci replaces
 //   mid-run, and with QA_FRESH_SERVER=1 or QA_BASE_URL.
-// - A worktree a stopped run left on the same port is removed first.
+// - A worktree a stopped run left on the same port is removed first, whichever scratch folder
+//   it is in, and a worktree on a branch never is.
 //
 // Each case works in a git repo of its own in the temp folder; the secrets file there is a
 // stand-in, and nothing here reads the real one.
@@ -247,6 +248,42 @@ describe('the throwaway worktree', () => {
         } finally {
             run.remove();
             other.remove();
+        }
+    });
+
+    // Each agent may point QA_SCRATCH_DIR at a scratch folder of its own, so a worktree a killed
+    // run left is found wherever it is: by its name among the repo's worktrees.
+    it('removes a worktree a stopped run left on the same port in another scratch folder', () => {
+        const { main, checkout, scratch } = repo();
+        const left = createOverlayCheckout({
+            checkout, overlay: OVERLAY, port: 3410, scratch: tempDir('rf-overlay-other-scratch-'), log: quiet,
+        });
+        const lines = [];
+        const run = createOverlayCheckout({
+            checkout, overlay: OVERLAY, port: 3410, scratch, log: line => lines.push(line),
+        });
+        try {
+            assert.ok(!fs.existsSync(left.dir), 'the stopped run\'s worktree is gone');
+            assert.ok(!registered(main).includes(left.dir), 'and no longer registered');
+            assert.ok(lines.some(line => line.startsWith('STALE') && line.includes(left.dir)), lines.join('\n'));
+        } finally {
+            run.remove();
+        }
+    });
+
+    it('never removes a worktree on a branch, whatever its folder is called', () => {
+        const { main, checkout, scratch } = repo();
+        const named = path.join(tempDir('rf-overlay-named-'), 'rf-qa-overlay-3410-rf_rise-off-not-an-overlay');
+        git(main, 'worktree', 'add', '-q', named, '-b', 'w0/9-named-like-an-overlay');
+        const run = createOverlayCheckout({
+            checkout, overlay: OVERLAY, port: 3410, scratch, log: quiet,
+        });
+        try {
+            assert.ok(fs.existsSync(named), 'its folder is kept');
+            assert.ok(registered(main).includes(named), 'and still registered');
+        } finally {
+            run.remove();
+            git(main, 'worktree', 'remove', '--force', named);
         }
     });
 
