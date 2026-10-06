@@ -232,7 +232,7 @@ export function portWarning({ env = process.env, checkout = ROOT } = {}) {
 // Then it plans with the port its own (`plan`, planLocalServer by default, which throws on
 // 'refuse'). Resolves to { plan, release }; both locks also go when the process exits.
 export async function claimLocalServer({
-    port = QA_PORT, plan = () => planLocalServer(), root = lockRoot(), checkout = ROOT, log = console.log, pollMs, timeoutMs,
+    port = QA_PORT, plan = () => planLocalServer(), root = lockRoot(), checkout = path.resolve(ROOT), log = console.log, pollMs, timeoutMs,
 } = {}) {
     const warning = portWarning({ checkout });
     if (warning) log(warning);
