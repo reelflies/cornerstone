@@ -1,0 +1,43 @@
+# The baseline-scope check (W0-13; plan section 6.6): a PR may change a screenshot baseline
+# under scripts/qa/baselines/ only if its body's "Baselines:" line declares that page kind or
+# overlay. scripts/merge.sh refuses a PR whose "baseline-scope" check didn't pass on its head.
+#
+# It is its own workflow, not a step in reelflies-checks.yml, because it also runs when the PR
+# body is edited ("edited"), so fixing the Baselines line reruns it without a new push. It
+# reads the body from the event through an environment variable, never inline in the script,
+# and needs no dependencies or secrets.
+
+name: Baseline scope
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: baseline-scope-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  baseline-scope:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # the diff runs from the merge base
+
+    - name: Use Node.js from .nvmrc
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+
+    - name: Every changed baseline is declared on the Baselines line
+      env:
+        PR_BODY: ${{ github.event.pull_request.body }}
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: node scripts/check-baseline-scope.mjs --base "$BASE_SHA" --head "$HEAD_SHA"
