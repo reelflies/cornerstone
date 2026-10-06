@@ -11,7 +11,7 @@ Every `stencil push` creates a theme whose Theme Styles start from `config.json`
   - A dry run works with the "local development only" Stencil-CLI token.
   - A real push needs a token at the "publish theme" level.
 - A real release needs a clean, committed tree, and records the commit's full sha. A dry run may run on a dirty tree: it warns, and the bundle name ends in `-dirty`.
-- A real push needs Shaun's go-ahead (HANDOFF, "Read-only on BigCommerce until Shaun approves").
+- A real push needs Shaun's go-ahead (HANDOFF, "Rules for every session"), except an agent's push to 1895766 with `--confirm-nonprod` from `master` at `origin/master`'s tip, which his answers of 2026-10-06 allow within the limits in [Agent pushes](#agent-pushes---confirm-nonprod).
 
 ## Dry run
 
@@ -134,7 +134,7 @@ Step 5 asks a person to type the channel id, and stops when stdin isn't a termin
 - **The first real agent push carries no theme change.** It pushes `master` as it is, before ticket 25's push, so the first push without the typed prompt and the first repeat push of the same name and version aren't tried together with W0-2's first real use and 25's changes.
   - The orchestrator runs it dry with `--confirm-nonprod 1895766`, then for real, and puts both outputs on the next review page. It doesn't wait for Shaun (his answers of 2026-10-06 in `plan/build-pipeline.md`).
   - Its `RELEASES.md` entry's `New uuid` line records whether the push made a new theme uuid or a new version of the theme the channel ran before it (decision 9). It compares step 5's capture with verify's.
-  - The review page asks Shaun whether that uuid previews on ReelFlies.com (1855224), and with which variation (W0-3).
+  - The review page asks Shaun whether that uuid previews on ReelFlies.com (1855224), and with which variation. The entry is written at the push, before he answers, so the orchestrator records his answer as a dated comment on ticket 05, where W0-3 reads it: if it previews there, W0-3 needs no upload mode.
   - If Claude Code's auto mode still blocks the command, Shaun runs that checkpoint's push in his terminal.
 
 ### The release calendar
