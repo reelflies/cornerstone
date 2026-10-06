@@ -1,0 +1,14 @@
+{{!-- The widget element-shot self-test (scripts/qa/widget-screens.spec.mjs, W0-9). Not a store
+      widget: it lives outside widgets/, so no sync ever uploads it. It uses a theme button,
+      so the shot shows the theme CSS, and a product photo from a GraphQL fixture, served
+      from fixtures/files/ instead of the store's CDN. --}}
+<section class="rf-selftest" style="padding: 16px; background: {{background}};">
+    <h2 class="page-heading">{{heading}}</h2>
+    {{#with _.data.site.product}}
+    <figure style="margin: 0 0 16px;">
+        <img src="{{defaultImage.url}}" width="320" height="160" alt="{{name}}" style="display: block; max-width: 100%; height: auto;">
+        <figcaption>{{name}}, {{prices.price.value}} {{prices.price.currencyCode}}</figcaption>
+    </figure>
+    {{/with}}
+    <a class="button button--primary" href="{{link}}">{{button_text}}</a>
+</section>

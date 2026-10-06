@@ -1,0 +1,19 @@
+{{!--
+    The page a widget element shot is taken on (W0-9; scripts/qa/render/widget-page.mjs). It
+    stands in for templates/layout/base.html: the page template's blocks render inside the
+    theme's own components/common/body, so the widget's region sits in the same boxes as on
+    the storefront. It loads the theme's fonts and compiled CSS, and no header, footer or script.
+--~}}
+<!DOCTYPE html>
+<html class="js" lang="{{locale_name}}">
+    <head>
+        <meta charset="utf-8">
+        <title>Widget fixture</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        {{getFontsCollection font-display='block'}}
+        <link data-stencil-stylesheet href="/assets/css/theme.css" rel="stylesheet">
+    </head>
+    <body>
+        {{> components/common/body}}
+    </body>
+</html>
