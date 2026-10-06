@@ -55,3 +55,10 @@ test('W0-1: ReelFlies_CA is non-production while it is prelaunch, takes --confir
     assert.deepEqual(target.confirmation, [CONFIRM_TYPED, CONFIRM_NONPROD]);
     assert.equal(target.liveFromFlip, true);
 });
+
+test('W0-1: 1895766 is the only target that takes --confirm-nonprod, so a new non-production target is a reviewed change to this test', () => {
+    const nonprod = Object.entries(RELEASE_TARGETS).filter(([, target]) => target.confirmation.includes(CONFIRM_NONPROD)).map(([id]) => Number(id));
+    assert.deepEqual(nonprod, [1895766]);
+    const notProduction = Object.entries(RELEASE_TARGETS).filter(([, target]) => target.production === false).map(([id]) => Number(id));
+    assert.deepEqual(notProduction, [1895766]);
+});

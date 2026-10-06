@@ -4,7 +4,7 @@
 //
 //   import {
 //       setupProblems, themeCapProblems, realReleaseStops, confirmChannel, pushGate,
-//       confirmNonprodRefusals, pairedChannel1Release, pushConfirmation,
+//       confirmNonprodRefusals, pairedChannel1Release, pushConfirmation, LIVE_CHANNELS,
 //   } from './release-checks.mjs';
 //
 // setupProblems and themeCapProblems return one line per problem. realReleaseStops turns them into
@@ -103,8 +103,15 @@ export async function pushGate({
 
 // --- W0-1: --confirm-nonprod ----------------------------------------------------------------
 
+// The storefronts shoppers use, by channel id. --confirm-nonprod is refused on them whatever
+// RELEASE_TARGETS declares, so one wrong `production` flag in a future entry (ticket 53's channel-1
+// target copied from 1895766's, say) can't open them to agents: their pushes stay Shaun's, typed
+// (HANDOFF, "Rules for every session"; ticket 56). 1895766 joins them at the Flip (liveFromFlip).
+export const LIVE_CHANNELS = Object.freeze({ 1: 'live reelflies.ca', 1855224: 'reelflies.com' });
+
+const liveChannel = target => LIVE_CHANNELS[Number(target.id)];
 // A target that doesn't say `production: false` counts as production: deny by default.
-const isProduction = target => target.production !== false;
+const isProduction = target => target.production !== false || Boolean(liveChannel(target));
 // Whether the release was given --confirm-nonprod (a state file without the key counts as typed).
 export const hasConfirmNonprod = options => options.confirmNonprod !== null && options.confirmNonprod !== undefined;
 const flipReached = phase => Boolean(phase.milestones) && phase.date >= phase.milestones['T-0'];
@@ -113,7 +120,8 @@ const flipReached = phase => Boolean(phase.milestones) && phase.date >= phase.mi
 // given). release-args.mjs refuses a value that isn't --channel and the combinations with
 // --overwrite-live and --first-release; they are checked again here, so step 5 never relies on
 // the arguments alone. The rest needs the target and the calendar's phase for today:
-//   - a production target is confirmed only by typing (channel 1, today and after ticket 53)
+//   - channels 1 and 1855224 are confirmed only by typing, by their id, whatever the table says
+//   - any other production target is confirmed only by typing too
 //   - from T-21 every push is typed (ticket 57: P1 fixes only, and Shaun decides what is P1)
 //   - from the Flip, a target that becomes live reelflies.ca then (1895766) refuses it whatever its
 //     `production` flag, as a second lock beside ticket 57's Flip-day change
@@ -125,7 +133,9 @@ export function confirmNonprodRefusals({ options, target, phase }) {
     }
     if (options.overwriteLive) reasons.push('--confirm-nonprod can\'t be combined with --overwrite-live: that choice stays with a person');
     if (options.firstRelease) reasons.push('--confirm-nonprod can\'t be combined with --first-release: that choice stays with a person');
-    if (isProduction(target)) {
+    if (liveChannel(target)) {
+        reasons.push(`channel ${target.id} is ${liveChannel(target)}: its push is confirmed only by typing the channel id at the terminal, whatever release-targets.mjs declares`);
+    } else if (isProduction(target)) {
         reasons.push(`channel ${target.id} (${target.name}) is a production target: its push is confirmed only by typing the channel id at the terminal`);
     } else if (!(target.confirmation || []).includes(CONFIRM_NONPROD)) {
         reasons.push(`channel ${target.id} (${target.name}) takes only the typed confirmation`);

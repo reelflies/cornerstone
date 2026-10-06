@@ -100,6 +100,7 @@ The targets are in `scripts/release-targets.mjs`. Any channel that isn't listed 
 | 1895766 | ReelFlies_CA (prelaunch) | ReelFlies CA | `config.ca.live.json` | no, until the Flip | typed, or `--confirm-nonprod 1895766` |
 
 - Each target declares `production` and its `confirmation` modes. A production target is typed only, and a target that doesn't declare `production: false` counts as production.
+- Channels 1 and 1855224 are typed only by their id, whatever their entry declares (`LIVE_CHANNELS` in `release-checks.mjs`). So a channel-1 entry copied from 1895766's by mistake, with `production: false`, still refuses `--confirm-nonprod`. A test also holds the targets that take the flag to exactly 1895766.
 - 1895766 also declares `liveFromFlip`: it becomes live reelflies.ca at the Flip, so `--confirm-nonprod` is refused there from the Flip whatever its `production` value. Ticket 57 marks it `production: true` on Flip day, which ends agent pushes there twice over.
 
 - **Channel 1 (live reelflies.ca)** is refused. It is pushed only through ticket 53's guarded channel-1 target, which will add its own entry, `production: true` and typed only.
@@ -116,7 +117,7 @@ Step 5 asks a person to type the channel id, and stops when stdin isn't a termin
 
 - **It is taken only when** the target is non-production and lists the non-interactive mode (today only 1895766), and the flag's value equals `--channel`. Everything else in the release runs as without it: step 1's diff, the guard, the clean build, the checks, the bundle, the storefront gates, and step 5's re-capture and checks of the commit, the tree, the zip's sha256, the live theme and variation, and the saved and published Theme Styles.
 - **It is refused** before anything runs:
-  - on a production target, so channel 1 keeps its typed prompt today and after ticket 53
+  - on channels 1 and 1855224 by their id, whatever `release-targets.mjs` declares, and on any other production target, so channel 1 keeps its typed prompt today and after ticket 53
   - on a channel that isn't a target (1855224)
   - with `--overwrite-live` or `--first-release`, because those choices stay with a person
   - while the release calendar refuses it (below)

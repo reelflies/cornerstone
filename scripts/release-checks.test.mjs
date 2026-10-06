@@ -7,7 +7,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PassThrough } from 'node:stream';
 import {
-    confirmChannel, confirmNonprodRefusals, pairedChannel1Release, pushConfirmation, pushGate, realReleaseStops, setupProblems, themeCapProblems,
+    confirmChannel, confirmNonprodRefusals, LIVE_CHANNELS, pairedChannel1Release, pushConfirmation, pushGate, realReleaseStops,
+    setupProblems, themeCapProblems,
 } from './release-checks.mjs';
 import { parseCalendar, phaseOn } from './lib/release-calendar.mjs';
 
@@ -224,10 +225,41 @@ test('W0-1: from the Flip, the flag is refused on 1895766 whatever its productio
 
 test('W0-1: a production target is refused, so channel 1 keeps its typed prompt today and after ticket 53', () => {
     const reasons = confirmNonprodRefusals({ options: agent({ channel: 1, confirmNonprod: 1 }), target: CHANNEL_1, phase: on('2026-10-06') });
-    assert.deepEqual(reasons, ['channel 1 (reelflies.ca) is a production target: its push is confirmed only by typing the channel id at the terminal']);
+    assert.deepEqual(reasons, ['channel 1 is live reelflies.ca: its push is confirmed only by typing the channel id at the terminal, whatever release-targets.mjs declares']);
     // A production entry that lists the non-production mode by mistake is still refused.
-    const mistaken = { ...CHANNEL_1, confirmation: ['typed', 'nonprod'] };
-    assert.match(confirmNonprodRefusals({ options: agent({ channel: 1, confirmNonprod: 1 }), target: mistaken, phase: on('2026-10-06') })[0], /production target/);
+    const mistaken = { ...CHANNEL_1, id: 8, confirmation: ['typed', 'nonprod'] };
+    assert.match(confirmNonprodRefusals({ options: agent({ channel: 8, confirmNonprod: 8 }), target: mistaken, phase: on('2026-10-06') })[0], /production target/);
+});
+
+test('W0-1: the live storefronts are typed only by their channel id: channels 1 and 1855224, and no other', () => {
+    assert.deepEqual(Object.keys(LIVE_CHANNELS).map(Number).sort((a, b) => a - b), [1, 1855224]);
+});
+
+// One wrong boolean in a future target (ticket 53's channel-1 entry copied from 1895766's, say)
+// must not open a live storefront to agents: the flag is refused by channel id, whatever the entry says.
+const LIVE_COPIES = [[1, 'reelflies.ca'], [1855224, 'reelflies.com']].map(([id, name]) => ({
+    ...CA_TARGET, id, name, liveFromFlip: false,
+}));
+
+test('W0-1: channels 1 and 1855224 refuse the flag by id, even in an entry copied from 1895766\'s with production: false', () => {
+    const unset = phaseOn(parseCalendar({ flip: null, status: 'provisional', source: 'ticket 10: Flip date after ticket 26' }), '2026-10-06');
+    for (const copied of LIVE_COPIES) {
+        for (const phase of [unset, on('2026-10-06'), on('2027-01-25'), on('2027-02-01')]) {
+            const reasons = confirmNonprodRefusals({ options: agent({ channel: copied.id, confirmNonprod: copied.id }), target: copied, phase });
+            assert.equal(reasons.length, 1, `channel ${copied.id} on ${phase.date} (${phase.phase}): ${reasons.join('; ')}`);
+            assert.match(reasons[0], new RegExp(`^channel ${copied.id} is (live reelflies\\.ca|reelflies\\.com): its push is confirmed only by typing the channel id at the terminal, whatever release-targets\\.mjs declares$`));
+        }
+        assert.equal(pairedChannel1Release({ target: copied, phase: on('2027-02-03') }), null, `channel ${copied.id} never queues a paired release`);
+    }
+});
+
+test('W0-1: step 5 refuses the flag on channels 1 and 1855224 by id too, before anything is captured', async () => {
+    await Promise.all(LIVE_COPIES.map(copied => assert.rejects(
+        pushConfirmation({
+            options: agent({ channel: copied.id, confirmNonprod: copied.id }), target: copied, phase: () => on('2026-10-06'), typed: async () => {},
+        })(),
+        new RegExp(`--confirm-nonprod refused at step 5: channel ${copied.id} is`),
+    )));
 });
 
 test('W0-1: a target that doesn\'t declare production: false counts as production (deny by default)', () => {
