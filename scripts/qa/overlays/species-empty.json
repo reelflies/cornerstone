@@ -1,0 +1,7 @@
+{
+    "description": "The Species root id empty, as on tree 1: the grouped menu with no Species group, and nothing else changed (ticket 28)",
+    "ticket": "28",
+    "settings": {
+        "rf_menu_species_root_id": ""
+    }
+}
