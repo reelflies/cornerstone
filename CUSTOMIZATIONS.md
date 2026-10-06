@@ -15,7 +15,8 @@ This repo is Cornerstone (`upstream`, bigcommerce/cornerstone) plus ReelFlies co
 | Hero widget template and schema (stored in BigCommerce) | `widgets/` |
 | Release, check and generator tooling (never bundled) | `scripts/` |
 | Decisions | `docs/adr/` |
-| Operator guides, such as [releasing](docs/releasing.md) | `docs/` |
+| Operator guides, such as [releasing](docs/releasing.md) and [guardrails](docs/guardrails.md) | `docs/` |
+| Claude Code permission rules: a draft until Shaun turns them on ([permissions](docs/permissions.md)) | `.claude/` |
 
 - **New theme settings** go in one block at the end of `schema.json`, `schemaTranslations.json` and the `settings` object in `config.json`.
 - **ReelFlies defaults** may change the *values* of existing `config.json` settings, which is how Theme Styles defaults are set. The `variations` array belongs to ReelFlies.
@@ -48,7 +49,7 @@ This repo is Cornerstone (`upstream`, bigcommerce/cornerstone) plus ReelFlies co
 | `assets/js/theme/global.js` | Lines 12 and 25: imports and starts `reelflies/lazy-quick-view` instead of `global/quick-view` | Quick view, ProductDetails and reviews load on the first Quick view click, as `theme-bundle.chunk.quick-view.js` plus three chunks shared with the page classes (about 64 KB raw and 21 KB gzip in all). That takes main.js from 307,607 B to under the 300 KiB limit | 16 |
 | `package.json`, `package-lock.json` | `@playwright/test` 1.59.1 and `@axe-core/playwright` 4.10.2 as exact devDependencies; `qa:axe`, `qa:screens`, `qa:quick-view`, `qa:raw-html` and `qa:prepush` scripts | The storefront gates in `scripts/qa/`. Playwright 1.59.1 uses Chromium build 1217; `@axe-core/playwright` 4.10.2 uses the axe-core 4.10.3 already in the lockfile, the same engine as Lighthouse's audit | 16 |
 
-New ReelFlies files in upstream folders: `.github/workflows/reelflies-checks.yml`, `.gitleaksignore`, and `RELEASES.md` at the repo root (the release log, written by `scripts/release.sh`, and the Switch toggles log; tickets 05 and 15). `stencil bundle` zips only `README.md` and `CHANGELOG.md` from the root's Markdown files, so `RELEASES.md` never ships.
+New ReelFlies files in upstream folders: `.github/workflows/reelflies-checks.yml`, `.github/workflows/reelflies-baseline-scope.yml` (W0-13), `.gitleaksignore`, and `RELEASES.md` at the repo root (the release log, written by `scripts/release.sh`, and the Switch toggles log; tickets 05 and 15). `stencil bundle` zips only `README.md` and `CHANGELOG.md` from the root's Markdown files, so `RELEASES.md` never ships.
 
 `meta/desktop_bold.png`, `mobile_bold.png`, `desktop_warm.png` and `mobile_warm.png` are now unused but still ship in every bundle (about 6 MB). Delete them, and point the variations at their own screenshots, once the skin has screenshots.
 
