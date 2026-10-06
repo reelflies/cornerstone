@@ -126,9 +126,23 @@ describe('the whitelisted helpers', () => {
         });
     });
 
+    it('a misspelled helper called with hash arguments only fails the render too', async () => {
+        await assert.rejects(partial('rf-render-unknown-hash-helper', {}), error => {
+            assert.match(error.message, /\{\{regoin\}\}/);
+            assert.match(error.message, /components\/reelflies\/rf-render-unknown-hash-helper/);
+            return true;
+        });
+    });
+
+    it('a plain {{name}} that matches nothing still renders empty: that is a missing value, not a helper', async () => {
+        const name = 'components/reelflies/rf-render-missing-value';
+        assert.equal(await renderPartial(name, {}, { overrides: { [name]: '<p>[{{no_such_value}}]</p>' } }), '<p>[]</p>');
+    });
+
     it('with strict: false, an unknown helper renders nothing, as on the store', async () => {
         const rendered = await partial('rf-render-unknown-helper', fixture('card.json'), { strict: false });
         assert.match(rendered, /<p><\/p>/);
+        assert.match(await partial('rf-render-unknown-hash-helper', {}, { strict: false }), /<p><\/p>/);
     });
 });
 
@@ -195,6 +209,55 @@ describe('a widget template rendered from fixture JSON', () => {
 
     it('fails on a widget that has no template.html, naming the folder', async () => {
         await assert.rejects(renderWidget('rf-render-nothing', {}, { root: WIDGETS }), /rf-render-nothing\/template\.html/);
+    });
+});
+
+describe('a widget template\'s helpers', () => {
+    // A widgets folder holding one widget, `w`, with this template.
+    const widgetWith = source => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-widgets-'));
+        tempDirs.push(root);
+        fs.mkdirSync(path.join(root, 'w'));
+        fs.writeFileSync(path.join(root, 'w/template.html'), source);
+        return root;
+    };
+    const render = (source, options = {}) => renderWidget('w', { configuration: { name: 'Parachute Adams' } }, { root: widgetWith(source), ...options });
+
+    it('fail the render on a helper the store doesn\'t have, naming the helper and the template', async () => {
+        await assert.rejects(render('<p>{{shout name}}</p>'), error => {
+            assert.match(error.message, /\{\{shout\}\}/);
+            assert.match(error.message, /w\/template\.html/);
+            return true;
+        });
+    });
+
+    it('fail the render on a misspelled helper called with hash arguments only', async () => {
+        await assert.rejects(render('<p>{{regoin name="home_below_menu"}}</p>'), /\{\{regoin\}\}/);
+    });
+
+    for (const [helper, call] of [
+        ['lang', '{{lang "common.error"}}'],
+        ['langJson', '{{{langJson "common"}}}'],
+        ['inject', '{{inject "name" name}}'],
+        ['jsContext', '{{jsContext}}'],
+        ['region', '{{{region name="home_below_menu"}}}'],
+    ]) {
+        it(`fail the render on ${helper}, which reads the theme's page context that a widget template doesn't get`, async () => {
+            await assert.rejects(render(`<p>${call}</p>`), error => {
+                assert.match(error.message, new RegExp(`\\{\\{${helper}\\}\\}`));
+                assert.match(error.message, /widget_configuration/);
+                assert.match(error.message, /w\/template\.html/);
+                return true;
+            });
+        });
+    }
+
+    it('render a plain {{name}} that matches nothing as empty', async () => {
+        assert.equal(await render('<p>[{{no_such_value}}]</p>'), '<p>[]</p>');
+    });
+
+    it('with strict: false, render as stencil-paper-handlebars does: unknown helpers and lang as nothing', async () => {
+        assert.equal(await render('<p>{{shout name}}</p><p>{{regoin name="x"}}</p><p>{{lang "common.error"}}</p>', { strict: false }), '<p></p><p></p><p></p>');
     });
 });
 

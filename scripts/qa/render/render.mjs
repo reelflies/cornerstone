@@ -25,8 +25,9 @@
 //
 // One deliberate difference: a helper the store doesn't have fails the render. The store
 // renders `{{shout name}}` as nothing (stencil-paper-handlebars' helperMissing), which would
-// let a typo, or a helper outside the whitelist, pass every test. `strict: false` renders it
-// as the store does.
+// let a typo, or a helper outside the whitelist, pass every test. A widget template also fails
+// on the helpers that read the theme's page context (lang, langJson, inject, jsContext,
+// region). `strict: false` renders them as stencil-paper-handlebars does.
 
 import fs from 'fs';
 import { createRequire } from 'module';
@@ -147,14 +148,29 @@ function collectTemplates(top, folders, overrides) {
     return templates;
 }
 
-// Fails a call to a helper the store doesn't have, as stock Handlebars does. A plain
-// {{name}} that matches nothing still renders empty: that is a missing value, not a helper.
+// Fails a call to a helper the store doesn't have, as stock Handlebars does: one with
+// arguments, or with hash arguments only ({{regoin name="…"}}). A plain {{name}} that matches
+// nothing still renders empty: that is a missing value, not a helper.
 function failOnUnknownHelpers(paper) {
     paper.getRenderer().handlebars.registerHelper('helperMissing', (...args) => {
         const options = args[args.length - 1];
-        if (args.length === 1) return undefined;
+        if (args.length === 1 && !Object.keys(options.hash || {}).length) return undefined;
         throw new Error(`{{${options.name}}} isn't a helper the store has (stencil-paper-handlebars ${HELPERS_VERSION}), so the store would render it as nothing`);
     });
+}
+
+// The helpers that read the theme's page context: its lang strings, the page's jsContext and
+// its regions. A widget template doesn't get that context, so in strict mode a widget that
+// calls one fails, instead of rendering nothing (lang) or this renderer's own jsContext.
+const PAGE_CONTEXT_HELPERS = ['lang', 'langJson', 'inject', 'jsContext', 'region'];
+
+function failOnPageContextHelpers(paper) {
+    const { handlebars } = paper.getRenderer();
+    for (const name of PAGE_CONTEXT_HELPERS) {
+        handlebars.registerHelper(name, () => {
+            throw new Error(`{{${name}}} reads the theme's page context (lang strings, jsContext, regions), which a widget template doesn't get: put the widget's text in its widget_configuration`);
+        });
+    }
 }
 
 // paper-handlebars rejects with "<message> : <stack>"; keep the message and say what failed.
@@ -225,13 +241,17 @@ function sharedWidgetPartials(root) {
 // widget_configuration) and `data` (the storefront_api_query result). Returns the template's
 // output, without the wrapper the store adds around it (widget-page.mjs adds that).
 //
-// options: root (the widgets folder, default widgets/), strict (as for renderPartial)
+// options: root (the widgets folder, default widgets/), strict (as for renderPartial; it also
+// fails lang, langJson, inject, jsContext and region, which need the theme's page context)
 export async function renderWidget(widget, fixture = {}, options = {}) {
     const { root = WIDGETS_DIR, strict = true } = options;
     const file = path.join(root, widget, 'template.html');
     if (!fs.existsSync(file)) throw new Error(`${relative(file)} doesn't exist: a widget's template is widgets/<name>/template.html`);
     const paper = new Paper(WIDGET_SITE_SETTINGS, {}, null, WIDGET_ENGINE);
-    if (strict) failOnUnknownHelpers(paper);
+    if (strict) {
+        failOnUnknownHelpers(paper);
+        failOnPageContextHelpers(paper);
+    }
     paper.addTemplates(paper.getPreProcessor()(sharedWidgetPartials(root)));
     try {
         return await paper.renderString(fs.readFileSync(file, 'utf8'), {

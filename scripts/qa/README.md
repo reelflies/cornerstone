@@ -275,7 +275,7 @@ The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixtu
 
 **Helpers.** Every helper the store whitelists works as it does there. `render.test.mjs` proves the ones ReelFlies partials rely on: `split`, `inArray`, `trim`, `assignVar`, `getVar` and `getImageSrcset`, plus `lang`.
 
-**A helper the store doesn't have fails the render.** The store renders `{{shout name}}` as nothing, so a typo, or a helper outside the whitelist, would pass every test. The renderer fails instead, naming the helper and the template. `strict: false` renders it as the store does. A plain `{{name}}` that matches nothing still renders empty: that is a missing value, not a helper.
+**A helper the store doesn't have fails the render.** The store renders `{{shout name}}` as nothing, so a typo, or a helper outside the whitelist, would pass every test. The renderer fails instead, naming the helper and the template, whether the call has arguments or hash arguments only (`{{{regoin name="…"}}}`). `strict: false` renders it as the store does. A plain `{{name}}` that matches nothing still renders empty: that is a missing value, not a helper.
 
 **Reading the output:** `findTags` from `raw-html/html.mjs` lists tags with their attributes, and `unbalancedTags` from `render/html-checks.mjs` checks the markup. `unbalancedTags` asks for explicit closing tags, which is stricter than a browser.
 
@@ -312,6 +312,8 @@ Ticket 46 adds the schema, the query and `channels/<channel>.json` beside `templ
 - `page` and `region` say where the widget sits. A fixture for render tests only sets `"shot": false` instead.
 
 `renderWidget(name, fixture, { root })` resolves to the template's output, for render tests under `node --test` (Jest ignores `scripts/`). For example, ticket 48's "a changed price in the fixture changes the rendered price" is a `renderWidget` call with the price changed (`render.test.mjs` has the same test on a test widget). Put a widget's render tests in `scripts/qa/render/widgets/<name>.test.mjs`.
+
+**A widget template gets no page context.** Besides the unknown helpers above, `renderWidget` fails on `lang`, `langJson`, `inject`, `jsContext` and `region`, which read the theme's lang strings, the page's jsContext and its regions. Put a widget's text in its `widget_configuration`. `strict: false` renders them as stencil-paper-handlebars does: `lang` as nothing, and `jsContext` as the renderer's own. This is a revisitable default: BigCommerce doesn't document which helpers its widget renderer has.
 
 ### Widget element shots (`widget-screens.spec.mjs`)
 
