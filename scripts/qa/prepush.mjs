@@ -65,10 +65,12 @@ export async function prepushStart({
     return { action: 'checked' };
 }
 
-// The environment each gate runs in: this one, without RF_QA_PORTS_CHECKED. Only a Playwright
-// runner sets that, for its own workers; inherited from a shell, it would let a gate's runner
-// skip its port lock and stencil start slot.
-export const gateEnv = (env = process.env) => Object.fromEntries(Object.entries(env).filter(([name]) => name !== 'RF_QA_PORTS_CHECKED'));
+// The environment each gate runs in: this one, without RF_QA_PORTS_CHECKED and RF_QA_THEME_DIR.
+// Only a Playwright runner sets those, for its own workers. Inherited from a shell, the first
+// would let a gate's runner skip its port lock and stencil start slot, and the second could
+// start its stencil start in another folder (storefront.mjs, themeDir).
+const RUNNER_ONLY = ['RF_QA_PORTS_CHECKED', 'RF_QA_THEME_DIR'];
+export const gateEnv = (env = process.env) => Object.fromEntries(Object.entries(env).filter(([name]) => !RUNNER_ONLY.includes(name)));
 
 async function runNpmGate(gate) {
     console.log(`\n-- Storefront gate: ${gate.name} (npm run ${gate.script})\n`);

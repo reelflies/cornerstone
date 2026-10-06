@@ -43,7 +43,7 @@ import {
 } from '../lib/lock.mjs';
 import { analyticsMode } from './analytics-hosts.mjs';
 import {
-    OVERLAY_MARKER, OVERLAY_PORT_OFFSET, createOverlayCheckout, overlayEnvProblem, overlayProblems, readOverlay,
+    OVERLAY_MARKER, OVERLAY_PORT_OFFSET, createOverlayCheckout, overlayCheckoutPrefix, overlayEnvProblem, overlayProblems, readOverlay,
 } from './overlays.mjs';
 import { fetchWithRetries } from './retry.mjs';
 
@@ -85,8 +85,15 @@ export const HEADERS = { 'Accept-Language': 'en-CA,en;q=0.9' };
 export const startCommand = ({ channel = QA_CHANNEL, variation = QA_VARIATION, port = QA_PORT } = {}) => `node scripts/qa/custom-layouts.mjs && rm -rf assets/dist && npx stencil start -c ${channel} -v "${variation}" -p ${port}`;
 export const START_COMMAND = startCommand();
 // The folder a stencil start runs in: this checkout, or the throwaway worktree an overlay
-// renders in, which a Playwright runner passes to its workers as RF_QA_THEME_DIR.
-export const themeDir = (env = process.env) => env.RF_QA_THEME_DIR || ROOT;
+// renders in, which a Playwright runner passes to its workers as RF_QA_THEME_DIR. Only an
+// overlay run's own worktree counts, named for its port and overlay: an RF_QA_THEME_DIR left in
+// the shell never moves a plain run, a release's included, into another folder, whose server
+// would pass the checks for this checkout's.
+export function themeDir(env = process.env) {
+    const dir = env.RF_QA_THEME_DIR;
+    const own = Boolean(env.QA_OVERLAY && dir) && path.basename(dir).startsWith(overlayCheckoutPrefix(qaPort(env), env.QA_OVERLAY));
+    return own ? dir : ROOT;
+}
 // Where useStorefront writes the output of a stencil start it runs: one log per port pair, so
 // runs on other ports never write the same file.
 export const startLogPath = (port = QA_PORT) => path.join(os.tmpdir(), `rf-qa-stencil-start-${port}.log`);

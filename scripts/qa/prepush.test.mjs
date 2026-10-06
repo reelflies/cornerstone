@@ -82,3 +82,10 @@ it('runs each gate without an RF_QA_PORTS_CHECKED from the shell, so its Playwri
     });
     assert.deepEqual(env, { PATH: '/usr/bin', QA_PORT: '3400', QA_FRESH_SERVER: '1' });
 });
+
+it('runs each gate without an RF_QA_THEME_DIR from the shell, so its stencil start runs in this checkout', () => {
+    const env = gateEnv({
+        PATH: '/usr/bin', QA_PORT: '3300', QA_FRESH_SERVER: '1', RF_QA_THEME_DIR: '/Users/someone/another-checkout',
+    });
+    assert.deepEqual(env, { PATH: '/usr/bin', QA_PORT: '3300', QA_FRESH_SERVER: '1' });
+});

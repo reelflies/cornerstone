@@ -24,8 +24,10 @@ checkEnv();
 // both until it exits (W0-7). With QA_OVERLAY it then makes the overlay's throwaway worktree,
 // which the webServer starts in and which goes when the runner exits (W0-8). Each worker loads
 // this config again while the server is up, and skips this through the RF_QA_PORTS_CHECKED
-// and RF_QA_THEME_DIR it inherits.
+// and RF_QA_THEME_DIR it inherits. Only the runner sets RF_QA_THEME_DIR, so it drops one
+// inherited from the shell first.
 if (IS_LOCAL && !process.env.RF_QA_PORTS_CHECKED) {
+    delete process.env.RF_QA_THEME_DIR;
     await claimLocalServer();
     if (QA_OVERLAY) process.env.RF_QA_THEME_DIR = startOverlayCheckout().dir;
     process.env.RF_QA_PORTS_CHECKED = '1';

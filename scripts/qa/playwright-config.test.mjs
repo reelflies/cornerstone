@@ -13,6 +13,7 @@
 //   config.stencil.json first. An overlay run starts its own stencil start in its throwaway
 //   worktree, on QA_PORT + 10, and is refused with QA_FRESH_SERVER=1, on QA_BASE_URL, and for
 //   an overlay that isn't in scripts/qa/overlays/ or changes a setting config.json doesn't have.
+//   A plain run's stencil start runs in this checkout whatever RF_QA_THEME_DIR the shell has.
 //
 //   node --test scripts/qa/playwright-config.test.mjs
 
@@ -163,6 +164,25 @@ it('merges the committed custom layouts into config.stencil.json before every st
 
 it('runs a plain run\'s stencil start in this checkout', () => {
     assert.equal(setting({ RF_QA_PORTS_CHECKED: '1' }, 'config.webServer.cwd'), path.resolve('.') + path.sep);
+});
+
+// RF_QA_THEME_DIR is the runner's message to its workers on an overlay run. One exported in
+// the shell must never move a plain run's stencil start, a release's included, into another
+// folder, whose server would then pass for this checkout's.
+it('runs a plain run\'s stencil start in this checkout whatever RF_QA_THEME_DIR the shell has, and passes none on to the workers', async () => {
+    const checkout = path.resolve('.') + path.sep;
+    for (const stray of [path.resolve('..'), '/tmp/rf-qa-overlay-3310-powered-by-off-x']) {
+        assert.equal(setting({ RF_QA_PORTS_CHECKED: '1', RF_QA_THEME_DIR: stray }, 'config.webServer.cwd'), checkout, `a worker, ${stray}`);
+        assert.equal(setting({
+            RF_QA_PORTS_CHECKED: '1', QA_FRESH_SERVER: '1', QA_PORT: '3300', RF_QA_THEME_DIR: stray,
+        }, 'config.webServer.cwd'), checkout, `a release's worker, ${stray}`);
+        const port = await freePort(); // eslint-disable-line no-await-in-loop
+        assert.deepEqual(
+            setting({ QA_PORT: String(port), RF_QA_THEME_DIR: stray }, '[config.webServer.cwd, process.env.RF_QA_THEME_DIR ?? null]'),
+            [checkout, null],
+            `the runner, ${stray}`,
+        );
+    }
 });
 
 // Overlays for these cases, in a folder of their own (RF_QA_OVERLAYS_DIR, read only under

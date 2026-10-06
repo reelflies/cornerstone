@@ -30,8 +30,8 @@ import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { acquireLock, readHolder } from '../lib/lock.mjs';
 import {
-    assertServer, busyPorts, busyServerMessage, claimLocalServer, portWarning, qaPort, qaPortProblem, serverPlan, serverProblems,
-    startCommand, startLogPath, stopProcessGroup, waitForFreePorts, waitForOwnServer,
+    ROOT, assertServer, busyPorts, busyServerMessage, claimLocalServer, portWarning, qaPort, qaPortProblem, serverPlan, serverProblems,
+    startCommand, startLogPath, stopProcessGroup, themeDir, waitForFreePorts, waitForOwnServer,
 } from './storefront.mjs';
 
 const config = { variations: [{ name: 'ReelFlies CA' }, { name: 'ReelFlies US' }] };
@@ -555,6 +555,17 @@ describe('an overlay run (W0-8)', () => {
         assert.deepEqual(serverProblems(marked('rf_rise-off'), {
             channel: '1895766', variation: 'ReelFlies CA', config, overlay: '',
         }), ['renders the overlay "rf_rise-off", and this run has none']);
+    });
+
+    it('starts in the overlay\'s worktree only on an overlay run, never in a folder an RF_QA_THEME_DIR from the shell names', () => {
+        const worktree = path.join(os.tmpdir(), 'rf-qa-overlay-3410-rf_rise-off-123-abc');
+        assert.equal(themeDir({}), ROOT);
+        assert.equal(themeDir({ QA_PORT: '3400', RF_QA_THEME_DIR: path.resolve(ROOT, '..') }), ROOT, 'a plain run, with another checkout\'s folder');
+        assert.equal(themeDir({ QA_PORT: '3400', RF_QA_THEME_DIR: worktree }), ROOT, 'a plain run, with an overlay worktree\'s folder');
+        assert.equal(themeDir({ QA_PORT: '3400', QA_OVERLAY: 'rf_rise-off', RF_QA_THEME_DIR: worktree }), worktree);
+        assert.equal(themeDir({ QA_PORT: '3400', QA_OVERLAY: 'rf_rise-off', RF_QA_THEME_DIR: path.resolve(ROOT, '..') }), ROOT, 'a folder that isn\'t an overlay worktree');
+        assert.equal(themeDir({ QA_PORT: '3500', QA_OVERLAY: 'rf_rise-off', RF_QA_THEME_DIR: worktree }), ROOT, 'another port\'s overlay worktree');
+        assert.equal(themeDir({ QA_PORT: '3400', QA_OVERLAY: 'menu-ids-empty', RF_QA_THEME_DIR: worktree }), ROOT, 'another overlay\'s worktree');
     });
 
     it('says why it refuses a busy port: it starts its own server, as a release does', () => {
