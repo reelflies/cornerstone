@@ -20,8 +20,8 @@ import { pathToFileURL } from 'url';
 import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    ANALYTICS_HOSTS, PRELAUNCH_URL, analyticsMode, analyticsRecord, isAnalyticsUrl, isPrelaunchHost, lighthouseBlockedUrlPatterns,
-    readFlipDate, sampleUrl,
+    ANALYTICS_HOSTS, PRELAUNCH_URL, analyticsMode, analyticsRecord, isAfterFlip, isAnalyticsUrl, isPrelaunchHost, lighthouseBlockedUrlPatterns,
+    readFlip, sampleUrl,
 } from './analytics-hosts.mjs';
 
 // Requests the tags on live reelflies.ca and the prelaunch host make, or would make once a
@@ -143,7 +143,7 @@ describe('Lighthouse\'s blockedUrlPatterns (ticket 17)', () => {
 });
 
 describe('QA_ANALYTICS', () => {
-    const today = new Date(2026, 9, 6, 12);
+    const today = new Date('2026-10-06T16:00:00Z'); // noon in Toronto
     const mode = (env, flip = null) => analyticsMode({ env, today, flip });
 
     it('blocks the tags by default, and records it', () => {
@@ -189,7 +189,7 @@ describe('QA_ANALYTICS', () => {
     });
 });
 
-describe('the Flip date, from the release calendar (W0-13)', () => {
+describe('the Flip date, from W0-13\'s release calendar (scripts/lib/release-calendar.mjs)', () => {
     const dirs = [];
     after(() => dirs.forEach(dir => fs.rmSync(dir, { recursive: true, force: true })));
     const calendar = text => {
@@ -200,18 +200,38 @@ describe('the Flip date, from the release calendar (W0-13)', () => {
         return file;
     };
 
-    it('is none while the calendar is missing or has no date', () => {
-        assert.equal(readFlipDate(calendar()), null);
-        assert.equal(readFlipDate(calendar('{"flip": null, "status": "provisional", "source": "ticket 10"}')), null);
+    it('is none while the calendar has no date', () => {
+        assert.equal(readFlip(calendar('{"flip": null, "status": "provisional", "source": "ticket 10"}')), null);
     });
 
     it('is the calendar\'s date', () => {
-        assert.equal(readFlipDate(calendar('{"flip": "2027-02-15", "status": "set", "source": "ticket 10"}')), '2027-02-15');
+        assert.equal(readFlip(calendar('{"flip": "2027-02-15", "status": "set", "source": "ticket 10"}')), '2027-02-15');
     });
 
-    it('can\'t be read from a calendar that isn\'t one', () => {
-        assert.throws(() => readFlipDate(calendar('{ flip: soon')), /can't read the Flip date from .*release-calendar\.json/);
-        assert.throws(() => readFlipDate(calendar('{"flip": "15 Feb"}')), /"flip" must be a date \(YYYY-MM-DD\) or null/);
+    it('stops the run when the calendar is missing or isn\'t one, since a typo must never read as "no Flip"', () => {
+        assert.throws(() => readFlip(calendar()), /can't read the release calendar/);
+        assert.throws(() => readFlip(calendar('{ flip: soon')), /isn't valid JSON/);
+        assert.throws(() => readFlip(calendar('{"flip": "15 Feb", "status": "set", "source": "ticket 10"}')), /the Flip date must be a date as YYYY-MM-DD/);
+        assert.throws(() => readFlip(calendar('{"flipp": "2027-02-15", "status": "set", "source": "ticket 10"}')), /unknown key "flipp"/);
+        assert.throws(() => readFlip(calendar('{"status": "provisional", "source": "ticket 10"}')), /needs "flip"/);
+    });
+
+    it('is reached at midnight in Toronto, where the store is, whatever this Mac\'s clock says', () => {
+        // 23:30 on 6 October in Toronto is already 7 October in UTC.
+        assert.equal(isAfterFlip({ today: new Date('2026-10-07T03:30:00Z'), flip: '2026-10-07' }), false);
+        assert.equal(isAfterFlip({ today: new Date('2026-10-07T04:30:00Z'), flip: '2026-10-07' }), true);
+        assert.equal(isAfterFlip({ today: new Date('2027-01-01T12:00:00Z'), flip: '2026-10-07' }), true);
+        assert.equal(isAfterFlip({ today: new Date('2026-10-07T12:00:00Z'), flip: null }), false);
+    });
+
+    it('is read from the repo\'s calendar when no date is given', () => {
+        assert.equal(isAfterFlip({ today: new Date('2026-10-06T16:00:00Z') }), isAfterFlip({ today: new Date('2026-10-06T16:00:00Z'), flip: readFlip() }));
+    });
+
+    it('turns QA_ANALYTICS=allow away from the Toronto date of the Flip on', () => {
+        const env = { QA_ANALYTICS: 'allow', QA_BASE_URL: PRELAUNCH_URL };
+        assert.deepEqual(analyticsMode({ env, today: new Date('2026-10-07T03:30:00Z'), flip: '2026-10-07' }), { blocked: false });
+        assert.throws(() => analyticsMode({ env, today: new Date('2026-10-07T04:30:00Z'), flip: '2026-10-07' }), /refused from the Flip \(2026-10-07\) on/);
     });
 });
 

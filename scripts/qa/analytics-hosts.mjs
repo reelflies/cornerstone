@@ -17,9 +17,11 @@
 // - Blocking is on by default. QA_ANALYTICS=allow opts out, and only on the prelaunch host
 //   before the Flip (analyticsMode); a GA4 hostname filter can then keep the run out of the
 //   reports, which it can't for live reelflies.ca or reelflies.com.
+// - The Flip date comes from W0-13's release calendar (scripts/lib/release-calendar.mjs), and
+//   is reached at midnight in Toronto. network-guard.mjs reads it too: from the Flip,
+//   ReelFlies_CA is live reelflies.ca, so every write is refused there as well.
 
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import { readCalendar, todayInToronto } from '../lib/release-calendar.mjs';
 
 // The prelaunch host: ReelFlies_CA (1895766), behind the control panel's preview cookie.
 export const PRELAUNCH_URL = 'https://reelflies_ca-1895766.mybigcommerce.com';
@@ -83,25 +85,16 @@ export function isPrelaunchHost(value) {
     return Boolean(url) && url.origin === new URL(PRELAUNCH_URL).origin;
 }
 
-// The release calendar (W0-13): {"flip": "YYYY-MM-DD" or null, "status", "source"}. Until it
-// exists, there is no Flip date.
-export const CALENDAR = fileURLToPath(new URL('../release-calendar.json', import.meta.url));
+// The Flip date in the release calendar (scripts/release-calendar.json, W0-13), or null while it
+// has none. A missing or malformed calendar throws, and so stops the run: a typo must never
+// read as "no Flip", which would refuse nothing.
+export const readFlip = file => readCalendar(file).flip;
 
-export function readFlipDate(file = CALENDAR) {
-    let calendar;
-    try {
-        calendar = JSON.parse(fs.readFileSync(file, 'utf8'));
-    } catch (error) {
-        if (error.code === 'ENOENT') return null;
-        throw new Error(`can't read the Flip date from ${file}: ${error.message}`);
-    }
-    const flip = calendar?.flip ?? null;
-    if (flip !== null && !/^\d{4}-\d{2}-\d{2}$/.test(flip)) throw new Error(`can't read the Flip date from ${file}: "flip" must be a date (YYYY-MM-DD) or null, not ${JSON.stringify(flip)}`);
-    return flip;
+// Whether `today` is on or after the Flip, by the date in Toronto, where the store is, as W0-13
+// starts its phases. `flip` is read from the calendar when it isn't given.
+export function isAfterFlip({ today = new Date(), flip = readFlip() } = {}) {
+    return Boolean(flip) && todayInToronto(today) >= flip;
 }
-
-// The date on this Mac's clock, as YYYY-MM-DD.
-const localDate = date => [date.getFullYear(), date.getMonth() + 1, date.getDate()].map(part => String(part).padStart(2, '0')).join('-');
 
 // Whether a run blocks the tags: { blocked }. Throws when QA_ANALYTICS asks for something the
 // run may not do. `flip` is read from the calendar when it isn't given.
@@ -115,8 +108,8 @@ export function analyticsMode({ env = process.env, today = new Date(), flip } = 
         const where = base ? (urlOf(base)?.origin || `"${base}"`) : 'a local stencil start';
         throw new Error(`QA_ANALYTICS=allow is refused on ${where}: the tags may load only on the prelaunch host (${PRELAUNCH_URL}), where a GA4 hostname filter can keep the run out of the reports. Unset QA_ANALYTICS to block them.`);
     }
-    const flipDate = flip === undefined ? readFlipDate() : flip;
-    if (flipDate && localDate(today) >= flipDate) {
+    const flipDate = flip === undefined ? readFlip() : flip;
+    if (isAfterFlip({ today, flip: flipDate })) {
         throw new Error(`QA_ANALYTICS=allow is refused from the Flip (${flipDate}) on: the prelaunch host is then live reelflies.ca, and no filter can tell a run from a real visit. Unset QA_ANALYTICS to block the tags.`);
     }
     return { blocked: false };
