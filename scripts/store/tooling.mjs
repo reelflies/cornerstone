@@ -82,7 +82,9 @@ export function storeToolingProblem({ repo = REPO_ROOT, git = args => runGit(rep
     const onDisk = [...filesUnder(repo, STORE_FOLDER), ...STORE_TOOLING.filter(file => fs.existsSync(path.join(repo, file)))];
     const have = new Map();
     if (onDisk.length) {
-        const hashed = git(['hash-object', '--', ...onDisk]);
+        // --no-filters: the bytes on disk, never what a clean filter (say one in the untracked
+        // .git/info/attributes) makes of them.
+        const hashed = git(['hash-object', '--no-filters', '--', ...onDisk]);
         const hashes = hashed.stdout.split('\n').filter(Boolean);
         if (hashed.status !== 0 || hashes.length !== onDisk.length) return `couldn't hash this checkout's store tooling: ${firstLine(hashed.stderr) || `git exited ${hashed.status}`}`;
         onDisk.forEach((file, index) => have.set(file, hashes[index]));

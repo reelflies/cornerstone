@@ -30,6 +30,20 @@ test('an uncommitted edit to the allowlist is refused, naming the file', () => {
     assert.match(problem, /git -C ~\/reelflies\/theme\/cornerstone pull --ff-only origin master/);
 });
 
+test('a clean filter in the untracked .git/info/attributes can\'t pass an edited file: the bytes on disk are compared', () => {
+    const dir = fresh();
+    const file = 'scripts/store/allowlist.mjs';
+    const masterCopy = path.join(tmp, `allowlist-${count}.mjs`);
+    fs.copyFileSync(path.join(dir, file), masterCopy);
+    fs.appendFileSync(path.join(dir, file), '\n// widened\n');
+    // The filter hands git master's bytes whatever is on disk.
+    fs.mkdirSync(path.join(dir, '.git', 'info'), { recursive: true });
+    fs.writeFileSync(path.join(dir, '.git', 'info', 'attributes'), `${file} filter=same\n`);
+    git(dir, 'config', 'filter.same.clean', `cat '${masterCopy}'`);
+    assert.equal(git(dir, 'hash-object', '--', file), git(dir, 'rev-parse', `origin/master:${file}`), 'through the filter, the edited file hashes as master\'s');
+    assert.match(storeToolingProblem({ repo: dir }), /\(scripts\/store\/allowlist\.mjs\)/);
+});
+
 test('a committed change on a ticket branch is refused too: only master\'s reviewed rules write', () => {
     const dir = fresh();
     git(dir, 'checkout', '-q', '-b', 't46/widget-sync');
