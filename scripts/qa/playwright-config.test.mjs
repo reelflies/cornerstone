@@ -20,7 +20,7 @@ import path from 'path';
 import { pathToFileURL } from 'url';
 import { after, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { HEADERS, QA_PORT } from './storefront.mjs';
+import { HEADERS } from './storefront.mjs';
 
 const CONFIG = pathToFileURL(path.resolve('scripts/qa/playwright.config.mjs')).href;
 
@@ -80,29 +80,28 @@ it('never reuses a running stencil start with QA_FRESH_SERVER=1', () => {
     assert.equal(setting({ QA_FRESH_SERVER: '1', RF_QA_PORTS_CHECKED: '1' }, 'config.webServer.reuseExistingServer'), false);
 });
 
-it('refuses to load with QA_FRESH_SERVER=1 while anything answers on 3300', async () => {
-    // Something that isn't a stencil start holds Browsersync's port; if a real server already
-    // holds it, that does as well.
-    const holder = net.createServer();
-    await new Promise(resolve => {
-        holder.once('error', resolve).listen(QA_PORT, '127.0.0.1', resolve);
-    });
-    try {
-        const { status, stderr } = load({ QA_FRESH_SERVER: '1' }, 'config.webServer.reuseExistingServer');
-        assert.notEqual(status, 0);
-        assert.match(stderr, /already answers on port[s]? (3300|3300 and 3301)\. Stop that server first/);
-    } finally {
-        holder.close();
-    }
-});
-
-// A port nothing answers on, below 65000 so the next one is a port too.
+// A port nothing answers on, below 65000 so the next one is a port too. The cases bind ports of
+// their own, never 3300, which the release and wave 0's worktrees use.
 async function freePort() {
     const server = net.createServer();
     const port = await new Promise(resolve => { server.listen(0, '127.0.0.1', () => resolve(server.address().port)); });
     await new Promise(resolve => { server.close(resolve); });
     return port < 65000 ? port : freePort();
 }
+
+it('refuses to load with QA_FRESH_SERVER=1 while anything answers on QA_PORT, whatever QA_PORT the shell has', async () => {
+    // Something that isn't a stencil start holds Browsersync's port.
+    const port = await freePort();
+    const holder = net.createServer();
+    await new Promise(resolve => { holder.listen(port, '127.0.0.1', resolve); });
+    try {
+        const { status, stderr } = load({ QA_FRESH_SERVER: '1', QA_PORT: String(port) }, 'config.webServer.reuseExistingServer');
+        assert.notEqual(status, 0);
+        assert.match(stderr, new RegExp(`already answers on port ${port}\\. Stop that server first`));
+    } finally {
+        holder.close();
+    }
+});
 
 it('starts stencil start on QA_PORT and tests the stencil server on the next port', () => {
     const env = { QA_PORT: '3400', RF_QA_PORTS_CHECKED: '1' };
