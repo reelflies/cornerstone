@@ -3,29 +3,45 @@
 //
 // - A request to an analytics host (analytics-hosts.mjs) is aborted, on every channel, unless
 //   QA_ANALYTICS=allow lets the tags load on the prelaunch host.
-// - On a live channel, 1 (reelflies.ca) or 1855224 (reelflies.com), and on any host but the
-//   prelaunch host and a local stencil start, every request that isn't a GET, HEAD or OPTIONS
-//   is refused: aborted, so it never reaches the store, and recorded, so the test fails at
-//   teardown naming each one. stencil start passes every request to the live store, and
-//   mocking cart endpoints one by one fails open: one missed endpoint makes a real guest cart.
-//   The exceptions are the read-only POSTs and the gates' own answers in read-only-posts.mjs.
+// - On a live channel, 1 (reelflies.ca) or 1855224 (reelflies.com), on any host but the
+//   prelaunch host and a local stencil start, and on every channel from the Flip (when
+//   ReelFlies_CA becomes live reelflies.ca), every write is refused: aborted, so it never
+//   reaches the store, and recorded, so the test fails at teardown naming each one. A write is
+//   any request but a GET, HEAD or OPTIONS, and the GETs that change the cart, a wish list or a
+//   sign-in (GET_WRITES in read-only-posts.mjs: the stock card's "Add to cart" is a link).
+//   stencil start passes every request to the live store, and mocking cart endpoints one by one
+//   fails open: one missed endpoint makes a real guest cart. The exceptions are the read-only
+//   POSTs and the gates' own answers in read-only-posts.mjs.
 // - A request a test mocks itself (page.route, or a context.route added after the guard) is
-//   answered by its mock and never reaches the guard. A mock that calls route.fallback()
-//   hands the request back to the guard.
+//   answered by its mock and never reaches the guard. A mock may only fulfill, abort or call
+//   route.fallback(), which hands the request back to the guard. route.continue() sends it
+//   straight to the network, past the guard, so a gate's own route never calls it.
 // - While the tags are blocked, a request to an analytics host that completes anyway (only a
 //   route ahead of the guard can let one through) also fails the test at teardown, so a
 //   blocked run can't quietly send one.
 
-import { isAnalyticsUrl, isPrelaunchHost } from './analytics-hosts.mjs';
-import { localAnswer, readOnlyPost } from './read-only-posts.mjs';
+import { isAfterFlip, isAnalyticsUrl, isPrelaunchHost } from './analytics-hosts.mjs';
+import { getWrite, localAnswer, readOnlyPost } from './read-only-posts.mjs';
 
 export const LIVE_CHANNELS = ['1', '1855224'];
 const READS = ['GET', 'HEAD', 'OPTIONS'];
 
-// Whether a run refuses writes: on a live channel, or on a host (QA_BASE_URL) that is neither
-// the prelaunch host nor a local stencil start, whatever QA_CHANNEL says.
-export function refusesWrites({ channel, storefront, local }) {
-    return LIVE_CHANNELS.includes(String(channel)) || (!local && !isPrelaunchHost(storefront));
+const isLive = channel => LIVE_CHANNELS.includes(String(channel));
+
+// The channel a test is guarded as. A test's qaChannel option (test.use) can only make the
+// guard stricter: on a run whose QA_CHANNEL is live, every test stays live, whatever its option
+// says; on another run, a self-test may act as a live channel.
+export function guardChannel(runChannel, testChannel = runChannel) {
+    return String(isLive(runChannel) ? runChannel : testChannel ?? runChannel);
+}
+
+// Whether a run refuses writes: on a live channel, on a host (QA_BASE_URL) that is neither the
+// prelaunch host nor a local stencil start whatever QA_CHANNEL says, and on every channel from
+// the Flip. `flipped` is read from the release calendar when it isn't given.
+export function refusesWrites({
+    channel, storefront, local, flipped = isAfterFlip(),
+}) {
+    return Boolean(flipped) || isLive(channel) || (!local && !isPrelaunchHost(storefront));
 }
 
 // What the guard does with one request: { action: 'block' } (an analytics request), 'refuse' (a
@@ -33,7 +49,9 @@ export function refusesWrites({ channel, storefront, local }) {
 // route, and then the network).
 export function requestAction(request, { blockAnalytics, refuseWrites, storefront }) {
     if (blockAnalytics && isAnalyticsUrl(request.url)) return { action: 'block' };
-    if (!refuseWrites || READS.includes(request.method)) return { action: 'pass' };
+    if (!refuseWrites) return { action: 'pass' };
+    if (getWrite(request)) return { action: 'refuse' };
+    if (READS.includes(request.method)) return { action: 'pass' };
     const answer = localAnswer(request, { storefront });
     if (answer) return { action: 'answer', answer };
     if (readOnlyPost(request, { storefront })) return { action: 'pass' };
@@ -41,8 +59,9 @@ export function requestAction(request, { blockAnalytics, refuseWrites, storefron
 }
 
 // Where a run refuses writes, and why: { name, why }.
-function liveTarget({ channel, storefront }) {
-    if (LIVE_CHANNELS.includes(String(channel))) return { name: `channel ${channel}`, why: 'is live' };
+function liveTarget({ channel, storefront, flipped }) {
+    if (isLive(channel)) return { name: `channel ${channel}`, why: 'is live' };
+    if (flipped) return { name: `channel ${channel}`, why: 'is live reelflies.ca from the Flip on' };
     let name = storefront;
     try {
         name = new URL(storefront).origin;
@@ -54,14 +73,14 @@ function liveTarget({ channel, storefront }) {
 
 // The lines a run prints before its first test (global-setup.mjs).
 export function guardNotice({
-    blockAnalytics, refuseWrites, channel, storefront,
+    blockAnalytics, refuseWrites, channel, storefront, flipped = false,
 }) {
     const lines = [blockAnalytics
         ? 'ANALYTICS blocked: yes (scripts/qa/analytics-hosts.mjs; QA_ANALYTICS=allow lets them load on the prelaunch host only)'
         : 'ANALYTICS blocked: no (QA_ANALYTICS=allow, on the prelaunch host)'];
     if (refuseWrites) {
-        const { name, why } = liveTarget({ channel, storefront });
-        lines.push(`WRITES    refused: ${name} ${why}, so every request but a GET, HEAD or OPTIONS fails the test, apart from the read-only POSTs in scripts/qa/read-only-posts.mjs`);
+        const { name, why } = liveTarget({ channel, storefront, flipped });
+        lines.push(`WRITES    refused: ${name} ${why}, so every write fails the test: every request but a GET, HEAD or OPTIONS, and the GETs that change the cart, a wish list or a sign-in (GET_WRITES). The exceptions are the read-only POSTs (scripts/qa/read-only-posts.mjs).`);
     }
     return lines;
 }
@@ -79,20 +98,28 @@ const settle = async answer => {
 // blocked, answered and refused, and the analytics requests that completed while blocked, each
 // as "METHOD URL"; assertNoRefusedWrites() and assertNoAnalyticsCompleted() throw naming each
 // one (fixtures.mjs calls both at teardown).
-//   channel         the channel the run renders (QA_CHANNEL)
+//   channel         the channel the test is guarded as (guardChannel)
 //   storefront      the storefront under test, its base URL
 //   local           whether that is a local stencil start
 //   blockAnalytics  false only with QA_ANALYTICS=allow
+//   flipped         whether the Flip has passed; read from the release calendar when not given
 export async function installNetworkGuard(context, {
-    channel, storefront, local, blockAnalytics,
+    channel, storefront, local, blockAnalytics, flipped = isAfterFlip(),
 }) {
     const options = {
-        blockAnalytics, refuseWrites: refusesWrites({ channel, storefront, local }), storefront,
+        blockAnalytics,
+        refuseWrites: refusesWrites({
+            channel, storefront, local, flipped,
+        }),
+        storefront,
+        channel: String(channel),
+        flipped: Boolean(flipped),
     };
     const guard = {
         channel: String(channel),
         analyticsBlocked: blockAnalytics,
         refusesWrites: options.refuseWrites,
+        options,
         blocked: [],
         answered: [],
         refused: [],
@@ -106,7 +133,7 @@ export async function installNetworkGuard(context, {
         assertNoRefusedWrites() {
             if (!guard.refused.length) return;
             const count = guard.refused.length;
-            const { name, why } = liveTarget({ channel, storefront });
+            const { name, why } = liveTarget(options);
             throw new Error(`The gates refused ${count} write${count > 1 ? 's' : ''} on ${name}, which ${why}, so none reached the store: ${guard.refused.join('; ')}. `
                 + 'A gate never writes to a live store: mock it in the test (page.route), or, if it only reads, add it to scripts/qa/read-only-posts.mjs with the reason.');
         },

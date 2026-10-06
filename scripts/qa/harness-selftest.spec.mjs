@@ -12,17 +12,21 @@
 // - Dismissing the cookie banner leaves nothing hovered, so no hover zoom or menu is open
 //   in a screenshot.
 // - The network guard (network-guard.mjs, W0-6) aborts a request to every analytics host on
-//   the list, and on a live channel refuses every cart write, failing the test at teardown,
-//   while the read-only POSTs and a test's own mocks go through, and it catches an analytics
-//   request that a route ahead of it let through. Those cases run in a context
-//   of their own whose first route answers everything itself, so no request leaves the Mac;
-//   two more prove that every gate test gets the guard through the fixture.
+//   the list, and on a live channel refuses every cart write, failing the test at teardown:
+//   the GETs that add to the cart and the stock card's "Add to cart" link clicked among them.
+//   The read-only POSTs and a
+//   test's own mocks go through, and it catches an analytics request that a route ahead of it
+//   let through. Those cases run in a context of their own whose first route answers
+//   everything itself, and send everything else to a .test origin that never resolves, so no
+//   request leaves the Mac. More prove that every gate test gets the guard through the
+//   fixture, again only towards that origin.
 
 /* eslint-env browser */ // the page.evaluate callbacks run in the page
 
 import { ANALYTICS_HOSTS, sampleUrl } from './analytics-hosts.mjs';
-import { installNetworkGuard } from './network-guard.mjs';
+import { LIVE_CHANNELS, guardChannel, installNetworkGuard } from './network-guard.mjs';
 import { expectedStatus } from './pages.mjs';
+import { QA_CHANNEL } from './storefront.mjs';
 import {
     ANALYTICS, PAGES, dismissCookieBanner, expect, storefrontPage, test,
 } from './fixtures.mjs';
@@ -154,18 +158,21 @@ test.describe('dismissing the cookie banner', () => {
 const SELFTEST_ORIGIN = 'http://rf-qa-selftest.test';
 const SELFTEST_PAGE = `${SELFTEST_ORIGIN}/rf-selftest/guard/`;
 
+// A made-up product id: no store has it, so even a write that got out would add nothing.
+const SELFTEST_PRODUCT = '9999901';
+
 // A context of the test's own, with the guard on top as fixtures.mjs installs it, and under it
-// a route that answers the fixture page and every request the guard passes on to the selftest
-// origin itself (recorded in `reached`). Anything else that got past the guard is recorded in
-// `leaked` and aborted, so nothing leaves the Mac.
-async function guardedPage(browser, { channel }) {
+// a route that answers the fixture page (`body`) and every request the guard passes on to the
+// selftest origin itself (recorded in `reached`). Anything else that got past the guard is
+// recorded in `leaked` and aborted, so nothing leaves the Mac.
+async function guardedPage(browser, { channel, body = '<h1>guard</h1>' }) {
     const context = await browser.newContext();
     const reached = [];
     const leaked = [];
     await context.route('**/*', route => {
         const request = route.request();
         if (request.method() === 'GET' && request.url() === SELFTEST_PAGE) {
-            return route.fulfill({ contentType: 'text/html', body: '<!doctype html><html lang="en"><title>guard</title><h1>guard</h1></html>' });
+            return route.fulfill({ contentType: 'text/html', body: `<!doctype html><html lang="en"><title>guard</title>${body}</html>` });
         }
         const line = `${request.method()} ${request.url()}`;
         if (new URL(request.url()).origin === SELFTEST_ORIGIN) {
@@ -213,6 +220,10 @@ const CART_WRITES = [
     ['DELETE', '/api/storefront/carts/rf-selftest/items/rf-line', null],
     ['POST', '/cart.php', 'action=add&product_id=6178'],
     ['POST', '/graphql', '{"query":"mutation { cart { createCart(input: {lineItems: []}) { cart { entityId } } } }"}'],
+    ['POST', '/graphql', '{"query":"\\u006dutation { cart { createCart(input: {lineItems: []}) { cart { entityId } } } }"}'],
+    // BigCommerce adds to the cart on these GETs: the stock card's "Add to cart" is a link.
+    ['GET', `/cart.php?action=add&product_id=${SELFTEST_PRODUCT}`, null],
+    ['GET', `/cart.php?action=buy&sku=RF-SELFTEST-${SELFTEST_PRODUCT}`, null],
 ];
 const lines = requests => requests.map(([method, pagePath]) => `${method} ${SELFTEST_ORIGIN}${pagePath}`).sort();
 
@@ -252,6 +263,23 @@ test.describe('the network guard (W0-6)', () => {
         expect(reached, 'no write reached the storefront').toEqual([]);
         expect(leaked).toEqual([]);
         expect(() => guard.assertNoRefusedWrites()).toThrow(`The gates refused ${CART_WRITES.length} writes on channel 1, which is live, so none reached the store: ${guard.refused.join('; ')}.`);
+        await context.close();
+    });
+
+    test('refuses the stock card\'s "Add to cart" link when it is clicked on a live channel', async ({ browser }) => {
+        const link = `/cart.php?action=add&product_id=${SELFTEST_PRODUCT}`;
+        const {
+            context, page, guard, reached, leaked,
+        } = await guardedPage(browser, {
+            channel: '1',
+            // As templates/components/products/card.html renders it.
+            body: `<a href="${link}" data-event-type="product-click" data-button-type="add-cart" class="button button--small card-figcaption-button">Add to Cart</a>`,
+        });
+        await page.getByRole('link', { name: 'Add to Cart' }).click();
+        await expect.poll(() => guard.refused).toEqual([`GET ${SELFTEST_ORIGIN}${link}`]);
+        expect(reached, 'the add never reached the storefront').toEqual([]);
+        expect(leaked).toEqual([]);
+        expect(() => guard.assertNoRefusedWrites()).toThrow(`The gates refused 1 write on channel 1, which is live, so none reached the store: GET ${SELFTEST_ORIGIN}${link}.`);
         await context.close();
     });
 
@@ -334,8 +362,21 @@ test.describe('the network guard in every gate test, through the fixture (W0-6)'
             test.fail(true, 'the fixture fails this test at teardown, for the cart write the guard refused: that is what it proves');
             await serve(page, '**/rf-selftest/fixture-guard/', 200);
             await page.goto('/rf-selftest/fixture-guard/');
-            expect(await page.evaluate(() => fetch('/remote/v1/cart/add', { method: 'POST', body: 'action=add&product_id=6178' }).then(() => 'answered', () => 'failed'))).toBe('failed');
-            expect(networkGuard.refused).toEqual([`POST ${new URL('/remote/v1/cart/add', page.url()).href}`]);
+            // The write goes to an origin that never resolves, not the storefront under test: on a
+            // live channel the guard refuses a write to any host, and if it ever stopped, the
+            // write would still reach no store.
+            const write = `${SELFTEST_ORIGIN}/remote/v1/cart/add`;
+            expect(await page.evaluate(([url, product]) => fetch(url, { method: 'POST', body: `action=add&product_id=${product}` }).then(() => 'answered', () => 'failed'), [write, SELFTEST_PRODUCT])).toBe('failed');
+            expect(networkGuard.refused).toEqual([`POST ${write}`]);
+        });
+
+        test.describe('when a test asks to be guarded as ReelFlies_CA', () => {
+            test.use({ qaChannel: '1895766' });
+
+            test('stays live on a run whose QA_CHANNEL is live: the option only tightens the guard', async ({ networkGuard }) => {
+                expect(networkGuard.channel).toBe(guardChannel(QA_CHANNEL, '1895766'));
+                if (LIVE_CHANNELS.includes(String(QA_CHANNEL))) expect(networkGuard.refusesWrites).toBe(true);
+            });
         });
 
         test('passes a test that only read, refusing nothing', async ({ page, networkGuard }, testInfo) => {

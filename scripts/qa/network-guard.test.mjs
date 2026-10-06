@@ -2,10 +2,11 @@
 // fixtures.mjs installs on each test's context:
 //
 // - A request to an analytics host is aborted, on every channel, unless QA_ANALYTICS=allow.
-// - On a live channel (1, 1855224), or on any host but the prelaunch host and a local stencil
-//   start, every request that isn't a GET, HEAD or OPTIONS is refused: aborted and recorded,
-//   and the test fails at teardown naming each one. Only the read-only POSTs in
-//   read-only-posts.mjs go through, and the gates answer the cookie banner's consent POST
+// - On a live channel (1, 1855224), on any host but the prelaunch host and a local stencil
+//   start, and on every channel from the Flip, every write is refused: aborted and recorded,
+//   and the test fails at teardown naming each one. A write is any request but a GET, HEAD or
+//   OPTIONS, and the GETs that change the cart (GET_WRITES in read-only-posts.mjs). Only the
+//   read-only POSTs go through, and the gates answer the cookie banner's consent POST
 //   themselves. A request a test mocks itself never reaches the guard.
 //
 // harness-selftest.spec.mjs proves the same in a browser.
@@ -16,7 +17,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { PRELAUNCH_URL } from './analytics-hosts.mjs';
 import {
-    LIVE_CHANNELS, guardNotice, installNetworkGuard, refusesWrites, requestAction,
+    LIVE_CHANNELS, guardChannel, guardNotice, installNetworkGuard, refusesWrites, requestAction,
 } from './network-guard.mjs';
 
 const LOCAL = 'http://localhost:3401';
@@ -25,22 +26,65 @@ const prelaunch = { blockAnalytics: true, refuseWrites: false, storefront: LOCAL
 const request = (method, path, postData = null, origin = LOCAL) => ({ method, url: path.startsWith('http') ? path : `${origin}${path}`, postData });
 
 describe('which runs refuse writes', () => {
+    const before = { flipped: false };
+
     it('are the live channels, 1 and 1855224, whatever the host', () => {
         assert.deepEqual(LIVE_CHANNELS, ['1', '1855224']);
         for (const channel of LIVE_CHANNELS) {
-            assert.equal(refusesWrites({ channel, storefront: LOCAL, local: true }), true);
-            assert.equal(refusesWrites({ channel, storefront: PRELAUNCH_URL, local: false }), true);
+            assert.equal(refusesWrites({
+                channel, storefront: LOCAL, local: true, ...before,
+            }), true);
+            assert.equal(refusesWrites({
+                channel, storefront: PRELAUNCH_URL, local: false, ...before,
+            }), true);
         }
     });
 
     it('include a run on any host but the prelaunch host, whatever QA_CHANNEL says', () => {
-        assert.equal(refusesWrites({ channel: '1895766', storefront: 'https://reelflies.ca', local: false }), true);
-        assert.equal(refusesWrites({ channel: '1895766', storefront: 'https://www.reelflies.com', local: false }), true);
+        assert.equal(refusesWrites({
+            channel: '1895766', storefront: 'https://reelflies.ca', local: false, ...before,
+        }), true);
+        assert.equal(refusesWrites({
+            channel: '1895766', storefront: 'https://www.reelflies.com', local: false, ...before,
+        }), true);
     });
 
-    it('leave out ReelFlies_CA, through stencil start or on the prelaunch host', () => {
+    it('leave out ReelFlies_CA before the Flip, through stencil start or on the prelaunch host', () => {
+        assert.equal(refusesWrites({
+            channel: '1895766', storefront: LOCAL, local: true, ...before,
+        }), false);
+        assert.equal(refusesWrites({
+            channel: '1895766', storefront: PRELAUNCH_URL, local: false, ...before,
+        }), false);
+    });
+
+    it('include ReelFlies_CA from the Flip, when it is live reelflies.ca', () => {
+        assert.equal(refusesWrites({
+            channel: '1895766', storefront: LOCAL, local: true, flipped: true,
+        }), true);
+        assert.equal(refusesWrites({
+            channel: '1895766', storefront: PRELAUNCH_URL, local: false, flipped: true,
+        }), true);
+    });
+
+    it('read the Flip from the release calendar when they aren\'t told it', () => {
+        // The calendar on master has no Flip date yet (scripts/release-calendar.json).
         assert.equal(refusesWrites({ channel: '1895766', storefront: LOCAL, local: true }), false);
-        assert.equal(refusesWrites({ channel: '1895766', storefront: PRELAUNCH_URL, local: false }), false);
+    });
+});
+
+describe('the channel a test is guarded as', () => {
+    it('is the run\'s own when that is live, whatever the test asks for, so a test can\'t loosen the guard', () => {
+        assert.equal(guardChannel('1', '1895766'), '1');
+        assert.equal(guardChannel('1855224', '1895766'), '1855224');
+        assert.equal(guardChannel(1, undefined), '1');
+    });
+
+    it('is the test\'s qaChannel on a run that isn\'t live, so a self-test can act as a live channel', () => {
+        assert.equal(guardChannel('1895766', '1'), '1');
+        assert.equal(guardChannel('1895766', '1855224'), '1855224');
+        assert.equal(guardChannel('1895766', undefined), '1895766');
+        assert.equal(guardChannel('1895766', '1895766'), '1895766');
     });
 });
 
@@ -60,7 +104,23 @@ describe('what happens to each request', () => {
     it('lets every read through on a live channel', () => {
         for (const method of ['GET', 'HEAD', 'OPTIONS']) {
             assert.deepEqual(requestAction(request(method, '/api/storefront/carts'), live), { action: 'pass' }, method);
+            assert.deepEqual(requestAction(request(method, '/cart.php'), live), { action: 'pass' }, method);
         }
+    });
+
+    it('refuses a cart write sent as a GET on a live channel: the stock card\'s "Add to cart" link among them', () => {
+        const writes = [
+            request('GET', '/cart.php?action=add&product_id=6178'),
+            request('HEAD', '/cart.php?action=add&product_id=6178'),
+            request('GET', '/cart.php?action=buy&sku=RF-6178-14'),
+            request('GET', '/cart.php?action=remove&item=abc'),
+            request('GET', '/remote/v1/cart/add?product_id=6178'),
+            request('GET', '/wishlist.php?action=add&product_id=6178'),
+            request('GET', '/login.php?action=logout'),
+            request('GET', 'https://reelflies.ca/cart.php?action=add&product_id=6178'),
+        ];
+        for (const write of writes) assert.deepEqual(requestAction(write, live), { action: 'refuse' }, `${write.method} ${write.url}`);
+        assert.deepEqual(requestAction(request('GET', '/cart.php?action=add&product_id=6178'), prelaunch), { action: 'pass' }, 'ReelFlies_CA isn\'t live');
     });
 
     it('refuses every cart write on a live channel, through any endpoint or method', () => {
@@ -73,6 +133,7 @@ describe('what happens to each request', () => {
             request('PATCH', '/api/storefront/carts/abc', '{}'),
             request('POST', '/cart.php', 'action=add'),
             request('POST', '/graphql', JSON.stringify({ query: 'mutation { cart { createCart(input: {}) { cart { entityId } } } }' })),
+            request('POST', '/graphql', '{"query":"\\u006dutation { cart { createCart(input: {}) { cart { entityId } } } }"}'),
             request('POST', 'https://api.rf-qa-selftest.test/queue', '{}'),
         ];
         for (const write of writes) assert.deepEqual(requestAction(write, live), { action: 'refuse' }, `${write.method} ${write.url}`);
@@ -210,6 +271,25 @@ describe('the guard on a context', () => {
         guard.assertNoAnalyticsCompleted();
     });
 
+    it('names channel 1895766 as live from the Flip when it refused a write there', async () => {
+        const context = fakeContext();
+        const guard = await installNetworkGuard(context, {
+            channel: '1895766', storefront: LOCAL, local: true, blockAnalytics: true, flipped: true,
+        });
+        assert.equal(guard.refusesWrites, true);
+        await context.send('POST', `${LOCAL}/remote/v1/cart/add`, 'action=add');
+        assert.throws(() => guard.assertNoRefusedWrites(), { message: /^The gates refused 1 write on channel 1895766, which is live reelflies\.ca from the Flip on, so none reached the store:/ });
+    });
+
+    it('refuses the stock card\'s "Add to cart" link, a GET, on a live channel', async () => {
+        const context = fakeContext();
+        const guard = await installNetworkGuard(context, {
+            channel: '1', storefront: LOCAL, local: true, blockAnalytics: true,
+        });
+        assert.deepEqual(await context.send('GET', `${LOCAL}/cart.php?action=add&product_id=6178`), [['abort', 'accessdenied']]);
+        assert.deepEqual(guard.refused, [`GET ${LOCAL}/cart.php?action=add&product_id=6178`]);
+    });
+
     it('treats a request the page has already closed on as handled', async () => {
         const context = fakeContext();
         await installNetworkGuard(context, {
@@ -238,7 +318,10 @@ describe('the notice each run prints', () => {
             blockAnalytics: true, refuseWrites: true, channel: '1', storefront: LOCAL, local: true,
         }), [
             'ANALYTICS blocked: yes (scripts/qa/analytics-hosts.mjs; QA_ANALYTICS=allow lets them load on the prelaunch host only)',
-            'WRITES    refused: channel 1 is live, so every request but a GET, HEAD or OPTIONS fails the test, apart from the read-only POSTs in scripts/qa/read-only-posts.mjs',
+            'WRITES    refused: channel 1 is live, so every write fails the test: every request but a GET, HEAD or OPTIONS, and the GETs that change the cart, a wish list or a sign-in (GET_WRITES). The exceptions are the read-only POSTs (scripts/qa/read-only-posts.mjs).',
         ]);
+        assert.match(guardNotice({
+            blockAnalytics: true, refuseWrites: true, channel: '1895766', storefront: LOCAL, local: true, flipped: true,
+        })[1], /^WRITES {4}refused: channel 1895766 is live reelflies\.ca from the Flip on, so every write fails the test/);
     });
 });

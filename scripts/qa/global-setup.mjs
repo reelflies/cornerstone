@@ -3,7 +3,7 @@
 // compared with, or written as, another set's baselines. Then it says whether the run blocks
 // the analytics tags and refuses writes (W0-6).
 
-import { analyticsMode } from './analytics-hosts.mjs';
+import { analyticsMode, isAfterFlip } from './analytics-hosts.mjs';
 import { guardNotice, refusesWrites } from './network-guard.mjs';
 import {
     BASE_URL, IS_LOCAL, QA_CHANNEL, assertLocalServer,
@@ -11,6 +11,8 @@ import {
 
 export default async function globalSetup() {
     await assertLocalServer();
-    const run = { channel: QA_CHANNEL, storefront: BASE_URL, local: IS_LOCAL };
+    const run = {
+        channel: QA_CHANNEL, storefront: BASE_URL, local: IS_LOCAL, flipped: isAfterFlip(),
+    };
     guardNotice({ ...run, blockAnalytics: analyticsMode().blocked, refuseWrites: refusesWrites(run) }).forEach(line => console.log(line));
 }
