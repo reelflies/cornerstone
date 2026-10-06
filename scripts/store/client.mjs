@@ -7,8 +7,9 @@
 //
 // - A read-only client refuses any other method before it sends anything. plan.mjs uses one, so
 //   a plan can't write, whichever token it holds.
-// - Nothing is retried: a write sent twice could create two objects. A failed read stops the
-//   plan or the apply, which is run again.
+// - The client retries nothing: a write sent twice could create two objects. A failed read
+//   before any write stops the plan or the apply, which is run again; apply.mjs tries each GET
+//   after a write up to 3 times, because part 3 must be read.
 // - Errors and failure descriptions carry the status and BigCommerce's own title, never the
 //   request's headers. Callers print through release-redact.mjs anyway.
 

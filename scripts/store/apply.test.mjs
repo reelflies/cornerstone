@@ -231,18 +231,19 @@ test('a failed part 3 restores the snapshot\'s values at once, stops, and locks 
     const puts = calls.filter(call => call.method === 'PUT');
     assert.deepEqual(puts.map(call => [call.path, call.body]), [
         ['/v3/settings/inventory?channel_id=1895766', { option_out_of_stock_behavior: 'label_option' }],
-        ['/v3/settings/inventory', { option_out_of_stock_behavior: 'do_nothing' }],
-        // A channel is put back with its whole read: BigCommerce resets an override only when
-        // every field is sent, and null where the channel inherited.
+        // 1895766 is put back first, with its whole read: BigCommerce resets an override only
+        // when every field is sent, null where the channel inherited. Its PUT is the kind that
+        // just leaked, so the global value and the live channels are put back after it.
         ['/v3/settings/inventory?channel_id=1895766', inventory.channel_1895766.data],
+        ['/v3/settings/inventory', { option_out_of_stock_behavior: 'do_nothing' }],
     ]);
     const rows = readLogRows(root);
     assert.deepEqual(rows.map(row => [row.row, row.action, row.channel, row.outcome]), [
         ['intent', 'settings', 1895766, undefined],
-        ['intent', 'restore', 'global', undefined],
-        ['result', 'restore', 'global', 'ok'],
         ['intent', 'restore', 1895766, undefined],
         ['result', 'restore', 1895766, 'ok'],
+        ['intent', 'restore', 'global', undefined],
+        ['result', 'restore', 'global', 'ok'],
         ['result', 'settings', 1895766, 'stopped'],
     ]);
     assert.match(rows[5].message, /part 3 failed: global changed \(option_out_of_stock_behavior\); restored and locked/);
@@ -257,6 +258,130 @@ test('a failed part 3 restores the snapshot\'s values at once, stops, and locks 
     await assert.rejects(later.run, /LOCKED exists: every apply refuses until Shaun removes it/);
     assert.deepEqual(later.calls, []);
     assert.match(lockedProblem(root), /part 3 of ticket 21's test failed/);
+});
+
+// --- Part 3 after a settings write that went wrong: proved, or locked ------------------------------
+
+const leakedGlobal = () => {
+    const leaked = structuredClone(inventory.global);
+    leaked.data.option_out_of_stock_behavior = 'label_option';
+    return leaked;
+};
+const busy = { status: 429, body: { status: 429, title: 'Too many requests' } };
+const down = { status: 503, body: { status: 503, title: 'Service unavailable' } };
+
+async function settingsRun(overrides) {
+    const { text } = await makePlan([labelOption], inventoryRoutes());
+    const started = await apply(text, inventoryRoutes(overrides));
+    const result = await started.run;
+    return {
+        ...started, result, rows: readLogRows(started.root), locked: lockedProblem(started.root),
+    };
+}
+
+const reads = calls => calls.filter(call => call.method === 'GET').map(call => call.path);
+
+test('part 3 can\'t be read after a settings write (the global read answers 429): a stopped row and LOCKED, never a throw', async () => {
+    const {
+        result, rows, locked, calls, root,
+    } = await settingsRun({
+        'GET /v3/settings/inventory?channel_id=1895766': [{ body: inventory.channel_1895766 }, { body: inventory.channel_1895766_after }],
+        'GET /v3/settings/inventory': [{ body: inventory.global }, busy],
+        'PUT /v3/settings/inventory?channel_id=1895766': { body: inventory.put_response },
+    });
+    assert.equal(result.outcome, 'locked');
+    assert.deepEqual(rows.map(row => [row.row, row.outcome]), [['intent', undefined], ['result', 'stopped']]);
+    assert.match(rows[1].message, /part 3 unproved: global couldn't be read \(GET \/v3\/settings\/inventory answered 429: Too many requests\)/);
+    assert.match(locked, /part 3 of ticket 21's test is unproved for settings\/inventory/);
+    // Channels 1 and 1855224 are still read, and nothing is put back blind.
+    assert.ok(reads(calls).includes('/v3/settings/inventory?channel_id=1855224'));
+    assert.deepEqual(calls.filter(call => call.method === 'PUT').length, 1);
+    assert.ok(fs.readdirSync(path.join(root, '1895766', 'settings-inventory')).some(file => file.endsWith(`after-${rows[0].plan_sha256.slice(0, 8)}.json`)), 'what was read is kept');
+});
+
+test('the 1895766 re-read fails after a settings write: part 3 is still read, a leak is put back, and the helper locks', async () => {
+    const {
+        result, rows, calls, root,
+    } = await settingsRun({
+        'GET /v3/settings/inventory?channel_id=1895766': [{ body: inventory.channel_1895766 }, down],
+        'GET /v3/settings/inventory': [{ body: inventory.global }, { body: leakedGlobal() }, { body: inventory.global }],
+        'PUT /v3/settings/inventory?channel_id=1895766': { body: inventory.put_response },
+        'PUT /v3/settings/inventory': { body: inventory.global },
+    });
+    assert.equal(result.outcome, 'locked');
+    const puts = calls.filter(call => call.method === 'PUT').map(call => [call.path, call.body]);
+    // 1895766 couldn't be read, so it isn't put back blind; the global value is.
+    assert.deepEqual(puts, [
+        ['/v3/settings/inventory?channel_id=1895766', { option_out_of_stock_behavior: 'label_option' }],
+        ['/v3/settings/inventory', { option_out_of_stock_behavior: 'do_nothing' }],
+    ]);
+    // 1895766 still can't be read after the restore, so the restore can't be confirmed.
+    assert.match(rows.at(-1).message, /part 3 failed: global changed \(option_out_of_stock_behavior\); 1895766 couldn't be read \(.*503.*\); restore not confirmed: check the store by hand; locked$/);
+    assert.equal(rows.at(-1).outcome, 'stopped');
+    assert.equal(JSON.parse(fs.readFileSync(path.join(root, 'LOCKED'), 'utf8')).restored, false);
+});
+
+test('a 1895766 re-read that fails with nothing leaked still locks: part 3 is unproved', async () => {
+    const { result, rows, locked } = await settingsRun({
+        'GET /v3/settings/inventory?channel_id=1895766': [{ body: inventory.channel_1895766 }, down],
+        'PUT /v3/settings/inventory?channel_id=1895766': { body: inventory.put_response },
+    });
+    assert.equal(result.outcome, 'locked');
+    assert.match(rows.at(-1).message, /part 3 unproved: 1895766 couldn't be read/);
+    assert.match(locked, /unproved/);
+});
+
+test('a settings PUT that answers 504 but was applied store-wide is caught by part 3, put back and locked', async () => {
+    const { result, rows, calls } = await settingsRun({
+        'GET /v3/settings/inventory?channel_id=1895766': [{ body: inventory.channel_1895766 }, { body: inventory.channel_1895766_after }, { body: inventory.channel_1895766 }],
+        'GET /v3/settings/inventory': [{ body: inventory.global }, { body: leakedGlobal() }, { body: inventory.global }],
+        'PUT /v3/settings/inventory?channel_id=1895766': { status: 504, body: { status: 504, title: 'Gateway timeout' } },
+        'PUT /v3/settings/inventory': { body: inventory.global },
+    });
+    assert.equal(result.outcome, 'locked');
+    assert.equal(rows.at(-1).status, 504);
+    assert.match(rows.at(-1).message, /part 3 failed: global changed \(option_out_of_stock_behavior\); restored and locked; the write itself answered 504: Gateway timeout/);
+    assert.deepEqual(calls.filter(call => call.method === 'PUT').map(call => call.path), [
+        '/v3/settings/inventory?channel_id=1895766', '/v3/settings/inventory?channel_id=1895766', '/v3/settings/inventory',
+    ]);
+});
+
+test('a settings PUT whose connection drops is checked by part 3 all the same', async () => {
+    const { result, rows } = await settingsRun({
+        'GET /v3/settings/inventory?channel_id=1895766': [{ body: inventory.channel_1895766 }, { body: inventory.channel_1895766_after }, { body: inventory.channel_1895766 }],
+        'GET /v3/settings/inventory': [{ body: inventory.global }, { body: leakedGlobal() }, { body: inventory.global }],
+        'PUT /v3/settings/inventory?channel_id=1895766': () => { throw new Error('socket hang up'); },
+        'PUT /v3/settings/inventory': { body: inventory.global },
+    });
+    assert.equal(result.outcome, 'locked');
+    assert.equal(rows.at(-1).status, null);
+    assert.match(rows.at(-1).message, /part 3 failed: global changed .*; the write itself got no answer: socket hang up/);
+});
+
+test('a settings PUT the store refuses, with part 3 holding, fails without a lock', async () => {
+    const {
+        result, rows, locked, calls,
+    } = await settingsRun({
+        'PUT /v3/settings/inventory?channel_id=1895766': { status: 422, body: { status: 422, title: 'Invalid', errors: { option_out_of_stock_behavior: 'unknown value' } } },
+    });
+    assert.equal(result.outcome, 'failed');
+    assert.equal(locked, null);
+    assert.deepEqual(rows.map(row => [row.row, row.outcome, row.status ?? null]), [['intent', undefined, null], ['result', 'failed', 422]]);
+    assert.match(rows[1].message, /^422: Invalid \(option_out_of_stock_behavior: unknown value\); part 3 held: the global value and channels 1 and 1855224 read back unchanged$/);
+    assert.deepEqual(reads(calls).slice(-4), [
+        '/v3/settings/inventory?channel_id=1895766', '/v3/settings/inventory', '/v3/settings/inventory?channel_id=1', '/v3/settings/inventory?channel_id=1855224',
+    ]);
+});
+
+test('a part-3 read that answers 429 once is read again, and the write goes through', async () => {
+    const { result, rows, locked } = await settingsRun({
+        'GET /v3/settings/inventory?channel_id=1895766': [{ body: inventory.channel_1895766 }, { body: inventory.channel_1895766_after }],
+        'GET /v3/settings/inventory': [{ body: inventory.global }, busy, { body: inventory.global }],
+        'PUT /v3/settings/inventory?channel_id=1895766': { body: inventory.put_response },
+    });
+    assert.equal(result.outcome, 'applied');
+    assert.equal(locked, null);
+    assert.equal(rows.at(-1).outcome, 'ok');
 });
 
 const template = {
@@ -383,6 +508,23 @@ test('an approved write keeps the snapshot, the log and the re-reads, and report
     assert.ok(fs.existsSync(path.join(root, 'store-wide', 'settings-inventory')));
     assert.ok(SMOKE_TESTS.some(line => /reelflies\.com/.test(line)));
     assert.ok(SMOKE_TESTS.some(line => /channel 1/.test(line)));
+});
+
+test('an approved write whose part-3 report can\'t be read still gets its result row, and stops', async () => {
+    const { text } = await makePlan([storeWide], inventoryRoutes(), { mode: 'approved' });
+    const changed = structuredClone(inventory.global);
+    changed.data.option_out_of_stock_behavior = 'label_option';
+    const { run, root } = await apply(text, inventoryRoutes({
+        'GET /v3/settings/inventory': [{ body: inventory.global }, { body: changed }],
+        'GET /v3/settings/inventory?channel_id=1855224': [{ body: inventory.channel_1855224 }, down],
+        'PUT /v3/settings/inventory': { body: changed },
+    }), { approved: true });
+    const result = await run;
+    assert.equal(result.outcome, 'failed');
+    const rows = readLogRows(root);
+    assert.deepEqual(rows.map(row => [row.row, row.outcome, row.status ?? null]), [['intent', undefined, null], ['result', 'stopped', 200]]);
+    assert.match(rows[1].message, /the write answered 200, but part 3's report couldn't be read: 1855224 couldn't be read/);
+    assert.equal(lockedProblem(root), null, 'approved mode reports part 3, and never locks on it');
 });
 
 function terminal(isTTY = true) {

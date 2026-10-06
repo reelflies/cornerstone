@@ -19,11 +19,16 @@
 //    plan whose own copies differ, and shows the diff it derived (never the file's).
 // 7. for each request: an intent row in log.jsonl (flushed), the request, the response's channel
 //    check, the re-read, and for a settings write part 3: the global value and channels 1 and
-//    1855224 read back unchanged. Then the result row.
+//    1855224 read back unchanged. Then the result row, whatever happened.
 //    - A refused write stops the run (outcome "failed"); nothing after it is sent.
 //    - A response or re-read naming another channel stops the run and writes LOCKED.
-//    - A failed part 3 puts back the snapshot's values at once (the global value and each
-//      channel that changed, and 1895766's own), stops, and writes LOCKED.
+//    - Part 3 is read after every settings write that was sent, whatever it answered, even
+//      none: a PUT that times out may still have landed. Each GET after a write is tried up
+//      to 3 times.
+//    - A failed part 3 puts back the snapshot's values at once (1895766's own first, then the
+//      global value and each live channel that changed), stops, and writes LOCKED.
+//    - A part 3 that can't be read (a scope still unreadable after its tries) is unproved: the
+//      run stops and writes LOCKED, and puts back only what it read as changed.
 //
 // Approved mode runs only at a terminal, which an agent's shell isn't. It prints the exact
 // requests, asks Shaun for a token at a hidden prompt (used for this run and never stored), takes
@@ -39,6 +44,7 @@ import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
 import { Writable } from 'stream';
+import { setTimeout as pause } from 'timers/promises';
 import { isDeepStrictEqual } from 'util';
 import { isMain } from '../lib/is-main.mjs';
 import { acquireLock } from '../lib/lock.mjs';
@@ -69,7 +75,12 @@ export const SMOKE_TESTS = [
 ];
 
 const NO_TERMINAL = 'apply --approved runs only at Shaun\'s terminal: it asks him to type the start of the plan\'s sha256 and to paste a token at a hidden prompt, which no agent can answer (as with release.sh)';
-const RESTORE_SCOPES = [...PART3_SCOPES, String(CHANNEL)];
+// 1895766 is put back first: its PUT is the kind that just leaked, so the global value and the
+// live channels are put back after it.
+const RESTORE_SCOPES = [String(CHANNEL), ...PART3_SCOPES];
+// Each GET after a write is tried this often (a 429, a 5xx or no answer), with a pause between.
+const READ_TRIES = 3;
+const defaultWait = attempt => pause(1000 * attempt);
 
 const isObject = value => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
@@ -203,29 +214,65 @@ function reReadSpecs({ request, what }, ids, mode) {
     }));
 }
 
-async function readAll(client, specs) {
+// One GET after a write, tried up to READ_TRIES times. A read naming another channel isn't
+// tried again: that isn't a blip.
+async function readTried(client, spec, wait, attempt = 1) {
+    try {
+        return await takeRead(client, spec);
+    } catch (error) {
+        if (error.channel || attempt >= READ_TRIES) throw error;
+        await wait(attempt);
+        return readTried(client, spec, wait, attempt + 1);
+    }
+}
+
+const readRecord = (spec, data) => ({
+    key: spec.key, object: spec.object, scope: spec.scope, data, sha256: sha256(canonicalJson(data)),
+});
+
+async function readAll(client, specs, wait) {
     const records = [];
     for (const spec of specs) {
         // eslint-disable-next-line no-await-in-loop
-        const data = await takeRead(client, spec);
-        records.push({
-            key: spec.key, object: spec.object, scope: spec.scope, data, sha256: sha256(canonicalJson(data)),
-        });
+        records.push(readRecord(spec, await readTried(client, spec, wait)));
     }
     return records;
 }
 
-const scopeData = (records, request, what, scopes) => Object.fromEntries(scopes.map(scope => [scope, records.find(record => record.key === settingsSpec(request, what, scope).key)?.data]));
+// One setting at each scope, each read on its own, so a scope that can't be read doesn't hide
+// another's change. Returns the data by scope, the records, and the scopes left unread.
+async function readScopes(client, { request, what }, scopes, wait) {
+    const data = {};
+    const records = [];
+    const unread = [];
+    for (const scope of scopes) {
+        const spec = settingsSpec(request, what, scope, scope === String(CHANNEL) ? 'channel' : 'none');
+        try {
+            // eslint-disable-next-line no-await-in-loop
+            const value = await readTried(client, spec, wait);
+            data[scope] = value;
+            records.push(readRecord(spec, value));
+        } catch (error) {
+            unread.push({ scope, message: error.message });
+        }
+    }
+    return { data, records, unread };
+}
 
-// Puts back the snapshot's values after a failed part 3: the changed keys of the global value,
-// and the whole read of each channel that changed (BigCommerce resets a channel's override only
-// when every field is sent, null where it inherited). Then reads all four again.
+const scopeData = (records, request, what, scopes) => Object.fromEntries(scopes.map(scope => [scope, records.find(record => record.key === settingsSpec(request, what, scope).key)?.data]));
+const describeChanges = changes => changes.map(change => `${change.scope} changed (${change.keys.join(', ')})`).join('; ');
+const describeUnread = unread => unread.map(({ scope, message }) => `${scope} couldn't be read (${message})`).join('; ');
+
+// Puts back the snapshot's values after a failed part 3: the whole read of each channel that
+// changed (BigCommerce resets a channel's override only when every field is sent, null where it
+// inherited), 1895766 first, and the changed keys of the global value. A scope that couldn't be
+// read is never written blind. Then reads all four again: `held` says they match the snapshot.
 async function restoreSettings({
-    client, item, before, after, root, row, now,
+    client, item, before, after, root, row, now, wait,
 }) {
-    const { request, what } = item;
+    const { request } = item;
     const results = [];
-    for (const scope of RESTORE_SCOPES) {
+    for (const scope of RESTORE_SCOPES.filter(name => Object.hasOwn(after, name))) {
         const was = isObject(before[scope]) ? before[scope] : {};
         const is = isObject(after[scope]) ? after[scope] : {};
         const keys = [...new Set([...Object.keys(was), ...Object.keys(is)])].filter(key => !isDeepStrictEqual(was[key], is[key]));
@@ -257,17 +304,140 @@ async function restoreSettings({
             });
         }
     }
-    let held = false;
-    try {
-        const check = scopeData(await readAll(client, RESTORE_SCOPES.map(scope => settingsSpec(request, what, scope))), request, what, RESTORE_SCOPES);
-        held = RESTORE_SCOPES.every(scope => isDeepStrictEqual(check[scope], before[scope]));
-    } catch {
-        held = false;
-    }
+    const check = await readScopes(client, item, RESTORE_SCOPES, wait);
+    const held = !check.unread.length && RESTORE_SCOPES.every(scope => isDeepStrictEqual(check.data[scope], before[scope]));
     return { results, held };
 }
 
-const describeChanges = changes => changes.map(change => `${change.scope} changed (${change.keys.join(', ')})`).join('; ');
+// After a lifted settings write was sent, whatever it answered: the re-read of 1895766 and part
+// 3. Returns null to go on, or the outcome that stops the run. Every path writes the result row.
+async function afterLiftedSettingsWrite({
+    client, item, fresh, response, sendError, wait, result, lock, afterRecords, log, root, row, now,
+}) {
+    const { index, request, what } = item;
+    const status = response ? response.status : null;
+    let failure = null;
+    if (sendError) failure = { short: `no answer: ${sendError.message}`, long: `got no answer: ${sendError.message}` };
+    else if (!response.ok) failure = { short: describeFailure(response), long: `answered ${describeFailure(response)}` };
+    const tail = failure ? `; the write itself ${failure.long}` : '';
+    const wrong = response && response.ok ? responseChannelProblems(response.body) : [];
+    const read = await readScopes(client, item, RESTORE_SCOPES, wait);
+    afterRecords.push(...read.records);
+    const afterSha = read.records.length ? sha256(canonicalJson(read.records)) : null;
+    const before = scopeData(fresh.reads, request, what, RESTORE_SCOPES);
+    const changes = part3Changes(before, read.data, PART3_SCOPES.filter(scope => Object.hasOwn(read.data, scope)));
+    const notes = [...(read.unread.length ? [describeUnread(read.unread)] : []), ...wrong];
+    const where = { request: index, method: request.method, path: request.path };
+
+    if (changes.length) {
+        log(`FAIL     part 3: ${describeChanges(changes)}. Restoring the snapshot's values now`);
+        const restore = await restoreSettings({
+            client, item, before, after: read.data, root, row, now, wait,
+        });
+        const message = [`part 3 failed: ${describeChanges(changes)}`, ...notes, restore.held ? 'restored and locked' : 'restore not confirmed: check the store by hand; locked'].join('; ') + tail;
+        result({
+            status, outcome: 'stopped', after_sha256: afterSha, message,
+        });
+        lock(`part 3 of ticket 21's test failed for ${what.object}: ${describeChanges(changes)}`, {
+            ...where, changes, unread: read.unread, restore: restore.results, restored: restore.held,
+        });
+        log(restore.held ? 'restored 1895766, the global value and every channel to the snapshot\'s values, and wrote LOCKED' : 'STOP     the restore didn\'t read back as the snapshot: check the store by hand. LOCKED is written');
+        return {
+            outcome: 'locked', request: index, message, changes, restore,
+        };
+    }
+    if (notes.length) {
+        const proof = read.unread.length ? `part 3 unproved: ${describeUnread(read.unread)}` : 'part 3 held';
+        const message = [proof, ...wrong].join('; ') + tail;
+        result({
+            status, outcome: 'stopped', after_sha256: afterSha, message,
+        });
+        lock(read.unread.length ? `part 3 of ticket 21's test is unproved for ${what.object}: ${message}` : `a write's response named another channel: ${wrong.join('; ')}`, { ...where, unread: read.unread });
+        log(`STOP     ${message}. LOCKED is written`);
+        return { outcome: 'locked', request: index, message };
+    }
+    log('part 3   the global value and channels 1 and 1855224 read back unchanged');
+    if (failure) {
+        const message = `${failure.short}; part 3 held: the global value and channels 1 and 1855224 read back unchanged`;
+        result({
+            status, outcome: 'failed', after_sha256: afterSha, message,
+        });
+        return { outcome: 'failed', request: index, message };
+    }
+    result({
+        status, outcome: 'ok', after_sha256: afterSha, message: '',
+    });
+    log(`ok       ${index + 1}. ${status}`);
+    return null;
+}
+
+// After any other write: the response's checks, the re-read, and in approved mode part 3's
+// report. Returns null to go on, or the outcome that stops the run.
+async function afterWrite({
+    client, item, fresh, response, sendError, wait, result, lock, afterRecords, log, mode, created,
+}) {
+    const { index, request, what } = item;
+    const where = { request: index, method: request.method, path: request.path };
+    if (sendError) {
+        const message = `no answer: ${sendError.message}`;
+        result({ status: null, outcome: 'failed', message });
+        return { outcome: 'failed', request: index, message };
+    }
+    if (!response.ok) {
+        const message = describeFailure(response);
+        result({ status: response.status, outcome: 'failed', message });
+        return { outcome: 'failed', request: index, message };
+    }
+    if (mode === 'lifted') {
+        const wrong = responseChannelProblems(response.body, { requireOnData: ['widget', 'page', 'script'].includes(what.kind) });
+        if (wrong.length) {
+            const message = wrong.join('; ');
+            result({ status: response.status, outcome: 'stopped', message });
+            lock(`a write's response named another channel: ${message}`, where);
+            return { outcome: 'locked', request: index, message };
+        }
+    }
+    const ids = createdIds(item, response);
+    if (what.action === 'create' && ids.length) created.set(index, ids[0]);
+    const id = what.id ?? (ids.length ? ids.join(',') : null);
+    let records;
+    try {
+        records = await readAll(client, reReadSpecs(item, ids, mode), wait);
+    } catch (error) {
+        const message = `the write answered ${response.status}, but its re-read stopped: ${error.message}`;
+        result({
+            id, status: response.status, outcome: 'stopped', message,
+        });
+        if (error.channel) {
+            lock(`a re-read after a write named another channel: ${error.message}`, where);
+            return { outcome: 'locked', request: index, message };
+        }
+        return { outcome: 'failed', request: index, message };
+    }
+    afterRecords.push(...records);
+    let afterSha = sha256(canonicalJson(records));
+    if (what.kind === 'settings' && mode === 'approved' && APPROVED_SETTINGS[what.settingsPath].channelReads) {
+        const scopes = [...LIVE_CHANNELS, CHANNEL].map(String);
+        const read = await readScopes(client, item, scopes, wait);
+        afterRecords.push(...read.records);
+        afterSha = sha256(canonicalJson([...records, ...read.records]));
+        if (read.unread.length) {
+            const message = `the write answered ${response.status}, but part 3's report couldn't be read: ${describeUnread(read.unread)}`;
+            result({
+                id, status: response.status, outcome: 'stopped', after_sha256: afterSha, message,
+            });
+            return { outcome: 'failed', request: index, message };
+        }
+        const all = ['global', ...scopes];
+        const changes = part3Changes(scopeData(fresh.reads, request, what, all), { ...read.data, global: records[0].data }, all);
+        log(`part 3 (reported, not enforced): ${changes.length ? describeChanges(changes) : 'nothing read back changed'}`);
+    }
+    result({
+        id, status: response.status, outcome: 'ok', after_sha256: afterSha, message: '',
+    });
+    log(`ok       ${index + 1}. ${response.status}${id ? `, ${what.object} ${id}` : ''}`);
+    return null;
+}
 
 // Applies a plan. Throws Refused before anything is written; once writing starts it returns
 // { outcome: 'applied' | 'failed' | 'locked', ... } and every request it sent has its log rows.
@@ -275,7 +445,7 @@ const describeChanges = changes => changes.map(change => `${change.scope} change
 //   first write; it throws to stop. Approved mode needs one: Shaun's typed go-ahead.
 // - dryRun stops there instead, having written nothing: { outcome: 'dry-run', ... }.
 export async function applyPlan({
-    planText, client, phase, root, operator, approved = false, confirm, dryRun = false, now = () => new Date(), log = () => {},
+    planText, client, phase, root, operator, approved = false, confirm, dryRun = false, now = () => new Date(), log = () => {}, wait = defaultWait,
 }) {
     const locked = lockedProblem(root);
     if (locked) throw new Refused(locked);
@@ -326,6 +496,10 @@ export async function applyPlan({
         return { ...outcome, beforeFiles, afterFiles };
     };
 
+    const lock = (reason, details) => writeLocked(root, {
+        locked: now().toISOString(), reason, plan: planSha, plan_created: plan.created, ticket: plan.ticket, ...details,
+    });
+
     for (const item of items) {
         const { index, request, what } = item;
         const row = {
@@ -343,7 +517,8 @@ export async function applyPlan({
         }
         appendLogRow(root, logRow({ row: 'intent', ...row, date: now().toISOString() }));
         log(`write    ${index + 1}. ${request.method} ${request.path}${queryString(request.query)}`);
-        let response;
+        let response = null;
+        let sendError = null;
         try {
             // Requests go one after another: each may need the uuid the one before created.
             // eslint-disable-next-line no-await-in-loop
@@ -351,97 +526,14 @@ export async function applyPlan({
                 method: request.method, path: request.path, query: request.query, body,
             });
         } catch (error) {
-            const message = `no answer: ${error.message}`;
-            result({ status: null, outcome: 'failed', message });
-            return finish({ outcome: 'failed', request: index, message });
+            sendError = error;
         }
-        if (!response.ok) {
-            const message = describeFailure(response);
-            result({ status: response.status, outcome: 'failed', message });
-            return finish({ outcome: 'failed', request: index, message });
-        }
-        if (mode === 'lifted') {
-            const wrong = responseChannelProblems(response.body, { requireOnData: ['widget', 'page', 'script'].includes(what.kind) });
-            if (wrong.length) {
-                const message = wrong.join('; ');
-                result({ status: response.status, outcome: 'stopped', message });
-                writeLocked(root, {
-                    locked: now().toISOString(), reason: `a write's response named another channel: ${message}`, plan: planSha, plan_created: plan.created, ticket: plan.ticket, request: index, method: request.method, path: request.path,
-                });
-                return finish({ outcome: 'locked', request: index, message });
-            }
-        }
-        const ids = createdIds(item, response);
-        if (what.action === 'create' && ids.length) created.set(index, ids[0]);
-        const id = what.id ?? (ids.length ? ids.join(',') : null);
-        let records;
-        try {
-            // eslint-disable-next-line no-await-in-loop
-            records = await readAll(client, reReadSpecs(item, ids, mode));
-        } catch (error) {
-            const message = `the write answered ${response.status}, but its re-read stopped: ${error.message}`;
-            result({
-                id, status: response.status, outcome: 'stopped', message,
-            });
-            if (error.channel) {
-                writeLocked(root, {
-                    locked: now().toISOString(), reason: `a re-read after a write named another channel: ${error.message}`, plan: planSha, plan_created: plan.created, ticket: plan.ticket, request: index, method: request.method, path: request.path,
-                });
-                return finish({ outcome: 'locked', request: index, message });
-            }
-            return finish({ outcome: 'failed', request: index, message });
-        }
-        afterRecords.push(...records);
-        const afterSha = sha256(canonicalJson(records));
-
-        if (what.kind === 'settings' && mode === 'lifted') {
-            // eslint-disable-next-line no-await-in-loop
-            const part3 = await readAll(client, PART3_SCOPES.map(scope => settingsSpec(request, what, scope)));
-            afterRecords.push(...part3);
-            const before = scopeData(fresh.reads, request, what, RESTORE_SCOPES);
-            const afterData = { ...scopeData(part3, request, what, PART3_SCOPES), [CHANNEL]: records[0].data };
-            const changes = part3Changes(before, afterData);
-            if (changes.length) {
-                log(`FAIL     part 3: ${describeChanges(changes)}. Restoring the snapshot's values now`);
-                // eslint-disable-next-line no-await-in-loop
-                const restore = await restoreSettings({
-                    client, item, before, after: afterData, root, row: { ...row, id }, now,
-                });
-                const message = `part 3 failed: ${describeChanges(changes)}; restored and locked`;
-                result({
-                    id, status: response.status, outcome: 'stopped', after_sha256: afterSha, message,
-                });
-                writeLocked(root, {
-                    locked: now().toISOString(),
-                    reason: `part 3 of ticket 21's test failed for ${what.object}: ${describeChanges(changes)}`,
-                    plan: planSha,
-                    plan_created: plan.created,
-                    ticket: plan.ticket,
-                    request: index,
-                    changes,
-                    restore: restore.results,
-                    restored: restore.held,
-                });
-                log(restore.held ? 'restored the global value and every channel to the snapshot\'s values, and wrote LOCKED' : 'STOP     the restore didn\'t read back as the snapshot: check the store by hand. LOCKED is written');
-                return finish({
-                    outcome: 'locked', request: index, message, changes, restore,
-                });
-            }
-            log('part 3   the global value and channels 1 and 1855224 read back unchanged');
-        }
-        if (what.kind === 'settings' && mode === 'approved' && APPROVED_SETTINGS[what.settingsPath].channelReads) {
-            const scopes = [...LIVE_CHANNELS, CHANNEL].map(String);
-            // eslint-disable-next-line no-await-in-loop
-            const channels = await readAll(client, scopes.map(scope => settingsSpec(request, what, scope)));
-            afterRecords.push(...channels);
-            const all = ['global', ...scopes];
-            const changes = part3Changes(scopeData(fresh.reads, request, what, all), { ...scopeData(channels, request, what, scopes), global: records[0].data }, all);
-            log(`part 3 (reported, not enforced): ${changes.length ? describeChanges(changes) : 'nothing read back changed'}`);
-        }
-        result({
-            id, status: response.status, outcome: 'ok', after_sha256: afterSha, message: '',
-        });
-        log(`ok       ${index + 1}. ${response.status}${id ? `, ${what.object} ${id}` : ''}`);
+        const context = {
+            client, item, fresh, response, sendError, wait, result, lock, afterRecords, log, mode, created, root, row, now,
+        };
+        // eslint-disable-next-line no-await-in-loop
+        const stop = what.kind === 'settings' && mode === 'lifted' ? await afterLiftedSettingsWrite(context) : await afterWrite(context);
+        if (stop) return finish(stop);
     }
     return finish({ outcome: 'applied', count: items.length });
 }
