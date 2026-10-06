@@ -22,9 +22,9 @@ test('the wrong Node version and a dirty tree are each a reason to stop', () => 
     assert.match(problems[1], /uncommitted changes/);
 });
 
-test('My Themes stops the release at 20 themes, because the release never deletes one', () => {
+test('My Themes stops the release at 20 themes, because the push never deletes one: the prune runs only after a push (W0-3)', () => {
     assert.deepEqual(themeCapProblems(19), []);
-    assert.match(themeCapProblems(20)[0], /My Themes holds 20 themes, the limit is 20: delete one by hand/);
+    assert.match(themeCapProblems(20)[0], /My Themes holds 20 themes, the limit is 20: prune old ReelFlies builds with scripts\/release\.sh --prune-only, run with --dry-run first \(W0-3\), or delete a theme by hand/);
 });
 
 test('a real release stops on these problems; a dry run only warns, saying a real release would stop', () => {

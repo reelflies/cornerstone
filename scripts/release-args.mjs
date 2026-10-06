@@ -1,15 +1,18 @@
 // Reads scripts/release.sh's arguments and refuses anything but one channel and one named
 // variation (tickets 05 and 15), and --confirm-nonprod that doesn't name that channel (W0-1). Pure:
 // no network, no files. Whether the target and the release calendar allow --confirm-nonprod is
-// release-checks.mjs's confirmNonprodRefusals.
+// release-checks.mjs's confirmNonprodRefusals. W0-3's --prune-only runs on its own, with only
+// --dry-run (parsePruneArgs).
 //
 //   import { parseReleaseArgs, resolveTarget, USAGE } from './release-args.mjs';
+//   import { isPruneOnly, parsePruneArgs, PRUNE_USAGE } from './release-args.mjs'; // W0-3
 //
 // Each refusal throws an Error whose message is the one-line reason the operator sees.
 
 import { findTarget } from './release-targets.mjs';
 
 export const USAGE = 'scripts/release.sh --channel <id> --variation "<name>" [--dry-run] [--first-release] [--accept-live | --overwrite-live] [--confirm-nonprod <id>]';
+export const PRUNE_USAGE = 'scripts/release.sh --prune-only [--dry-run]';
 
 // Flags that take no value (not the rf_* module switches, which the release guard checks).
 const BOOLEAN_FLAGS = {
@@ -23,7 +26,7 @@ const VALUE_FLAGS = { '--channel': 'channels', '--variation': 'variations', '--c
 // stencil push flags (and look-alikes) that must never reach a release.
 const ALL_CHANNELS = 'pushing to all channels is never allowed: name one channel with --channel <id>';
 const ACTIVATE = 'name the variation with --variation "<name>" (a bare -a activates whichever variation comes first)';
-const DELETE = 'the release never deletes themes: prune My Themes by hand in the control panel';
+const DELETE = `the release never deletes themes with stencil push -d: old ReelFlies builds are pruned after each push, or with ${PRUNE_USAGE} (W0-3)`;
 const FORBIDDEN = {
     '-allc': ALL_CHANNELS,
     '--all-channels': ALL_CHANNELS,
@@ -34,7 +37,10 @@ const FORBIDDEN = {
     '--delete': DELETE,
     '-c': 'name the channel with --channel <id>',
     '--channel_ids': 'name the channel with --channel <id>',
+    // W0-3 builds an upload mode only if a 1895766 push's uuid doesn't preview on reelflies.com.
+    '--upload-only': 'there is no upload mode: each push to 1895766 already puts its build in My Themes, where reelflies.com can preview it. W0-3 adds --upload-only only if that build doesn\'t preview there (W0-1\'s watched push)',
 };
+const PRUNE_ALONE = `--prune-only runs on its own: ${PRUNE_USAGE}, with no channel, variation or other flag (My Themes is store-wide)`;
 
 function splitFlag(arg) {
     const equals = arg.indexOf('=');
@@ -46,6 +52,7 @@ function readFlags(argv) {
     for (let i = 0; i < argv.length; i++) {
         const [flag, inline] = splitFlag(argv[i]);
         if (FORBIDDEN[flag]) throw new Error(`${flag}: ${FORBIDDEN[flag]}`);
+        if (flag === '--prune-only') throw new Error(PRUNE_ALONE);
         if (BOOLEAN_FLAGS[flag]) {
             if (inline !== undefined) throw new Error(`${flag} takes no value`);
             found[BOOLEAN_FLAGS[flag]] = true;
@@ -117,6 +124,33 @@ export function parseReleaseArgs(argv) {
         }
     }
     return options;
+}
+
+// --- W0-3: --prune-only --------------------------------------------------------------------
+
+// Whether release.sh runs the prune on its own: any argument that is the flag, with or without a
+// value (parsePruneArgs then refuses a value). A value of another flag never counts.
+export const isPruneOnly = argv => argv.some(arg => splitFlag(arg)[0] === '--prune-only');
+
+// `--prune-only [--dry-run]`, and nothing else: the prune is store-wide, so it names no channel or
+// variation. Returns { pruneOnly: true, dryRun }.
+export function parsePruneArgs(argv) {
+    const seen = { '--prune-only': 0, '--dry-run': 0 };
+    for (const arg of argv) {
+        const [flag, inline] = splitFlag(arg);
+        if (FORBIDDEN[flag]) throw new Error(`${flag}: ${FORBIDDEN[flag]}`);
+        if (flag in seen) {
+            if (inline !== undefined) throw new Error(`${flag} takes no value`);
+            seen[flag] += 1;
+            if (seen[flag] > 1) throw new Error(`${flag} was given ${seen[flag]} times`);
+        } else if (flag.startsWith('-')) {
+            throw new Error(`--prune-only takes only --dry-run: it prunes My Themes, which is store-wide, so it names no channel or variation (${flag})`);
+        } else {
+            throw new Error(`unexpected argument "${flag}"`);
+        }
+    }
+    if (!seen['--prune-only']) throw new Error(`this isn't a prune: ${PRUNE_USAGE}`);
+    return { pruneOnly: true, dryRun: seen['--dry-run'] === 1 };
 }
 
 // Checks the variation against config.json and the channel against the release targets.

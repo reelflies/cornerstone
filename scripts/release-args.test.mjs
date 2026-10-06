@@ -3,7 +3,9 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseReleaseArgs, USAGE } from './release-args.mjs';
+import {
+    isPruneOnly, parsePruneArgs, parseReleaseArgs, PRUNE_USAGE, USAGE,
+} from './release-args.mjs';
 
 const CA = ['--channel', '1895766', '--variation', 'ReelFlies CA'];
 
@@ -41,4 +43,34 @@ test('W0-1: --confirm-nonprod is refused with --overwrite-live or --first-releas
 
 test('W0-1: the usage line names --confirm-nonprod', () => {
     assert.match(USAGE, /\[--confirm-nonprod <id>\]/);
+});
+
+// --- W0-3: --prune-only ------------------------------------------------------------------------
+
+test('W0-3: --prune-only runs on its own, with or without --dry-run', () => {
+    assert.deepEqual(parsePruneArgs(['--prune-only']), { pruneOnly: true, dryRun: false });
+    assert.deepEqual(parsePruneArgs(['--dry-run', '--prune-only']), { pruneOnly: true, dryRun: true });
+    assert.equal(isPruneOnly(['--prune-only', '--dry-run']), true);
+    assert.equal(isPruneOnly([...CA, '--dry-run']), false);
+    assert.equal(isPruneOnly([...CA, '--variation=--prune-only']), false, 'only the flag itself, not a value');
+    assert.match(PRUNE_USAGE, /^scripts\/release\.sh --prune-only \[--dry-run\]$/);
+});
+
+test('W0-3: --prune-only takes no channel, variation or other flag: My Themes is store-wide', () => {
+    assert.throws(() => parsePruneArgs(['--prune-only', ...CA]), /--prune-only takes only --dry-run/);
+    assert.throws(() => parsePruneArgs(['--prune-only', '--confirm-nonprod', '1895766']), /--prune-only takes only --dry-run/);
+    assert.throws(() => parsePruneArgs(['--prune-only', '--first-release']), /--prune-only takes only --dry-run/);
+    assert.throws(() => parsePruneArgs(['--prune-only', '-d']), /stencil push -d/);
+    assert.throws(() => parsePruneArgs(['--prune-only', '-allc']), /all channels/);
+    assert.throws(() => parsePruneArgs(['--prune-only=yes']), /--prune-only takes no value/);
+    assert.throws(() => parsePruneArgs(['--prune-only', '--prune-only']), /--prune-only was given 2 times/);
+    assert.throws(() => parsePruneArgs(['--prune-only', 'now']), /unexpected argument "now"/);
+    assert.throws(() => parsePruneArgs(['--dry-run']), /--prune-only/);
+});
+
+test('W0-3: a release refuses --prune-only among its arguments, and there is no upload mode', () => {
+    assert.throws(() => parseReleaseArgs([...CA, '--prune-only']), /--prune-only runs on its own: scripts\/release\.sh --prune-only \[--dry-run\]/);
+    assert.throws(() => parseReleaseArgs([...CA, '--prune-only=1']), /--prune-only runs on its own/);
+    assert.throws(() => parseReleaseArgs([...CA, '--upload-only']), /there is no upload mode.*W0-1's watched push/);
+    assert.throws(() => parsePruneArgs(['--prune-only', '--upload-only']), /there is no upload mode/);
 });

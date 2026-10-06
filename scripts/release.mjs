@@ -12,6 +12,10 @@
 //   node scripts/release.mjs redact                           step 5: filters tokens out of the push output
 //   node scripts/release.mjs verify                           step 6: capture again and compare
 //   node scripts/release.mjs write-log                        step 7: appends the entry to RELEASES.md
+//   node scripts/release.mjs prune-after-push                 after step 7, or at the end of a dry run: prunes
+//                                                             My Themes (W0-3; a plan only, until a --prune-only
+//                                                             has deleted a theme)
+//   node scripts/release.mjs prune --prune-only [--dry-run]   W0-3: prunes My Themes on its own
 //
 // Steps share a state file named by RF_RELEASE_STATE, which release.sh creates and removes.
 // Exit codes: 0 go on, 1 the release stops, 2 the arguments or the setup are refused.
@@ -30,6 +34,8 @@
 //                                    scripts/release-calendar.json (W0-1); step 5 never reads it
 //   RF_RELEASE_DATE=<YYYY-MM-DD>     today's date for the calendar, instead of today in Toronto (W0-1);
 //                                    step 5 never reads it
+//   RF_RELEASE_THEMES_FIXTURE=<file> My Themes and every channel's active theme, { themes,
+//                                    activeByChannel }, instead of the store, for the prune (W0-3)
 
 import { execFileSync } from 'child_process';
 import crypto from 'crypto';
@@ -40,9 +46,11 @@ import { isMain } from './lib/is-main.mjs';
 import {
     describePhase, phaseOn, readCalendar, todayInToronto,
 } from './lib/release-calendar.mjs';
-import { parseReleaseArgs, resolveTarget, USAGE } from './release-args.mjs';
 import {
-    captureLive, describeLiveTheme, getStoreHash, isThisFork,
+    parsePruneArgs, parseReleaseArgs, PRUNE_USAGE, resolveTarget, USAGE,
+} from './release-args.mjs';
+import {
+    captureLive, describeLiveTheme, getStoreHash, isThisFork, stencilApi,
 } from './release-capture.mjs';
 import {
     confirmChannel, confirmNonprodRefusals, hasConfirmNonprod, MAX_THEMES, pairedChannel1Release, pushConfirmation, pushGate,
@@ -53,20 +61,26 @@ import {
 } from './release-diff.mjs';
 import { checkRelease, menuIdsSet } from './release-guard.mjs';
 import {
-    addReleaseEntry, describePairedRelease, formatPushSummary, formatReleaseEntry, lastRelease, releasedThemeUuids,
+    addMyThemesRow, addReleaseEntry, describePairedRelease, formatMyThemesRow, formatPushSummary, formatReleaseEntry, lastRelease, myThemesRows,
+    releasedThemeUuids, releaseEntries,
 } from './release-log.mjs';
 import {
     checkoutProblems, gitIn, readCheckout, stepFiveOrigin,
 } from './release-origin.mjs';
+import {
+    describePlan, planPrune, REQUIRED_CHANNELS, runPrune, uncommittedProblems,
+} from './release-prune.mjs';
 import { redact } from './release-redact.mjs';
 import { validateThemeConfig } from './release-schema.mjs';
-import { buildPushArgs, findTarget } from './release-targets.mjs';
+import { buildPushArgs, findTarget, RELEASE_TARGETS } from './release-targets.mjs';
+import { readMyThemes, themeDeleter } from './release-themes.mjs';
 import { fetchChannelCategoryIds, readGuardToken, tokenGetJson } from './release-tree-ids.mjs';
 
 const MAIN_JS = 'assets/dist/theme-bundle.main.js';
 const RELEASES = 'RELEASES.md';
 const OVERRIDES = [
     'RF_RELEASE_CONFIG', 'RF_RELEASE_LIVE_FIXTURE', 'RF_RELEASE_TREE_FIXTURE', 'RF_RELEASE_LOG_FIXTURE', 'RF_RELEASE_BASE_FIXTURE', 'RF_RELEASE_CALENDAR_FIXTURE', 'RF_RELEASE_DATE',
+    'RF_RELEASE_THEMES_FIXTURE',
 ];
 // The store token variables, read here only to redact them from the output. The guard reads its
 // token through scripts/lib/store-token.mjs (readGuardToken), never from here.
@@ -133,6 +147,14 @@ function stopOrWarn(problems, dryRun, stop) {
 
 // --- prepare: refusals ---------------------------------------------------------------------
 
+// The test-only overrides need --dry-run: a real run always reads the store, git and RELEASES.md.
+function refuseOverrides(dryRun, why) {
+    const overrides = OVERRIDES.filter(name => process.env[name]);
+    if (overrides.length && !dryRun) {
+        throw refuse(`${overrides.join(' and ')} ${overrides.length > 1 ? 'are' : 'is'} test-only and need${overrides.length > 1 ? '' : 's'} --dry-run: ${why}`);
+    }
+}
+
 function readOptions(argv) {
     let options;
     try {
@@ -140,10 +162,7 @@ function readOptions(argv) {
     } catch (error) {
         throw refuse(error.message);
     }
-    const overrides = OVERRIDES.filter(name => process.env[name]);
-    if (overrides.length && !options.dryRun) {
-        throw refuse(`${overrides.join(' and ')} ${overrides.length > 1 ? 'are' : 'is'} test-only and need${overrides.length > 1 ? '' : 's'} --dry-run: a real push always captures the live theme`);
-    }
+    refuseOverrides(options.dryRun, 'a real push always captures the live theme');
     return options;
 }
 
@@ -730,6 +749,144 @@ function writeReleaseLog() {
     }
 }
 
+// --- W0-3: pruning My Themes ------------------------------------------------------------------
+
+// My Themes and every channel's active theme: the store, read-only, or RF_RELEASE_THEMES_FIXTURE in a
+// dry run. A deleter is made only for a real prune, so a dry run has no way to delete.
+async function readStoreThemes(releases, deleting) {
+    const fixture = process.env.RF_RELEASE_THEMES_FIXTURE;
+    if (fixture) {
+        say('fixture', `My Themes and the channels' active themes from ${fixture} (RF_RELEASE_THEMES_FIXTURE)`);
+        const { themes, activeByChannel } = readJson(fixture, 'the My Themes fixture');
+        return { themes, activeByChannel };
+    }
+    say('', 'Reading My Themes and every channel\'s active theme read-only…');
+    try {
+        const { client, api } = await stencilApi();
+        const knownChannels = [...REQUIRED_CHANNELS, ...Object.keys(RELEASE_TARGETS).map(Number), ...releaseEntries(releases).map(entry => entry.channel)];
+        const { themes, activeByChannel } = await readMyThemes({ client, api, knownChannels });
+        if (!deleting) return { themes, activeByChannel };
+        return {
+            themes, activeByChannel, deleteTheme: themeDeleter({ client, api }), readThemes: () => client.getThemes(api),
+        };
+    } catch (error) {
+        throw new Stop(`reading My Themes failed, so nothing was deleted: ${redact(error.message, knownSecrets())}`);
+    }
+}
+
+// Logs one deletion in RELEASES.md's My Themes section, right after the store answered it.
+function logDeletion(build, action) {
+    const row = formatMyThemesRow({
+        timestamp: new Date().toISOString(),
+        action,
+        uuid: build.uuid,
+        name: build.name,
+        version: build.record.version,
+        sha: build.record.sha,
+        zipSha256: build.record.zipSha256,
+        operator: operator(),
+    });
+    fs.writeFileSync(RELEASES, addMyThemesRow(readReleases(), row));
+    say('deleted', `${build.uuid}, released ${build.record.timestamp} UTC: logged in ${RELEASES}`);
+}
+
+// Reads the store, plans (scripts/release-prune.mjs) and, when `deleting`, deletes the plan's
+// themes one at a time, logging each. `releases` is RELEASES.md, or the fixture in a dry run.
+async function prune({ releases, deleting, action }) {
+    const store = await readStoreThemes(releases, deleting);
+    let plan;
+    try {
+        plan = planPrune({ themes: store.themes, activeByChannel: store.activeByChannel, markdown: releases });
+    } catch (error) {
+        throw new Stop(`${error.message}: nothing was deleted`);
+    }
+    describePlan(plan).forEach(line => console.log(line));
+    if (!plan.toDelete.length) {
+        say('ok', 'nothing to delete');
+        return;
+    }
+    if (!deleting) {
+        say('dry run', `would delete ${plan.toDelete.length} theme(s); nothing was deleted, and ${RELEASES} is unchanged`);
+        return;
+    }
+    const result = await runPrune({
+        plan, deleteTheme: store.deleteTheme, readThemes: store.readThemes, record: build => logDeletion(build, action),
+    });
+    if (result.failed) {
+        throw new Stop(`deleting ${result.failed.uuid} failed: ${redact(result.failed.message, knownSecrets())}. ${result.deleted.length} theme(s) deleted before it are logged in ${RELEASES}; nothing after it was tried`);
+    }
+    if (result.stillThere.length) {
+        throw new Stop(`My Themes still lists ${result.stillThere.join(', ')} after the store answered its deletion. Its row is in ${RELEASES}: check My Themes by hand, and say so in the release-log PR`);
+    }
+    say('ok', `deleted ${result.deleted.length} theme(s), each logged in ${RELEASES}'s My Themes section: commit it`);
+}
+
+// A real --prune-only runs from master at origin/master's tip, with nothing uncommitted but
+// RELEASES.md, so origin/master's rules decide what is deleted (as for W0-1's agent push). A dry
+// run warns instead; on the test-only overrides it doesn't fetch.
+function pruneCheckout(dryRun) {
+    const offline = OVERRIDES.some(name => process.env[name]);
+    if (offline) say('fixture', 'origin/master as last fetched: a dry run on the test-only overrides doesn\'t fetch');
+    const checkout = readCheckout({ git: gitIn(), fetch: !offline });
+    const porcelain = execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' });
+    const problems = [...checkoutProblems(checkout), ...uncommittedProblems(porcelain)];
+    if (!problems.length) {
+        say('origin', `master at origin/master's tip ${checkout.head.slice(0, 7)}${offline ? '' : ', fetched just now'}: origin/master's rules decide what the prune deletes`);
+        return;
+    }
+    const message = `a real prune needs this checkout on master at origin/master's tip, with nothing uncommitted but ${RELEASES}, so that origin/master's rules decide what is deleted: ${problems.join('; ')}`;
+    if (!dryRun) throw refuse(message);
+    warn(`${message} (a dry run goes on; a real prune stops here)`);
+}
+
+// release.sh --prune-only [--dry-run]: the prune on its own (W0-3).
+async function pruneOnly(argv) {
+    let options;
+    try {
+        options = parsePruneArgs(argv);
+    } catch (error) {
+        throw refuse(error.message);
+    }
+    refuseOverrides(options.dryRun, 'a real prune always reads the store, git and RELEASES.md');
+    heading(`My Themes: prune${options.dryRun ? ' (dry run: nothing is deleted)' : ''}`);
+    pruneCheckout(options.dryRun);
+    await prune({ releases: readReleaseLog(), deleting: !options.dryRun, action: 'deleted (--prune-only)' });
+}
+
+const hasLoggedDeletion = releases => myThemesRows(releases).some(row => row.action.startsWith('deleted'));
+
+// After step 7, or at the end of a dry run. A real release deletes only once RELEASES.md logs a
+// deletion, so the first real prune is a --prune-only run dry first (W0-3), and only when the
+// commit it pushed is still judged by origin/master's rules (release-origin.mjs stepFiveOrigin).
+// Otherwise it shows the plan. Verify's problems stop release.sh at step 7, before this.
+async function pruneAfterPush() {
+    const state = readState();
+    refuseOverrides(state.dryRun, 'a real release always reads the store and RELEASES.md');
+    heading(`My Themes: prune after the push${state.dryRun ? ' (dry run: nothing is deleted)' : ''}`);
+    const releases = readReleaseLog();
+    let deleting = false;
+    if (state.dryRun) {
+        say('dry run', `a real release prunes My Themes here, after its push and its ${RELEASES} entry. This is what it would do now, before the push.`);
+    } else if (!hasLoggedDeletion(releases)) {
+        say('first', `${RELEASES} records no theme deleted from My Themes yet, so this prune only shows its plan: the first real prune is ${PRUNE_USAGE.replace(' [--dry-run]', '')}, run with --dry-run first (W0-3)`);
+    } else {
+        const { problems, note } = stepFiveOrigin({ git: gitIn(), sha: state.git.sha });
+        if (problems.length) {
+            warn(`this prune only shows its plan: ${problems.join('; ')}. Prune from the main clone, on master, with ${PRUNE_USAGE}`);
+        } else {
+            if (note) say('origin', note);
+            say('prune', `deletes what the plan below marks "delete", and logs each in ${RELEASES}'s My Themes section`);
+            deleting = true;
+        }
+    }
+    try {
+        await prune({ releases, deleting, action: 'deleted (prune after a release)' });
+    } catch (error) {
+        if (!(error instanceof Stop) || state.dryRun) throw error;
+        throw new Stop(`The release is pushed and logged in ${RELEASES}; only the prune stopped: ${error.message}`);
+    }
+}
+
 const STEPS = {
     prepare,
     state: printState,
@@ -741,6 +898,8 @@ const STEPS = {
     redact: redactStream,
     verify,
     'write-log': writeReleaseLog,
+    'prune-after-push': pruneAfterPush,
+    prune: pruneOnly,
 };
 
 async function main([step, ...rest]) {
@@ -753,7 +912,7 @@ if (isMain(import.meta.url)) {
         if (!(error instanceof Stop)) throw error;
         const label = error.code === 2 ? 'REFUSED' : 'STOP';
         console.error(`${label.padEnd(8)} ${error.message}`);
-        if (error.code === 2) console.error(`Usage:   ${USAGE}`);
+        if (error.code === 2) console.error(`Usage:   ${USAGE}\n         ${PRUNE_USAGE}`);
         process.exit(error.code);
     });
 }

@@ -2,6 +2,7 @@
 # Releases the theme to one storefront channel with one named variation (tickets 05 and 15).
 #
 #   scripts/release.sh --channel <id> --variation "<name>" [--dry-run] [--first-release] [--accept-live | --overwrite-live] [--confirm-nonprod <id>]
+#   scripts/release.sh --prune-only [--dry-run]
 #
 #   0 how step 5 is confirmed (typed, or --confirm-nonprod on a non-production target, W0-1) within
 #     the release calendar's limits (scripts/release-calendar.json); --confirm-nonprod runs only from
@@ -12,6 +13,10 @@
 #   2 clean build      3 checks      4 bundle, check the zip, then axe, raw HTML and screenshots
 #   5 push (never in a dry run: a dry run prints the push command and the log entry, then stops)
 #   6 verify           7 log the release in RELEASES.md
+#   then prune old ReelFlies builds from My Themes (W0-3), logging each deletion in RELEASES.md: a
+#   plan only in a dry run, and until a --prune-only has deleted a theme
+#
+# --prune-only runs the prune on its own, holding the same lock; with --dry-run it deletes nothing.
 #
 # docs/releasing.md explains each step, flag and refusal. The node steps are in scripts/release.mjs.
 # Every failed step stops the release, and only one release or dry run runs at a time on this Mac.
@@ -47,6 +52,17 @@ export RF_RELEASE_STATE="$STATE_DIR/state.json"
 
 release() { node scripts/release.mjs "$@"; }
 step() { printf '\n== %s\n' "$1"; }
+
+# W0-3: --prune-only prunes My Themes and nothing else. release.mjs refuses any other argument but
+# --dry-run with it, and a release refuses it among its own arguments.
+prune_only=false
+for arg in "$@"; do
+    case "$arg" in --prune-only | --prune-only=*) prune_only=true ;; esac
+done
+if [ "$prune_only" = true ]; then
+    release prune "$@"
+    exit 0
+fi
 
 # Refusals (before any network call or build), step 1 (capture and diff, then a report of the
 # live colours' contrast), then the release guard.
@@ -96,6 +112,7 @@ QA_PORT=3300 QA_FRESH_SERVER=1 QA_CHANNEL="$(release state channel)" QA_VARIATIO
 
 if [ "$dry_run" = true ]; then
     release dry-run-report
+    release prune-after-push
     exit 0
 fi
 
@@ -120,3 +137,6 @@ npx stencil "${push_args[@]}" </dev/null 2>&1 | release redact
 
 release verify
 release write-log
+# W0-3: after the log entry, so the prune counts this release. write-log stops the release when
+# verify found a problem, so nothing is pruned then.
+release prune-after-push
