@@ -620,6 +620,35 @@ test('a write the store refuses stops the run with a failed row; nothing after i
     assert.equal(lockedProblem(root), null);
 });
 
+test('a create that answers 5xx is read back all the same, because it may have landed', async () => {
+    const { text } = await makePlan([template], listRoutes);
+    const { run, calls, root } = await apply(text, {
+        ...listRoutes,
+        'POST /v3/content/widget-templates': { status: 504, body: { status: 504, title: 'Gateway timeout' } },
+    });
+    assert.equal((await run).outcome, 'failed');
+    assert.deepEqual(calls.slice(-2).map(call => `${call.method} ${call.path}`), [
+        'POST /v3/content/widget-templates', 'GET /v3/content/widget-templates?channel_id:in=1895766&limit=250&page=1',
+    ]);
+    const [, row] = readLogRows(root);
+    assert.deepEqual([row.outcome, row.status, row.message], ['failed', 504, '504: Gateway timeout; may have landed: see the re-read']);
+    assert.match(row.after_sha256, /^[0-9a-f]{64}$/);
+    assert.equal(lockedProblem(root), null);
+});
+
+test('an update that gets no answer is read back all the same, because it may have landed', async () => {
+    const { text } = await makePlan([unpublish], { [placementGet]: { body: widgets.placement_item } });
+    const { run, calls, root } = await apply(text, {
+        [placementGet]: [{ body: widgets.placement_item }, { body: widgets.placement_item_inactive }],
+        [placementPut]: () => { throw new Error('socket hang up'); },
+    });
+    assert.equal((await run).outcome, 'failed');
+    assert.deepEqual(calls.map(call => `${call.method} ${call.path}`), [placementGet, placementPut, placementGet]);
+    const [, row] = readLogRows(root);
+    assert.deepEqual([row.outcome, row.status, row.message], ['failed', null, 'no answer: socket hang up; may have landed: see the re-read']);
+    assert.match(row.after_sha256, /^[0-9a-f]{64}$/);
+});
+
 test('the calendar is read again at apply: a plan made before T-14 for a new widget is refused from T-14', async () => {
     const { text } = await makePlan([template], listRoutes);
     const { run, calls } = await apply(text, listRoutes, { phase: freeze });
@@ -682,6 +711,27 @@ test('an approved write whose part-3 report can\'t be read still gets its result
     assert.deepEqual(rows.map(row => [row.row, row.outcome, row.status ?? null]), [['intent', undefined, null], ['result', 'stopped', 200]]);
     assert.match(rows[1].message, /the write answered 200, but part 3's report couldn't be read: 1855224 couldn't be read/);
     assert.equal(lockedProblem(root), null, 'approved mode reports part 3, and never locks on it');
+});
+
+test('an approved write that answers 5xx is read back and its part 3 reported, because it may have landed', async () => {
+    const { text } = await makePlan([storeWide], inventoryRoutes(), { mode: 'approved' });
+    const changed = structuredClone(inventory.global);
+    changed.data.option_out_of_stock_behavior = 'label_option';
+    const {
+        run, calls, lines, root,
+    } = await apply(text, inventoryRoutes({
+        'GET /v3/settings/inventory': [{ body: inventory.global }, { body: changed }],
+        'PUT /v3/settings/inventory': { status: 504, body: { status: 504, title: 'Gateway timeout' } },
+    }), { approved: true });
+    assert.equal((await run).outcome, 'failed');
+    const order = calls.map(call => `${call.method} ${call.path}`);
+    assert.deepEqual(order.slice(order.indexOf('PUT /v3/settings/inventory') + 1), [
+        'GET /v3/settings/inventory', 'GET /v3/settings/inventory?channel_id=1', 'GET /v3/settings/inventory?channel_id=1855224', 'GET /v3/settings/inventory?channel_id=1895766',
+    ]);
+    assert.ok(lines.some(line => /part 3 \(reported, not enforced\): global changed \(option_out_of_stock_behavior\)/.test(line)), lines.join('\n'));
+    const [, row] = readLogRows(root);
+    assert.deepEqual([row.outcome, row.status, row.message], ['failed', 504, '504: Gateway timeout; may have landed: see the re-read']);
+    assert.match(row.after_sha256, /^[0-9a-f]{64}$/);
 });
 
 function terminal(isTTY = true) {

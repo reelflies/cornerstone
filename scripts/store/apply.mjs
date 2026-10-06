@@ -22,7 +22,9 @@
 // 7. for each request: an intent row in log.jsonl (flushed), the request, the response's channel
 //    check, the re-read, and for a settings write part 3: the global value and channels 1 and
 //    1855224 read back unchanged. Then the result row, whatever happened.
-//    - A refused write stops the run (outcome "failed"); nothing after it is sent.
+//    - A refused write stops the run (outcome "failed"); nothing after it is sent. Every write
+//      that was sent is read back, whatever it answered: one that answered 5xx or got no
+//      answer may still have landed, and its row says "may have landed: see the re-read".
 //    - A response or re-read naming another channel stops the run and writes LOCKED, and so
 //      does a script that reads back anything but disabled.
 //    - Part 3 is read after every settings write that was sent, whatever it answered, even
@@ -414,52 +416,50 @@ function enabledScripts(data, fallbackId) {
         .map(item => `script ${(isObject(item) && item.uuid) || fallbackId || '(no uuid)'} is enabled on the store: scripts stay disabled until Shaun enables one`);
 }
 
-// After any other write: the response's checks, the re-read, and in approved mode part 3's
-// report. Returns null to go on, or the outcome that stops the run.
+// After any other write that was sent, whatever it answered: the response's checks, the re-read,
+// and in approved mode part 3's report. A write that got no answer, or answered 5xx, may still
+// have landed, so it is read back too, and its row says so. Returns null to go on, or the
+// outcome that stops the run.
 async function afterWrite({
     client, item, fresh, response, sendError, wait, result, lock, afterRecords, log, mode, created,
 }) {
     const { index, request, what } = item;
     const where = { request: index, method: request.method, path: request.path };
-    if (sendError) {
-        const message = `no answer: ${sendError.message}`;
-        result({ status: null, outcome: 'failed', message });
-        return { outcome: 'failed', request: index, message };
-    }
-    if (!response.ok) {
-        const message = describeFailure(response);
-        result({ status: response.status, outcome: 'failed', message });
-        return { outcome: 'failed', request: index, message };
-    }
-    if (mode === 'lifted') {
-        const wrong = responseChannelProblems(response.body, { requireOnData: ['widget', 'page', 'script'].includes(what.kind) });
-        if (wrong.length) {
-            const message = wrong.join('; ');
-            result({ status: response.status, outcome: 'stopped', message });
-            lock(`a write's response named another channel: ${message}`, where);
-            return { outcome: 'locked', request: index, message };
-        }
-    }
+    const status = response ? response.status : null;
+    let failure = null;
+    if (sendError) failure = `no answer: ${sendError.message}; may have landed: see the re-read`;
+    else if (!response.ok) failure = response.status >= 500 ? `${describeFailure(response)}; may have landed: see the re-read` : describeFailure(response);
     const scriptLock = (problems, fields) => {
         const message = problems.join('; ');
         result({ ...fields, outcome: 'stopped', message });
         lock(`a script read back enabled after a write: ${message}`, where);
         return { outcome: 'locked', request: index, message };
     };
-    if (what.object === 'scripts') {
-        const enabled = enabledScripts(response.body && response.body.data, what.id);
-        if (enabled.length) return scriptLock(enabled, { id: what.id, status: response.status });
+    if (!failure) {
+        if (mode === 'lifted') {
+            const wrong = responseChannelProblems(response.body, { requireOnData: ['widget', 'page', 'script'].includes(what.kind) });
+            if (wrong.length) {
+                const message = wrong.join('; ');
+                result({ status, outcome: 'stopped', message });
+                lock(`a write's response named another channel: ${message}`, where);
+                return { outcome: 'locked', request: index, message };
+            }
+        }
+        if (what.object === 'scripts') {
+            const enabled = enabledScripts(response.body && response.body.data, what.id);
+            if (enabled.length) return scriptLock(enabled, { id: what.id, status });
+        }
     }
-    const ids = createdIds(item, response);
+    const ids = failure ? [] : createdIds(item, response);
     if (what.action === 'create' && ids.length) created.set(index, ids[0]);
     const id = what.id ?? (ids.length ? ids.join(',') : null);
     let records;
     try {
         records = await readAll(client, reReadSpecs(item, ids, mode), wait);
     } catch (error) {
-        const message = `the write answered ${response.status}, but its re-read stopped: ${error.message}`;
+        const message = failure ? `${failure}; the re-read stopped: ${error.message}` : `the write answered ${status}, but its re-read stopped: ${error.message}`;
         result({
-            id, status: response.status, outcome: 'stopped', message,
+            id, status, outcome: 'stopped', message,
         });
         if (error.channel) {
             lock(`a re-read after a write named another channel: ${error.message}`, where);
@@ -473,7 +473,7 @@ async function afterWrite({
         // Only a read of the script itself: a channel's list (a create that gave no uuid) also
         // holds scripts the helper didn't write.
         const enabled = records.filter(record => record.scope === 'item').flatMap(record => enabledScripts(record.data, id));
-        if (enabled.length) return scriptLock(enabled, { id, status: response.status, after_sha256: afterSha });
+        if (enabled.length) return scriptLock(enabled, { id, status, after_sha256: afterSha });
     }
     if (what.kind === 'settings' && mode === 'approved' && APPROVED_SETTINGS[what.settingsPath].channelReads) {
         const scopes = [...LIVE_CHANNELS, CHANNEL].map(String);
@@ -481,9 +481,9 @@ async function afterWrite({
         afterRecords.push(...read.records);
         afterSha = sha256(canonicalJson([...records, ...read.records]));
         if (read.unread.length) {
-            const message = `the write answered ${response.status}, but part 3's report couldn't be read: ${describeUnread(read.unread)}`;
+            const message = `${failure || `the write answered ${status}`}${failure ? '; ' : ', but '}part 3's report couldn't be read: ${describeUnread(read.unread)}`;
             result({
-                id, status: response.status, outcome: 'stopped', after_sha256: afterSha, message,
+                id, status, outcome: 'stopped', after_sha256: afterSha, message,
             });
             return { outcome: 'failed', request: index, message };
         }
@@ -491,10 +491,16 @@ async function afterWrite({
         const changes = part3Changes(scopeData(fresh.reads, request, what, all), { ...read.data, global: records[0].data }, all);
         log(`part 3 (reported, not enforced): ${changes.length ? describeChanges(changes) : 'nothing read back changed'}`);
     }
+    if (failure) {
+        result({
+            id, status, outcome: 'failed', after_sha256: afterSha, message: failure,
+        });
+        return { outcome: 'failed', request: index, message: failure };
+    }
     result({
-        id, status: response.status, outcome: 'ok', after_sha256: afterSha, message: '',
+        id, status, outcome: 'ok', after_sha256: afterSha, message: '',
     });
-    log(`ok       ${index + 1}. ${response.status}${id ? `, ${what.object} ${id}` : ''}`);
+    log(`ok       ${index + 1}. ${status}${id ? `, ${what.object} ${id}` : ''}`);
     return null;
 }
 
