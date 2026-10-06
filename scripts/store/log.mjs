@@ -13,7 +13,7 @@
 // The orchestrator mirrors new rows into RELEASES.md's "Store writes" section through each
 // release-log PR (plan/build-pipeline.md section 6.5). This prints them as that table's rows:
 //
-//   node scripts/store/log.mjs [--since YYYY-MM-DD]
+//   node ~/reelflies/theme/cornerstone/scripts/store/log.mjs [--since YYYY-MM-DD]
 
 import fs from 'fs';
 import path from 'path';
@@ -141,7 +141,7 @@ function main(argv) {
     const since = sinceIndex >= 0 ? argv[sinceIndex + 1] : undefined;
     const unknown = argv.filter((arg, index) => index !== sinceIndex && !(sinceIndex >= 0 && index === sinceIndex + 1));
     if (unknown.length || (sinceIndex >= 0 && !/^\d{4}-\d{2}-\d{2}$/.test(since || ''))) {
-        console.error('usage: node scripts/store/log.mjs [--since YYYY-MM-DD]');
+        console.error('usage: node ~/reelflies/theme/cornerstone/scripts/store/log.mjs [--since YYYY-MM-DD]');
         return 2;
     }
     try {

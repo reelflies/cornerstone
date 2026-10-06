@@ -455,7 +455,7 @@ async function main(argv) {
         say(`plan     ${written.file}`);
         say(`sha256   ${written.sha256}`);
         say(mode === 'lifted'
-            ? `Next: review the diff, then node scripts/store/apply.mjs ${written.file}`
+            ? `Next: review the diff, then node ~/reelflies/theme/cornerstone/scripts/store/apply.mjs ${written.file}`
             : `Next: Shaun reviews it on the review page and runs, at his own terminal: node scripts/store/apply.mjs --approved ${written.file}`);
         return 0;
     } catch (error) {

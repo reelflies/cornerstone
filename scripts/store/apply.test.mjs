@@ -989,7 +989,8 @@ test('plan.mjs then apply.mjs, on fixture routes: the plan file, the writes, the
     assert.equal(path.dirname(planFile), path.join(root, 'plans'));
     assert.match(planned.stdout, /status: "active" -> "inactive"/);
     assert.match(planned.stdout, /sha256 {3}[0-9a-f]{64}/);
-    assert.match(planned.stdout, /Next: review the diff, then node scripts\/store\/apply\.mjs/);
+    // The main clone's copy, by its full path: the only one the permission rules pre-approve.
+    assert.ok(planned.stdout.includes(`Next: review the diff, then node ~/reelflies/theme/cornerstone/scripts/store/apply.mjs ${planFile}`), planned.stdout);
     assert.ok(!planned.output.includes(FAKE_TOKEN));
     // The routes file is read afresh by each command, so apply's snapshot sees the first answer again.
     fs.writeFileSync(path.join(root, 'routes.json'), JSON.stringify({

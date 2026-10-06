@@ -72,7 +72,7 @@ export function readStoreToken(kind, {
     const spec = TOKENS[kind];
     if (!spec) throw new Error(`"${kind}" isn't a store token kind (${Object.keys(TOKENS).join(', ')})`);
     if (kind === 'write' && !isStoreHelper(mainScript)) {
-        throw new Error(`the writer token is read only by the store helper, scripts/store/ (W0-11), and this is ${mainScript || 'no script'}: write through \`node scripts/store/plan.mjs\` and \`apply.mjs\``);
+        throw new Error(`the writer token is read only by the store helper, scripts/store/ (W0-11), and this is ${mainScript || 'no script'}: write through \`node ~/reelflies/theme/cornerstone/scripts/store/plan.mjs\` and \`apply.mjs\``);
     }
     if (kind === 'write') {
         const problem = toolingProblem();

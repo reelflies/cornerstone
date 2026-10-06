@@ -2,9 +2,12 @@
 // Applies a store plan (W0-11): exactly the plan's requests, on a fresh snapshot that must match
 // the plan's, with a log row before and after each request and a re-read of every object written.
 //
-//   node scripts/store/apply.mjs <plan file>               lifted writes on 1895766 (agents may)
-//   node scripts/store/apply.mjs --dry-run <plan file>     steps 1 to 6 with the writer token; sends nothing
-//   node scripts/store/apply.mjs --approved <plan file>    Shaun's approved store-wide writes
+//   node ~/reelflies/theme/cornerstone/scripts/store/apply.mjs <plan file>             lifted writes on 1895766 (agents may)
+//   node ~/reelflies/theme/cornerstone/scripts/store/apply.mjs --dry-run <plan file>   steps 1 to 6 with the writer token; sends nothing
+//   node scripts/store/apply.mjs --approved <plan file>    Shaun's approved store-wide writes, at his terminal
+//
+// Agents run the main clone's copy by its full path: it is the only copy the permission rules
+// pre-approve, and only origin/master's tooling writes.
 //
 // In order, it:
 //
@@ -691,7 +694,7 @@ export async function applyPlan({
 
 // --- The command ----------------------------------------------------------------------------
 
-const USAGE = 'usage: node scripts/store/apply.mjs [--approved] [--dry-run] <plan file>';
+const USAGE = 'usage: node ~/reelflies/theme/cornerstone/scripts/store/apply.mjs [--approved] [--dry-run] <plan file>';
 
 async function main(argv) {
     const approved = argv.includes('--approved');
