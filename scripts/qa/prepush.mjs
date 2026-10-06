@@ -13,7 +13,9 @@
 //   Each holds the port pair's lock while it runs, and a stencil start slot while its server
 //   runs (W0-7).
 // - With QA_FRESH_SERVER=1 nothing starts while anything answers on those ports, and after
-//   each gate its server must be gone, with both ports free, before the next one starts.
+//   each gate its server must be gone, with both ports free, before the next one starts. A busy
+//   port stops the run at once, unless another gate run holds that port pair: then each gate
+//   waits for its lock (prepushStart).
 
 import { spawnSync } from 'child_process';
 import { describeHolder, heldBy, portLockName } from '../lib/lock.mjs';
@@ -45,9 +47,32 @@ export function summary(results) {
     };
 }
 
+// What the run does before its first gate, from QA_BASE_URL (`local`), QA_FRESH_SERVER
+// (`fresh`), the gate run holding this port pair's lock, if any (`holder()`), and the port
+// check (`plan()`: planLocalServer, which throws naming a busy port):
+//   'none'     nothing to check: a remote host, or a run that may reuse a server
+//   'wait'     another gate run holds the port pair, so its server answering there is expected;
+//              each gate waits for the lock and checks the ports then
+//   'checked'  no gate run holds them, and nothing answers on them
+// A busy port that no gate run holds rejects, so the run stops before its first gate.
+export async function prepushStart({
+    local, fresh, holder, plan,
+}) {
+    if (!local || !fresh) return { action: 'none' };
+    const held = holder();
+    if (held) return { action: 'wait', holder: held };
+    await plan();
+    return { action: 'checked' };
+}
+
+// The environment each gate runs in: this one, without RF_QA_PORTS_CHECKED. Only a Playwright
+// runner sets that, for its own workers; inherited from a shell, it would let a gate's runner
+// skip its port lock and stencil start slot.
+export const gateEnv = (env = process.env) => Object.fromEntries(Object.entries(env).filter(([name]) => name !== 'RF_QA_PORTS_CHECKED'));
+
 async function runNpmGate(gate) {
     console.log(`\n-- Storefront gate: ${gate.name} (npm run ${gate.script})\n`);
-    const { status, signal } = spawnSync('npm', ['run', gate.script], { stdio: 'inherit' });
+    const { status, signal } = spawnSync('npm', ['run', gate.script], { stdio: 'inherit', env: gateEnv() });
     const problems = status === 0 ? [] : [`npm run ${gate.script} ${signal ? `stopped on ${signal}` : `exited ${status}`}`];
     if (IS_LOCAL && FRESH_SERVER) {
         const left = await waitForFreePorts();
@@ -59,10 +84,10 @@ async function runNpmGate(gate) {
 async function main() {
     try {
         checkEnv();
-        // Stop at once on a busy port, unless another gate run holds it: then each gate waits.
-        const portHolder = IS_LOCAL && FRESH_SERVER && heldBy(portLockName(QA_PORT));
-        if (portHolder) console.log(`WAIT     port ${QA_PORT} is in use by ${describeHolder(portHolder)}; each gate waits for it`);
-        else if (IS_LOCAL && FRESH_SERVER) await planLocalServer();
+        const start = await prepushStart({
+            local: IS_LOCAL, fresh: FRESH_SERVER, holder: () => heldBy(portLockName(QA_PORT)), plan: () => planLocalServer(),
+        });
+        if (start.action === 'wait') console.log(`WAIT     port ${QA_PORT} is in use by ${describeHolder(start.holder)}; each gate waits for it`);
     } catch (error) {
         console.error(`STOP     ${error.message}`);
         process.exit(1);
