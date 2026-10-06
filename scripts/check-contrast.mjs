@@ -4,14 +4,17 @@
 //   node scripts/check-contrast.mjs [config.json ...]
 //
 // Each variation is checked as the storefront sees it: base settings with the
-// variation's settings on top. This works on the repo's config.json and on a
+// variation's settings on top. This works on the repo's config.json, on a
 // config pulled with `stencil pull -s`, which writes live values into the
-// matching variation. Text needs 4.5:1 and UI parts 3:1.
+// matching variation, and on release.sh's capture of a channel
+// (config.<slug>.live.json). Text needs 4.5:1 and UI parts 3:1.
 //
 // Exits 1 when a pair fails and isn't listed in KNOWN_FAILURES, and 2 when a
-// colour can't be read.
+// colour can't be read. scripts/release.mjs imports checkContrast to report on
+// the live capture after step 1, where a failure warns and doesn't stop.
 
 import fs from 'fs';
+import { isMain } from './lib/is-main.mjs';
 
 const TEXT = 4.5;
 const UI = 3;
@@ -122,7 +125,9 @@ function checkPair([id, fgRef, bgRef, min], settings, known) {
     return isKnown ? { status: 'known', line: `known    ${detail}` } : { status: 'fail', line: `FAIL     ${detail}` };
 }
 
-function checkConfig(path) {
+// Prints each variation's result. Returns { unexpected, unreadable }: the counts of failing pairs
+// that KNOWN_FAILURES doesn't list, and of pairs whose colours can't be read.
+export function checkContrast(path) {
     const config = JSON.parse(fs.readFileSync(path, 'utf8'));
     const variations = config.variations?.length ? config.variations : [{ name: 'base', settings: {} }];
     let unexpected = 0;
@@ -142,14 +147,12 @@ function checkConfig(path) {
     return { unexpected, unreadable };
 }
 
-const isMain = process.argv[1] && import.meta.url === new URL(`file://${fs.realpathSync(process.argv[1])}`).href;
-
-if (isMain) {
+if (isMain(import.meta.url)) {
     const paths = process.argv.slice(2);
     let unexpected = 0;
     let unreadable = 0;
     for (const path of paths.length ? paths : ['config.json']) {
-        const result = checkConfig(path);
+        const result = checkContrast(path);
         unexpected += result.unexpected;
         unreadable += result.unreadable;
     }

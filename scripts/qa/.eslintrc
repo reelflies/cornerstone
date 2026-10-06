@@ -1,0 +1,6 @@
+{
+    "ignorePatterns": ["results/"],
+    "rules": {
+        "import/no-extraneous-dependencies": ["error", { "devDependencies": true }]
+    }
+}

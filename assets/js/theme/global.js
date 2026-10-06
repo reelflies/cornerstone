@@ -9,7 +9,7 @@ import languageSelector from './global/language-selector';
 import mobileMenuToggle from './global/mobile-menu-toggle';
 import menu from './global/menu';
 import foundation from './global/foundation';
-import quickView from './global/quick-view';
+import lazyQuickView from './reelflies/lazy-quick-view'; // ReelFlies hook (ticket 16): was ./global/quick-view
 import cartPreview from './global/cart-preview';
 import carousel from './common/carousel';
 import svgInjector from './global/svg-injector';
@@ -22,7 +22,7 @@ export default class Global extends PageManager {
         currencySelector(cartId);
         languageSelector();
         foundation($(document));
-        quickView(this.context);
+        lazyQuickView(this.context); // ReelFlies hook (ticket 16): Quick view loads on the first click
         carousel(this.context);
         menu();
         mobileMenuToggle();

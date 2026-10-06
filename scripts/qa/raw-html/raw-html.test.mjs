@@ -1,0 +1,161 @@
+// Tests for the raw-HTML harness (scripts/qa/raw-html.mjs) and its registered
+// assertions, on fixture pages. CI runs them through `npm run test:scripts`.
+//
+//   node --test scripts/qa/raw-html/raw-html.test.mjs
+
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import {
+    after, before, describe, it,
+} from 'node:test';
+import assert from 'node:assert/strict';
+import { checkPage, loadAssertions, pagesToFetch } from '../raw-html.mjs';
+
+const FIXTURES = path.resolve('scripts/qa/raw-html/fixtures');
+const fixture = (name, kind = 'product') => ({
+    kind,
+    path: `/${name}`,
+    url: `http://localhost:3301/${name}`,
+    status: 200,
+    html: fs.readFileSync(path.join(FIXTURES, name), 'utf8'),
+});
+const failed = results => results.filter(result => result.status === 'fail').map(result => result.id);
+
+let assertions;
+before(async () => {
+    assertions = await loadAssertions();
+});
+
+describe('the registered assertions', () => {
+    it('include the three starting assertions', () => {
+        const ids = assertions.map(assertion => assertion.id);
+        for (const id of ['one-canonical', 'json-ld-parses', 'no-region-prompt']) assert.ok(ids.includes(id), `${id} is registered`);
+    });
+
+    it('pass a good product page', () => {
+        const results = checkPage(fixture('good-product.html'), assertions);
+        assert.deepEqual(failed(results), []);
+        assert.ok(results.some(result => result.status === 'pass'));
+    });
+
+    it('fail a page with two canonicals', () => {
+        const results = checkPage(fixture('two-canonicals.html'), assertions);
+        assert.deepEqual(failed(results), ['one-canonical']);
+        assert.match(results.find(result => result.id === 'one-canonical').problems[0], /2 canonical links/);
+    });
+
+    it('fail a page with no canonical', () => {
+        const page = fixture('good-product.html');
+        page.html = page.html.replace(/<link rel='canonical'[^>]*>/, '');
+        assert.deepEqual(failed(checkPage(page, assertions)), ['one-canonical']);
+    });
+
+    it('fail a page with a broken JSON-LD block, and say which block', () => {
+        const results = checkPage(fixture('broken-json-ld.html'), assertions);
+        assert.deepEqual(failed(results), ['json-ld-parses']);
+        assert.match(results.find(result => result.id === 'json-ld-parses').problems[0], /JSON-LD block 2 of 2 doesn't parse/);
+    });
+
+    it('fail a page whose server HTML carries the outside-Canada prompt marker', () => {
+        const results = checkPage(fixture('region-prompt.html'), assertions);
+        assert.deepEqual(failed(results), ['no-region-prompt']);
+        assert.match(results.find(result => result.id === 'no-region-prompt').problems[0], /data-rf-region-prompt/);
+    });
+
+    it('ignore markup inside comments and scripts, which a crawler doesn\'t read as elements', () => {
+        // good-product.html has a commented-out canonical and the prompt marker in a script string.
+        assert.deepEqual(failed(checkPage(fixture('good-product.html'), assertions)), []);
+    });
+
+    it('don\'t ask for a canonical on the cart or the 404 page', () => {
+        const page = fixture('good-product.html', 'cart');
+        page.html = page.html.replace(/<link rel='canonical'[^>]*>/, '');
+        const canonical = checkPage(page, assertions).find(result => result.id === 'one-canonical');
+        assert.equal(canonical.status, 'skip');
+    });
+});
+
+describe('the harness', () => {
+    const tempDirs = [];
+    after(() => tempDirs.forEach(dir => fs.rmSync(dir, { recursive: true, force: true })));
+
+    it('picks up a new assertion module dropped into the assertions folder', async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'raw-html-'));
+        tempDirs.push(dir);
+        fs.writeFileSync(path.join(dir, 'one-h1.mjs'), `export default {
+            id: 'one-h1',
+            ticket: 27,
+            description: 'exactly one <h1>',
+            check: page => ((page.html.match(/<h1[\\s>]/g) || []).length === 1 ? [] : ['not one <h1>']),
+        };\n`);
+        fs.writeFileSync(path.join(dir, 'one-h1.test.mjs'), 'throw new Error("tests are not assertions");\n');
+
+        const loaded = await loadAssertions(dir);
+        assert.deepEqual(loaded.map(assertion => assertion.id), ['one-h1']);
+        assert.deepEqual(failed(checkPage(fixture('good-product.html'), loaded)), []);
+    });
+
+    it('refuses an assertion module without an id and a check function', async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'raw-html-'));
+        tempDirs.push(dir);
+        fs.writeFileSync(path.join(dir, 'broken.mjs'), 'export default { description: "no id" };\n');
+        await assert.rejects(loadAssertions(dir), /broken\.mjs must export default \{ id, description, check \}/);
+    });
+
+    it('fails a page that didn\'t render, whatever the assertions say', () => {
+        const page = { ...fixture('good-product.html'), status: 404 };
+        const results = checkPage(page, assertions);
+        assert.deepEqual(failed(results), ['page-renders']);
+    });
+
+    it('runs an assertion only on the page kinds it names', () => {
+        const productOnly = {
+            id: 'offer',
+            description: 'has an Offer',
+            pages: ['product'],
+            check: () => ['no Offer'],
+        };
+        assert.equal(checkPage(fixture('good-product.html', 'category'), [productOnly])[0].status, 'skip');
+        assert.equal(checkPage(fixture('good-product.html', 'product'), [productOnly])[0].status, 'fail');
+    });
+
+    it('fails a page that answers 404 when its template should render', () => {
+        const page = { ...fixture('good-product.html'), status: 404 };
+        assert.match(checkPage(page, assertions)[0].problems[0], /returned HTTP 404, not 200/);
+    });
+
+    it('checks the 404 page, which must answer 404, and fails it when it answers 200', () => {
+        const notFound = { ...fixture('good-product.html', '404'), status: 404 };
+        assert.deepEqual(failed(checkPage(notFound, assertions)), []);
+        assert.ok(checkPage(notFound, assertions).some(result => result.status === 'pass'));
+        assert.deepEqual(failed(checkPage({ ...notFound, status: 200 }, assertions)), ['page-renders']);
+    });
+
+    it('fetches every page pinned for the channel, so a ticket adds a page kind by pinning it', () => {
+        const { fetch } = pagesToFetch({
+            pages: {
+                home: '/', cart: '/cart.php', 404: '/missing/', product: '/p/', category: '/c/',
+            },
+        });
+        assert.deepEqual(fetch.map(({ kind }) => kind).sort(), ['404', 'cart', 'category', 'home', 'product']);
+        assert.deepEqual(fetch.find(({ kind }) => kind === 'cart'), { kind: 'cart', path: '/cart.php' });
+    });
+
+    it('fails a channel with no product or category page pinned, the spec\'s two raw-HTML pages', () => {
+        const { missing, waiting } = pagesToFetch({ pages: { home: '/' } });
+        assert.deepEqual(missing, ['product', 'category']);
+        assert.deepEqual(waiting, []);
+    });
+
+    it('only warns about a product or category page the channel says it can\'t pin yet, and why', () => {
+        const { missing, waiting } = pagesToFetch({ pages: { home: '/' }, notPinnedYet: { product: 'no products until refactor 13', category: 'no tree 4 until refactor 14' } });
+        assert.deepEqual(missing, []);
+        assert.deepEqual(waiting, [{ kind: 'product', reason: 'no products until refactor 13' }, { kind: 'category', reason: 'no tree 4 until refactor 14' }]);
+    });
+
+    it('says when a page listed as not pinned yet is pinned now, so the entry can go', () => {
+        const { stale } = pagesToFetch({ pages: { product: '/p/' }, notPinnedYet: { product: 'no products until refactor 13' } });
+        assert.deepEqual(stale, ['product']);
+    });
+});
