@@ -11,12 +11,25 @@
 //   (W0-4). A fourth 429 fails.
 // - Dismissing the cookie banner leaves nothing hovered, so no hover zoom or menu is open
 //   in a screenshot.
+// - The network guard (network-guard.mjs, W0-6) aborts a request to every analytics host on
+//   the list, and on a live channel refuses every cart write, failing the test at teardown:
+//   the GETs that add to the cart, the stock card's "Add to cart" link clicked, and writes
+//   through Playwright's request API and route.fetch() among them. The read-only POSTs and a
+//   test's own mocks go through, and it catches an analytics request that a route ahead of it
+//   let through. Those cases run in a context of their own whose first route answers
+//   everything itself, and send everything else to a .test origin that never resolves, so no
+//   request leaves the Mac. More prove that every gate test gets the guard through the
+//   fixture, its request fixture and page.request included, again only towards that origin.
 
 /* eslint-env browser */ // the page.evaluate callbacks run in the page
 
+import http from 'http';
+import { ANALYTICS_HOSTS, sampleUrl } from './analytics-hosts.mjs';
+import { LIVE_CHANNELS, guardChannel, installNetworkGuard } from './network-guard.mjs';
 import { expectedStatus } from './pages.mjs';
+import { QA_CHANNEL } from './storefront.mjs';
 import {
-    PAGES, dismissCookieBanner, expect, storefrontPage, test,
+    ANALYTICS, PAGES, dismissCookieBanner, expect, storefrontPage, test,
 } from './fixtures.mjs';
 
 const html = status => `<!doctype html><html lang="en"><title>HTTP ${status}</title><h1>HTTP ${status}</h1></html>`;
@@ -137,5 +150,295 @@ test.describe('dismissing the cookie banner', () => {
 
         expect(await page.locator('#photo').evaluate(element => element.matches(':hover')), 'the photo is hovered').toBe(false);
         expect(await page.evaluate(() => window.entered), 'mouseenter on the photo').toBe(0);
+    });
+});
+
+// The fixture pages of the network guard's cases sit on a made-up origin, answered by the
+// context's first route. The .test domain never resolves, so not even a mistake could send
+// one of these requests anywhere.
+const SELFTEST_ORIGIN = 'http://rf-qa-selftest.test';
+const SELFTEST_PAGE = `${SELFTEST_ORIGIN}/rf-selftest/guard/`;
+
+// A made-up product id: no store has it, so even a write that got out would add nothing.
+const SELFTEST_PRODUCT = '9999901';
+
+// A context of the test's own, with the guard on top as fixtures.mjs installs it, and under it
+// a route that answers the fixture page (`body`) and every request the guard passes on to the
+// selftest origin itself (recorded in `reached`). Anything else that got past the guard is
+// recorded in `leaked` and aborted, so nothing leaves the Mac.
+async function guardedPage(browser, { channel, body = '<h1>guard</h1>' }) {
+    const context = await browser.newContext();
+    const reached = [];
+    const leaked = [];
+    await context.route('**/*', route => {
+        const request = route.request();
+        if (request.method() === 'GET' && request.url() === SELFTEST_PAGE) {
+            return route.fulfill({ contentType: 'text/html', body: `<!doctype html><html lang="en"><title>guard</title>${body}</html>` });
+        }
+        const line = `${request.method()} ${request.url()}`;
+        if (new URL(request.url()).origin === SELFTEST_ORIGIN) {
+            reached.push(line);
+            return route.fulfill({ status: 200, contentType: 'application/json', body: '{"rf":"storefront"}' });
+        }
+        leaked.push(line);
+        return route.abort('internetdisconnected');
+    });
+    const guard = await installNetworkGuard(context, {
+        channel, storefront: SELFTEST_ORIGIN, local: true, blockAnalytics: true,
+    });
+    const page = await context.newPage();
+    const failures = [];
+    page.on('requestfailed', request => failures.push(`${request.method()} ${request.url()} ${request.failure()?.errorText}`));
+    await page.goto(SELFTEST_PAGE);
+    return {
+        context, page, guard, reached, leaked, failures,
+    };
+}
+
+// Sends each request from the page: a fetch (same-origin, or no-cors to another origin), an
+// image or a script. Resolves to the status of each, 'opaque' for a no-cors answer, or 'failed'.
+const send = (page, requests) => page.evaluate(list => Promise.all(list.map(({
+    method = 'GET', url, body = null, kind = 'fetch',
+}) => {
+    if (kind === 'img' || kind === 'script') {
+        return new Promise(resolve => {
+            const element = document.createElement(kind);
+            element.addEventListener('load', () => resolve(200));
+            element.addEventListener('error', () => resolve('failed'));
+            element.src = url;
+            document.body.append(element);
+        });
+    }
+    const mode = new URL(url).origin === window.location.origin ? 'same-origin' : 'no-cors';
+    return fetch(url, { method, body, mode }).then(response => (response.type === 'opaque' ? 'opaque' : response.status), () => 'failed');
+})), requests);
+
+const CART_WRITES = [
+    ['POST', '/remote/v1/cart/add', 'action=add&product_id=6178&qty%5B%5D=1'],
+    ['POST', '/api/storefront/carts', '{"lineItems":[{"productId":6178,"quantity":1}]}'],
+    ['POST', '/api/storefront/carts/rf-selftest/items', '{"lineItems":[{"productId":6178,"quantity":1}]}'],
+    ['PUT', '/api/storefront/carts/rf-selftest/items/rf-line', '{"lineItem":{"productId":6178,"quantity":2}}'],
+    ['DELETE', '/api/storefront/carts/rf-selftest/items/rf-line', null],
+    ['POST', '/cart.php', 'action=add&product_id=6178'],
+    ['POST', '/graphql', '{"query":"mutation { cart { createCart(input: {lineItems: []}) { cart { entityId } } } }"}'],
+    ['POST', '/graphql', '{"query":"\\u006dutation { cart { createCart(input: {lineItems: []}) { cart { entityId } } } }"}'],
+    // BigCommerce adds to the cart on these GETs: the stock card's "Add to cart" is a link.
+    ['GET', `/cart.php?action=add&product_id=${SELFTEST_PRODUCT}`, null],
+    ['GET', `/cart.php?action=buy&sku=RF-SELFTEST-${SELFTEST_PRODUCT}`, null],
+];
+const lines = requests => requests.map(([method, pagePath]) => `${method} ${SELFTEST_ORIGIN}${pagePath}`).sort();
+
+test.describe('the network guard (W0-6)', () => {
+    for (const channel of ['1895766', '1']) {
+        test(`aborts a request to every analytics host on the list, beacons included, on channel ${channel}`, async ({ browser }) => {
+            const {
+                context, page, guard, reached, leaked, failures,
+            } = await guardedPage(browser, { channel });
+            const urls = ANALYTICS_HOSTS.map(sampleUrl);
+            const kinds = ['fetch', 'img', 'script'];
+            const answers = await send(page, urls.map((url, index) => ({ url, kind: kinds[index % kinds.length] })));
+            await page.evaluate(url => navigator.sendBeacon(url, 'rf-qa-selftest'), urls[1]);
+            await expect.poll(() => guard.blocked.length).toBe(urls.length + 1);
+
+            expect(answers).toEqual(urls.map(() => 'failed'));
+            expect([...guard.blocked].sort()).toEqual([...urls.map(url => `GET ${url}`), `POST ${urls[1]}`].sort());
+            await expect.poll(() => failures.length).toBe(urls.length + 1);
+            // Chromium names an abort through the inspector "net::ERR_BLOCKED_BY_CLIENT.Inspector".
+            expect(failures.filter(failure => !/ net::ERR_BLOCKED_BY_CLIENT(\.Inspector)?$/.test(failure))).toEqual([]);
+            expect(guard.refused, 'an analytics beacon is blocked, never counted as a refused write').toEqual([]);
+            expect(reached).toEqual([]);
+            expect(leaked).toEqual([]);
+            await context.close();
+        });
+    }
+
+    test('refuses every cart write on a live channel, names each one, and lets none out', async ({ browser }) => {
+        const {
+            context, page, guard, reached, leaked, failures,
+        } = await guardedPage(browser, { channel: '1' });
+        const answers = await send(page, CART_WRITES.map(([method, pagePath, body]) => ({ method, url: `${SELFTEST_ORIGIN}${pagePath}`, body })));
+
+        expect(answers).toEqual(CART_WRITES.map(() => 'failed'));
+        expect([...guard.refused].sort()).toEqual(lines(CART_WRITES));
+        expect(failures.filter(failure => !/ net::ERR_ACCESS_DENIED(\.Inspector)?$/.test(failure))).toEqual([]);
+        expect(reached, 'no write reached the storefront').toEqual([]);
+        expect(leaked).toEqual([]);
+        expect(() => guard.assertNoRefusedWrites()).toThrow(`The gates refused ${CART_WRITES.length} writes on channel 1, which is live, so none reached the store: ${guard.refused.join('; ')}.`);
+        await context.close();
+    });
+
+    test('refuses the stock card\'s "Add to cart" link when it is clicked on a live channel', async ({ browser }) => {
+        const link = `/cart.php?action=add&product_id=${SELFTEST_PRODUCT}`;
+        const {
+            context, page, guard, reached, leaked,
+        } = await guardedPage(browser, {
+            channel: '1',
+            // As templates/components/products/card.html renders it.
+            body: `<a href="${link}" data-event-type="product-click" data-button-type="add-cart" class="button button--small card-figcaption-button">Add to Cart</a>`,
+        });
+        await page.getByRole('link', { name: 'Add to Cart' }).click();
+        await expect.poll(() => guard.refused).toEqual([`GET ${SELFTEST_ORIGIN}${link}`]);
+        expect(reached, 'the add never reached the storefront').toEqual([]);
+        expect(leaked).toEqual([]);
+        expect(() => guard.assertNoRefusedWrites()).toThrow(`The gates refused 1 write on channel 1, which is live, so none reached the store: GET ${SELFTEST_ORIGIN}${link}.`);
+        await context.close();
+    });
+
+    test('refuses writes through Playwright\'s request API and route.fetch() on a live channel, before they are sent', async ({ browser }) => {
+        const {
+            context, page, guard, reached, leaked,
+        } = await guardedPage(browser, { channel: '1' });
+        const refusal = /^the network guard refused (POST|PUT|DELETE|GET) http:\/\/rf-qa-selftest\.test\/.*, because channel 1 is live:/;
+        await expect(page.request.post(`${SELFTEST_ORIGIN}/remote/v1/cart/add`, { form: { action: 'add', product_id: SELFTEST_PRODUCT } })).rejects.toThrow(refusal);
+        await expect(context.request.fetch(`${SELFTEST_ORIGIN}/api/storefront/carts`, { method: 'POST', data: { lineItems: [{ productId: Number(SELFTEST_PRODUCT), quantity: 1 }] } })).rejects.toThrow(refusal);
+        await expect(context.request.delete(`${SELFTEST_ORIGIN}/api/storefront/carts/rf-selftest`)).rejects.toThrow(refusal);
+        await expect(page.request.get(`${SELFTEST_ORIGIN}/cart.php`, { params: { action: 'add', product_id: SELFTEST_PRODUCT } })).rejects.toThrow(refusal);
+
+        // A test's own route that sends the page's write on with route.fetch().
+        const fetched = [];
+        await page.route(`${SELFTEST_ORIGIN}/remote/v1/cart/update`, async route => {
+            fetched.push(await route.fetch().then(() => 'sent', error => error.message));
+            return route.fulfill({ status: 200, contentType: 'application/json', body: '{"rf":"mocked"}' });
+        });
+        await send(page, [{ method: 'POST', url: `${SELFTEST_ORIGIN}/remote/v1/cart/update`, body: 'items=1' }]);
+        expect(fetched).toHaveLength(1);
+        expect(fetched[0].replace(/^route\.fetch: /, ''), 'Playwright names the call it failed in').toMatch(refusal);
+
+        // A read is sent on, here to a server of the test's own on this Mac.
+        const server = http.createServer((request, response) => response.end('{"rf":"read"}'));
+        await new Promise(resolve => { server.listen(0, '127.0.0.1', resolve); });
+        try {
+            const read = await page.request.get(`http://127.0.0.1:${server.address().port}/api/storefront/carts`);
+            expect(await read.text()).toBe('{"rf":"read"}');
+        } finally {
+            server.close();
+        }
+
+        expect([...guard.refused].sort()).toEqual([
+            `DELETE ${SELFTEST_ORIGIN}/api/storefront/carts/rf-selftest`,
+            `GET ${SELFTEST_ORIGIN}/cart.php?action=add&product_id=${SELFTEST_PRODUCT}`,
+            `POST ${SELFTEST_ORIGIN}/api/storefront/carts`,
+            `POST ${SELFTEST_ORIGIN}/remote/v1/cart/add`,
+            `POST ${SELFTEST_ORIGIN}/remote/v1/cart/update`,
+        ]);
+        expect(reached).toEqual([]);
+        expect(leaked).toEqual([]);
+        await context.close();
+    });
+
+    test('lets the read-only POSTs through on a live channel, and answers the consent POST itself', async ({ browser }) => {
+        const {
+            context, page, guard, reached, leaked,
+        } = await guardedPage(browser, { channel: '1855224' });
+        const reads = [
+            ['POST', '/remote/v1/product-attributes/6178', 'action=add&product_id=6178&attribute%5B123%5D=456'],
+            ['POST', '/graphql', JSON.stringify({ query: '{ site { settings { storeName } } }' })],
+        ];
+        const consent = ['POST', '/api/storefront/consent', '{"allow":[],"deny":[2,3,4]}'];
+        const answers = await send(page, [...reads, consent].map(([method, pagePath, body]) => ({ method, url: `${SELFTEST_ORIGIN}${pagePath}`, body })));
+
+        expect(answers).toEqual([200, 200, 204]);
+        expect([...reached].sort(), 'the reads went on to the storefront; the consent POST didn\'t').toEqual(lines(reads));
+        expect(guard.answered).toEqual(lines([consent]));
+        expect(guard.refused).toEqual([]);
+        expect(leaked).toEqual([]);
+        guard.assertNoRefusedWrites();
+        await context.close();
+    });
+
+    test('answers a write the test mocks itself with its mock, on a live channel', async ({ browser }) => {
+        const {
+            context, page, guard, reached,
+        } = await guardedPage(browser, { channel: '1' });
+        await page.route(`${SELFTEST_ORIGIN}/remote/v1/cart/add`, route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"rf":"mocked"}' }));
+        const body = await page.evaluate(url => fetch(url, { method: 'POST', body: 'action=add' }).then(response => response.text()), `${SELFTEST_ORIGIN}/remote/v1/cart/add`);
+
+        expect(body).toBe('{"rf":"mocked"}');
+        expect(guard.refused).toEqual([]);
+        expect(reached).toEqual([]);
+        await context.close();
+    });
+
+    test('catches an analytics request that a route ahead of it let through', async ({ browser }) => {
+        const {
+            context, page, guard, leaked,
+        } = await guardedPage(browser, { channel: '1895766' });
+        const target = 'https://www.google-analytics.com/rf-qa-selftest';
+        await page.route(target, route => route.fulfill({ status: 204 }));
+        expect(await send(page, [{ url: target }])).toEqual(['opaque']);
+        await expect.poll(() => guard.completed).toEqual([`GET ${target}`]);
+        expect(guard.blocked).toEqual([]);
+        expect(leaked).toEqual([]);
+        expect(() => guard.assertNoAnalyticsCompleted()).toThrow(`1 request to an analytics host completed although this run blocks them: GET ${target}.`);
+        await context.close();
+    });
+
+    test('lets writes through on ReelFlies_CA, which isn\'t live', async ({ browser }) => {
+        const {
+            context, page, guard, reached,
+        } = await guardedPage(browser, { channel: '1895766' });
+        const answers = await send(page, CART_WRITES.slice(0, 2).map(([method, pagePath, body]) => ({ method, url: `${SELFTEST_ORIGIN}${pagePath}`, body })));
+
+        expect(answers).toEqual([200, 200]);
+        expect([...reached].sort()).toEqual(lines(CART_WRITES.slice(0, 2)));
+        expect(guard.refused).toEqual([]);
+        await context.close();
+    });
+});
+
+test.describe('the network guard in every gate test, through the fixture (W0-6)', () => {
+    test('blocks the analytics tags, and records that it does', async ({ page, networkGuard }, testInfo) => {
+        expect(testInfo.annotations).toContainEqual({ type: 'analytics blocked', description: ANALYTICS.blocked ? 'yes' : 'no' });
+        test.skip(!ANALYTICS.blocked, 'QA_ANALYTICS=allow lets the tags load in this run');
+        await serve(page, '**/rf-selftest/fixture-guard/', 200);
+        await page.goto('/rf-selftest/fixture-guard/');
+        // A path with no measurement id, on a listed host.
+        const target = 'https://www.google-analytics.com/rf-qa-selftest';
+        expect(await send(page, [{ url: target }])).toEqual(['failed']);
+        expect(networkGuard.blocked).toEqual([`GET ${target}`]);
+    });
+
+    test.describe('on a live channel', () => {
+        test.use({ qaChannel: '1' });
+
+        test('fails a test that wrote to the cart, at teardown', async ({ page, networkGuard }) => {
+            test.fail(true, 'the fixture fails this test at teardown, for the cart write the guard refused: that is what it proves');
+            await serve(page, '**/rf-selftest/fixture-guard/', 200);
+            await page.goto('/rf-selftest/fixture-guard/');
+            // The write goes to an origin that never resolves, not the storefront under test: on a
+            // live channel the guard refuses a write to any host, and if it ever stopped, the
+            // write would still reach no store.
+            const write = `${SELFTEST_ORIGIN}/remote/v1/cart/add`;
+            expect(await page.evaluate(([url, product]) => fetch(url, { method: 'POST', body: `action=add&product_id=${product}` }).then(() => 'answered', () => 'failed'), [write, SELFTEST_PRODUCT])).toBe('failed');
+            expect(networkGuard.refused).toEqual([`POST ${write}`]);
+        });
+
+        test('guards Playwright\'s request fixture and page.request too', async ({ page, request, networkGuard }) => {
+            // Channel 1, or the run's own live channel, which the option never loosens.
+            const refusal = new RegExp(`^the network guard refused POST http://rf-qa-selftest\\.test/.*, because channel ${networkGuard.channel} is live:`);
+            await expect(request.post(`${SELFTEST_ORIGIN}/remote/v1/cart/add`, { form: { action: 'add', product_id: SELFTEST_PRODUCT } })).rejects.toThrow(refusal);
+            await expect(page.request.post(`${SELFTEST_ORIGIN}/api/storefront/carts`, { data: { lineItems: [] } })).rejects.toThrow(refusal);
+            expect(networkGuard.refused).toEqual([`POST ${SELFTEST_ORIGIN}/remote/v1/cart/add`, `POST ${SELFTEST_ORIGIN}/api/storefront/carts`]);
+            // Neither was sent. The case above proves a refused write fails the test at teardown,
+            // so clear the record here, and this test passes only on what it checked.
+            networkGuard.refused.splice(0);
+        });
+
+        test.describe('when a test asks to be guarded as ReelFlies_CA', () => {
+            test.use({ qaChannel: '1895766' });
+
+            test('stays live on a run whose QA_CHANNEL is live: the option only tightens the guard', async ({ networkGuard }) => {
+                expect(networkGuard.channel).toBe(guardChannel(QA_CHANNEL, '1895766'));
+                if (LIVE_CHANNELS.includes(String(QA_CHANNEL))) expect(networkGuard.refusesWrites).toBe(true);
+            });
+        });
+
+        test('passes a test that only read, refusing nothing', async ({ page, networkGuard }, testInfo) => {
+            await serve(page, '**/rf-selftest/fixture-guard/', 200);
+            await page.goto('/rf-selftest/fixture-guard/');
+            expect(networkGuard.refusesWrites).toBe(true);
+            expect(testInfo.annotations.map(({ type }) => type)).toContain('writes refused');
+            expect(networkGuard.refused).toEqual([]);
+        });
     });
 });

@@ -12,8 +12,9 @@ The checks every theme change is held to (ticket 16; spec "Testing Decisions", s
 | Quick view | `npm run qa:quick-view` | no | no |
 | Fixture renders of partials and widgets | `npm run test:scripts` | yes | yes (release.sh) |
 | Widget element shots | `npm run qa:screens`, with the page shots | no | yes (release.sh, through `qa:prepush`) |
+| Host batch on the prelaunch host | `npm run qa:prelaunch` | no | no: once per checkpoint, in the operator's shell with the preview cookie ([Host batch](#host-batch-qaprelaunch)) |
 
-CI has no store credentials, so anything that renders the storefront runs locally or from `release.sh`. `npm run qa:prepush` (`prepush.mjs`) runs axe, the raw-HTML check and the screenshot diffs, in that order. It runs all three even when one fails, exits non-zero if any failed, and ends with each gate's result.
+CI has no store credentials, so anything that renders the storefront runs locally or from `release.sh`. Every browser gate blocks the analytics tags, and on a live channel refuses every write ([Analytics and live-store writes](#analytics-and-live-store-writes-network-guardmjs)). `npm run qa:prepush` (`prepush.mjs`) runs axe, the raw-HTML check and the screenshot diffs, in that order. It runs all three even when one fails, exits non-zero if any failed, and ends with each gate's result.
 
 `release.sh` runs it in step 4 on the release's channel and variation (`QA_CHANNEL` and `QA_VARIATION`), with `QA_FRESH_SERVER=1`, after `check-bundle.mjs` and before the dry-run exit and the push. So a serious or critical axe issue, a failed raw-HTML check, a screenshot diff or a missing baseline stops a release, and every gate runs on a stencil start of the commit being pushed ("Reuse" below). It must stay after the bundle check, for the reason in "Fresh start" below; `scripts/release-sh.test.mjs` checks the order.
 
@@ -32,9 +33,11 @@ CI has no store credentials, so anything that renders the storefront runs locall
 | `QA_PREVIEW_COOKIE` | none | Cookie for the prelaunch host, as `name=value; name2=value2`. It goes only to `QA_BASE_URL` and is never printed. A run that sends it keeps no Playwright traces, because a trace records every request's Cookie header. |
 | `QA_FRESH_SERVER` | none | `1` (`release.sh` sets it): never reuse a running server. Each gate starts its own, and the run stops if anything already answers on its ports. |
 | `QA_PORT` | `3300` | Browsersync's port; the stencil server takes the next one. Each agent's worktree runs on the pair the orchestrator assigns (3400, 3500 and so on), so parallel runs never share ports. `release.sh` always uses 3300. See [Parallel runs](#parallel-runs). |
+| `QA_ANALYTICS` | none (blocked) | `allow` lets the analytics tags load, on the prelaunch host only and only before the Flip (`scripts/release-calendar.json`); anything else is refused before the run starts. See [Analytics and live-store writes](#analytics-and-live-store-writes-network-guardmjs). |
 | `RF_TICKET` | the branch | The ticket the run's locks name, for anyone waiting on them. |
 | `QA_REFERENCE_HTML` | none | The reference page the review pages' reference screens are shot from, instead of `plan/design/reelflies-reference.html` above the checkout ("Review pages") |
 | `QA_MANIFEST` | `scripts/qa/results/manifest.json` | The screenshot manifest a run writes, for example a ticket worktree's from W0-8's overlay worktree ("Review pages") |
+| `QA_RESULTS_DIR` | none | Set by the host batch to `scripts/qa/results/host/<uuid>/`, the folder a gate files its results in. Ticket 17's Lighthouse runner reads it. |
 
 **The preview cookie** is a control-panel login, so set it only in your own shell, where it isn't shown or kept in history, and never in a file or a chat (ticket 16):
 
@@ -104,7 +107,61 @@ Agents build tickets in parallel, each in its own worktree, and each worktree's 
 3. **The release lock is now `release.sh`'s own.** Don't take `~/reelflies/theme/.locks/release` by hand around `release.sh` any more: it would find the lock held and stop, naming you.
 4. **Once no worktree from before W0-7 is left,** nothing takes `.locks/stencil` any more, and the orchestrator deletes it.
 
-**The channel-1 fallback.** ReelFlies_CA has no products and no tree-4 categories yet, so its product and category pages 404. Until they exist, `QA_CHANNEL=1` renders this repo's templates with live reelflies.ca data. It is read-only: stencil start only reads from the store. Channel 1 has only a product page and a category page pinned.
+**The channel-1 fallback.** ReelFlies_CA has no products and no tree-4 categories yet, so its product and category pages 404. Until they exist, `QA_CHANNEL=1` renders this repo's templates with live reelflies.ca data. It is read-only: stencil start passes every request through to the live store, so the gates refuse every write on channel 1 and 1855224 ([Analytics and live-store writes](#analytics-and-live-store-writes-network-guardmjs)). Channel 1 has only a product page and a category page pinned.
+
+## Analytics and live-store writes (`network-guard.mjs`)
+
+Every Playwright gate opens its pages through `fixtures.mjs`, which puts a guard on each test's browser context (`context.route`) before the test opens a page (W0-6). It does two things.
+
+**It blocks the analytics tags,** on every channel and host:
+
+- **Why:** the prelaunch host and the live stores load GA4 `G-BQ4RFFK3KW`, which reports into live reelflies.ca, Universal Analytics `UA-1225874-8`, the Meta Pixel `2233770690192958` and Omnisend. A gate's page views would count as visits. A local `stencil start` serves none of these tags today, but a store setting can add one at any time.
+- **The list** is `analytics-hosts.mjs`, `ANALYTICS_HOSTS`, with what each entry is for:
+  - Google: `googletagmanager.com`, `google-analytics.com`, `analytics.google.com` and `doubleclick.net`. That includes the legacy UA endpoints (`analytics.js`, `ga.js`, `/collect`, `/r/collect`)
+  - Meta: `connect.facebook.net`, and `facebook.com/tr`
+  - Omnisend: `omnisnippet1.com`, `omnisrc.com`, `soundestlink.com`, `omnisendlink.com` and `omnisend.com`
+  - BigCommerce's own visitor beacon (`bes.gcp.data.bigcommerce.com`) and its data-layer events (`microapps.bigcommerce.com/bodl-events`)
+- An entry matches its host and every subdomain, never a look-alike host. An entry with a path matches only that path and the paths below it. A blocked request is aborted (`net::ERR_BLOCKED_BY_CLIENT`) and never leaves the Mac.
+- **Ticket 17's Lighthouse runner** passes the same list as `blockedUrlPatterns`: `lighthouseBlockedUrlPatterns()`.
+- **Every result records it.** Each test carries the annotation "analytics blocked: yes" or "no", and the number of analytics requests it blocked. The run prints an `ANALYTICS` line before its first test, and the host batch puts it in its row.
+- **A blocked run can't quietly send one.** If a request to a listed host completes while the tags are blocked, the test fails at teardown, naming it. Only a route ahead of the guard, such as a test's own mock of that URL, could let one through.
+- **`QA_ANALYTICS=allow`** lets the tags load, but only on the prelaunch host (`QA_BASE_URL=https://reelflies_ca-1895766.mybigcommerce.com`), where a GA4 hostname filter can keep the run out of the reports.
+  - It is refused on a local `stencil start`, on reelflies.ca, on reelflies.com and on any other host, before the run starts.
+  - It is also refused from the Flip on. The Flip date comes from W0-13's release calendar (`scripts/release-calendar.json`, read with `scripts/lib/release-calendar.mjs`), by the date in Toronto, where the store is. A calendar that is missing or malformed stops the run, so a typo never reads as "no Flip". After the Flip the prelaunch host is live reelflies.ca, and no filter can tell a run from a real visit.
+  - The budgets and the drop rule stay on blocked runs, so they compare like with like (ticket 17). The host batch adds one run with the tags loaded, for information, once ticket 08 records the filter.
+- The raw-HTML check runs no JavaScript, so no tag loads there, and its output says so.
+
+**On a live channel it refuses writes:**
+
+- **When:** `QA_CHANNEL` is `1` (reelflies.ca) or `1855224` (reelflies.com), or `QA_BASE_URL` is any host but the prelaunch host. From the Flip date in the release calendar, every channel counts as live, 1895766 included, because it is then live reelflies.ca.
+- **Why:** `stencil start -c 1` and `-c 1855224` pass every request through to the live store. Mocking cart endpoints one by one fails open: one missed endpoint (`/remote/v1/cart/add`, `/api/storefront/carts`, a request queue, the card's "Add to cart" link) would make a real guest cart on a live site.
+- **What counts as a write:**
+  - every request that isn't a GET, HEAD or OPTIONS
+  - **the GETs that change something** (`GET_WRITES` in `read-only-posts.mjs`), on any host, as a HEAD too. BigCommerce adds to the cart on a GET: the stock card's, list item's and compare page's "Add to cart" is a link to `/cart.php?action=add&product_id=N`. So is `action=buy`, and so are the cart page's "Remove" links for coupons, gift certificates and gift wrapping. Any `/cart.php` with an `action`, any `/remote/v1/cart/…`, any `/wishlist.php` with an `action`, and `/login.php?action=logout` count. `/cart.php` without an action, and `/api/storefront/carts`, stay reads.
+- **What happens:** each write is aborted (`net::ERR_ACCESS_DENIED`), so it never reaches the store, and recorded. A clicked "Add to cart" link is refused the same way. At teardown the test fails, naming the method and URL of each write. The run prints a `WRITES` line, and each test carries a "writes refused" annotation.
+- **Playwright's request API is guarded too.** The `request` fixture, `context.request`, `page.request` and `route.fetch()` never pass through `context.route`. So the guard checks each of their calls before it is sent. A write it would refuse throws, naming it, and also fails the test at teardown. A call to an analytics host throws while the tags are blocked. The gates answer the consent POST themselves only for a page; through the request API it is refused. Every call goes through Playwright's internal `APIRequestContext._innerFetch`, which the pinned Playwright 1.59.1 has. A Playwright without it stops every run until `guardRequestContext` is updated, and `harness-selftest.spec.mjs` checks the hook on each run. A test never makes its own `playwright.request.newContext()`, which nothing guards.
+- **The exceptions,** both in `read-only-posts.mjs` and only on the storefront under test:
+  - **`READ_ONLY_POSTS` go through:** `POST /remote/v1/product-attributes/<id>` (the price and stock for the options chosen on a product page or in Quick view), and a storefront GraphQL `POST /graphql` whose body is plain queries with no `mutation` anywhere in it.
+  - **`LOCAL_ANSWERS` are answered by the gates themselves:** `POST /api/storefront/consent`, which "Reject all" on the cookie banner sends (`dismissCookieBanner`). The banner hides whatever the answer, so it gets a 204 and the choice never reaches a live store. A test that sent it carries a "writes answered by the gates" annotation.
+  - **A request a test mocks itself** (`page.route`, or a `context.route` added in the test) is answered by its mock and never reaches the guard. A test's route may only `route.fulfill()`, `route.abort()` or `route.fallback()`, which hands the request back to the guard. **Never `route.continue()`:** it sends the request straight to the network, past the guard, and nothing records it. `route.fetch()` is guarded (above).
+- **Adding a read-only POST:** add it to `READ_ONLY_POSTS` with the reason it changes nothing, and a case to `read-only-posts.test.mjs`. Otherwise mock the request in the test.
+- **On ReelFlies_CA** (1895766, through `stencil start` or the prelaunch host) nothing is refused before the Flip, because the prelaunch store isn't live yet. Real adds there wait for refactor 14's products.
+- **A self-test can only tighten it.** `test.use({ qaChannel: '1' })` lets a self-test act as channel 1 on a 1895766 run. On a run whose `QA_CHANNEL` is live, every test stays guarded as that channel, whatever its `qaChannel` says.
+- **Service workers are blocked** in the gates (`serviceWorkers: 'block'`), because a request a service worker answers never reaches `context.route`. The store registers none.
+
+**The proof:**
+
+- `harness-selftest.spec.mjs` runs with `qa:axe`, `qa:screens` and `qa:quick-view`. In a context of its own, whose first route answers everything itself so no request leaves the Mac, it shows:
+  - a request to every host on the list is aborted, an image, a script, a fetch and a beacon among them
+  - every cart write is refused on channel 1, the GETs that add to the cart and a `\u`-escaped GraphQL mutation included, and the guard names each one
+  - the stock card's "Add to cart" link, clicked, is refused
+  - writes through `page.request`, `context.request` and a test route's `route.fetch()` are refused before they are sent, and a read through `page.request` is sent
+  - the read-only POSTs go through, and the consent POST gets the gates' own answer
+  - a test's own mock answers a write
+  - an analytics request that a route ahead of the guard let through is caught
+  - writes go through on ReelFlies_CA
+- More tests use the fixture itself: every gate test blocks the tags and records it; a test on channel 1 that posts to the cart fails at teardown; the `request` fixture and `page.request` are guarded; and a test that asks to be guarded as 1895766 stays live on a live run. Their writes go only to `http://rf-qa-selftest.test`, which never resolves, so even a broken guard sends nothing to a store.
+- `analytics-hosts.test.mjs`, `read-only-posts.test.mjs` and `network-guard.test.mjs` check the list against the tags reelflies.ca loads, the Lighthouse patterns, `QA_ANALYTICS`, and each allowed, answered and refused request.
 
 ## Pinned pages and live data
 
@@ -462,14 +519,14 @@ Review is per wave, through rolling checkpoints (W0-10 in `plan/build-pipeline.m
 **Review renders** (`review-live.spec.mjs`) are pages shot as they render, with nothing masked and no baseline. No `qa:*` script runs them:
 
 - **ReelFlies_CA's home page with its widgets,** for section 6. Page baselines hide widget regions, so this is where they show.
-- **Every page pinned for reelflies.com (1855224),** for section 5. .com has no baselines, so these are its renders. `pages.mjs` pins its home page; pin a product and a category there too. Run it only once W0-6 has landed, which refuses writes and blocks analytics on live channels.
+- **Every page pinned for reelflies.com (1855224),** for section 5. .com has no baselines, so these are its renders. `pages.mjs` pins its home page; pin a product and a category there too. The gates refuse writes and block analytics there (W0-6).
 
 ```sh
 npx playwright test --config scripts/qa/playwright.config.mjs review-live    # ReelFlies_CA's home page, this checkout through stencil start
-QA_CHANNEL=1855224 QA_VARIATION='ReelFlies US' npx playwright test --config scripts/qa/playwright.config.mjs review-live    # .com, after W0-6
+QA_CHANNEL=1855224 QA_VARIATION='ReelFlies US' npx playwright test --config scripts/qa/playwright.config.mjs review-live    # .com
 ```
 
-The prelaunch host's own build can be shot too, but only after W0-6: its pages load GA4, which reports into live reelflies.ca. Read the cookie as in "The storefront the gates test", then run `QA_BASE_URL=https://<prelaunch host> npx playwright test --config scripts/qa/playwright.config.mjs review-live`.
+The prelaunch host's own build can be shot too. Its pages load GA4, which reports into live reelflies.ca, so the gates block the tags there as everywhere (W0-6). Read the cookie as in "The storefront the gates test", then run `QA_BASE_URL=https://<prelaunch host> npx playwright test --config scripts/qa/playwright.config.mjs review-live`.
 
 **A checkpoint page,** from a clean `master`, holding the stencil lock for the runs:
 
@@ -478,7 +535,7 @@ rm -f scripts/qa/results/manifest.json   # start from this commit's shots only
 npm run qa:screens                       # ReelFlies_CA, with the reference screens
 QA_CHANNEL=1 npm run qa:screens          # channel 1's product and category
 npx playwright test --config scripts/qa/playwright.config.mjs review-live
-QA_CHANNEL=1855224 QA_VARIATION='ReelFlies US' npx playwright test --config scripts/qa/playwright.config.mjs review-live    # after W0-6
+QA_CHANNEL=1855224 QA_VARIATION='ReelFlies US' npx playwright test --config scripts/qa/playwright.config.mjs review-live
 rm -rf assets/dist
 node scripts/qa/review/review.mjs --input <notes.json>
 ```
@@ -531,6 +588,31 @@ node scripts/qa/review/review.mjs --pr <number> [--base origin/master]
 
 It writes `results/review/pr-<number>/` with each baseline the working tree changes against its merge base with `--base` (new, untracked baselines too), before and after, beside its reference screen. The page says it is local only, and it is never published.
 
+## Host batch (`qa:prelaunch`)
+
+`npm run qa:prelaunch` (`prelaunch.mjs`, W0-6) runs the gates against the prelaunch host, which serves the build ReelFlies_CA actually runs. Shaun runs it once per checkpoint, in his own shell, because the host needs his preview cookie (the cookie routine, build pipeline W0-12):
+
+```sh
+read -rs QA_PREVIEW_COOKIE && export QA_PREVIEW_COOKIE    # paste name=value; name2=value2, then Return
+npm run qa:prelaunch
+```
+
+1. **No cookie, no run.** Without `QA_PREVIEW_COOKIE`, or with one that isn't `name=value` pairs, it stops at once and says so. It never prints the cookie, and the gates keep no trace while it is set. It also stops if `QA_BASE_URL` names another host, or `QA_CHANNEL` another channel.
+2. **The build first.** It reads the theme active on 1895766 through the store API, GET only, with the token from `stencil init` (`release-capture.mjs`). If the theme can't be read, nothing runs. It files every result under that theme's uuid, in `scripts/qa/results/host/<uuid>/`:
+   - `summary.json`
+   - each gate's log (`axe.log`, `raw-html.log`, `screenshots.log`)
+   - Playwright's reports and output (`axe-report/`, `screenshots-output/` and so on)
+   - the screenshot manifest
+3. **The gates.** axe, the raw-HTML check and the screenshots, the same three as `qa:prepush`, on every page pinned for 1895766. They run as the variation the host runs, with the analytics tags blocked whatever `QA_ANALYTICS` says.
+   - Ticket 17's Lighthouse joins them once `npm run qa:lighthouse` exists. Until then the run prints that Lighthouse waits for ticket 17.
+   - Once ticket 08 records Shaun's GA4 hostname filter, set `GA4_HOSTNAME_FILTER_SINCE` in `prelaunch.mjs` to its date. Each batch then adds one Lighthouse run with the tags loaded (`QA_ANALYTICS=allow`). It is information only: it never fails the batch, and the budgets stay on the blocked runs. Its results go in `tags-loaded/` inside the uuid's folder (its `QA_RESULTS_DIR`), so they never overwrite the blocked run's.
+4. **The same build throughout.** It reads the active theme again after the gates, and fails if it changed, because the results would then mix two builds.
+5. **The log.** It appends a row to the "Host runs" section of `RELEASES.md`, which it creates before "Switch toggles" the first time: the date, the theme uuid, the build's commit (from the uuid's newest release entry, or "not in RELEASES.md"), the gates, pass or fail, "analytics blocked", and the commit the gates ran from. "Analytics blocked" is "yes", or, once the tags-loaded run runs, "yes, in the gates it counts; tags loaded in Lighthouse with the tags loaded (information)". `summary.json` records the same. The release's own gates run on a local `stencil start`; these rows are the record that the build ReelFlies_CA actually runs passed on the host.
+   - Once Lighthouse ran, it also fills in that release entry's `- Lighthouse: pending host batch`. That is the line a push made without the cookie records (ticket 17's `release.sh` hook). So ticket 56 can see that the exact build it pushes passed on prelaunch.
+   - The orchestrator commits the change through the next release-log PR (build pipeline, section 6.5).
+
+It exits 0 when every counted gate passed, 1 when one failed or the theme changed, and 2 when it stopped before the first gate. It takes no lock: it starts no `stencil start`.
+
 ## Which runner picks up what
 
 - Playwright runs `scripts/qa/*.spec.mjs` with this folder's config.
@@ -538,6 +620,7 @@ It writes `results/review/pr-<number>/` with each baseline the working tree chan
 - `widget-screens.spec.mjs` runs with `qa:screens`, because the script's `screens` filter matches its name.
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
 - `storefront.test.mjs` also covers `QA_PORT`, the start log's name, the locks a gate holds (and the ports checked again after a slot wait), trusting only the server a gate started, and stopping that server when the gate is stopped by a signal. `playwright-config.test.mjs` covers that the config reads `QA_PORT` and holds the locks only in the runner, `prepush.test.mjs` what `qa:prepush` checks before its first gate, `serve.test.mjs` the locks around a `stencil start` by hand, and `scripts/lib/lock.test.mjs` the locks themselves: the stale rules, waiting, the three slots across processes, the signals, `RF_LOCK_ROOT`, and the command line `release.sh` uses.
+- `analytics-hosts.test.mjs`, `read-only-posts.test.mjs` and `network-guard.test.mjs` cover the network guard (W0-6), and `harness-selftest.spec.mjs` proves it in a browser. `prelaunch.test.mjs` covers the host batch: the cookie check, the uuid folder, the gates and their environment, the `RELEASES.md` row, Lighthouse once ticket 17 adds it, and that the cookie is never printed.
 - `npm run test:scripts` runs every `scripts/**/*.test.mjs` with `node --test`, the fixture renders included.
 - Jest runs `assets/js/test-unit/`. `jest.config.js` ignores `scripts/`, because Jest 30 would otherwise match `*.test.mjs` and `*.spec.mjs` too.
 - `screens-reference.spec.mjs` runs with `qa:screens`, because its name matches the filter, and never fails it. `review-live.spec.mjs` runs only when named. Neither is a gate. `review/manifest-reporter.test.mjs` checks both against `package.json`'s filters.
