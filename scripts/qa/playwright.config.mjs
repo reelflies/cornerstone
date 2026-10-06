@@ -7,22 +7,24 @@
 //
 // Specs are *.spec.mjs, which neither Jest nor `npm run test:scripts` picks up, and
 // none of this runs in CI, which has no store credentials. Without QA_BASE_URL the
-// run reuses the `stencil start` on port 3301, or starts one (scripts/qa/storefront.mjs).
-// With QA_FRESH_SERVER=1 (release.sh) it never reuses one: it starts its own, and stops
-// before that if anything already answers on 3300 or 3301.
+// run reuses the `stencil start` on port QA_PORT + 1 (3301 by default), or starts one on
+// QA_PORT (scripts/qa/storefront.mjs). With QA_FRESH_SERVER=1 (release.sh) it never reuses
+// one: it starts its own, and stops before that if anything already answers on either port.
 
 import { defineConfig } from '@playwright/test';
 import {
-    BASE_URL, FRESH_SERVER, HEADERS, IS_LOCAL, READY_URL, ROOT, START_COMMAND, checkEnv, planLocalServer, previewCookies,
+    BASE_URL, FRESH_SERVER, HEADERS, IS_LOCAL, READY_URL, ROOT, START_COMMAND, checkEnv, claimLocalServer, previewCookies,
 } from './storefront.mjs';
 
 checkEnv();
 
-// The webServer starts before globalSetup, so the ports are checked here, once, by the
-// runner. Each worker loads this config again while the server is up, and skips the check
-// through the RF_QA_PORTS_CHECKED it inherits.
-if (IS_LOCAL && FRESH_SERVER && !process.env.RF_QA_PORTS_CHECKED) {
-    await planLocalServer();
+// The webServer starts before globalSetup, so the runner claims the server here, once: it
+// waits for its port pair's lock, checks the ports (QA_FRESH_SERVER=1 stops while anything
+// answers on them), and takes a stencil start slot when it will start a server. It holds
+// both until it exits (W0-7). Each worker loads this config again while the server is up,
+// and skips this through the RF_QA_PORTS_CHECKED it inherits.
+if (IS_LOCAL && !process.env.RF_QA_PORTS_CHECKED) {
+    await claimLocalServer();
     process.env.RF_QA_PORTS_CHECKED = '1';
 }
 

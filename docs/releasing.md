@@ -29,10 +29,21 @@ A dry run writes nothing that git tracks, but it isn't read-only for the checkou
 
 - It deletes and rebuilds `assets/dist`, and reinstalls `node_modules` with `npm ci`, like a real release (step 2).
 - It writes the gitignored capture (`config.ca.live.json`) and the bundle zip.
-- The storefront gates start `stencil start` up to three times (axe, the raw-HTML check and the screenshots), on ports 3300 and 3301, and leave its dev build in `assets/dist`. The zip was checked before that, and the push sends that zip.
-- The gates refuse to reuse a running `stencil start`, so ports 3300 and 3301 must be free. If a `stencil start` is already running, step 4 stops.
+- The storefront gates start `stencil start` up to three times (axe, the raw-HTML check and the screenshots), always on ports 3300 and 3301 whatever `QA_PORT` your shell has, and leave its dev build in `assets/dist`. The zip was checked before that, and the push sends that zip.
+- The gates refuse to reuse a running `stencil start`, so ports 3300 and 3301 must be free. If a `stencil start` is already running there, step 4 stops.
+- Each gate takes a `stencil start` slot like any other run, so it waits while three other runs on the Mac have one up ([scripts/qa/README.md](../scripts/qa/README.md#parallel-runs), "Parallel runs").
 
-So stop any `stencil start` first, and don't run a release while another build or release is using the same checkout.
+So stop any `stencil start` on 3300 first, and don't run a release while another build is using the same checkout.
+
+## One release at a time
+
+Only one release or dry run runs at a time on this Mac (W0-7). Before anything else, `release.sh` takes the release lock, `~/reelflies/theme/.locks/release`, for its own pid, and drops it when it exits, however it ends.
+
+- **A second release or dry run stops at once**, before any check, naming the holder (its command line and ticket, its pid and host) and the time it started. Run it again once that one has finished.
+- **A stale lock is broken:** one over 90 minutes old whose pid isn't running any more. The release prints a `STALE` line naming the old holder and goes on. A lock whose holder still runs is never broken, however old.
+- **Don't take the lock by hand** around `release.sh`, as wave 0's agents did: the release would find it held and stop, naming you. A lock written by hand (an `owner.txt` with no pid) goes stale only after 90 minutes.
+- **`RF_LOCK_ROOT` is for the tests only.** A real release or dry run with it set stops before anything runs and says to unset it, so every run on the Mac shares the one lock and the gates' slots.
+- The lock and its rules are in `scripts/lib/lock.mjs`, shared with the gates' slots and W0-13's merge lock.
 
 ## Real release
 
@@ -72,6 +83,7 @@ The release refuses these before any network call or build, with a one-line reas
 - a channel that isn't a release target, or a variation that the channel doesn't take
 - `--accept-live` together with `--overwrite-live`, or either one with `--first-release`
 - for a real release: a dirty tree, the wrong Node version, or a test-only `RF_RELEASE_*` override
+- another release or dry run holding the release lock ([One release at a time](#one-release-at-a-time)); this is checked first, before the arguments
 
 ### Release targets
 
@@ -149,7 +161,7 @@ The release's tests are `scripts/release-*.test.mjs`. `npm run test:scripts` run
 
 - `release-guard.test.mjs` covers the four refusals of the spec's seam 5 (more than one channel, no named variation, a switch difference, and a set-but-missing menu id) and each case of the guard's two rules.
 - `release-checks.test.mjs` covers the stops that only a real release reaches, which a dry run can't: the Node version and dirty-tree refusals, the My Themes cap, the typed channel id (a wrong answer, a closed stdin, no terminal), and step 5's gate (a switch toggled or a draft published while the prompt waits, another theme, a new commit, a changed or missing zip).
-- `release-sh.test.mjs` runs `scripts/release.sh` itself, in dry runs. It covers the argument refusals, step 1's stops, the live contrast report and the guard, using three test-only overrides:
+- `release-sh.test.mjs` runs `scripts/release.sh` itself, in dry runs. It covers the release lock (a held lock, a lock taken by hand, a stale lock, and the lock dropped at the end), the argument refusals, step 1's stops, the live contrast report and the guard. Its runs take the release lock in a folder of their own (`RF_LOCK_ROOT`, which only `node --test` may set), and use three test-only overrides:
   - `RF_RELEASE_CONFIG=<file>` is a theme config to use instead of `config.json`. The run stops before the clean build.
   - `RF_RELEASE_LIVE_FIXTURE=<file>` is a capture to use instead of the store.
   - `RF_RELEASE_TREE_FIXTURE=<file>` is a JSON array of the channel's category ids, to use instead of the catalogue API.

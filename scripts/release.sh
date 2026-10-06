@@ -10,14 +10,35 @@
 #   6 verify           7 log the release in RELEASES.md
 #
 # docs/releasing.md explains each step, flag and refusal. The node steps are in scripts/release.mjs.
-# Every failed step stops the release.
+# Every failed step stops the release, and only one release or dry run runs at a time on this Mac.
 
 set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
+STATE_DIR=""
+LOCK_TAKEN=""
+trap 'if [ -n "$LOCK_TAKEN" ]; then node scripts/lib/lock.mjs drop release --pid "$$" || true; fi; if [ -n "$STATE_DIR" ]; then rm -rf "$STATE_DIR"; fi' EXIT
+
+# One release or dry run at a time on this Mac (W0-7): the release lock,
+# ~/reelflies/theme/.locks/release, held for this script's pid until it exits. A held lock stops
+# this run before anything else, naming its holder and start time; one over 90 minutes old whose
+# pid has gone is broken, with a STALE line. scripts/lib/lock.mjs has the rules. It exits 1 when
+# another run holds the lock, and 2 when it can't take it at all (RF_LOCK_ROOT outside a test,
+# or something at the lock's path that isn't a lock).
+lock_status=0
+node scripts/lib/lock.mjs take release --pid "$$" --owner "scripts/release.sh $*" || lock_status=$?
+if [ "$lock_status" -eq 1 ]; then
+    echo "Another release or dry run is running on this Mac, or holds its lock, so nothing ran. Run this again once it has finished." >&2
+    echo "If you took this lock by hand under wave 0's rule, remove it first: release.sh takes this lock itself (W0-7)." >&2
+    exit 1
+elif [ "$lock_status" -ne 0 ]; then
+    echo "STOP     the release lock couldn't be taken, so nothing ran (above says why)." >&2
+    exit 1
+fi
+LOCK_TAKEN=1
+
 STATE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/rf-release.XXXXXX")"
-trap 'rm -rf "$STATE_DIR"' EXIT
 export RF_RELEASE_STATE="$STATE_DIR/state.json"
 
 release() { node scripts/release.mjs "$@"; }
@@ -64,9 +85,10 @@ release bundle-info "$zip"
 # stencil start of the target. QA_FRESH_SERVER=1 starts a new one each time and stops if one is
 # already running, so no gate checks a server left running on another checkout or an older build.
 # stencil start's dev build replaces assets/dist, so this runs after the zip is checked; the push
-# sends that zip.
+# sends that zip. The release keeps ports 3300 and 3301, whatever QA_PORT the shell has; each gate
+# takes a stencil start slot like any other run (W0-7).
 step "Step 4 · Storefront gates: axe, raw HTML and screenshots"
-QA_FRESH_SERVER=1 QA_CHANNEL="$(release state channel)" QA_VARIATION="$(release state variation)" npm run qa:prepush
+QA_PORT=3300 QA_FRESH_SERVER=1 QA_CHANNEL="$(release state channel)" QA_VARIATION="$(release state variation)" npm run qa:prepush
 
 if [ "$dry_run" = true ]; then
     release dry-run-report
