@@ -137,7 +137,9 @@ describe('a host batch', () => {
         const dir = resultsDir(UUID, ROOT);
         assert.equal(dir, path.join(ROOT, 'scripts', 'qa', 'results', 'host', UUID));
         assert.deepEqual(run.calls[1], ['mkdir', dir]);
-        assert.ok(run.files[path.join(dir, 'summary.json')]);
+        const summary = JSON.parse(run.files[path.join(dir, 'summary.json')]);
+        assert.equal(summary.analyticsBlocked, 'yes');
+        assert.deepEqual(summary.gates.map(gate => gate.analyticsBlocked), ['yes', 'yes', 'yes']);
     });
 
     it('runs axe, the raw-HTML check and the screenshots on the prelaunch host, with the tags blocked', async () => {
@@ -226,7 +228,7 @@ describe('the Host runs row in RELEASES.md', () => {
             commit: SHA,
             gates: ['axe'],
             problems: [],
-            analyticsBlocked: true,
+            analytics: 'yes',
             checkout: { sha: SHA, dirty: true },
         });
         assert.equal(row, `| 2026-10-07 15:04 UTC | \`${UUID}\` | \`5d0d0cb8\` | axe | pass | yes | \`5d0d0cb8\` (uncommitted changes) |`);
@@ -276,7 +278,21 @@ describe('Lighthouse (ticket 17)', () => {
         assert.equal(tags[2].QA_ANALYTICS, 'allow');
         assert.equal(tags[1], 'qa:lighthouse');
         assert.equal(run.code, 0, 'the tags-loaded run is information: it never fails the batch');
-        assert.ok(run.files['RELEASES.md'].includes('| axe, raw HTML, screenshots, Lighthouse, Lighthouse with the tags loaded (information) | pass | yes |'));
+        const loaded = 'yes, in the gates it counts; tags loaded in Lighthouse with the tags loaded (information)';
+        assert.ok(run.files['RELEASES.md'].includes(`| axe, raw HTML, screenshots, Lighthouse, Lighthouse with the tags loaded (information) | pass | ${loaded} |`));
+        const summary = JSON.parse(run.files[path.join(resultsDir(UUID, ROOT), 'summary.json')]);
+        assert.equal(summary.analyticsBlocked, loaded);
+        assert.deepEqual(summary.gates.map(gate => gate.analyticsBlocked), ['yes', 'yes', 'yes', 'yes', 'no']);
+    });
+
+    it('files the tags-loaded run\'s results apart, so they never overwrite the blocked run\'s', async () => {
+        const run = await batch({ scripts: withLighthouse, ga4FilterSince: '2026-10-20' });
+        const dir = resultsDir(UUID, ROOT);
+        const [blocked, loaded] = run.gates.filter(([, script]) => script === 'qa:lighthouse').map(([, , env]) => env);
+        assert.equal(blocked.QA_RESULTS_DIR, dir);
+        assert.equal(loaded.QA_RESULTS_DIR, path.join(dir, 'tags-loaded'));
+        assert.equal(loaded.QA_MANIFEST, path.join(dir, 'tags-loaded', 'manifest.json'));
+        assert.ok(run.calls.some(([kind, folder]) => kind === 'mkdir' && folder === path.join(dir, 'tags-loaded')), 'its folder is made before it runs');
     });
 
     it('fills in the uuid\'s pending Lighthouse line once its Lighthouse ran', async () => {

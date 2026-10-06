@@ -18,10 +18,12 @@
 //    whatever QA_ANALYTICS says. Ticket 17's Lighthouse joins them once `npm run qa:lighthouse`
 //    exists. Once ticket 08 records Shaun's GA4 hostname filter (GA4_HOSTNAME_FILTER_SINCE),
 //    one more Lighthouse run loads the tags, as information only: it never fails the batch,
-//    and the budgets stay on the blocked runs.
+//    the budgets stay on the blocked runs, and its results go in a folder of their own
+//    (tags-loaded/), so they never overwrite the blocked run's.
 // 4. It reads the active theme again, and fails if it changed meanwhile.
 // 5. It appends a row to RELEASES.md's "Host runs" section: date, uuid, the build's commit
-//    (from the uuid's newest release entry), the gates, pass or fail, and "analytics blocked".
+//    (from the uuid's newest release entry), the gates, pass or fail, and "analytics blocked":
+//    yes, or, when the tags-loaded run ran, yes in the gates it counts and where they loaded.
 //    Once Lighthouse ran, it also fills in that entry's "Lighthouse: pending host batch", the
 //    line a push made without the cookie records (ticket 17's release.sh hook). The orchestrator
 //    commits the change through the next release-log PR (build pipeline, section 6.5).
@@ -90,22 +92,35 @@ export function batchGates({ scripts = {}, ga4FilterSince = GA4_HOSTNAME_FILTER_
     return gates;
 }
 
+// The folder a gate files its results in: the uuid's, or for a run that loads the tags a
+// folder of its own inside it, so its results never overwrite the blocked run's.
+const gateDir = (gate, dir) => (gate.analytics === 'allow' ? path.join(dir, 'tags-loaded') : dir);
+
 // The environment one gate runs in: the shell's (the cookie with it), on the prelaunch host as
-// the variation it runs, with its results in the uuid's folder. QA_ANALYTICS is the gate's own.
+// the variation it runs, with its results in its folder. QA_ANALYTICS is the gate's own.
 function hostGateEnv({
     env, gate, variation, dir,
 }) {
     const inherited = Object.fromEntries(Object.entries(env).filter(([name]) => !['RF_QA_PORTS_CHECKED', 'QA_ANALYTICS'].includes(name)));
+    const results = gateDir(gate, dir);
     return {
         ...inherited,
         QA_BASE_URL: PRELAUNCH_URL,
         QA_CHANNEL: HOST_CHANNEL,
         QA_VARIATION: variation,
-        QA_MANIFEST: path.join(dir, 'manifest.json'),
-        QA_RESULTS_DIR: dir,
+        QA_MANIFEST: path.join(results, 'manifest.json'),
+        QA_RESULTS_DIR: results,
         ...(gate.playwright ? { PLAYWRIGHT_HTML_OUTPUT_DIR: path.join(dir, `${gate.slug}-report`) } : {}),
         ...(gate.analytics === 'allow' ? { QA_ANALYTICS: 'allow' } : {}),
     };
+}
+
+// What the row and summary.json record as "analytics blocked": yes, or, when a run loaded the
+// tags for information, yes in the gates the batch counts, and where the tags loaded.
+export function analyticsBlockedText(gates) {
+    const loaded = gates.filter(gate => gate.analytics === 'allow');
+    if (!loaded.length) return 'yes';
+    return `yes, in the gates it counts; tags loaded in ${loaded.map(gate => `${gate.name}${gate.informational ? ' (information)' : ''}`).join(', ')}`;
 }
 
 const gateArgs = (gate, dir) => (gate.playwright ? ['--output', path.join(dir, `${gate.slug}-output`)] : []);
@@ -141,7 +156,7 @@ Each \`npm run qa:prelaunch\` adds a row here: the storefront gates against the 
 `;
 
 export function hostRunRow({
-    date, uuid, commit, gates, problems, analyticsBlocked, checkout,
+    date, uuid, commit, gates, problems, analytics, checkout,
 }) {
     return [
         '',
@@ -150,7 +165,7 @@ export function hostRunRow({
         commit ? short(commit) : 'not in RELEASES.md',
         gates.join(', '),
         problems.length ? `fail: ${problems.join(', ')}` : 'pass',
-        analyticsBlocked ? 'yes' : 'no',
+        analytics,
         `${short(checkout.sha)}${checkout.dirty ? ' (uncommitted changes)' : ''}`,
         '',
     ].join(' | ').trim();
@@ -209,6 +224,7 @@ export async function runHostBatch({
 
     const results = [];
     for (const gate of gates) {
+        if (gateDir(gate, dir) !== dir) mkdir(gateDir(gate, dir));
         const problems = await runGate({ // eslint-disable-line no-await-in-loop
             gate,
             env: hostGateEnv({
@@ -232,6 +248,7 @@ export async function runHostBatch({
     }
     const ok = !problems.length;
     const finished = now();
+    const analytics = analyticsBlockedText(results);
 
     log(`\nHost batch on ${uuid}:`);
     const label = gate => {
@@ -248,7 +265,7 @@ export async function runHostBatch({
         checkout: from,
         startedAt: started.toISOString(),
         finishedAt: finished.toISOString(),
-        analyticsBlocked: 'yes',
+        analyticsBlocked: analytics,
         ok,
         problems,
         gates: results.map(gate => ({
@@ -273,7 +290,7 @@ export async function runHostBatch({
         commit,
         gates: results.map(gate => (gate.informational ? `${gate.name} (information)` : gate.name)),
         problems,
-        analyticsBlocked: true,
+        analytics,
         checkout: from,
     }));
     writeReleases(text);
