@@ -1,7 +1,7 @@
 // Self-tests of fixtures.mjs, which every storefront gate opens its pages with. They run
 // with qa:axe, qa:screens and qa:quick-view, and serve their own pages (page.route and
-// setContent), so they need no store data; only the 5xx retry gets a pinned page's real
-// response from the storefront under test.
+// setContent), so they need no store data; only the 5xx and 429 retry cases get a pinned
+// page's real response from the storefront under test.
 //
 // - A pinned page that doesn't answer as its template should fails the run, so axe and the
 //   screenshots never check, or record as a baseline, an error page instead.

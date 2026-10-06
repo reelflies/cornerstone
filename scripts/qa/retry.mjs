@@ -9,10 +9,15 @@
 // - A 429 is asked again up to three times: after its Retry-After when it sends one, and
 //   otherwise after 2, 4 and 8 s (RATE_LIMIT_DELAYS_MS). Parallel agents proxy many pages
 //   to the live stores at once, so a store can limit them. A fourth 429 is the answer.
-// - A wait that would take the waits for one request past MAX_WAIT_MS isn't waited for:
-//   the 429 is the answer, and a WARNING line says why. Only a long Retry-After can get
-//   there, since the schedule alone waits 16 s at most. A Playwright test has 90 s in all,
-//   and a store that asks for longer is saying to run the gates later.
+// - A wait that would take the waits for one request past MAX_WAIT_MS isn't waited for,
+//   whether a 429 or a 5xx asks for it: that answer stands, and a WARNING line says why.
+//   Only a long Retry-After can get there, since the schedule alone waits 16 s at most. A
+//   Playwright test has 90 s in all, and a store that asks for longer is saying to run the
+//   gates later.
+// - Behind a local stencil start, stencil-cli keeps the store's answer to a page for 15 s
+//   (its cache, on unless `--no-cache`), a 429 included, so a retry within 15 s is answered
+//   with the same 429 without reaching the store. A 429 on stencil-cli's second request for
+//   a page (its data request) reaches the gates as a 500. The README says what that means.
 // - Every other status is the page's real answer and is never asked again: a 4xx, or a 200
 //   where a 404 belongs.
 //
