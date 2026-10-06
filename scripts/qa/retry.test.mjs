@@ -86,9 +86,15 @@ describe('after an answer', () => {
     it('doesn\'t wait for a Retry-After that would take the waits for one request past MAX_WAIT_MS, and says so', () => {
         const next = nextTry(429, { retryAfter: '120' });
         assert.equal(next.wait, undefined);
-        assert.equal(next.giveUp, ', and its Retry-After asks for 120 s: longer than the gates wait for one request (30 s in all), so it isn\'t asked again. The store is limiting requests; run the gates later.');
-        assert.equal(nextTry(429, { retryAfter: '10', waited: 25000 }).giveUp.includes('10 s'), true);
+        assert.equal(next.giveUp, ', and its Retry-After asks for 120 s, which would take the waits for this request past the gates\' limit of 30 s, so it isn\'t asked again. The store is limiting requests; run the gates later.');
+        assert.match(nextTry(429, { retryAfter: '10', waited: 25000 }).giveUp, /^, and its Retry-After asks for 10 s, which/);
         assert.equal(nextTry(429, { retryAfter: '5', waited: 25000 }).wait, 5000, 'exactly 30 s in all is still waited for');
+    });
+
+    it('says when the next step of the schedule, not a Retry-After, would pass MAX_WAIT_MS', () => {
+        const next = nextTry(429, { earlier: [429, 429], waited: 25000 });
+        assert.equal(next.wait, undefined);
+        assert.match(next.giveUp, /^, and the next retry would wait 8 s, which would take the waits for this request past the gates' limit of 30 s/);
     });
 
     it('takes every other status as the answer', () => {
@@ -164,7 +170,7 @@ describe('asking with retries', () => {
         assert.equal(seen.asked, 2);
         assert.deepEqual(seen.waits, [20000]);
         assert.deepEqual(seen.dropped, [429], 'the answer it resolves to is left for the caller to read');
-        assert.match(seen.lines[1], /^WARNING {2}product \/flies\/ returned HTTP 429, and its Retry-After asks for 20 s: longer than the gates wait for one request \(30 s in all\)/);
+        assert.match(seen.lines[1], /^WARNING {2}product \/flies\/ returned HTTP 429, and its Retry-After asks for 20 s, which would take the waits for this request past the gates' limit of 30 s/);
     });
 
     it('asks once more after a 5xx and up to three times after a 429, in any order', async () => {

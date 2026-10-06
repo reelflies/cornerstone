@@ -9,9 +9,10 @@
 // - A 429 is asked again up to three times: after its Retry-After when it sends one, and
 //   otherwise after 2, 4 and 8 s (RATE_LIMIT_DELAYS_MS). Parallel agents proxy many pages
 //   to the live stores at once, so a store can limit them. A fourth 429 is the answer.
-// - A Retry-After that would take the waits for one request past MAX_WAIT_MS isn't waited
-//   for: the 429 is the answer, and a WARNING line says why. A Playwright test has 90 s in
-//   all, and a store that asks for longer is saying to run the gates later.
+// - A wait that would take the waits for one request past MAX_WAIT_MS isn't waited for:
+//   the 429 is the answer, and a WARNING line says why. Only a long Retry-After can get
+//   there, since the schedule alone waits 16 s at most. A Playwright test has 90 s in all,
+//   and a store that asks for longer is saying to run the gates later.
 // - Every other status is the page's real answer and is never asked again: a 4xx, or a 200
 //   where a 404 belongs.
 //
@@ -54,8 +55,9 @@ export function nextTry(status, {
     const asked = retryAfterMs(retryAfter, now);
     const wait = asked ?? RATE_LIMIT_DELAYS_MS[retry - 1];
     if (waited + wait > MAX_WAIT_MS) {
+        const reason = asked === null ? `the next retry would wait ${seconds(wait)}` : `its Retry-After asks for ${seconds(wait)}`;
         return {
-            giveUp: `, and its Retry-After asks for ${seconds(wait)}: longer than the gates wait for one request (${seconds(MAX_WAIT_MS)} in all), so it isn't asked again. The store is limiting requests; run the gates later.`,
+            giveUp: `, and ${reason}, which would take the waits for this request past the gates' limit of ${seconds(MAX_WAIT_MS)}, so it isn't asked again. The store is limiting requests; run the gates later.`,
         };
     }
     const why = `retry ${retry} of ${RATE_LIMIT_DELAYS_MS.length}; the store is limiting requests`;
