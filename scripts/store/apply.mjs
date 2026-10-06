@@ -38,7 +38,8 @@
 // channel 1. It ends with the same-day smoke tests (HANDOFF: store-wide switches also hit .com
 // and channel 1).
 //
-// One apply runs at a time on this Mac: the store-write lock (scripts/lib/lock.mjs).
+// One apply runs at a time on this Mac: the store-write lock (scripts/lib/lock.mjs). And only
+// origin/master's store tooling writes (tooling.mjs): run it from the main clone at origin/master.
 
 import fs from 'fs';
 import path from 'path';
@@ -59,6 +60,7 @@ import {
     PLAN_FORMAT, TICKET, checkRequests, commandFetch, commandStoreHash, diffLines, isRef, operatorName, planDigest, proofProblem, proofsFor, snapshotProblems, writesFor,
 } from './plan.mjs';
 import { PART3_SCOPES, part3Changes } from './settings-proof.mjs';
+import { storeToolingProblem } from './tooling.mjs';
 import {
     Stopped, canonicalJson, readSpec, readsFor, sha256, storeRoot, takeRead, takeSnapshot, writeSnapshotFiles,
 } from './snapshot.mjs';
@@ -592,6 +594,12 @@ async function main(argv) {
             // What will be sent, exactly. The diff follows once the fresh read is in.
             say('The exact requests:');
             (Array.isArray(plan.requests) ? plan.requests : []).forEach((request, index) => say(`  ${index + 1}. ${request.method} ${request.path}${queryString(request.query)} ${JSON.stringify(request.body)}`));
+        }
+        // Only origin/master's store tooling writes. The writer token's loader checks this itself;
+        // approved mode, whose token Shaun pastes, checks it before asking for one.
+        if (approved) {
+            const problem = storeToolingProblem();
+            if (problem) throw new Refused(problem);
         }
         const token = approved ? await askApprovedToken() : readStoreToken('write').token;
         secrets.push(token);

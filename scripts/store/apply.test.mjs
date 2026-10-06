@@ -19,12 +19,12 @@ import { createClient } from './client.mjs';
 import { readLogRows } from './log.mjs';
 import { buildPlan, checkRequests, planDigest } from './plan.mjs';
 import { readsFor, sha256, takeSnapshot } from './snapshot.mjs';
+import { storeCheckout } from './fixtures/checkout.mjs';
 import {
     FAKE_TOKEN, STORE_HASH, fixtureFetch, loadFixture,
 } from './fixtures/store.mjs';
 
 const APPLY = fileURLToPath(new URL('./apply.mjs', import.meta.url));
-const PLAN = fileURLToPath(new URL('./plan.mjs', import.meta.url));
 const widgets = loadFixture('widgets.json');
 const inventory = loadFixture('settings-inventory.json');
 const PLACEMENT = 'e1e1e1e1-1234-4abc-8def-0123456789ab';
@@ -679,6 +679,12 @@ test('apply --approved without a terminal stops first, naming why, whatever else
     assert.doesNotMatch(result.output, /no-such-plan/);
 });
 
+// apply.mjs runs only store tooling identical to origin/master's, so the commands that get as
+// far as the writer token run from a scratch clone whose origin is a local bare repo.
+const checkout = storeCheckout(path.join(tmp, 'checkout'));
+const CHECKOUT_PLAN = path.join(checkout, 'scripts/store/plan.mjs');
+const CHECKOUT_APPLY = path.join(checkout, 'scripts/store/apply.mjs');
+
 test('plan.mjs then apply.mjs, on fixture routes: the plan file, the writes, the log', () => {
     const root = newRoot();
     const changes = path.join(root, 'changes.json');
@@ -688,7 +694,7 @@ test('plan.mjs then apply.mjs, on fixture routes: the plan file, the writes, the
         [placementGet]: [{ body: widgets.placement_item }, { body: widgets.placement_item }, { body: widgets.placement_item_inactive }],
         [placementPut]: { body: widgets.placement_item_inactive },
     };
-    const planned = cli(PLAN, ['--ticket', '46', '--changes', changes, '--out', path.join(root, 'plan.json')], { root, routes });
+    const planned = cli(CHECKOUT_PLAN, ['--ticket', '46', '--changes', changes, '--out', path.join(root, 'plan.json')], { root, routes });
     assert.equal(planned.status, 0, planned.output);
     assert.match(planned.stdout, /status: "active" -> "inactive"/);
     assert.match(planned.stdout, /sha256 {3}[0-9a-f]{64}/);
@@ -699,7 +705,7 @@ test('plan.mjs then apply.mjs, on fixture routes: the plan file, the writes, the
         [placementGet]: [{ body: widgets.placement_item }, { body: widgets.placement_item_inactive }],
         [placementPut]: { body: widgets.placement_item_inactive },
     }));
-    const applied = cli(APPLY, [path.join(root, 'plan.json')], { root, routes: undefined, extraEnv: { RF_STORE_FIXTURES: path.join(root, 'routes.json') } });
+    const applied = cli(CHECKOUT_APPLY, [path.join(root, 'plan.json')], { root, routes: undefined, extraEnv: { RF_STORE_FIXTURES: path.join(root, 'routes.json') } });
     assert.equal(applied.status, 0, applied.output);
     assert.match(applied.stdout, /applied: 1 request/);
     const sent = fs.readFileSync(path.join(root, 'fixture-calls.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
@@ -707,6 +713,22 @@ test('plan.mjs then apply.mjs, on fixture routes: the plan file, the writes, the
     assert.ok(sent.every(call => call.token === 'set'));
     assert.deepEqual(readLogRows(root).map(row => [row.row, row.operator]), [['intent', 'test operator'], ['result', 'test operator']]);
     assert.ok(!applied.output.includes(FAKE_TOKEN));
+});
+
+test('apply.mjs refuses to write from a checkout whose store tooling isn\'t origin/master\'s, before the writer token is read', async () => {
+    const root = newRoot();
+    fs.mkdirSync(root, { recursive: true });
+    const { text } = await makePlan([unpublish], { [placementGet]: { body: widgets.placement_item } });
+    fs.writeFileSync(path.join(root, 'plan.json'), text);
+    const edited = storeCheckout(path.join(tmp, 'checkout-edited'));
+    fs.appendFileSync(path.join(edited, 'scripts/store/allowlist.mjs'), '\n// widened on a branch\n');
+    const result = cli(path.join(edited, 'scripts/store/apply.mjs'), [path.join(root, 'plan.json')], {
+        root, routes: { [placementGet]: { body: widgets.placement_item } },
+    });
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.stderr, /REFUSED +this checkout's store tooling differs from origin\/master's \(scripts\/store\/allowlist\.mjs\)/);
+    assert.ok(!fs.existsSync(path.join(root, 'fixture-calls.jsonl')), 'nothing was read or written');
+    assert.deepEqual(readLogRows(root), []);
 });
 
 test('apply.mjs refuses while LOCKED exists, and plan.mjs warns of it', () => {

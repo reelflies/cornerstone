@@ -10,6 +10,8 @@
 // - write: the writer account. Only the store helper, scripts/store/, may read it: the loader
 //   refuses when the script node was started with lives anywhere else. That is a tripwire, as
 //   the permission rules are; the real limits are the token scopes and the Keychain.
+//   It also refuses unless this checkout's store tooling is byte-identical to origin/master's
+//   (scripts/store/tooling.mjs), so a stale worktree or an unreviewed branch can't write with it.
 //
 // The Keychain is read only here, with `security find-generic-password -a reelflies -s <item> -w`.
 // A token is returned, never printed, and no error message ever carries one. Callers pass every
@@ -19,6 +21,7 @@ import { spawnSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { storeToolingProblem } from '../store/tooling.mjs';
 
 export const KEYCHAIN_ACCOUNT = 'reelflies';
 
@@ -59,12 +62,20 @@ function checked(token, source) {
 }
 
 export function readStoreToken(kind, {
-    env = process.env, security = runSecurity, platform = process.platform, mainScript = process.argv[1],
+    env = process.env, security = runSecurity, platform = process.platform, mainScript = process.argv[1], toolingProblem = storeToolingProblem,
 } = {}) {
     const spec = TOKENS[kind];
     if (!spec) throw new Error(`"${kind}" isn't a store token kind (${Object.keys(TOKENS).join(', ')})`);
     if (kind === 'write' && !isStoreHelper(mainScript)) {
         throw new Error(`the writer token is read only by the store helper, scripts/store/ (W0-11), and this is ${mainScript || 'no script'}: write through \`node scripts/store/plan.mjs\` and \`apply.mjs\``);
+    }
+    if (kind === 'write') {
+        const problem = toolingProblem();
+        if (problem) {
+            const refused = new Error(problem);
+            refused.name = 'Refused';
+            throw refused;
+        }
     }
     const fromEnv = env[spec.env];
     if (fromEnv) return checked(fromEnv, `$${spec.env}`);

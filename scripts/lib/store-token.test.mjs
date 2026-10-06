@@ -25,8 +25,10 @@ function keychain(answers = {}) {
     return { security, calls };
 }
 
+// The tooling check (scripts/store/tooling.mjs) has its own tests; here it passes unless a test
+// says otherwise.
 const options = (extra = {}) => ({
-    env: {}, platform: 'darwin', mainScript: STORE_SCRIPT, ...extra,
+    env: {}, platform: 'darwin', mainScript: STORE_SCRIPT, toolingProblem: () => null, ...extra,
 });
 
 test('the two tokens: an environment variable each, then a Keychain item each, under account "reelflies"', () => {
@@ -104,6 +106,21 @@ test('the writer token is read only by the store helper: any other script is ref
     assert.throws(() => readStoreToken('write', options({ mainScript: climbing, env: { RF_BC_WRITE_TOKEN: FAKE } })), /read only by the store helper/);
     // The read-only token has no such limit: the release guard reads it too.
     assert.equal(readStoreToken('read', options({ mainScript: OTHER_SCRIPT, env: { RF_BC_READ_TOKEN: FAKE } })).token, FAKE);
+});
+
+test('the writer token goes only to store tooling identical to origin/master\'s: otherwise neither the variable nor the Keychain is read', () => {
+    const stub = keychain({ 'reelflies-bc-write': FAKE });
+    const problem = 'this checkout\'s store tooling differs from origin/master\'s (scripts/store/allowlist.mjs), and a store write runs only master\'s reviewed rules';
+    for (const env of [{ RF_BC_WRITE_TOKEN: FAKE }, {}]) {
+        assert.throws(() => readStoreToken('write', options({ env, security: stub.security, toolingProblem: () => problem })), error => {
+            assert.equal(error.message, problem);
+            return true;
+        });
+    }
+    assert.deepEqual(stub.calls, []);
+    // The read-only token is never held to it: plans read anywhere, and so will the release guard.
+    const unasked = () => { throw new Error('the tooling check ran for the read token'); };
+    assert.equal(readStoreToken('read', options({ env: { RF_BC_READ_TOKEN: FAKE }, toolingProblem: unasked })).token, FAKE);
 });
 
 test('only the two kinds exist', () => {
