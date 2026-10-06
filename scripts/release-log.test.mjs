@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
-    addReleaseEntry, describeStep1, formatPushSummary, formatReleaseEntry, releasedThemeUuids,
+    addReleaseEntry, describeStep1, formatPushSummary, formatReleaseEntry, lastRelease, releaseEntries, releasedThemeUuids, RELEASES_TEMPLATE,
 } from './release-log.mjs';
 
 const release = {
@@ -15,7 +15,9 @@ const release = {
     bundle: {
         file: 'reelflies-ca-6.22.0-1be9fb2.zip', bytes: 9876543, sha256: 'ab12', mainJsBytes: 307607,
     },
-    step1: { replacing: null, overwritten: [], unpublished: [] },
+    step1: {
+        replacing: null, overwritten: [], unpublished: [], changedInRepo: [], base: { sha: '0a1b2c3d4e5f60718293a4b5c6d7e8f901234567', timestamp: '2026-10-04 10:00' },
+    },
     guard: { values: [], newSwitches: [] },
     verify: { problems: [] },
     operator: 'Shaun Bathgate',
@@ -37,6 +39,7 @@ test('a release entry records where, what, from which commit and bundle, step 1 
         '- Bundle: `reelflies-ca-6.22.0-1be9fb2.zip`, 9,876,543 B, sha256 `ab12`',
         '- main.js: 307,607 B',
         '- Step 1: no differences from the live saved settings',
+        '- Changed in repo: none since `0a1b2c3`, the channel\'s last release',
         '- rf_* values pushed: none',
         '- New switches: none',
         '- Verify: the live saved settings match config.json',
@@ -124,4 +127,105 @@ test('the repo\'s RELEASES.md takes a release entry at the end of its Releases s
     const updated = addReleaseEntry(markdown, formatReleaseEntry(release));
     assert.ok(updated.startsWith(markdown.slice(0, markdown.indexOf('## Releases'))));
     assert.match(updated, /## Releases\n(.|\n)*### 2026-10-05 18:04 UTC/);
+});
+
+// --- W0-2: the channel's last release, and the settings changed in the repo since ----------
+
+const SHA_A = 'aaaaaaa000000000000000000000000000000001';
+const SHA_B = 'bbbbbbb000000000000000000000000000000002';
+const at = (timestamp, sha, extra = {}) => formatReleaseEntry({
+    ...release, timestamp, git: { sha, branch: 'master' }, ...extra,
+});
+
+test('W0-2: RELEASES.md gives each release\'s time, channel, variation, commit and theme, starting with the first real one', () => {
+    const [first] = releaseEntries(fs.readFileSync(new URL('../RELEASES.md', import.meta.url), 'utf8'));
+    assert.deepEqual(first, {
+        timestamp: '2026-10-06 14:30',
+        channel: 1895766,
+        channelName: 'ReelFlies_CA',
+        variation: 'ReelFlies CA',
+        sha: '5d0d0cb8ca42405d8555de6a84f20843060d7cde',
+        themeUuid: '58abad50-a3c0-013f-e2b6-2ec98cc9ce73',
+    });
+    assert.deepEqual(releaseEntries(null), []);
+    assert.deepEqual(releaseEntries(RELEASES_TEMPLATE), []);
+});
+
+test('W0-2: what formatReleaseEntry writes, lastRelease reads back', () => {
+    const markdown = addReleaseEntry(null, formatReleaseEntry(release));
+    assert.deepEqual(lastRelease(markdown, 1895766), {
+        timestamp: '2026-10-05 18:04',
+        channel: 1895766,
+        channelName: 'ReelFlies_CA',
+        variation: 'ReelFlies CA',
+        sha: '1be9fb20ffd985c26c59c5b5fcd28006418d9a08',
+        themeUuid: '9f0c2a10-0000-0000-0000-000000000001',
+    });
+    assert.equal(lastRelease(markdown, '1895766').sha, '1be9fb20ffd985c26c59c5b5fcd28006418d9a08', 'the channel may be a string');
+});
+
+test('W0-2: the channel\'s last release is its latest by time, wherever a merge put it; other channels don\'t count', () => {
+    let markdown = addReleaseEntry(null, at('2026-10-07T09:00:00.000Z', SHA_B));
+    markdown = addReleaseEntry(markdown, at('2026-10-06T18:00:00.000Z', SHA_A)); // a union merge can put an older entry last
+    markdown = addReleaseEntry(markdown, at('2026-10-08T09:00:00.000Z', SHA_A, { channel: 1, channelName: 'reelflies.ca' }));
+    assert.equal(lastRelease(markdown, 1895766).sha, SHA_B);
+    assert.equal(lastRelease(markdown, 1).sha, SHA_A);
+    assert.equal(lastRelease(markdown, 1855224), null);
+    assert.equal(lastRelease(null, 1895766), null);
+});
+
+test('W0-2: two releases in the same minute: the one further down RELEASES.md is the later', () => {
+    let markdown = addReleaseEntry(null, at('2026-10-07T09:00:10.000Z', SHA_A));
+    markdown = addReleaseEntry(markdown, at('2026-10-07T09:00:50.000Z', SHA_B));
+    assert.equal(lastRelease(markdown, 1895766).sha, SHA_B);
+});
+
+test('W0-2: only the Releases section holds releases, and an entry without a readable commit has no sha', () => {
+    const later = '### 2026-10-09 09:00 UTC · channel 1895766 (ReelFlies_CA) · ReelFlies CA\n\n- Commit: `bbbbbbb000000000000000000000000000000002` on `master`\n';
+    const broken = '### 2026-10-08 09:00 UTC · channel 1895766 (ReelFlies_CA) · ReelFlies CA\n\n- Theme: ReelFlies 6.22.0, uuid unknown\n';
+    const markdown = `${addReleaseEntry(addReleaseEntry(null, formatReleaseEntry(release)), broken)}\n## Later section\n\n${later}`;
+    assert.deepEqual(releaseEntries(markdown).map(entry => [entry.timestamp, entry.sha, entry.themeUuid]), [
+        ['2026-10-05 18:04', '1be9fb20ffd985c26c59c5b5fcd28006418d9a08', '9f0c2a10-0000-0000-0000-000000000001'],
+        ['2026-10-08 09:00', null, null],
+    ]);
+    assert.equal(lastRelease(markdown, 1895766).sha, null);
+});
+
+const changed = {
+    ...release,
+    step1: { ...release.step1, changedInRepo: ['body-bg', 'fontSize-root'] },
+};
+
+test('W0-2: the entry lists the settings changed in the repo since the channel\'s last release, with its commit', () => {
+    const entry = formatReleaseEntry(changed);
+    assert.match(entry, /\n- Step 1: no Theme Styles edits since the last release\n/);
+    assert.match(entry, /\n- Changed in repo: `body-bg`, `fontSize-root` \(since `0a1b2c3`, the channel's last release\)\n/);
+});
+
+test('W0-2: the push summary lists them too', () => {
+    const summary = formatPushSummary(changed);
+    assert.match(summary, /\n {2}step 1 {6}no Theme Styles edits since the last release\n/);
+    assert.match(summary, /\n {2}in repo {5}body-bg, fontSize-root \(since 0a1b2c3, the channel's last release\)\n/);
+    assert.match(formatPushSummary(release), /\n {2}in repo {5}none since 0a1b2c3, the channel's last release\n/);
+});
+
+test('W0-2: a release with no last release to compare with says why, and a first release says so', () => {
+    const none = { ...release, step1: { ...release.step1, base: null, baseNote: 'RELEASES.md records no release on channel 1895766' } };
+    assert.match(formatReleaseEntry(none), /\n- Changed in repo: not compared: RELEASES\.md records no release on channel 1895766\n/);
+    assert.match(formatPushSummary(none), /\n {2}in repo {5}not compared: RELEASES\.md records no release on channel 1895766\n/);
+    const first = {
+        ...release,
+        step1: {
+            replacing: { themeName: 'Cavio', variationName: 'Natural', themeUuid: '25121d00' }, overwritten: [], unpublished: [], changedInRepo: [], base: null,
+        },
+    };
+    assert.match(formatReleaseEntry(first), /\n- Changed in repo: not compared: a first release replaces another theme\n/);
+});
+
+test('W0-2: step 1 names the overwritten control-panel edits beside the repo\'s changes', () => {
+    const both = { ...release, step1: { ...release.step1, overwritten: ['logo_size'], changedInRepo: ['body-bg'] } };
+    assert.match(formatReleaseEntry(both), /\n- Step 1: overwrote the live values of `logo_size`\n- Changed in repo: `body-bg` \(since `0a1b2c3`, the channel's last release\)\n/);
+    assert.equal(describeStep1({
+        replacing: null, overwritten: [], unpublished: [], changedInRepo: [], base: null,
+    }), 'no differences from the live saved settings');
 });

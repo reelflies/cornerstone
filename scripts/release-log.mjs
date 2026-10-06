@@ -1,12 +1,16 @@
 // Formats the push summary and the RELEASES.md entry for scripts/release.sh (ticket 05, step 7,
-// with ticket 15's rf_* values, new switches and Switch toggles section). Pure: no network, no files.
+// with ticket 15's rf_* values, new switches and Switch toggles section), and reads the entries back
+// (W0-2: step 1 compares with the channel's last release). Pure: no network, no files.
 //
-//   import { formatPushSummary, formatReleaseEntry, addReleaseEntry, releasedThemeUuids } from './release-log.mjs';
+//   import { formatPushSummary, formatReleaseEntry, addReleaseEntry, releasedThemeUuids, releaseEntries, lastRelease } from './release-log.mjs';
 //
 // A release: { timestamp, channel, channelName, variation, theme: { uuid, name, version },
 //   git: { sha, branch }, bundle: { file, bytes, sha256, mainJsBytes },
-//   step1: { replacing, overwritten, unpublished: [keys] }, guard: { values, newSwitches },
+//   step1: { replacing, overwritten: [keys], unpublished: [keys], changedInRepo: [keys],
+//     base: { sha, timestamp } | null, baseNote }, guard: { values, newSwitches },
 //   verify: { problems } | null, operator }
+// step1.base is the channel's last release, which step 1 compared with; baseNote says why there was
+// none.
 
 import { formatBytes } from './lib/format.mjs';
 import { describeLiveTheme } from './release-capture.mjs';
@@ -32,14 +36,30 @@ const utc = iso => `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
 const codeList = keys => keys.map(key => `\`${key}\``).join(', ');
 const valueList = (values, code) => values.map(({ key, value }) => `${code ? `\`${key}\`` : key} = ${displayValue(key, value)}`).join(', ') || 'none';
 
-export function describeStep1({ replacing, overwritten, unpublished }) {
+export function describeStep1({
+    replacing, overwritten, unpublished, changedInRepo = [],
+}) {
     let text = 'no differences from the live saved settings';
     if (replacing) {
         text = `first release, replacing ${describeLiveTheme(replacing)}`;
     } else if (overwritten.length) {
         text = `overwrote the live values of ${codeList(overwritten)}`;
+    } else if (changedInRepo.length) {
+        text = 'no Theme Styles edits since the last release';
     }
     return unpublished.length && !replacing ? `${text} (the channel had unpublished Theme Styles edits in ${codeList(unpublished)})` : text;
+}
+
+// W0-2: the settings config.json changed since the channel's last release, which step 1 let through.
+export function describeRepoChanges({
+    replacing, changedInRepo = [], base = null, baseNote,
+}, code = true) {
+    const mark = text => (code ? `\`${text}\`` : text);
+    if (replacing) return 'not compared: a first release replaces another theme';
+    if (!base) return `not compared: ${baseNote || 'no last release to compare with'}`;
+    const since = `${mark(base.sha.slice(0, 7))}, the channel's last release`;
+    if (!changedInRepo.length) return `none since ${since}`;
+    return `${changedInRepo.map(mark).join(', ')} (since ${since})`;
 }
 
 function describeVerify(verify) {
@@ -58,6 +78,7 @@ export function formatReleaseEntry(release) {
         `- Bundle: \`${bundle.file}\`, ${formatBytes(bundle.bytes)}, sha256 \`${bundle.sha256}\``,
         `- main.js: ${formatBytes(bundle.mainJsBytes)}`,
         `- Step 1: ${describeStep1(release.step1)}`,
+        `- Changed in repo: ${describeRepoChanges(release.step1)}`,
         `- rf_* values pushed: ${valueList(release.guard.values, true)}`,
         `- New switches: ${codeList(release.guard.newSwitches) || 'none'}`,
         `- Verify: ${describeVerify(release.verify)}`,
@@ -83,6 +104,40 @@ export function releasedThemeUuids(markdown) {
     return [...(markdown || '').matchAll(/^- Theme: .*, uuid `([0-9a-f-]{36})`$/gm)].map(match => match[1]);
 }
 
+const ENTRY_HEADING = /^### (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) UTC · channel (\d+) \((.*)\) · (.+)$/;
+const firstMatch = (text, pattern) => (pattern.exec(text) || [])[1] || null;
+
+// The entries of the "## Releases" section, in file order: { timestamp ('YYYY-MM-DD HH:MM', UTC),
+// channel, channelName, variation, sha, themeUuid }. sha and themeUuid are null when their line is
+// missing or unreadable.
+export function releaseEntries(markdown) {
+    const text = markdown || '';
+    const start = text.indexOf('\n## Releases\n');
+    if (start === -1) return [];
+    const next = text.indexOf('\n## ', start + 1);
+    const section = text.slice(start, next === -1 ? text.length : next + 1);
+    return section.split(/\n(?=### )/).slice(1).flatMap(block => {
+        const heading = ENTRY_HEADING.exec(block.split('\n', 1)[0]);
+        if (!heading) return [];
+        return [{
+            timestamp: heading[1],
+            channel: Number(heading[2]),
+            channelName: heading[3],
+            variation: heading[4],
+            sha: firstMatch(block, /^- Commit: `([0-9a-f]{7,40})`/m),
+            themeUuid: firstMatch(block, /^- Theme: .*, uuid `([0-9a-f-]{36})`$/m),
+        }];
+    });
+}
+
+// W0-2: the channel's newest entry, or null when RELEASES.md records no release on it. Newest by
+// its time, because a union merge of two release logs can leave an older entry further down; of two
+// in the same minute, the one further down.
+export function lastRelease(markdown, channel) {
+    const entries = releaseEntries(markdown).filter(entry => entry.channel === Number(channel));
+    return entries.reduce((newest, entry) => (!newest || entry.timestamp >= newest.timestamp ? entry : newest), null);
+}
+
 export function formatPushSummary(release) {
     const line = (label, value) => `  ${label.padEnd(11)} ${value}`;
     const { newSwitches } = release.guard;
@@ -91,6 +146,7 @@ export function formatPushSummary(release) {
         line('target', `channel ${release.channel} (${release.channelName})`),
         line('variation', release.variation),
         line('step 1', describeStep1(release.step1)),
+        line('in repo', describeRepoChanges(release.step1, false)),
         line('rf_* values', valueList(release.guard.values, false)),
         ...(newSwitches.length ? newSwitches.map(key => line('new switch', key)) : [line('new switch', 'none')]),
         line('bundle', `${release.bundle.file}, ${formatBytes(release.bundle.bytes)}`),

@@ -1,7 +1,7 @@
-// Compares the repo's Theme Styles for a variation with a channel's live saved settings
-// (ticket 05, step 1). Pure: no network, no files.
+// Compares the repo's Theme Styles for a variation with a channel's live saved settings, and with
+// the settings its last release pushed (ticket 05, step 1; W0-2). Pure: no network, no files.
 //
-//   import { effectiveSettings, diffSettings, changedKeys, hasSetting, blockingDifferences, acceptLiveValues } from './release-diff.mjs';
+//   import { effectiveSettings, diffSettings, changedKeys, hasSetting, blockingDifferences, threeWayDiff, acceptLiveValues } from './release-diff.mjs';
 
 import { isDeepStrictEqual } from 'util';
 
@@ -62,6 +62,40 @@ export function changedKeys(a, b) {
 // Live values a push would overwrite or drop. Repo-only keys are new settings, so they pass.
 export function blockingDifferences(diff) {
     return [...diff.changed, ...diff.liveOnly].filter(entry => !isSwitchKey(entry.key)).sort((a, b) => a.key.localeCompare(b.key));
+}
+
+const sameValue = (a, b, key) => hasSetting(a, key) && hasSetting(b, key) && isDeepStrictEqual(a[key], b[key]);
+
+// Step 1's three-way diff (W0-2): config.json now (repo), the live saved settings (live) and their
+// published values (published, what shoppers see), and the settings the channel's last release
+// pushed (released: config.json at the commit of its newest RELEASES.md entry, for that entry's
+// variation), or null when there is no last release to compare with.
+//
+// Only the differences blockingDifferences would stop on are split; the rf_* switches stay with the
+// release guard, and keys only in config.json pass as new, as before:
+//   changedInRepo: the saved and the published live values both equal the last released value, so
+//     config.json changed the key since that release (a removed key has no `repo`). The push carries
+//     the change, and every live value it replaces is in git at the release's commit.
+//   blocking: every other difference. The live value isn't the one the last release pushed, so it
+//     was edited in the control panel. With no last release, every difference blocks.
+// Entries keep diffSettings' shape, plus `released` when the last release had the key and
+// `published` when the published value isn't the saved one.
+// Returns { diff, blocking, changedInRepo }.
+export function threeWayDiff({
+    repo, live, published = live, released = null,
+}) {
+    const diff = diffSettings(repo, live);
+    const blocking = [];
+    const changedInRepo = [];
+    for (const entry of blockingDifferences(diff)) {
+        const { key } = entry;
+        const detail = { ...entry };
+        if (released && hasSetting(released, key)) detail.released = released[key];
+        if (hasSetting(published, key) && !isDeepStrictEqual(live[key], published[key])) detail.published = published[key];
+        const asReleased = released && sameValue(live, released, key) && sameValue(published, released, key);
+        (asReleased ? changedInRepo : blocking).push(detail);
+    }
+    return { diff, blocking, changedInRepo };
 }
 
 // Writes live values into the variation's settings, keeping config.json's 2-space formatting.

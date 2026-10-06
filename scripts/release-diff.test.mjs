@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    acceptLiveValues, blockingDifferences, changedKeys, diffSettings, displayValue, effectiveSettings, hasSetting, verifyRelease,
+    acceptLiveValues, blockingDifferences, changedKeys, diffSettings, displayValue, effectiveSettings, hasSetting, threeWayDiff, verifyRelease,
 } from './release-diff.mjs';
 
 const config = {
@@ -119,4 +119,105 @@ test('values of settings named like credentials are never shown, only their leng
     assert.equal(displayValue('client_secret', ''), '""');
     assert.equal(displayValue('body-bg', '#ffffff'), '"#ffffff"');
     assert.equal(displayValue('rf_quick_add', false), 'false');
+});
+
+// --- W0-2: the three-way diff, with config.json at the channel's last release ---------------
+
+const released = { 'body-bg': '#ffffff', logo_size: '300x100', channels: ['a'] };
+
+test('W0-2: a key the repo changed passes as "changed in repo" while the live value is still the released one', () => {
+    const result = threeWayDiff({
+        repo: { ...released, 'body-bg': '#000000', channels: ['b'] },
+        live: released,
+        released,
+    });
+    assert.deepEqual(result.changedInRepo, [
+        {
+            key: 'body-bg', repo: '#000000', live: '#ffffff', released: '#ffffff',
+        },
+        {
+            key: 'channels', repo: ['b'], live: ['a'], released: ['a'],
+        },
+    ], 'values are compared deeply');
+    assert.deepEqual(result.blocking, []);
+});
+
+test('W0-2: a live value that differs from the last release blocks, as a control-panel edit, with the released value', () => {
+    const result = threeWayDiff({ repo: released, live: { ...released, 'body-bg': '#fafafa' }, released });
+    assert.deepEqual(result.blocking, [{
+        key: 'body-bg', repo: '#ffffff', live: '#fafafa', released: '#ffffff',
+    }]);
+    assert.deepEqual(result.changedInRepo, []);
+});
+
+test('W0-2: a key changed in both the repo and the control panel blocks, with all three values', () => {
+    const result = threeWayDiff({ repo: { ...released, 'body-bg': '#000000' }, live: { ...released, 'body-bg': '#fafafa' }, released });
+    assert.deepEqual(result.blocking, [{
+        key: 'body-bg', repo: '#000000', live: '#fafafa', released: '#ffffff',
+    }]);
+    assert.deepEqual(result.changedInRepo, []);
+});
+
+test('W0-2: the same change made in the repo and the control panel is no difference at all', () => {
+    const result = threeWayDiff({ repo: { ...released, 'body-bg': '#000000' }, live: { ...released, 'body-bg': '#000000' }, released });
+    assert.deepEqual(result, { diff: { changed: [], liveOnly: [], repoOnly: [] }, blocking: [], changedInRepo: [] });
+});
+
+test('W0-2: a key the repo removed passes while live holds the released value; a live-only key the release never had blocks', () => {
+    const result = threeWayDiff({
+        repo: { 'body-bg': '#ffffff' },
+        live: {
+            'body-bg': '#ffffff', logo_size: '300x100', channels: ['a'], added_live: 1,
+        },
+        released,
+    });
+    assert.deepEqual(result.changedInRepo, [
+        { key: 'channels', live: ['a'], released: ['a'] },
+        { key: 'logo_size', live: '300x100', released: '300x100' },
+    ]);
+    assert.deepEqual(result.blocking, [{ key: 'added_live', live: 1 }]);
+});
+
+test('W0-2: a key the repo added still passes as new, and a key only the last release had changes nothing', () => {
+    const result = threeWayDiff({ repo: { ...released, new_setting: 3 }, live: { 'body-bg': '#ffffff', channels: ['a'] }, released });
+    assert.deepEqual(result.diff.repoOnly, [{ key: 'logo_size', repo: '300x100' }, { key: 'new_setting', repo: 3 }]);
+    assert.deepEqual(result.blocking, []);
+    assert.deepEqual(result.changedInRepo, []);
+});
+
+test('W0-2: a published value that differs from the last release blocks, though the saved draft has the released value', () => {
+    const result = threeWayDiff({
+        repo: { ...released, 'body-bg': '#000000' },
+        live: released,
+        published: { ...released, 'body-bg': '#eeeeee' },
+        released,
+    });
+    assert.deepEqual(result.blocking, [{
+        key: 'body-bg', repo: '#000000', live: '#ffffff', released: '#ffffff', published: '#eeeeee',
+    }]);
+    assert.deepEqual(result.changedInRepo, []);
+});
+
+test('W0-2: the rf_* switches stay with the release guard; the menu ids follow the three-way rule', () => {
+    const live = {
+        rf_quick_add: false, rf_menu_type_ids: '', rf_menu_species_root_id: '', rf_rise: true,
+    };
+    const result = threeWayDiff({
+        repo: { rf_quick_add: true, rf_menu_type_ids: '23,24', rf_menu_species_root_id: '25' },
+        live,
+        released: live,
+    });
+    assert.deepEqual(result.changedInRepo.map(entry => entry.key), ['rf_menu_species_root_id', 'rf_menu_type_ids']);
+    assert.deepEqual(result.blocking, []);
+});
+
+test('W0-2: with no last release every difference blocks, exactly as the two-way diff did', () => {
+    const repo = { 'body-bg': '#000000', rf_quick_add: true, new_setting: 1 };
+    const live = {
+        'body-bg': '#ffffff', rf_quick_add: false, old_setting: 'x',
+    };
+    const result = threeWayDiff({ repo, live, released: null });
+    assert.deepEqual(result.blocking, blockingDifferences(diffSettings(repo, live)));
+    assert.deepEqual(result.changedInRepo, []);
+    assert.deepEqual(result.diff, diffSettings(repo, live));
 });
