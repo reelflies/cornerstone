@@ -23,6 +23,7 @@ export const RELEASE_TOOLING = [
     'scripts/lib/format.mjs',
     'scripts/lib/is-main.mjs',
     'scripts/lib/release-calendar.mjs',
+    'scripts/lib/store-token.mjs',
     'scripts/release-args.mjs',
     'scripts/release-calendar.json',
     'scripts/release-capture.mjs',
@@ -37,6 +38,7 @@ export const RELEASE_TOOLING = [
     'scripts/release-tree-ids.mjs',
     'scripts/release.mjs',
     'scripts/release.sh',
+    'scripts/store/tooling.mjs',
 ];
 
 const short = sha => sha.slice(0, 7);

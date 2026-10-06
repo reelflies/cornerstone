@@ -16,6 +16,7 @@ import { phaseOn, readCalendar } from './lib/release-calendar.mjs';
 import { originRepo } from './release-origin-fixture.mjs';
 
 const SCRIPT = fileURLToPath(new URL('./release.sh', import.meta.url));
+const RELEASE_MJS_PATH = fileURLToPath(new URL('./release.mjs', import.meta.url));
 const NOTHING_RAN = /Step 1|Step 2|npm ci|Capturing/;
 const CA = ['--channel', '1895766', '--variation', 'ReelFlies CA'];
 
@@ -100,6 +101,8 @@ test('release.sh and step 3\'s contrast check still run from a checkout whose pa
         fs.copyFileSync(path.join(scripts, name), path.join(root, 'scripts', name));
     });
     fs.cpSync(path.join(scripts, 'lib'), path.join(root, 'scripts', 'lib'), { recursive: true }); // isMain and formatBytes
+    // The guard's token loader (W0-3 points it at W0-11's) imports the store tooling check.
+    fs.cpSync(path.join(scripts, 'store'), path.join(root, 'scripts', 'store'), { recursive: true });
     assertRefused(run([...CA, '-allc', '--dry-run'], {}, path.join(root, 'scripts', 'release.sh')), /all channels/);
 
     const config = fileURLToPath(new URL('../config.json', import.meta.url));
@@ -418,11 +421,20 @@ test('--overwrite-live lists a differing menu id, and the guard still checks con
     assert.match(result.stdout, /guard: pass/);
 });
 
-test('a set menu id without RF_BC_API_TOKEN stops before any catalogue call, naming the token scope', () => {
+test('a set menu id without the read-only store token stops before any catalogue call, naming the token scope and where it comes from', () => {
     const { env } = fixtures({ caSettings: { rf_menu_species_root_id: '25' } });
     const result = run([...CA, '--dry-run'], env);
     assert.equal(result.status, 1, result.output);
-    assert.match(result.stderr, /RF_BC_API_TOKEN.*Products: read-only/);
+    assert.match(result.stderr, /a menu id is set, so the guard must read channel 1895766's category tree with the read-only store API token \(Products: read-only, store_v2_products_read_only\)/);
+    // Under node --test the loader never reads the Keychain (scripts/lib/store-token.mjs).
+    assert.match(result.stderr, /RF_BC_READ_TOKEN/);
+    assert.doesNotMatch(result.output, /Reading channel 1895766's category tree/);
+});
+
+test('the guard takes its token from W0-11\'s loader, so RF_BC_API_TOKEN, RF_BC_READ_TOKEN and the Keychain item all reach it', () => {
+    const source = fs.readFileSync(RELEASE_MJS_PATH, 'utf8');
+    assert.doesNotMatch(source, /process\.env\.RF_BC_/, 'release.mjs reads no token variable itself, bar redacting them by name');
+    assert.match(source, /readGuardToken\(\)/);
 });
 
 // --- W0-2: step 1's three-way diff, with config.json at the channel's last release ----------

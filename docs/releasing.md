@@ -217,8 +217,9 @@ The release guard (ticket 15, `scripts/release-guard.mjs`) runs after step 1 and
 
 **The token for rule 2.** When a menu id is set, the release reads the channel's category tree with two read-only calls: `GET /v3/catalog/trees?channel_id:in=<channel>`, then every page of `GET /v3/catalog/trees/categories?tree_id:in=<tree>`.
 
-- These calls need `RF_BC_API_TOKEN`: a store API token with **Products: read-only** (`store_v2_products_read_only`), created under Settings > Store-level API accounts. The Stencil-CLI token can't read the catalogue.
-- Without the token, the release stops and names the scope it needs. Export the token in your shell for the release only, and never write it into a file in the repo.
+- These calls need the read-only store API token, with **Products: read-only** (`store_v2_products_read_only`). The Stencil-CLI token can't read the catalogue.
+- The guard reads it through W0-11's loader, `scripts/lib/store-token.mjs` ([store writes](store-writes.md)), as the store helper's plans do: `RF_BC_READ_TOKEN`, then `RF_BC_API_TOKEN`, then the Keychain item `reelflies-bc-read` (account `reelflies`), which Shaun adds at W0-12. An exported variable is never skipped for the Keychain, so a token exported for one release still wins.
+- Without the token, the release stops, naming the scope and where the loader looked. Never write a token into a file in the repo or paste it into a chat.
 
 The guard prints every `rf_*` value to be pushed and each new switch. The push summary and the `RELEASES.md` entry repeat them.
 
@@ -232,7 +233,7 @@ The guard prints every `rf_*` value to be pushed and each new switch. The push s
 ## Safety notes
 
 - **Why not `stencil pull`:** it crashes when `config.json` has no variation named like the live one (Cavio's "Natural"), and it silently skips live keys that `config.json` lacks. The capture in `scripts/release-capture.mjs` has neither problem.
-- **Tokens:** when a request fails, stencil-cli 9.1.0 prints the whole request, including its `x-auth-token` header. The release pipes the push through a filter that replaces the Stencil-CLI token, `RF_BC_API_TOKEN` and any `x-auth-token` value with `[redacted]`. Values of settings named like credentials (`token`, `secret`, `password`, `api key`) are hidden in the release's output.
+- **Tokens:** when a request fails, stencil-cli 9.1.0 prints the whole request, including its `x-auth-token` header. The release pipes the push through a filter that replaces the Stencil-CLI token, `RF_BC_API_TOKEN`, `RF_BC_READ_TOKEN` and any `x-auth-token` value with `[redacted]`. Values of settings named like credentials (`token`, `secret`, `password`, `api key`) are hidden in the release's output.
 - **The capture file** `config.<slug>.live.json` is gitignored. Cavio's capture holds a non-empty `instagram-access-token`, so never commit or share it.
 - **If the push seems to hang,** stencil-cli is probably waiting at its theme-deletion prompt, which means My Themes filled up after the release checked it. Press Ctrl-C and prune My Themes by hand.
 

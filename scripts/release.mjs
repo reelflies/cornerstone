@@ -61,13 +61,16 @@ import {
 import { redact } from './release-redact.mjs';
 import { validateThemeConfig } from './release-schema.mjs';
 import { buildPushArgs, findTarget } from './release-targets.mjs';
-import { fetchChannelCategoryIds, tokenGetJson } from './release-tree-ids.mjs';
+import { fetchChannelCategoryIds, readGuardToken, tokenGetJson } from './release-tree-ids.mjs';
 
 const MAIN_JS = 'assets/dist/theme-bundle.main.js';
 const RELEASES = 'RELEASES.md';
 const OVERRIDES = [
     'RF_RELEASE_CONFIG', 'RF_RELEASE_LIVE_FIXTURE', 'RF_RELEASE_TREE_FIXTURE', 'RF_RELEASE_LOG_FIXTURE', 'RF_RELEASE_BASE_FIXTURE', 'RF_RELEASE_CALENDAR_FIXTURE', 'RF_RELEASE_DATE',
 ];
+// The store token variables, read here only to redact them from the output. The guard reads its
+// token through scripts/lib/store-token.mjs (readGuardToken), never from here.
+const TOKEN_VARIABLES = ['RF_BC_API_TOKEN', 'RF_BC_READ_TOKEN'];
 
 const say = (label, message) => console.log(`${label.padEnd(8)} ${message}`);
 const warn = message => console.log(`WARNING  ${message}`);
@@ -455,9 +458,13 @@ async function readCategoryIds(state, repoSettings) {
         say('fixture', `category ids from ${fixture} (RF_RELEASE_TREE_FIXTURE)`);
         return readJson(fixture, 'the category id fixture');
     }
-    const token = process.env.RF_BC_API_TOKEN;
-    if (!token) {
-        throw new Stop(`a menu id is set, so the guard must read channel ${state.channel}'s category tree: set RF_BC_API_TOKEN to a store API token with Products: read-only (store_v2_products_read_only), created under Settings > Store-level API accounts`);
+    // W0-11's loader: RF_BC_READ_TOKEN, then RF_BC_API_TOKEN, then the Keychain item
+    // "reelflies-bc-read" (scripts/lib/store-token.mjs). The token is never printed.
+    let token;
+    try {
+        ({ token } = readGuardToken());
+    } catch (error) {
+        throw new Stop(`a menu id is set, so the guard must read channel ${state.channel}'s category tree with ${error.message}`);
     }
     say('', `Reading channel ${state.channel}'s category tree read-only…`);
     try {
@@ -673,7 +680,7 @@ function knownSecrets() {
     } catch {
         accessToken = undefined;
     }
-    return [accessToken, process.env.RF_BC_API_TOKEN];
+    return [accessToken, ...TOKEN_VARIABLES.map(name => process.env[name])];
 }
 
 async function redactStream() {
