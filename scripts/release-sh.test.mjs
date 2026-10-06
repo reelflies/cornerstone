@@ -667,7 +667,7 @@ test('W0-1: without the fixtures, a dry run reads scripts/release-calendar.json 
 // fail at once on the missing config.stencil.json: no test here reaches the store.
 const RELEASE_MJS = fileURLToPath(new URL('./release.mjs', import.meta.url));
 
-function stepFive(changes = {}) {
+function stepFive(changes = {}, env = {}) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-release-step5-'));
     tempDirs.push(dir);
     const statePath = path.join(dir, 'state.json');
@@ -698,7 +698,7 @@ function stepFive(changes = {}) {
     }));
     const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^RF_(RELEASE|BC)_/.test(key)));
     const result = spawnSync(process.execPath, [RELEASE_MJS, 'pre-push'], {
-        cwd: dir, encoding: 'utf8', input: '', env: { ...inherited, RF_RELEASE_STATE: statePath }, timeout: 60000,
+        cwd: dir, encoding: 'utf8', input: '', env: { ...inherited, ...env, RF_RELEASE_STATE: statePath }, timeout: 60000,
     });
     return {
         status: result.status, stdout: result.stdout, stderr: result.stderr, output: `${result.stdout}\n${result.stderr}`,
@@ -751,6 +751,25 @@ test('W0-1: step 5 with --confirm-nonprod asks nothing, reads today\'s calendar 
     } else {
         assert.match(result.stderr, /--confirm-nonprod refused at step 5/);
         assert.doesNotMatch(result.output, /Capturing channel/);
+    }
+});
+
+// A real release refuses the calendar overrides at prepare. Step 5 doesn't read them either, as a
+// second lock: with a T-21 fixture calendar and date set, it still reads the committed calendar.
+test('W0-1: step 5 ignores RF_RELEASE_CALENDAR_FIXTURE and RF_RELEASE_DATE, and reads the committed calendar and today', async () => {
+    const { readCalendar: read, phaseOn: on } = await import('./lib/release-calendar.mjs');
+    const today = on(read());
+    const result = stepFive({ confirmNonprod: 1895766 }, {
+        RF_RELEASE_CALENDAR_FIXTURE: calendarFixture({ flip: FLIP, status: 'set', source: 'ticket 10 comment, test' }),
+        RF_RELEASE_DATE: '2027-02-08', // T-21 on that calendar
+    });
+    assert.equal(result.status, 1, result.output);
+    assert.doesNotMatch(result.output, /^fixture /m);
+    assert.doesNotMatch(result.output, /2027-02-08|ticket 10 comment, test/);
+    assert.match(result.stdout, new RegExp(`^ {2}calendar {4}${describeLine(today)}`, 'm'));
+    if (today.limits.confirmNonprod) {
+        assert.match(result.stdout, new RegExp(`checked again with ${today.date}'s calendar`));
+        assert.match(result.stdout, /Capturing channel 1895766 again/);
     }
 });
 
