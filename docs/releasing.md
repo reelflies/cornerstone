@@ -42,7 +42,7 @@ scripts/release.sh --channel 1895766 --variation 'ReelFlies CA'
 
 | Step | What it does | It stops when |
 |---|---|---|
-| 1. Capture and diff | Reads the channel's active theme and saved Theme Styles with stencil-cli's own API client (GET only). Writes `config.<slug>.live.json` and diffs it against `config.json`'s settings for the variation (base settings, with the variation's settings on top). Then reports the live colours' contrast; see [The live contrast report](#the-live-contrast-report). | A live value differs, the channel runs another theme, or My Themes is full. See [When step 1 stops](#when-step-1-stops). The contrast report only warns. |
+| 1. Capture and diff | Reads the channel's active theme and saved Theme Styles with stencil-cli's own API client (GET only). Writes `config.<slug>.live.json` and diffs it against `config.json`'s settings for the variation (base settings, with the variation's settings on top), and against the settings the channel's last release pushed: `config.json` at the commit of its newest `RELEASES.md` entry. See [The three-way diff](#the-three-way-diff). Then reports the live colours' contrast; see [The live contrast report](#the-live-contrast-report). | A live value differs from both `config.json` and the last release (a control-panel edit), the channel runs another theme, or My Themes is full. With no earlier release on the channel, any live difference stops it. See [When step 1 stops](#when-step-1-stops). The contrast report only warns. |
 | Release guard | Checks the module switches (`rf_*`) and the menu category ids. See [The release guard](#the-release-guard). | A switch differs from the live theme or exists only there, or a set menu id isn't in the channel's category tree. |
 | 2. Clean build | `rm -rf assets/dist`, then `npm ci`. Upstream's webpack clean step never deletes anything, so stale chunks would otherwise ship. | `npm ci` fails. |
 | 3. Checks | Jest, `npm run test:scripts`, ESLint, Stylelint, the contrast check, and `config.json` against stencil-cli's full theme config schema. `stencil bundle` uses a looser schema, so it accepts a variation without `demo_url`. | Any check fails. |
@@ -58,6 +58,7 @@ The `RELEASES.md` entry records:
 - the commit sha and branch
 - the bundle file, its size and sha256, and the size of `main.js`
 - step 1's outcome and verify's result
+- the settings `config.json` changed since the channel's last release, with that release's commit ("Changed in repo"), or why there was nothing to compare with
 - every `rf_*` value pushed, and the new switches
 - the operator (`git config user.name`)
 
@@ -90,11 +91,35 @@ The targets are in `scripts/release-targets.mjs`. Any channel that isn't listed 
   - The channel runs this fork when its live variation is one of `config.json`'s, or when a `RELEASES.md` entry records a push of its theme's uuid. The theme's name doesn't count, so renaming the theme in `config.json` doesn't turn the next release into a first release.
   - Rerun with `--first-release` to replace that theme. The release reports the theme being replaced, which keeps its own Theme Styles in My Themes.
   - `--first-release` is refused on a channel that already runs this fork, because it would skip the diff.
-- **A live value differs from `config.json`.** The release lists each changed or live-only key with both values. Settings that only `config.json` has are new, so they pass. The `rf_*` module switches are the release guard's, so step 1 skips them. The two menu ids aren't switches, so step 1 checks them like any other setting. Rerun with one of:
-  - `--accept-live`, which copies the live values of every differing key, `rf_*` included, into the variation's `settings` in `config.json`, keeping its formatting, then stops. Review the change with `git diff config.json`, commit it, and rerun. In a dry run it shows the values and writes nothing.
-  - `--overwrite-live`, which lists the keys and asks you to type the channel id, then lets the push overwrite them. The overwritten keys go into the `RELEASES.md` entry. A dry run lists them and asks nothing.
+- **A live value was edited in the control panel.** Under [the three-way diff](#the-three-way-diff), that is a live value that differs from `config.json` and from the channel's last release. With no last release to compare with, it is any live value that differs from `config.json`. The release lists each changed or live-only key with its live and `config.json` values, plus the last released value and the published value when they help. Settings that only `config.json` has are new, so they pass. The `rf_*` module switches are the release guard's, so step 1 skips them. The two menu ids aren't switches, so step 1 checks them like any other setting. Rerun with one of:
+  - `--accept-live`, which copies the live values into the variation's `settings` in `config.json`, keeping its formatting, then stops. It takes every differing key, `rf_*` included, except the ones `config.json` changed since the last release: taking those would undo the repo's own change. Review the change with `git diff config.json`, commit it, and rerun. In a dry run it shows the values and writes nothing.
+  - `--overwrite-live`, which lists the edited keys and asks you to type the channel id, then lets the push overwrite them. The overwritten keys go into the `RELEASES.md` entry. A dry run lists them and asks nothing.
 - **The channel has unpublished Theme Styles edits** (its saved configuration differs from the published one). The release names the keys and diffs against the saved settings, which a push overwrites too. The release guard checks the `rf_*` switches against both. The push summary and the `RELEASES.md` entry name the keys.
 - **My Themes holds 20 themes.** Delete one by hand in the control panel (Storefront > My Themes). The release never uses `stencil push -d`. A dry run only warns.
+
+### The three-way diff
+
+Step 1 compares three versions of each setting (W0-2): the live saved value (and its published value), `config.json` now, and `config.json` at the commit of the channel's newest `RELEASES.md` entry, for that entry's variation. The newest entry is the latest by its time, whatever its place in the file.
+
+| Live value | `config.json` now | Step 1 |
+|---|---|---|
+| equals `config.json` | — | No difference. |
+| equals the last released value, saved and published | changed since the last release, or removed | Passes as **in repo**: the repo changed the key, and the push carries the change. The push summary and the `RELEASES.md` entry ("Changed in repo") list it. |
+| differs from the last released value | unchanged since the last release | **Stops:** a control-panel edit, as before. |
+| differs from the last released value | also changed, to another value | **Stops**, naming all three values. |
+| missing | has the key | Passes as a new setting, as before. |
+
+- **Why it is safe:** every live value the push replaces either equals `config.json`'s or is in git at the last release's commit. A value that is only on the store, such as an edit in Theme Styles, still stops the release.
+- **The published value counts too.** While the channel has unpublished Theme Styles edits, a key passes as "in repo" only when its published value also equals the last released one. Otherwise the push would replace what shoppers see without anyone deciding to.
+- **The `rf_*` switches** keep the release guard's rule 1, which compares with `config.json` only: a switch changed in the repo still stops at the guard, whatever the last release had. Toggle switches in Theme Styles and log them.
+- **The menu ids** follow the three-way rule, so ids that `config.json` sets after a release with empty ids (wave R1's tree-4 ids) pass step 1, and the guard then checks them against the channel's category tree.
+- **When there is nothing to compare with,** step 1 compares two ways, as it did before W0-2, and prints why on its `base` line:
+  - `RELEASES.md` records no release on the channel
+  - the entry's commit can't be read (`git show <commit>:config.json` fails, for example on a branch that no longer exists)
+  - the entry's variation isn't in that commit's `config.json`
+- **Commit each release's `RELEASES.md` entry before the next release.** Step 1 reads `RELEASES.md` from the checkout. If the newest release isn't logged there yet, it compares with an older release, and the keys the unlogged release changed stop step 1.
+- **A channel that runs a theme other than the last release's** (a rollback in My Themes, say) gets a NOTE, and step 1 still compares with the last release, which stays safe: a value it didn't push stops step 1.
+- **A first release** (`--first-release`) runs no diff, so it reads no last release.
 
 ## The live contrast report
 
@@ -120,7 +145,7 @@ The release guard (ticket 15, `scripts/release-guard.mjs`) runs after step 1 and
 
 - An empty id passes, because the menu then falls back to the stock markup. This keeps prelaunch pushes working before tree 4 exists.
 - A set id that isn't in the target channel's category tree stops the release, naming the id. One bad id in `rf_menu_type_ids` stops the whole push.
-- A live menu id that differs from `config.json`, or exists only on the live theme, stops step 1 like any other Theme Styles edit. Clear it with `--accept-live` or `--overwrite-live`.
+- A live menu id that differs from `config.json`, or exists only on the live theme, is step 1's, like any other Theme Styles setting. It passes when `config.json` changed it since the channel's last release and the live id is still the released one ([the three-way diff](#the-three-way-diff)). Otherwise it stops step 1 as a control-panel edit: clear it with `--accept-live` or `--overwrite-live`.
 
 **The token for rule 2.** When a menu id is set, the release reads the channel's category tree with two read-only calls: `GET /v3/catalog/trees?channel_id:in=<channel>`, then every page of `GET /v3/catalog/trees/categories?tree_id:in=<tree>`.
 
@@ -149,8 +174,11 @@ The release's tests are `scripts/release-*.test.mjs`. `npm run test:scripts` run
 
 - `release-guard.test.mjs` covers the four refusals of the spec's seam 5 (more than one channel, no named variation, a switch difference, and a set-but-missing menu id) and each case of the guard's two rules.
 - `release-checks.test.mjs` covers the stops that only a real release reaches, which a dry run can't: the Node version and dirty-tree refusals, the My Themes cap, the typed channel id (a wrong answer, a closed stdin, no terminal), and step 5's gate (a switch toggled or a draft published while the prompt waits, another theme, a new commit, a changed or missing zip).
-- `release-sh.test.mjs` runs `scripts/release.sh` itself, in dry runs. It covers the argument refusals, step 1's stops, the live contrast report and the guard, using three test-only overrides:
+- `release-diff.test.mjs` covers the three-way diff's cases, and `release-log.test.mjs` reading the channel's last release back from `RELEASES.md` and the "Changed in repo" lines.
+- `release-sh.test.mjs` runs `scripts/release.sh` itself, in dry runs. It covers the argument refusals, step 1's stops (two-way and three-way), the live contrast report and the guard, using five test-only overrides:
   - `RF_RELEASE_CONFIG=<file>` is a theme config to use instead of `config.json`. The run stops before the clean build.
   - `RF_RELEASE_LIVE_FIXTURE=<file>` is a capture to use instead of the store.
   - `RF_RELEASE_TREE_FIXTURE=<file>` is a JSON array of the channel's category ids, to use instead of the catalogue API.
-- All three overrides need `--dry-run`, so a real push always reads the live store.
+  - `RF_RELEASE_LOG_FIXTURE=<file>` is a release log to read instead of `RELEASES.md`, for the channel's last release and the themes the release pushed. Step 7 always writes `RELEASES.md`.
+  - `RF_RELEASE_BASE_FIXTURE=<file>` is a theme config to use as `config.json` at the last release's commit, instead of reading it with git.
+- All five overrides need `--dry-run`, so a real push always reads the live store, `RELEASES.md` and git.
