@@ -20,6 +20,7 @@ import net from 'net';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { fetchWithRetries } from './retry.mjs';
 
 export const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 export const QA_CHANNEL = process.env.QA_CHANNEL || '1895766';
@@ -36,13 +37,7 @@ export const FRESH_SERVER = process.env.QA_FRESH_SERVER === '1';
 export const READY_URL = `${LOCAL_URL}/stencil/00000000-0000-0000-0000-000000000001/dist/theme-bundle.main.js`;
 // The renderer throws on a request without Accept-Language, so every request sends one.
 export const HEADERS = { 'Accept-Language': 'en-CA,en;q=0.9' };
-// stencil start proxies each page to the store, and a dropped upstream connection
-// ("AxiosError: stream has been aborted" in stencil-cli's renderer.module.js) makes that one
-// request answer 5xx. A gate that gets a 5xx says so, waits this long and asks once more; a
-// second 5xx fails as any wrong status does. A 4xx, or a 200 where a 404 belongs, is the
-// page's real answer and is never asked again.
-export const RETRY_DELAY_MS = 2000;
-export const worthRetrying = status => status >= 500;
+// When a 5xx or a 429 is asked again, and how long the gates wait first: retry.mjs.
 
 // The webpack clean step never deletes anything, so a fresh server starts from an empty
 // assets/dist and is ready only once its dev build has written main.js.
@@ -166,14 +161,36 @@ export async function planLocalServer({ fresh = FRESH_SERVER } = {}) {
     return plan;
 }
 
-// A server already listening on 3301 is reused only if it renders QA_CHANNEL and QA_VARIATION.
-export async function assertLocalServer() {
-    if (!IS_LOCAL) return;
-    const response = await fetch(`${LOCAL_URL}/?debug=context`, { headers: HEADERS });
-    const problems = serverProblems(await response.json());
-    if (problems.length) {
-        throw new Error(`The stencil start on ${LOCAL_URL} ${problems.join(' and ')}. Stop it, or set QA_CHANNEL and QA_VARIATION to match it.`);
+// Throws unless the stencil start at `baseUrl` renders the run's channel and variation
+// (serverProblems), read from its `?debug=context`. That request is asked again after a 5xx
+// or a 429 as a pinned page's is (retry.mjs): a dropped upstream connection there would
+// otherwise fail the whole gate. Any other answer but a 2xx fails, naming the status; a
+// wrong channel or variation fails at once. `wait` and `log` are for tests.
+export async function assertServer(baseUrl, {
+    channel, variation, config, wait, log,
+} = {}) {
+    const response = await fetchWithRetries(`${baseUrl}/?debug=context`, { headers: HEADERS }, {
+        what: 'the page context /?debug=context', wait, log,
+    });
+    if (!response.ok) {
+        await response.arrayBuffer();
+        throw new Error(`The stencil start on ${baseUrl} answered HTTP ${response.status} to /?debug=context, so the gates can't tell which channel and variation it renders. Its output says why; run the gates again, or stop it.`);
     }
+    let context;
+    try {
+        context = await response.json();
+    } catch {
+        throw new Error(`The stencil start on ${baseUrl} answered /?debug=context with something that isn't JSON, so the gates can't tell which channel and variation it renders. Check what answers on that port.`);
+    }
+    const problems = serverProblems(context, { channel, variation, config });
+    if (problems.length) {
+        throw new Error(`The stencil start on ${baseUrl} ${problems.join(' and ')}. Stop it, or set QA_CHANNEL and QA_VARIATION to match it.`);
+    }
+}
+
+// The local server on 3301, reused or just started, must render QA_CHANNEL and QA_VARIATION.
+export async function assertLocalServer() {
+    if (IS_LOCAL) await assertServer(LOCAL_URL);
 }
 
 // Stops a detached server's whole process group (sh, npx, stencil start and its webpack

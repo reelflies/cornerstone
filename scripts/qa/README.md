@@ -33,7 +33,9 @@ CI has no store credentials, so anything that renders the storefront runs locall
 Without `QA_BASE_URL`, each gate uses `npx stencil start -c $QA_CHANNEL -v "$QA_VARIATION" -p 3300` (`scripts/qa/storefront.mjs`):
 
 - **Ports.** Browsersync takes 3300 and the stencil server 3301. The gates talk to 3301, so Browsersync's injected script, its overlay and its websocket stay out of the results.
-- **Reuse.** A server already on 3301 is reused, but only if it renders `QA_CHANNEL` and `QA_VARIATION`. Both are read from `?debug=context`: `settings.channel_id`, and `settings.theme_config_id`, which stencil start sets from the variation's position in `config.json`. Otherwise the run stops, so one set's screenshots can never be compared with, or written as, another's.
+- **Reuse.** A server already on 3301 is reused, but only if it renders `QA_CHANNEL` and `QA_VARIATION`. Both are read from `?debug=context`: `settings.channel_id`, and `settings.theme_config_id`, which stencil start sets from the variation's position in `config.json`. Otherwise the run stops at once, so one set's screenshots can never be compared with, or written as, another's.
+  - The same check runs on every server a gate starts, before its first page.
+  - `?debug=context` is asked again after a 5xx or a 429, as a pinned page is (below). If it still doesn't answer with the page context, the run stops and names the status it ended on.
 - **No reuse with `QA_FRESH_SERVER=1`.** A server already running could come from another checkout, worktree or branch, even with the right channel and variation, and the gates would then pass on code other than the commit being pushed. So nothing is reused: each gate starts its own server from this checkout. If anything already answers on 3300 or 3301, the run stops before starting one, names the port, and says to stop that server first. `qa:prepush` checks once before the first gate, and each gate checks again for itself (`serverPlan` in `storefront.mjs`; the Playwright config checks before its `webServer` starts).
 - **Fresh start.** A fresh server starts from an empty `assets/dist` and is ready once its webpack dev build is served. The gates stop the server again when they finish, with its whole process group. With `QA_FRESH_SERVER=1`, `qa:prepush` then waits until 3300 and 3301 are free (up to 15 s) before the next gate starts, and fails the gate if they aren't.
   - **The dev build stays in `assets/dist`.** That is about 2 MB of scripts with their sources inlined as source maps, and upstream's clean step never removes them. `stencil bundle` zips all of `assets/`, and so does `stencil push` without `-f`, which bundles again.
@@ -49,7 +51,17 @@ Without `QA_BASE_URL`, each gate uses `npx stencil start -c $QA_CHANNEL -v "$QA_
 - **Page keys** are the spec's template names: `home`, `fly-type`, `species`, `species-hub`, `product`, `cart`, `hook-chart`, `404` and `brand`, plus `category` for the stock category template until ticket 32.
 - **Test products are pinned** by URL. Pick ones that will stay in the catalogue.
 - **Every pinned page must answer as its template:** HTTP 404 for `404`, and 200 for every other page. Otherwise axe, the screenshots and the raw-HTML check fail the page instead of checking an error page. A renamed product or a mistyped pin shows up as that failure.
-- **A 5xx is asked once more.** stencil start proxies each page to the store, and a dropped upstream connection (`AxiosError: stream has been aborted` in its log) can make one request answer 500. A page that answers 5xx is opened again about 2 s later (`RETRY_DELAY_MS` in `storefront.mjs`), and the output says so in a `RETRY` line. A second 5xx fails as before. A 4xx, or a 200 where a 404 belongs, is the page's real answer and is never asked again.
+- **A 5xx or a 429 is asked again** (`retry.mjs`, W0-4). Each retry prints a `RETRY` line first, so a run that passed after one shows it.
+  - **A 5xx, once more.** stencil start proxies each page to the store, and a dropped upstream connection (`AxiosError: stream has been aborted` in its log) can make one request answer 500. A page that answers 5xx is opened again about 2 s later (`RETRY_DELAY_MS`). A second 5xx fails.
+  - **A 429, up to three times.** Parallel agents proxy many pages to the live stores at once, so a store can limit them. A page that answers 429 is opened again once its `Retry-After` has passed, or after 2, 4 and 8 s when it sends none (`RATE_LIMIT_DELAYS_MS`). A fourth 429 fails.
+  - **Behind a local stencil start, the 429 retries mostly don't reach the store.** The backoff works in full only on `QA_BASE_URL` runs, which see the store's answers directly.
+    - stencil-cli keeps the store's answer to each page for 15 s (its cache, on unless `stencil start --no-cache`), and that includes a 429. The 2, 4 and 8 s retries come 2, 6 and 14 s after the first answer, so each gets the same 429 back from the cache. Only a `Retry-After` that carries the waits past 15 s gets a new answer from the store.
+    - A 429 on stencil-cli's second request for a page (its data request) reaches the gates as a 500, so it gets the single 5xx retry, which the cache answers the same way.
+    - So locally, the protection against rate limits is running fewer gates at once (W0-7's cap on `stencil start`s), not the retries.
+  - **At most 30 s of waiting per request** (`MAX_WAIT_MS`), after a 429 or a 5xx. A wait that would go past that isn't waited for: that answer fails at once, with a `WARNING` line that says why. Only a long `Retry-After` can get there, since the schedule alone waits 16 s at most. A Playwright test has 90 s in all, and a store that asks for longer is saying to run the gates later.
+  - **A `Retry-After` is read** as whole seconds or as an HTTP date (`Tue, 06 Oct 2026 10:00:07 GMT`). Anything else counts as no `Retry-After`, so the 2, 4 and 8 s schedule applies.
+  - **Every other status is the page's real answer** and is never asked again: a 4xx, or a 200 where a 404 belongs.
+  - The same policy covers the axe and screenshot pages (`fixtures.mjs`), the raw-HTML pages (`raw-html.mjs`) and the server check (`?debug=context`, `storefront.mjs`).
 - **`notPinnedYet`** is for a product or category page that a channel can't pin yet, with the reason. See "Raw HTML" below.
 
 When a page is pinned for a channel, axe, the screenshots and the raw-HTML check all cover it on the next run.
@@ -144,7 +156,7 @@ This is spec seam 2: what a crawler gets, with no JavaScript.
 
 - It fetches every page pinned for the channel in `pages.mjs`, with `Accept-Language: en-CA`; stencil start's renderer fails without it.
 - It runs every registered assertion on each page. An assertion's `pages` and `notOn` pick the page kinds it applies to.
-- A page that doesn't answer as its template fails: 404 for `404`, and 200 for every other page. A 5xx is fetched once more first, as in "Pinned pages and live data".
+- A page that doesn't answer as its template fails: 404 for `404`, and 200 for every other page. A 5xx or a 429 is fetched again first, as in "Pinned pages and live data".
 - **A product and a category page are required** (`RAW_HTML_REQUIRED`), because spec seam 2 checks those two. A channel without one fails, unless its `notPinnedYet` gives the reason, which is reported as a warning on every run. ReelFlies_CA has no products or tree-4 categories until refactor tickets 13 and 14. When they land, pin both and delete its `notPinnedYet`; a run warns while an entry is left over.
 - **To check a new page kind** (for example the Fly Type page for ticket 40, or the cart for ticket 52), pin it in `CHANNELS`. Then name it in the assertion's `pages`, if the assertion applies only to some kinds.
 
@@ -217,7 +229,8 @@ It needs a category page with products, so run it with `QA_CHANNEL=1` until Reel
 ## Which runner picks up what
 
 - Playwright runs `scripts/qa/*.spec.mjs` with this folder's config.
-- `harness-selftest.spec.mjs` runs with `qa:axe`, `qa:screens` and `qa:quick-view`, on pages it serves itself. It proves that a pinned page answering with the wrong status fails the run without being asked again, that one answering 5xx twice fails, and that dismissing the cookie banner leaves nothing hovered. Its 5xx retry case answers the pinned 404 page (or the channel's first page) with a 500 once and then lets the request through, so the second answer is the storefront's real one.
+- `harness-selftest.spec.mjs` runs with `qa:axe`, `qa:screens` and `qa:quick-view`, on pages it serves itself. It proves that a pinned page answering with the wrong status fails the run without being asked again, that one answering 5xx twice or 429 four times fails, and that dismissing the cookie banner leaves nothing hovered. Its 5xx and 429 retry cases answer the pinned 404 page (or the channel's first page) with a 500, or a 429 with `Retry-After: 1`, once and then let the request through, so the second answer is the storefront's real one.
+- `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
 - `npm run test:scripts` runs every `scripts/**/*.test.mjs` with `node --test`.
 - Jest runs `assets/js/test-unit/`. `jest.config.js` ignores `scripts/`, because Jest 30 would otherwise match `*.test.mjs` and `*.spec.mjs` too.
 - Playwright writes its report, traces and failed diffs to `scripts/qa/results/`, which is ignored by git. A run with `QA_PREVIEW_COOKIE` writes no traces, so the cookie never lands there.

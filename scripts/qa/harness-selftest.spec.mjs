@@ -1,12 +1,14 @@
 // Self-tests of fixtures.mjs, which every storefront gate opens its pages with. They run
 // with qa:axe, qa:screens and qa:quick-view, and serve their own pages (page.route and
-// setContent), so they need no store data; only the 5xx retry gets a pinned page's real
-// response from the storefront under test.
+// setContent), so they need no store data; only the 5xx and 429 retry cases get a pinned
+// page's real response from the storefront under test.
 //
 // - A pinned page that doesn't answer as its template should fails the run, so axe and the
 //   screenshots never check, or record as a baseline, an error page instead.
 // - A page that answers 5xx is opened once more, about 2 s later: stencil start's request
 //   to the store can drop. A second 5xx fails, and a 4xx is never asked again.
+// - A page that answers 429 is opened again after its Retry-After, up to three times
+//   (W0-4). A fourth 429 fails.
 // - Dismissing the cookie banner leaves nothing hovered, so no hover zoom or menu is open
 //   in a screenshot.
 
@@ -18,12 +20,14 @@ import {
 } from './fixtures.mjs';
 
 const html = status => `<!doctype html><html lang="en"><title>HTTP ${status}</title><h1>HTTP ${status}</h1></html>`;
-// Answers `url` with `status`, and returns a counter of the requests it answered.
-async function serve(page, url, status) {
+// Answers `url` with `status` (and `headers`), and returns a counter of the requests it answered.
+async function serve(page, url, status, headers = {}) {
     const requests = { count: 0 };
     await page.route(url, route => {
         requests.count += 1;
-        return route.fulfill({ status, contentType: 'text/html', body: html(status) });
+        return route.fulfill({
+            status, headers, contentType: 'text/html', body: html(status),
+        });
     });
     return requests;
 }
@@ -64,6 +68,37 @@ test.describe('opening a pinned page', () => {
         }
         expect(answers).toEqual([500, 'storefront']);
         expect(logged).toEqual([`RETRY    the ${template} page ${pagePath} returned HTTP 500; opening it once more in 2 s (stencil start's request to the store can drop)`]);
+    });
+
+    test('opens a pinned page that answers 429 again after its Retry-After, from the storefront\'s real response', async ({ page, baseURL }) => {
+        const [template, pagePath] = PAGES['404'] ? ['404', PAGES['404']] : Object.entries(PAGES)[0];
+        const target = new URL(pagePath, baseURL).href;
+        const answers = [];
+        await page.route(url => url.href === target, route => {
+            answers.push(answers.length ? 'storefront' : 429);
+            return answers.length === 1
+                ? route.fulfill({
+                    status: 429, headers: { 'Retry-After': '1' }, contentType: 'text/html', body: html(429),
+                })
+                : route.fallback();
+        });
+        const logged = [];
+        const log = console.log;
+        console.log = (...args) => logged.push(args.join(' '));
+        try {
+            expect((await storefrontPage(page, template, pagePath)).status()).toBe(expectedStatus(template));
+        } finally {
+            console.log = log;
+        }
+        expect(answers).toEqual([429, 'storefront']);
+        expect(logged).toEqual([`RETRY    the ${template} page ${pagePath} returned HTTP 429; opening it again in 1 s, as its Retry-After asks (retry 1 of 3; the store is limiting requests)`]);
+    });
+
+    test('fails when a pinned page answers 429 after three retries', async ({ page }) => {
+        const requests = await serve(page, '**/rf-selftest/throttled/', 429, { 'Retry-After': '0' });
+        await expect(storefrontPage(page, 'product', '/rf-selftest/throttled/'))
+            .rejects.toThrow('the product page /rf-selftest/throttled/ returned HTTP 429, not 200');
+        expect(requests.count).toBe(4);
     });
 
     test('fails when a pinned page answers 5xx twice', async ({ page }) => {

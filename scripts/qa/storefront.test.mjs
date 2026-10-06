@@ -7,6 +7,9 @@
 //   3300 or 3301 could be another checkout's, worktree's or branch's, so the run stops.
 // - A server a gate started is stopped with its whole process group, and its ports are
 //   free again before the next gate starts.
+// - The check of what a server renders (`?debug=context`) asks a 5xx once more and backs
+//   off a 429, as the pinned pages do (W0-4), and fails naming the status it ends on. A
+//   wrong channel or variation fails at once.
 //
 //   node --test scripts/qa/storefront.test.mjs
 
@@ -15,7 +18,7 @@ import http from 'node:http';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    busyPorts, busyServerMessage, serverPlan, serverProblems, stopProcessGroup, waitForFreePorts,
+    assertServer, busyPorts, busyServerMessage, serverPlan, serverProblems, stopProcessGroup, waitForFreePorts,
 } from './storefront.mjs';
 
 const config = { variations: [{ name: 'ReelFlies CA' }, { name: 'ReelFlies US' }] };
@@ -85,6 +88,152 @@ async function freePort() {
     await close(server);
     return port;
 }
+
+describe('checking what a running server renders', () => {
+    // A stand-in for stencil start that answers `?debug=context` with each of `answers` in
+    // turn: a status alone, or { status, body, headers }. It records each request's path.
+    async function contextServer(...answers) {
+        const requests = [];
+        const server = http.createServer((request, response) => {
+            requests.push(request.url);
+            const answer = answers.shift() ?? 404;
+            const { status, body = '', headers = {} } = typeof answer === 'number' ? { status: answer } : answer;
+            response.writeHead(status, headers).end(typeof body === 'string' ? body : JSON.stringify(body));
+        });
+        const baseUrl = `http://127.0.0.1:${await listen(server)}`;
+        return { baseUrl, requests, close: () => close(server) };
+    }
+    const context = (channel, position) => ({ status: 200, body: served(channel, position), headers: { 'Content-Type': 'application/json' } });
+    // The stencil start renders 1895766 "ReelFlies CA"; nothing is really waited for.
+    const run = (baseUrl, waits = [], lines = []) => assertServer(baseUrl, {
+        channel: '1895766',
+        variation: 'ReelFlies CA',
+        config,
+        wait: async ms => { waits.push(ms); },
+        log: line => { lines.push(line); },
+    });
+    // stencil-cli's renderer answers 500 when its request to the store drops.
+    const dropped = { status: 500, body: 'AxiosError: stream has been aborted' };
+
+    it('passes when it renders the run\'s channel and variation', async () => {
+        const stencil = await contextServer(context(1895766, 1));
+        try {
+            const waits = [];
+            await run(stencil.baseUrl, waits);
+            assert.deepEqual(stencil.requests, ['/?debug=context']);
+            assert.deepEqual(waits, []);
+        } finally {
+            await stencil.close();
+        }
+    });
+
+    it('asks once more after a 500, saying so, and passes on a valid context', async () => {
+        const stencil = await contextServer(dropped, context(1895766, 1));
+        try {
+            const waits = [];
+            const lines = [];
+            await run(stencil.baseUrl, waits, lines);
+            assert.equal(stencil.requests.length, 2);
+            assert.deepEqual(waits, [2000], 'after RETRY_DELAY_MS');
+            assert.deepEqual(lines, ['RETRY    the page context /?debug=context returned HTTP 500; fetching it once more in 2 s (stencil start\'s request to the store can drop)']);
+        } finally {
+            await stencil.close();
+        }
+    });
+
+    it('fails on a second 500, naming the status, not a channel it can\'t read', async () => {
+        const stencil = await contextServer(dropped, dropped, context(1895766, 1));
+        try {
+            await assert.rejects(run(stencil.baseUrl), error => {
+                assert.match(error.message, /answered HTTP 500 to \/\?debug=context/);
+                assert.doesNotMatch(error.message, /renders channel/);
+                return true;
+            });
+            assert.equal(stencil.requests.length, 2, 'only once more');
+        } finally {
+            await stencil.close();
+        }
+    });
+
+    it('backs off after a 429 and passes on the 200 that follows', async () => {
+        const stencil = await contextServer(429, context(1895766, 1));
+        try {
+            const waits = [];
+            const lines = [];
+            await run(stencil.baseUrl, waits, lines);
+            assert.equal(stencil.requests.length, 2);
+            assert.deepEqual(waits, [2000]);
+            assert.match(lines[0], /^RETRY {4}the page context \/\?debug=context returned HTTP 429; fetching it again in 2 s \(retry 1 of 3; the store is limiting requests\)$/);
+        } finally {
+            await stencil.close();
+        }
+    });
+
+    it('waits for a 429\'s Retry-After when it sends one', async () => {
+        const stencil = await contextServer({ status: 429, headers: { 'Retry-After': '7' } }, context(1895766, 1));
+        try {
+            const waits = [];
+            await run(stencil.baseUrl, waits);
+            assert.deepEqual(waits, [7000]);
+        } finally {
+            await stencil.close();
+        }
+    });
+
+    it('fails after a 429 has been asked again three times, naming the status', async () => {
+        const stencil = await contextServer(429, 429, 429, 429, context(1895766, 1));
+        try {
+            const waits = [];
+            await assert.rejects(run(stencil.baseUrl, waits), /answered HTTP 429 to \/\?debug=context/);
+            assert.equal(stencil.requests.length, 4);
+            assert.deepEqual(waits, [2000, 4000, 8000]);
+        } finally {
+            await stencil.close();
+        }
+    });
+
+    it('fails at once, with no retry, when it renders another channel', async () => {
+        const stencil = await contextServer(context(1, 1), context(1895766, 1));
+        try {
+            const waits = [];
+            const lines = [];
+            await assert.rejects(run(stencil.baseUrl, waits, lines), /renders channel 1, not QA_CHANNEL 1895766\. Stop it, or set QA_CHANNEL and QA_VARIATION to match it\./);
+            assert.equal(stencil.requests.length, 1);
+            assert.deepEqual([waits, lines], [[], []]);
+        } finally {
+            await stencil.close();
+        }
+    });
+
+    it('fails at once, with no retry, when it renders another variation', async () => {
+        const stencil = await contextServer(context(1895766, 2), context(1895766, 1));
+        try {
+            await assert.rejects(run(stencil.baseUrl), /renders the variation "ReelFlies US", not QA_VARIATION "ReelFlies CA"/);
+            assert.equal(stencil.requests.length, 1);
+        } finally {
+            await stencil.close();
+        }
+    });
+
+    it('fails at once on a 4xx, naming the status', async () => {
+        const stencil = await contextServer(404, context(1895766, 1));
+        try {
+            await assert.rejects(run(stencil.baseUrl), /answered HTTP 404 to \/\?debug=context/);
+            assert.equal(stencil.requests.length, 1);
+        } finally {
+            await stencil.close();
+        }
+    });
+
+    it('fails, saying so, when the context isn\'t JSON', async () => {
+        const stencil = await contextServer({ status: 200, body: '<html>Coming soon</html>' });
+        try {
+            await assert.rejects(run(stencil.baseUrl), /answered \/\?debug=context with something that isn't JSON/);
+        } finally {
+            await stencil.close();
+        }
+    });
+});
 
 describe('the QA ports', () => {
     it('lists the ports something answers on', async () => {
