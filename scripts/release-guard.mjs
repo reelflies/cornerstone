@@ -18,8 +18,10 @@
 // shoppers see when only the draft matches config.json.
 // Rule 2: rf_menu_type_ids (comma-separated) and rf_menu_species_root_id. Empty passes, because
 // the menu falls back to the stock markup. A set id that isn't in the channel's tree fails. A live
-// menu id that differs from config.json, or exists only on the live side, is step 1's: it stops
-// there like any other Theme Styles edit (scripts/release-diff.mjs blockingDifferences).
+// menu id that differs from config.json, or exists only on the live side, is step 1's, like any
+// other Theme Styles setting (scripts/release-diff.mjs threeWayDiff): it passes when config.json
+// changed it since the channel's last release and the live id is still the released one (W0-2),
+// and otherwise stops step 1 as a control-panel edit.
 
 import { isDeepStrictEqual } from 'util';
 import {

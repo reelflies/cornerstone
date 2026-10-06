@@ -3,8 +3,9 @@
 #
 #   scripts/release.sh --channel <id> --variation "<name>" [--dry-run] [--first-release] [--accept-live | --overwrite-live]
 #
-#   1 capture the channel's live Theme Styles (read-only) and diff them against config.json,
-#     report the live colours' contrast, then the release guard: rf_* module switches and menu ids
+#   1 capture the channel's live Theme Styles (read-only) and diff them against config.json and
+#     against config.json at the channel's last release in RELEASES.md (W0-2), report the live
+#     colours' contrast, then the release guard: rf_* module switches and menu ids
 #   2 clean build      3 checks      4 bundle, check the zip, then axe, raw HTML and screenshots
 #   5 push (never in a dry run: a dry run prints the push command and the log entry, then stops)
 #   6 verify           7 log the release in RELEASES.md
