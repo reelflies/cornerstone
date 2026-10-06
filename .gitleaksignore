@@ -1,2 +1,5 @@
 # Upstream Cornerstone history (2015), not ours: a CI registry token in .travis.yml.
 e4f49548ccec5927690ecd8d198d7675a1da9e29:.travis.yml:generic-api-key:13
+# Fake token in release-redact.test.mjs's fixtures when ticket 05 added them; the value now in the file isn't flagged.
+a9723fd54069b2aba7492643ce85e30f86d0502b:scripts/release-redact.test.mjs:generic-api-key:10
+a9723fd54069b2aba7492643ce85e30f86d0502b:scripts/release-redact.test.mjs:generic-api-key:16
