@@ -8,12 +8,17 @@
 //   A page that answers 5xx is opened once more after 2 s, and one that answers 429 up to
 //   three times with backoff; the output says so each time (retry.mjs says why).
 // - dismissCookieBanner(page) closes the store's cookie banner without moving the pointer.
+// - screenshotStylePath(testInfo, channel, template) writes the stylesheet a page's
+//   screenshot applies (screenshotStyle in pages.mjs) and returns its path, for
+//   toHaveScreenshot's stylePath.
 
 /* eslint-env browser */ // the page.evaluate callbacks run in the page
 
+import fs from 'fs';
+import path from 'path';
 import { test as base, expect } from '@playwright/test';
 import { QA_CHANNEL, previewCookies } from './storefront.mjs';
-import { expectedStatus, pinnedPages } from './pages.mjs';
+import { expectedStatus, pinnedPages, screenshotStyle } from './pages.mjs';
 import { withRetries } from './retry.mjs';
 
 export const test = base.extend({
@@ -60,6 +65,15 @@ export async function storefrontPage(page, template, pagePath = PAGES[template])
         new Promise(resolve => { setTimeout(resolve, 10000); }),
     ]));
     return response;
+}
+
+// toHaveScreenshot reads a stylesheet only from a file, so each test writes its own into
+// its output folder (scripts/qa/results/, ignored by git).
+export function screenshotStylePath(testInfo, channel, template) {
+    const file = testInfo.outputPath(`screenshot-${channel}-${template}.css`);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, screenshotStyle(channel, template));
+    return file;
 }
 
 // BigCommerce's cookie banner (a store setting) is fixed to the viewport, so in a
