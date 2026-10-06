@@ -17,8 +17,11 @@
 //
 // Never, in either mode: Customers, Orders, the catalogue, theme activation or deletion, the
 // storefront's status. Never in lifted mode: promotions. Anything not listed is refused, so the
-// list is deny-by-default. DELETE isn't listed yet: no ticket needs one, and a DELETE carries
-// no channel_id to check. Add it with a snapshot-proved channel when one does.
+// list is deny-by-default. DELETE isn't listed yet: a DELETE carries no channel_id to check.
+// Ticket 07's probe 13 needs one for its spike's widget template, widget and placement; a
+// follow-up adds it, with the channel proved from the snapshot's item read. Until then probe
+// 13's objects stay unplaced. The favicon (a multipart upload) isn't listed either: ticket 25's
+// goes in Shaun's batch.
 //
 // The channel check (every write names 1895766) is channel.mjs's; this file says what may be
 // written at all.

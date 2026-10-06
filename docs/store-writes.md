@@ -15,21 +15,25 @@ All three outputs go on the next review page. Nothing waits for Shaun. Until tha
 ## The routine
 
 ```sh
-node scripts/store/plan.mjs --ticket 46 --changes widgets/home-lead/changes.json             # GETs only
-node scripts/store/apply.mjs --dry-run ~/reelflies/store-snapshots/plans/<time>-46.json       # every check, nothing sent
-node scripts/store/apply.mjs ~/reelflies/store-snapshots/plans/<time>-46.json                 # the writes
+node ~/reelflies/theme/cornerstone/scripts/store/plan.mjs --ticket 46 --changes <changes file>                         # GETs only
+node ~/reelflies/theme/cornerstone/scripts/store/apply.mjs --dry-run ~/reelflies/store-snapshots/plans/<time>-46.json   # every check, nothing sent
+node ~/reelflies/theme/cornerstone/scripts/store/apply.mjs ~/reelflies/store-snapshots/plans/<time>-46.json             # the writes
 ```
 
 1. **Write the changes file:** a JSON array of requests, or `{"requests": [...]}`. Each request is `{"method": "POST" or "PUT", "path": "/v3/…", "query": {...}, "body": ...}`.
-2. **Plan.** `plan.mjs` checks every request, takes the snapshot with GETs only, and writes the plan file, then prints:
-   - the diff
+   - It must be a `.json` file inside the main clone, one of its worktrees (`~/reelflies/theme/worktrees/<branch>`) or `~/reelflies/store-snapshots/`, judged by where a link leads. Anything else is refused, and so is `secrets.stencil.json`. A file that isn't JSON is named, never quoted.
+2. **Plan.** `plan.mjs` checks every request, takes the snapshot with GETs only, and writes the plan file to `~/reelflies/store-snapshots/plans/`, then prints:
+   - the diff. An update shows each changed field as `key: old -> new`. A create shows every field it sets as `key: (none) -> value`, so a placement created active, a script's `src` or a page made the homepage is in the diff.
    - the proof for each settings write
    - the snapshot files
    - the plan file and its sha256
 3. **Review the diff.** Put it in the PR body or the ticket comment.
 4. **Apply.** `apply.mjs` takes a fresh snapshot and refuses if anything changed since the plan. It derives the diff again from that read, prints it, then sends exactly the plan's requests, in order, and re-reads each object it wrote. `--dry-run` stops after the diff, having sent and logged nothing.
+   - **Every write that was sent is read back, whatever it answered.** One that answered 5xx or got no answer may still have landed: its row says "may have landed: see the re-read", and the run stops as `failed`.
+   - **An update or a settings write must read back as planned.** If the re-read shows another value, the write didn't take: the run stops as `failed`, with no lock. For 1895766's settings, `null` counts when the planned value is the global one it inherits. A field an object's read doesn't show at all (a placement's `widget_uuid` reads back as `widget.uuid`) is named on the row as not checked. This is revisitable once the first real write shows how the store echoes each field.
+   - **Each request gives up after 30 s with no answer,** so a hung write reaches the re-read and part 3 in the same run. Give the apply's Bash call the 10-minute timeout (`timeout: 600000`), because a run with part 3 and its retries can pass the default 120 s.
 
-**Run them from the main clone at `origin/master`,** by their full path (`node ~/reelflies/theme/cornerstone/scripts/store/…`). The permission rules pre-approve only that copy ([permissions.md](permissions.md)). And only `origin/master`'s rules write:
+**Run them from the main clone at `origin/master`,** by their full path (`node ~/reelflies/theme/cornerstone/scripts/store/…`), as plan.mjs's "Next:" line prints it. The permission rules pre-approve only that copy ([permissions.md](permissions.md)). And only `origin/master`'s rules write:
 
 - Before the writer token is read, `scripts/store/tooling.mjs` fetches `origin/master`. It refuses unless every file under `scripts/store/` (committed or not, tracked or not), every module the commands import from outside it, and `scripts/release-calendar.json` are byte-identical to `origin/master`'s, naming each file that differs. `merge.sh` holds merges to its own tooling the same way.
 - So a stale worktree, or a ticket branch with its own allowlist or sync script, can't write. Pull first: `git -C ~/reelflies/theme/cornerstone pull --ff-only origin master`.
@@ -72,7 +76,9 @@ The never list is checked first, in both modes:
 - checkout, carts and payments
 - promotions, except in approved mode
 
-`DELETE` isn't on the list yet: no ticket needs one, and a `DELETE` carries no `channel_id` to check. Add it, with a channel proved from the snapshot, when a ticket does.
+`DELETE` isn't on the list yet: a `DELETE` carries no `channel_id` to check. Ticket 07's probe 13 needs one, to remove the widget template, widget and placement its spike makes on 1895766. That waits for a follow-up that adds `DELETE` for widget templates, widgets and placements, with the channel proved from the snapshot's item read. Until then probe 13's objects stay unplaced (placements `inactive`), and the review page lists them.
+
+The favicon (`POST /v3/settings/favicon/image`, a multipart upload) isn't on the list either. Ticket 25's favicon goes in Shaun's batch until a multipart upload is added.
 
 The custom template association reads need the Themes scope, which only the writer account has (W0-12). So a plan that touches associations reads them with the writer token, still GET only.
 
@@ -103,7 +109,7 @@ A settings write is lifted only when all three hold (build pipeline, section 5):
   - A key the channel read doesn't show is refused, and so is a key the global read lacks.
   - An empty channel read (`{}`) proves part 1 but no key, so on such an endpoint the write goes in Shaun's batch. This is revisitable once ticket 07's probe 10 shows what the store returns.
 
-**Part 3 is checked after every settings write that was sent,** whatever it answered, even none: a `PUT` that times out may still have landed. The helper reads 1895766, the global value and channels 1 and 1855224, each on its own and each GET tried up to 3 times.
+**Part 3 is checked after every settings write that was sent,** whatever it answered, even none: a `PUT` that times out may still have landed. The helper reads 1895766, the global value and channels 1 and 1855224, each on its own and each GET tried up to 3 times. From before the `PUT` is sent until part 3 holds, `LOCKED` is on disk ([below](#locked)), so a run that dies in between stays locked.
 
 - **If any of them changed,** it:
   1. puts back the snapshot's values at once:
@@ -120,6 +126,7 @@ Restoring is itself a store-wide write, but it only puts back values it read.
 
 `~/reelflies/store-snapshots/LOCKED` is written when:
 
+- a lifted settings write is in flight. It goes on disk before the `PUT` is sent and comes off only once part 3 holds, and only if it is still that run's file. So an apply that dies in between (a tool's timeout, Ctrl-C, a closed session, the Mac sleeping, even `SIGKILL`) leaves the helper locked, with the write named and its intent row in the log, instead of a leak the next plan would take as its baseline.
 - part 3 failed, or couldn't be read after a settings write
 - a write's response, or its re-read, named another channel
 - a script read back enabled after a write
@@ -132,7 +139,11 @@ It records:
 
 While the file exists, every `apply` refuses, approved mode included, and `plan.mjs` warns. **Only Shaun removes the file,** once he has checked the store.
 
-**The review page puts the failure first.** The orchestrator checks for `LOCKED` before each checkpoint and puts its reason, and whether the restore held, at the top of the checkpoint notes' "For Shaun" section. The review page (W0-10) doesn't read the file itself yet; that is a W0-10 follow-up.
+**The review page puts the failure first.** The review page (W0-10) doesn't read the file itself yet; that is a W0-10 follow-up. Until then, the orchestrator checks for `LOCKED` before each checkpoint and, if it exists, makes it the **first entry of `forShaun.approvals`** in the checkpoint notes, which the page shows first ("Approvals waiting"):
+
+```json
+{ "ticket": "<LOCKED's ticket>", "title": "LOCKED: <its reason>", "detail": "restored: <its restored flag, or 'not tried'>; plan <its plan sha256>, request <its request + 1>", "diff": "<each changed scope and keys, one a line>" }
+```
 
 ## Snapshots, plans and the log
 
@@ -141,7 +152,7 @@ Everything is outside git, so an abandoned PR can't lose the record of a real st
 | What | Where |
 |---|---|
 | Snapshots | `~/reelflies/store-snapshots/<channel>/<object>/<time>-<label>.json`. `plan`, `before-<plan sha>` and `after-<plan sha>`, one file per object. Approved writes go under `store-wide/`. |
-| Plans | `~/reelflies/store-snapshots/plans/<time>-<ticket>.json`, or `--out` |
+| Plans | `~/reelflies/store-snapshots/plans/<time>-<ticket>.json`, and nowhere else |
 | The log | `~/reelflies/store-snapshots/log.jsonl` |
 
 **The plan file** holds:
@@ -163,13 +174,14 @@ Everything is outside git, so an abandoned PR can't lose the record of a real st
 - Each row holds the date, channel, object, id, action, snapshot sha256, ticket and operator, then the mode, the plan's sha256 and the request's index, method and path.
 - A result row adds the HTTP status, the outcome (`ok`, `failed` or `stopped`), the re-read's sha256 and a message.
 - A restore after a failed part 3 logs its own rows, with action `restore` and the scope it put back as the channel.
+- **An intent row that no result row answers** means a run stopped mid-request, so its write may have landed. `plan.mjs` and `apply.mjs` print a `WARN` line for each one before they read the store, naming the write: check that object on the store before writing it again. A lifted settings write that stopped that way has also left `LOCKED`.
 
 The operator is `RF_OPERATOR`, or `<user> on <branch>`.
 
 **The orchestrator mirrors new rows** into the "Store writes" section of `RELEASES.md`, through each release-log PR:
 
 ```sh
-node scripts/store/log.mjs --since 2026-10-06   # the table's rows, one per request
+node ~/reelflies/theme/cornerstone/scripts/store/log.mjs --since 2026-10-06   # the table's rows, one per request
 ```
 
 The root `.gitattributes` sets `RELEASES.md merge=union`, so rebasing a log branch keeps both sides' rows.
@@ -197,15 +209,15 @@ Unpublishing a widget is still allowed: a placement `PUT` with only `"status": "
 - **Shaun adds each item in his own terminal.** `security add-generic-password -a reelflies -s reelflies-bc-write -w` prompts for the token. Never paste one in a chat or a file.
 - **The loader runs `security find-generic-password` itself.** Agents never run it by hand, and the drafted permission rules deny it once Shaun turns them on.
 - **Nothing is printed with a token in it.** Output goes through `release-redact.mjs`.
-- **The store hash** comes from `config.stencil.json`'s store URL, through stencil-cli, or from `RF_BC_STORE_HASH`. `apply` refuses a plan made for another store.
+- **The store hash** comes from `config.stencil.json`'s store URL, through stencil-cli, or from `RF_BC_STORE_HASH`. `apply` looks it up before any token is read, so stencil-cli (from `node_modules`, outside the tooling check) never runs with a token in the process, and it refuses a plan made for another store before a token is read or asked for.
 
 ## Approved mode: Shaun's store-wide writes
 
 Store-wide settings and promotions also reach .com and channel 1, so they are Shaun's (decision 11). He approves the plan on a review page, then applies it himself:
 
 ```sh
-node scripts/store/plan.mjs --ticket 21 --changes store-wide.json --approved   # an agent may prepare it
-node scripts/store/apply.mjs --approved <plan file>                             # Shaun, at his terminal
+node ~/reelflies/theme/cornerstone/scripts/store/plan.mjs --ticket 21 --changes store-wide.json --approved   # an agent may prepare it
+node scripts/store/apply.mjs --approved <plan file>                                                           # Shaun, at his terminal
 ```
 
 - **The plan:**
@@ -214,7 +226,7 @@ node scripts/store/apply.mjs --approved <plan file>                             
   - shows all four in the diff
 - **It runs only at a terminal,** in this order:
   1. It prints the exact requests: method, path, query and body.
-  2. It asks Shaun to paste a token at a hidden prompt. The token is used for that run and never stored. He creates it with Products, Marketing and Information & Settings: modify, and can revoke it afterwards.
+  2. It refuses unless the store tooling is `origin/master`'s (above), then asks Shaun to paste a token at a hidden prompt. The token is used for that run and never stored. He creates it with Products, Marketing and Information & Settings: modify, and can revoke it afterwards.
   3. It takes the fresh snapshot and prints the diff it derived from it.
   4. It asks him to type the first 8 characters of the plan's sha256 as his go-ahead. A wrong answer stops it, and isn't repeated back.
 
