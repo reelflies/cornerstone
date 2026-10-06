@@ -6,14 +6,15 @@
 //   import { describeConfirmation, describePairedRelease } from './release-log.mjs'; // W0-1
 //
 // A release: { timestamp, channel, channelName, variation, theme: { uuid, name, version },
-//   git: { sha, branch }, bundle: { file, bytes, sha256, mainJsBytes },
+//   previousThemeUuid, git: { sha, branch }, bundle: { file, bytes, sha256, mainJsBytes },
 //   step1: { replacing, overwritten: [keys], unpublished: [keys], changedInRepo: [keys],
 //     base: { sha, timestamp } | null, baseNote }, guard: { values, newSwitches },
 //   verify: { problems } | null, operator,
 //   confirmation: { mode: 'typed' } | { mode: 'nonprod', channel }, calendar: { line },
 //   pairedChannel1: { phase, since, t28, flip, status } | null }
 // step1.base is the channel's last release, which step 1 compared with; baseNote says why there was
-// none. confirmation, calendar and pairedChannel1 are W0-1's: how step 5 was confirmed, the release
+// none. previousThemeUuid, confirmation, calendar and pairedChannel1 are W0-1's: the theme the
+// channel ran just before the push (step 5's capture), how step 5 was confirmed, the release
 // calendar's describePhase line, and the paired channel-1 release pending from T-28 (ticket 56).
 
 import { formatBytes } from './lib/format.mjs';
@@ -79,6 +80,17 @@ export function describePairedRelease(paired) {
     return `pending (ticket 56): channel 1 runs the same build from T-28 (${paired.t28}) until the Flip, so push this commit there through ticket 53's target; calendar ${paired.phase}, Flip ${paired.flip}, ${paired.status}`;
 }
 
+// W0-1 (decision 9): whether the push made a new theme in My Themes, or a new version of the theme
+// the channel ran before it. The earlier uuid isn't written as "uuid `…`", so releasedThemeUuids and
+// releaseEntries never take it for a theme the release pushed.
+function describeNewUuid({ theme, previousThemeUuid, verify }) {
+    if (!verify) return 'known after the push (dry run)';
+    if (!theme.uuid || theme.uuid === 'unknown') return 'unknown: verify couldn\'t read the channel\'s theme after the push';
+    if (!previousThemeUuid) return 'unknown: step 5 didn\'t record the channel\'s theme before the push';
+    if (previousThemeUuid === theme.uuid) return 'no, a new version of the theme the channel ran before the push';
+    return `yes; before the push the channel ran theme \`${previousThemeUuid}\``;
+}
+
 function describeVerify(verify) {
     if (!verify) return 'not run (dry run)';
     if (!verify.problems.length) return 'the live saved settings match config.json';
@@ -91,6 +103,7 @@ export function formatReleaseEntry(release) {
         `### ${utc(release.timestamp)} · channel ${release.channel} (${release.channelName}) · ${release.variation}`,
         '',
         `- Theme: ${theme.name} ${theme.version}, uuid ${theme.uuid ? `\`${theme.uuid}\`` : 'assigned at push'}`,
+        `- New uuid: ${describeNewUuid(release)}`,
         `- Commit: \`${git.sha}\` on \`${git.branch}\``,
         `- Bundle: \`${bundle.file}\`, ${formatBytes(bundle.bytes)}, sha256 \`${bundle.sha256}\``,
         `- main.js: ${formatBytes(bundle.mainJsBytes)}`,

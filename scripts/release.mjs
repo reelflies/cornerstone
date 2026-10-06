@@ -571,6 +571,7 @@ function releaseRecord(state, { themeUuid = null, verified = null } = {}) {
         channelName: state.target.name,
         variation: state.variation,
         theme: { uuid: themeUuid, name: state.themeName, version: state.version },
+        previousThemeUuid: state.beforePush ? state.beforePush.themeUuid : null, // step 5's capture
         git: { sha: state.git.sha, branch: state.git.branch },
         bundle: state.bundle,
         step1: state.step1,

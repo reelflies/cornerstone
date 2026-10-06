@@ -913,6 +913,33 @@ test('W0-1: step 5 with --confirm-nonprod stops before the capture when origin c
     assert.doesNotMatch(result.output, /Capturing channel/);
 });
 
+// Step 7 as release.sh runs it after verify, in an empty folder: it writes RELEASES.md there.
+test('W0-1: step 7\'s entry says whether the push made a new theme uuid, from step 5\'s capture and verify\'s (decision 9)', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-release-step7-'));
+    tempDirs.push(dir);
+    const repo = gitRepo();
+    const log = (before, now) => {
+        fs.rmSync(path.join(dir, 'RELEASES.md'), { force: true });
+        const result = runReleaseMjs('write-log', [], {
+            cwd: dir,
+            state: {
+                ...stepFiveState(repo, { confirmNonprod: 1895766 }),
+                confirmation: { mode: 'nonprod', channel: 1895766 },
+                calendar: { line: 'Release calendar: no Flip date yet (provisional; test), so nothing is limited.' },
+                pairedChannel1: null,
+                beforePush: { themeUuid: before },
+                verify: { problems: [], themeUuid: now },
+            },
+        });
+        assert.equal(result.status, 0, result.output);
+        return fs.readFileSync(path.join(dir, 'RELEASES.md'), 'utf8');
+    };
+    const same = log(LIVE_THEME_UUID, LIVE_THEME_UUID);
+    assert.match(same, new RegExp(`\\n- Theme: ReelFlies 6\\.22\\.0, uuid \`${LIVE_THEME_UUID}\`\\n- New uuid: no, a new version of the theme the channel ran before the push\\n`));
+    const fresh = log(LIVE_THEME_UUID, '00000000-0000-0000-0000-00000000ffff');
+    assert.match(fresh, new RegExp(`\\n- New uuid: yes; before the push the channel ran theme \`${LIVE_THEME_UUID}\`\\n`));
+});
+
 // --- Order of the build steps ---------------------------------------------------------------
 
 test('the storefront gates (axe, raw HTML and screenshots) run on a fresh server for the target, after the bundle check and before the dry-run exit and the push', () => {

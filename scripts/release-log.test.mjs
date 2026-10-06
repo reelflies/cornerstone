@@ -11,6 +11,7 @@ const release = {
     channelName: 'ReelFlies_CA',
     variation: 'ReelFlies CA',
     theme: { uuid: '9f0c2a10-0000-0000-0000-000000000001', name: 'Cornerstone', version: '6.22.0' },
+    previousThemeUuid: '9f0c2a10-0000-0000-0000-000000000001',
     git: { sha: '1be9fb20ffd985c26c59c5b5fcd28006418d9a08', branch: 'master' },
     bundle: {
         file: 'reelflies-ca-6.22.0-1be9fb2.zip', bytes: 9876543, sha256: 'ab12', mainJsBytes: 307607,
@@ -38,6 +39,7 @@ test('a release entry records where, what, from which commit and bundle, step 1 
         '### 2026-10-05 18:04 UTC · channel 1895766 (ReelFlies_CA) · ReelFlies CA',
         '',
         '- Theme: Cornerstone 6.22.0, uuid `9f0c2a10-0000-0000-0000-000000000001`',
+        '- New uuid: no, a new version of the theme the channel ran before the push',
         '- Commit: `1be9fb20ffd985c26c59c5b5fcd28006418d9a08` on `master`',
         '- Bundle: `reelflies-ca-6.22.0-1be9fb2.zip`, 9,876,543 B, sha256 `ab12`',
         '- main.js: 307,607 B',
@@ -95,6 +97,22 @@ test('RELEASES.md gives the uuids of the themes the release pushed', () => {
     const markdown = addReleaseEntry(addReleaseEntry(null, formatReleaseEntry(release)), unknown);
     assert.deepEqual(releasedThemeUuids(markdown), ['9f0c2a10-0000-0000-0000-000000000001']);
     assert.deepEqual(releasedThemeUuids(null), []);
+});
+
+const CAVIO = '25121d00-0000-0000-0000-00000000cafe';
+
+test('W0-1: the entry says whether the push made a new theme uuid, or a new version of the theme the channel ran before it (decision 9)', () => {
+    assert.match(formatReleaseEntry(release), /\n- Theme: Cornerstone 6\.22\.0, uuid `9f0c2a10-0000-0000-0000-000000000001`\n- New uuid: no, a new version of the theme the channel ran before the push\n/);
+    assert.match(formatReleaseEntry({ ...release, previousThemeUuid: CAVIO }), new RegExp(`\\n- New uuid: yes; before the push the channel ran theme \`${CAVIO}\`\\n`));
+    assert.match(formatReleaseEntry({ ...release, theme: { ...release.theme, uuid: 'unknown' } }), /\n- New uuid: unknown: verify couldn't read the channel's theme after the push\n/);
+    assert.match(formatReleaseEntry({ ...release, previousThemeUuid: null }), /\n- New uuid: unknown: step 5 didn't record the channel's theme before the push\n/);
+    assert.match(formatReleaseEntry({ ...release, theme: { ...release.theme, uuid: null }, verify: null }), /\n- New uuid: known after the push \(dry run\)\n/);
+});
+
+test('W0-1: the theme the channel ran before the push never counts as one the release pushed', () => {
+    const markdown = addReleaseEntry(null, formatReleaseEntry({ ...release, previousThemeUuid: CAVIO }));
+    assert.deepEqual(releasedThemeUuids(markdown), ['9f0c2a10-0000-0000-0000-000000000001']);
+    assert.equal(lastRelease(markdown, 1895766).themeUuid, '9f0c2a10-0000-0000-0000-000000000001');
 });
 
 test('the push summary shows the target, the variation, step 1 and the sizes before the operator confirms', () => {
