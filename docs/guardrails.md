@@ -9,6 +9,7 @@ Agents merge their own PRs and push to ReelFlies_CA (HANDOFF, "Rules for every s
 | Guarded paths | `scripts/guarded-paths.txt` | A change to the release, store, merge or permission tooling, the release log, the calendar, CI, the secret scan's config or the documents that steer agents without an extra safety review (`rf/safety`) |
 | The baseline-scope check | `scripts/check-baseline-scope.mjs`, `.github/workflows/reelflies-baseline-scope.yml` | A screenshot baseline changed outside the kinds the PR declares |
 | The release calendar | `scripts/release-calendar.json`, `scripts/lib/release-calendar.mjs` | Pushes and widget edits during the freezes (read by W0-1 and W0-11) |
+| The store-write helper | `scripts/store/`, `scripts/lib/store-token.mjs`, [store-writes.md](store-writes.md) | A store write that skips the snapshot, the diff or the log row, names a channel other than 1895766, hits an endpoint off the allowlist, edits a widget from T-14 or writes anything but an unpublish from the Flip, runs rules other than `origin/master`'s, or is a store-wide write not typed by Shaun at his terminal |
 | Claude Code permission rules (a draft until Shaun turns them on) | `.claude/settings.draft.json`, [permissions.md](permissions.md) | A bare `stencil push`, a raw `gh pr merge`, a non-GET `curl` to the store API, reading a token |
 
 All of it is tested offline by `npm run test:scripts`, with a stubbed `gh`.
@@ -74,8 +75,9 @@ node ~/reelflies/theme/cornerstone/scripts/status.mjs --pr 12 --sha <full head s
 - `scripts/store/`, the store token loader and the catalogue apply step
 - the merge tooling and every module `merge.mjs` imports, `status.mjs`, the baseline-scope check and the list itself
 - the release calendar
-- `.claude/`, the permission test, the root `CLAUDE.md` and `AGENTS.md`, and the documents agents and Shaun act on: `docs/guardrails.md`, `docs/permissions.md` (its probes are run by Shaun) and `docs/releasing.md`
+- `.claude/`, the permission test, the root `CLAUDE.md` and `AGENTS.md`, and the documents agents and Shaun act on: `docs/guardrails.md`, `docs/permissions.md` (its probes are run by Shaun), `docs/releasing.md` and `docs/store-writes.md`
 - `.github/`, `scripts/test-scripts.mjs` (which picks the script tests CI runs), and `.gitleaks.toml` and `.gitleaksignore`, which gitleaks reads from the repo by itself, so either could switch the secret scan off
+- `.gitattributes`, because an attribute can change how a guarded file merges (`RELEASES.md merge=union`, W0-11) or hide its diff from a reviewer (`-diff`, `linguist-generated`)
 
 How it matches:
 

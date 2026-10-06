@@ -1,0 +1,89 @@
+{
+  "_about": "GET /v3/settings/inventory responses, shaped on BigCommerce's documented responses: the global read, and per-channel reads where null means the channel inherits the global value. Not a capture of this store.",
+  "global": {
+    "data": {
+      "product_out_of_stock_behavior": "do_nothing",
+      "option_out_of_stock_behavior": "do_nothing",
+      "stock_level_display": "dont_show",
+      "default_out_of_stock_message": "Sold Out",
+      "hide_in_product_filtering": false,
+      "show_out_of_stock_message": true,
+      "out_of_stock_message": "Sold Out",
+      "show_pre_order_stock_levels": false,
+      "update_stock_behavior": "order_placed",
+      "edit_order_stock_adjustment": true,
+      "refund_order_stock_adjustment": true
+    },
+    "meta": {}
+  },
+  "channel_1895766": {
+    "data": {
+      "product_out_of_stock_behavior": null,
+      "option_out_of_stock_behavior": null,
+      "stock_level_display": null,
+      "default_out_of_stock_message": null,
+      "hide_in_product_filtering": null,
+      "show_out_of_stock_message": null,
+      "out_of_stock_message": null,
+      "show_pre_order_stock_levels": null,
+      "update_stock_behavior": null,
+      "edit_order_stock_adjustment": null,
+      "refund_order_stock_adjustment": null
+    },
+    "meta": {}
+  },
+  "channel_1895766_after": {
+    "data": {
+      "product_out_of_stock_behavior": null,
+      "option_out_of_stock_behavior": "label_option",
+      "stock_level_display": null,
+      "default_out_of_stock_message": null,
+      "hide_in_product_filtering": null,
+      "show_out_of_stock_message": null,
+      "out_of_stock_message": null,
+      "show_pre_order_stock_levels": null,
+      "update_stock_behavior": null,
+      "edit_order_stock_adjustment": null,
+      "refund_order_stock_adjustment": null
+    },
+    "meta": {}
+  },
+  "channel_1": {
+    "data": {
+      "product_out_of_stock_behavior": null,
+      "option_out_of_stock_behavior": null,
+      "stock_level_display": null,
+      "default_out_of_stock_message": null,
+      "hide_in_product_filtering": null,
+      "show_out_of_stock_message": null,
+      "out_of_stock_message": null,
+      "show_pre_order_stock_levels": null,
+      "update_stock_behavior": null,
+      "edit_order_stock_adjustment": null,
+      "refund_order_stock_adjustment": null
+    },
+    "meta": {}
+  },
+  "channel_1855224": {
+    "data": {
+      "product_out_of_stock_behavior": null,
+      "option_out_of_stock_behavior": null,
+      "stock_level_display": null,
+      "default_out_of_stock_message": null,
+      "hide_in_product_filtering": null,
+      "show_out_of_stock_message": null,
+      "out_of_stock_message": "Out of stock",
+      "show_pre_order_stock_levels": null,
+      "update_stock_behavior": null,
+      "edit_order_stock_adjustment": null,
+      "refund_order_stock_adjustment": null
+    },
+    "meta": {}
+  },
+  "put_response": {
+    "data": {
+      "option_out_of_stock_behavior": "label_option"
+    },
+    "meta": {}
+  }
+}

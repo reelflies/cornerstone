@@ -1,0 +1,152 @@
+{
+  "_about": "Widgets API responses (widget templates, widgets, placements), shaped on BigCommerce's documented responses. Not a capture of this store.",
+  "templates_list": {
+    "data": [
+      {
+        "uuid": "6f1c7a2e-0d8b-4b1a-9a43-1e2f3a4b5c6d",
+        "name": "rf-shipping-strip",
+        "schema": [],
+        "template": "<p class=\"rf-strip\">{{text}}</p>",
+        "storefront_api_query": "",
+        "kind": "custom",
+        "channel_id": 1895766,
+        "date_created": "2026-10-01T12:00:00.000Z",
+        "date_modified": "2026-10-01T12:00:00.000Z",
+        "current_version_uuid": "0a1b2c3d-1111-4222-8333-444455556666",
+        "icon_name": "default"
+      }
+    ],
+    "meta": { "pagination": { "total": 1, "count": 1, "per_page": 250, "current_page": 1, "total_pages": 1 } }
+  },
+  "templates_list_page_1_of_2": {
+    "data": [
+      { "uuid": "aaaaaaaa-0000-4000-8000-000000000001", "name": "rf-one", "kind": "custom", "channel_id": 1895766 }
+    ],
+    "meta": { "pagination": { "total": 2, "count": 1, "per_page": 1, "current_page": 1, "total_pages": 2 } }
+  },
+  "templates_list_page_2_of_2": {
+    "data": [
+      { "uuid": "aaaaaaaa-0000-4000-8000-000000000002", "name": "rf-two", "kind": "custom", "channel_id": 1895766 }
+    ],
+    "meta": { "pagination": { "total": 2, "count": 1, "per_page": 1, "current_page": 2, "total_pages": 2 } }
+  },
+  "templates_list_with_channel_1": {
+    "data": [
+      { "uuid": "6f1c7a2e-0d8b-4b1a-9a43-1e2f3a4b5c6d", "name": "rf-shipping-strip", "kind": "custom", "channel_id": 1895766 },
+      { "uuid": "bbbbbbbb-0000-4000-8000-000000000001", "name": "Hero (live reelflies.ca)", "kind": "custom", "channel_id": 1 }
+    ],
+    "meta": { "pagination": { "total": 2, "count": 2, "per_page": 250, "current_page": 1, "total_pages": 1 } }
+  },
+  "template_created": {
+    "data": {
+      "uuid": "c0ffee00-1234-4abc-8def-0123456789ab",
+      "name": "rf-home-lead",
+      "schema": [],
+      "template": "<section class=\"rf-home-lead\"><h1>{{heading}}</h1></section>",
+      "storefront_api_query": "",
+      "kind": "custom",
+      "channel_id": 1895766,
+      "date_created": "2026-10-06T20:00:00.000Z",
+      "date_modified": "2026-10-06T20:00:00.000Z",
+      "current_version_uuid": "0a1b2c3d-2222-4222-8333-444455556666",
+      "icon_name": "default"
+    },
+    "meta": {}
+  },
+  "template_created_on_channel_1": {
+    "data": {
+      "uuid": "c0ffee00-1234-4abc-8def-0123456789ab",
+      "name": "rf-home-lead",
+      "kind": "custom",
+      "channel_id": 1
+    },
+    "meta": {}
+  },
+  "widgets_list": {
+    "data": [],
+    "meta": { "pagination": { "total": 0, "count": 0, "per_page": 250, "current_page": 1, "total_pages": 0 } }
+  },
+  "widget_created": {
+    "data": {
+      "uuid": "d00dfeed-1234-4abc-8def-0123456789ab",
+      "name": "Home lead",
+      "description": "",
+      "widget_configuration": { "heading": "Hand-tied fly fishing flies, sold one at a time." },
+      "widget_template": { "uuid": "c0ffee00-1234-4abc-8def-0123456789ab", "name": "rf-home-lead", "kind": "custom", "channel_id": 1895766 },
+      "channel_id": 1895766,
+      "date_created": "2026-10-06T20:00:01.000Z",
+      "date_modified": "2026-10-06T20:00:01.000Z",
+      "version_uuid": "0a1b2c3d-2222-4222-8333-444455556666"
+    },
+    "meta": {}
+  },
+  "placements_list": {
+    "data": [
+      {
+        "uuid": "e1e1e1e1-1234-4abc-8def-0123456789ab",
+        "template_file": "pages/home",
+        "region": "home_below_menu",
+        "sort_order": 1,
+        "status": "active",
+        "channel_id": 1895766,
+        "widget": { "uuid": "f2f2f2f2-1234-4abc-8def-0123456789ab", "name": "rf-shipping-strip", "channel_id": 1895766 },
+        "date_created": "2026-10-01T12:00:00.000Z",
+        "date_modified": "2026-10-01T12:00:00.000Z"
+      }
+    ],
+    "meta": { "pagination": { "total": 1, "count": 1, "per_page": 250, "current_page": 1, "total_pages": 1 } }
+  },
+  "placement_item": {
+    "data": {
+      "uuid": "e1e1e1e1-1234-4abc-8def-0123456789ab",
+      "template_file": "pages/home",
+      "region": "home_below_menu",
+      "sort_order": 1,
+      "status": "active",
+      "channel_id": 1895766,
+      "widget": { "uuid": "f2f2f2f2-1234-4abc-8def-0123456789ab", "name": "rf-shipping-strip", "channel_id": 1895766 },
+      "date_created": "2026-10-01T12:00:00.000Z",
+      "date_modified": "2026-10-01T12:00:00.000Z"
+    },
+    "meta": {}
+  },
+  "placement_item_inactive": {
+    "data": {
+      "uuid": "e1e1e1e1-1234-4abc-8def-0123456789ab",
+      "template_file": "pages/home",
+      "region": "home_below_menu",
+      "sort_order": 1,
+      "status": "inactive",
+      "channel_id": 1895766,
+      "widget": { "uuid": "f2f2f2f2-1234-4abc-8def-0123456789ab", "name": "rf-shipping-strip", "channel_id": 1895766 },
+      "date_created": "2026-10-01T12:00:00.000Z",
+      "date_modified": "2026-10-06T20:05:00.000Z"
+    },
+    "meta": {}
+  },
+  "placement_item_on_channel_1": {
+    "data": {
+      "uuid": "e1e1e1e1-1234-4abc-8def-0123456789ab",
+      "template_file": "pages/home",
+      "region": "home_below_menu",
+      "sort_order": 1,
+      "status": "active",
+      "channel_id": 1
+    },
+    "meta": {}
+  },
+  "placement_created": {
+    "data": {
+      "uuid": "a7a7a7a7-1234-4abc-8def-0123456789ab",
+      "template_file": "pages/home",
+      "region": "home_below_menu",
+      "sort_order": 0,
+      "status": "inactive",
+      "channel_id": 1895766,
+      "widget": { "uuid": "d00dfeed-1234-4abc-8def-0123456789ab", "name": "Home lead", "channel_id": 1895766 },
+      "date_created": "2026-10-06T20:00:02.000Z",
+      "date_modified": "2026-10-06T20:00:02.000Z"
+    },
+    "meta": {}
+  }
+}

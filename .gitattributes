@@ -1,0 +1,4 @@
+# ReelFlies (W0-11). RELEASES.md is appended to by release.sh, the host batch and the
+# orchestrator's mirror of the store-write log, on separate branches: a union merge keeps both
+# sides' rows when a release-log branch is rebased (plan/build-pipeline.md section 6.5).
+RELEASES.md merge=union

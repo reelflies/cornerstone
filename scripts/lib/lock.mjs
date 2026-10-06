@@ -5,6 +5,7 @@
 //   merge        one merge at a time (W0-13's scripts/merge.sh)                     15 min
 //   stencil-<n>  a stencil start slot: at most three run on the Mac at once         30 min
 //   port-<n>     one gate run at a time on the port pair n and n + 1 (scripts/qa)   30 min
+//   store-write  one store apply at a time (W0-11's scripts/store/apply.mjs)        45 min (the default)
 //
 // - Every lock folder holds owner.json (owner, ticket, pid, host and start time) and owner.txt,
 //   the same facts as lines. Agents that take a lock by hand (wave 0's rule) write owner.txt.

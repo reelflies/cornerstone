@@ -102,6 +102,9 @@ test('the committed list guards the release, store, merge and permission tooling
         'docs/guardrails.md',
         'docs/permissions.md',
         'docs/releasing.md',
+        'docs/store-writes.md',
+        // git attributes can change how a guarded file merges or shows its diff (W0-11)
+        '.gitattributes',
         'CLAUDE.md',
         'AGENTS.md',
     ];
