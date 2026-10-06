@@ -13,8 +13,10 @@ after(() => fs.rmSync(root, { recursive: true, force: true }));
 const dir = path.join(root, 'theme #1 %41');
 fs.mkdirSync(dir);
 const script = name => path.join(dir, name);
-fs.writeFileSync(script('child.mjs'), `import { isMain } from '${HELPER}';\nconsole.log('child', isMain(import.meta.url));\n`);
-fs.writeFileSync(script('main.mjs'), `import { isMain } from '${HELPER}';\nimport './child.mjs';\nconsole.log('main', isMain(import.meta.url));\n`);
+// The scripts print text, not booleans: under a terminal, node --test turns on colour for its
+// subprocesses (FORCE_COLOR), and console.log would wrap a boolean in colour codes.
+fs.writeFileSync(script('child.mjs'), `import { isMain } from '${HELPER}';\nconsole.log(\`child \${isMain(import.meta.url)}\`);\n`);
+fs.writeFileSync(script('main.mjs'), `import { isMain } from '${HELPER}';\nimport './child.mjs';\nconsole.log(\`main \${isMain(import.meta.url)}\`);\n`);
 fs.symlinkSync(script('main.mjs'), script('linked.mjs'));
 
 const run = file => spawnSync(process.execPath, [file], { encoding: 'utf8' }).stdout;
