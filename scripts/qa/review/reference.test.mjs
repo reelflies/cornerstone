@@ -10,7 +10,7 @@ import path from 'path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    REFERENCE_ANCHORS, REFERENCE_SETTINGS, findReferenceHtml, referenceFor, referenceViewport, wrapReference,
+    REFERENCE_ANCHORS, REFERENCE_SETTINGS, findReferenceHtml, problemText, referenceFor, referenceViewport, shootScreens, wrapReference,
 } from './reference.mjs';
 
 describe('the reference anchors', () => {
@@ -104,5 +104,65 @@ describe('finding the reference page', () => {
 
     it('stops on a QA_REFERENCE_HTML that doesn\'t exist, instead of shooting another page', () => {
         assert.throws(() => findReferenceHtml({ env: { QA_REFERENCE_HTML: '/nowhere/ref.html' }, root: '/' }), /QA_REFERENCE_HTML/);
+    });
+});
+
+// The reference shots run inside every `npm run qa:screens`, the release's included, so
+// nothing about the reference page may fail that run: each screen it can't shoot becomes a
+// problem the review page shows.
+describe('shooting the reference screens', () => {
+    const anchors = [{ id: 'home' }, { id: 'species' }, { id: 'cart' }];
+
+    it('shoots every screen, and records a screen it can\'t shoot instead of failing', async () => {
+        const results = await shootScreens({
+            anchors,
+            budgetMs: 60000,
+            prepare: async () => {},
+            shoot: async anchor => {
+                if (anchor.id === 'species') throw new Error('locator.waitFor: Timeout 15000ms exceeded.\nCall log: …');
+                return `scripts/qa/results/reference/${anchor.id}.png`;
+            },
+        });
+        assert.deepEqual(results.map(({ anchor, image, problem }) => [anchor.id, image, problem]), [
+            ['home', 'scripts/qa/results/reference/home.png', null],
+            ['species', null, 'locator.waitFor: Timeout 15000ms exceeded.'],
+            ['cart', 'scripts/qa/results/reference/cart.png', null],
+        ]);
+    });
+
+    it('records a set-up problem, such as a missing control, against every screen', async () => {
+        let shots = 0;
+        const results = await shootScreens({
+            anchors,
+            budgetMs: 60000,
+            prepare: async () => { throw new Error('the reference page has no #linksToggle control any more; update REFERENCE_SETTINGS'); },
+            shoot: async () => { shots += 1; },
+        });
+        assert.equal(shots, 0);
+        assert.deepEqual(results.map(({ problem }) => problem), Array(3).fill('the reference page has no #linksToggle control any more; update REFERENCE_SETTINGS'));
+    });
+
+    it('stops when its time runs out, gives each shot only the time left, and says so for the rest', async () => {
+        let clock = 0;
+        const given = [];
+        const results = await shootScreens({
+            anchors,
+            budgetMs: 100,
+            now: () => clock,
+            prepare: async () => { clock += 10; },
+            shoot: async (anchor, left) => {
+                given.push(left);
+                clock += 50;
+                return `${anchor.id}.png`;
+            },
+        });
+        assert.deepEqual(given, [90, 40]);
+        assert.deepEqual(results.map(({ image }) => image), ['home.png', 'species.png', null]);
+        assert.match(results[2].problem, /ran out of time/);
+    });
+
+    it('keeps a problem to one line, without colour codes', () => {
+        assert.equal(problemText(new Error('\u001b[31mpage.goto: net::ERR_FILE_NOT_FOUND\u001b[39m\n  at …')), 'page.goto: net::ERR_FILE_NOT_FOUND');
+        assert.equal(problemText('plain'), 'plain');
     });
 });

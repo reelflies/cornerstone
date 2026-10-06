@@ -102,3 +102,44 @@ export function findReferenceHtml({ env = process.env, root = ROOT } = {}) {
         dir = parent;
     }
 }
+
+// One line for the review page's run notes: an error's first line, without colour codes.
+export const problemText = error => String(error?.message ?? error)
+    .replace(/\u001b\[[0-9;]*m/g, '') // eslint-disable-line no-control-regex
+    .split('\n').map(line => line.trim()).find(Boolean) || 'unknown problem';
+
+// Shoots each anchor in turn, and never throws: the reference shots run inside every
+// `npm run qa:screens`, the release's included, so a changed or broken reference page must
+// not fail that run. A screen that can't be shot gets `problem` instead of `image`, and the
+// review page says so.
+//
+// - prepare() opens and sets up the page. If it throws, every screen gets its problem.
+// - shoot(anchor, msLeft) shoots one screen and returns its image path. It must keep each
+//   wait within msLeft.
+// - Once budgetMs has passed since the start, the screens left aren't tried, so the test
+//   stays inside its timeout.
+export async function shootScreens({
+    anchors, prepare, shoot, budgetMs, now = Date.now,
+}) {
+    const started = now();
+    let setupProblem = null;
+    try {
+        await prepare();
+    } catch (error) {
+        setupProblem = problemText(error);
+    }
+    const results = [];
+    for (const anchor of anchors) {
+        const left = budgetMs - (now() - started);
+        if (setupProblem) results.push({ anchor, image: null, problem: setupProblem });
+        else if (left <= 0) results.push({ anchor, image: null, problem: `not tried: the reference shots ran out of time (${Math.round(budgetMs / 1000)} s)` });
+        else {
+            try {
+                results.push({ anchor, image: await shoot(anchor, left), problem: null }); // eslint-disable-line no-await-in-loop
+            } catch (error) {
+                results.push({ anchor, image: null, problem: problemText(error) });
+            }
+        }
+    }
+    return results;
+}
