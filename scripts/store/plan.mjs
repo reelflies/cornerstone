@@ -237,10 +237,16 @@ export function diffLines(items, snapshot, mode) {
     });
 }
 
+// What each request writes, as the plan lists it.
+export const writesFor = items => items.map(({ index, what }) => ({
+    index, object: what.object, action: what.action, id: what.id,
+}));
+
 // The digest covers the whole plan bar itself: the requests, the snapshot, the proofs and the
 // diff a reviewer reads. apply refuses a plan whose digest doesn't match, which catches a plan
-// edited after plan.mjs made it. Anyone can recompute it, so apply also re-checks every request
-// and re-proves every setting from its own reads, and trusts nothing else in the file.
+// edited after plan.mjs made it. Anyone can recompute it, so apply also re-checks every request,
+// derives the diff, the writes and the proofs again from its own fresh reads and refuses a plan
+// whose own copies differ, and shows only what it derived.
 export function planDigest(plan) {
     const { digest, ...rest } = plan;
     return sha256(canonicalJson(rest));
@@ -264,9 +270,7 @@ export async function buildPlan({
         channel: mode === 'lifted' ? CHANNEL : 'store-wide',
         calendar: describePhase(phase),
         requests: items.map(item => item.request),
-        writes: items.map(({ index, what }) => ({
-            index, object: what.object, action: what.action, id: what.id,
-        })),
+        writes: writesFor(items),
         snapshot: {
             sha256: snapshot.sha256,
             reads: snapshot.reads.map(({
@@ -297,7 +301,7 @@ export function writePlan(root, plan, { out, now = new Date() } = {}) {
 // --- The command ----------------------------------------------------------------------------
 
 const USAGE = 'usage: node scripts/store/plan.mjs --ticket <NN> --changes <file> [--approved] [--out <plan file>]';
-const TICKET = /^[A-Za-z0-9][A-Za-z0-9-]{0,19}$/;
+export const TICKET = /^[A-Za-z0-9][A-Za-z0-9-]{0,19}$/;
 
 export function parseArgs(argv) {
     const options = { approved: false };

@@ -15,7 +15,9 @@
 // 4. takes a fresh snapshot with the same GETs and refuses if anything changed since the plan.
 // 5. proves parts 1 and 2 of ticket 21's test again from those reads, and refuses a settings
 //    write whose plan carries no proof.
-// 6. for each request: an intent row in log.jsonl (flushed), the request, the response's channel
+// 6. derives the diff, the list of writes and the proofs again from the fresh reads, refuses a
+//    plan whose own copies differ, and shows the diff it derived (never the file's).
+// 7. for each request: an intent row in log.jsonl (flushed), the request, the response's channel
 //    check, the re-read, and for a settings write part 3: the global value and channels 1 and
 //    1855224 read back unchanged. Then the result row.
 //    - A refused write stops the run (outcome "failed"); nothing after it is sent.
@@ -23,11 +25,13 @@
 //    - A failed part 3 puts back the snapshot's values at once (the global value and each
 //      channel that changed, and 1895766's own), stops, and writes LOCKED.
 //
-// Approved mode runs only at a terminal, which an agent's shell isn't: it asks Shaun to type the
-// first 8 characters of the plan's sha256, then for a token at a hidden prompt, which is used for
-// this run and never stored. It keeps the snapshot, the log and the re-reads; part 3 is reported,
-// not enforced, because the write is meant to reach .com and channel 1. It ends with the same-day
-// smoke tests (HANDOFF: store-wide switches also hit .com and channel 1).
+// Approved mode runs only at a terminal, which an agent's shell isn't. It prints the exact
+// requests, asks Shaun for a token at a hidden prompt (used for this run and never stored), takes
+// the fresh snapshot and shows the diff it derived, and only then asks him to type the first 8
+// characters of the plan's sha256 as his go-ahead. It keeps the snapshot, the log and the
+// re-reads; part 3 is reported, not enforced, because the write is meant to reach .com and
+// channel 1. It ends with the same-day smoke tests (HANDOFF: store-wide switches also hit .com
+// and channel 1).
 //
 // One apply runs at a time on this Mac: the store-write lock (scripts/lib/lock.mjs).
 
@@ -46,7 +50,7 @@ import { CHANNEL, LIVE_CHANNELS, responseChannelProblems } from './channel.mjs';
 import { createClient, describeFailure, queryString } from './client.mjs';
 import { appendLogRow, logRow } from './log.mjs';
 import {
-    PLAN_FORMAT, checkRequests, commandFetch, commandStoreHash, isRef, operatorName, planDigest, proofProblem, proofsFor, snapshotProblems,
+    PLAN_FORMAT, TICKET, checkRequests, commandFetch, commandStoreHash, diffLines, isRef, operatorName, planDigest, proofProblem, proofsFor, snapshotProblems, writesFor,
 } from './plan.mjs';
 import { PART3_SCOPES, part3Changes } from './settings-proof.mjs';
 import {
@@ -98,14 +102,22 @@ export function readPlan(text) {
     }
     if (!isObject(plan) || plan.format !== PLAN_FORMAT) throw new Refused(`this file isn't a store plan (format ${PLAN_FORMAT})`);
     if (plan.digest !== planDigest(plan)) throw new Refused('the plan\'s digest doesn\'t match its contents: it was edited after plan.mjs made it. Plan again');
+    // The ticket labels the log rows and the RELEASES.md mirror. It can't be proved, but it can
+    // be held to what plan.mjs accepts.
+    if (typeof plan.ticket !== 'string' || !TICKET.test(plan.ticket)) throw new Refused(`the plan's ticket ${JSON.stringify(plan.ticket)} isn't a ticket name such as 46 or W0-11: plan again`);
     return plan;
 }
 
+// The plan file's copy of something apply derives again, compared as JSON (as the file holds it).
+const sameAsFile = (derived, fromFile) => isDeepStrictEqual(JSON.parse(JSON.stringify(derived)), fromFile);
+
 // --- Approved mode's prompts ------------------------------------------------------------------
 
-// Asks for the start of the plan's sha256, then for the token at a hidden prompt. Returns the
-// token, which the caller uses for this run only. Refuses without a terminal, before asking.
-export async function approvedGate({ input = process.stdin, output = process.stdout, planSha }) {
+// Reads one line at the terminal, shown as typed or hidden. Refuses without a terminal, before
+// asking anything. Resolves null when stdin closes first.
+export async function askAtTerminal({
+    input = process.stdin, output = process.stdout, question, hidden = false,
+}) {
     if (!input.isTTY || !output.isTTY) throw new Refused(NO_TERMINAL);
     const sink = new Writable({
         write(chunk, encoding, done) {
@@ -115,35 +127,33 @@ export async function approvedGate({ input = process.stdin, output = process.std
     });
     sink.muted = false;
     const prompt = readline.createInterface({ input, output: sink, terminal: true });
-    let closed = false;
-    prompt.on('close', () => { closed = true; });
-    const ask = (question, hidden) => new Promise(resolve => {
-        if (closed) {
-            resolve(null);
-            return;
-        }
-        const onClose = () => resolve(null);
-        prompt.once('close', onClose);
-        sink.muted = false;
-        prompt.question(question, answer => {
-            prompt.off('close', onClose);
-            resolve(answer);
-        });
-        sink.muted = hidden;
-    });
     try {
-        const typed = await ask('Type the first 8 characters of the plan\'s sha256, as plan.mjs printed it: ', false);
-        if (typed === null) throw new Refused('no answer (stdin closed): stopped');
-        if (typed.trim().toLowerCase() !== planSha.slice(0, 8)) throw new Refused(`"${typed.trim()}" isn't the start of this plan's sha256: stopped`);
-        const token = await ask('Paste the approved-write token (hidden, used for this run and never stored), then Return: ', true);
-        sink.muted = false;
-        output.write('\n');
-        if (token === null) throw new Refused('no answer (stdin closed): stopped');
-        if (!token.trim()) throw new Refused('no token given: stopped');
-        return token.trim();
+        return await new Promise(resolve => {
+            prompt.once('close', () => resolve(null));
+            prompt.question(question, answer => resolve(answer));
+            sink.muted = hidden;
+        });
     } finally {
+        sink.muted = false;
+        if (hidden) output.write('\n');
         prompt.close();
     }
+}
+
+// The approved-write token, at a hidden prompt. The caller uses it for this run only.
+export async function askApprovedToken(io = {}) {
+    const token = await askAtTerminal({ ...io, question: 'Paste the approved-write token (hidden, used for this run and never stored), then Return: ', hidden: true });
+    if (token === null) throw new Refused('no answer (stdin closed): stopped');
+    if (!token.trim()) throw new Refused('no token given: stopped');
+    return token.trim();
+}
+
+// Shaun's go-ahead, after the diff apply derived: the first 8 characters of the plan's sha256.
+// A wrong answer isn't repeated back, in case a token was pasted here by mistake.
+export async function confirmPlanSha({ planSha, ...io }) {
+    const typed = await askAtTerminal({ ...io, question: 'To apply the writes above, type the first 8 characters of the plan\'s sha256, as plan.mjs printed it: ' });
+    if (typed === null) throw new Refused('no answer (stdin closed): stopped');
+    if (typed.trim().toLowerCase() !== planSha.slice(0, 8)) throw new Refused('what was typed isn\'t the start of this plan\'s sha256: stopped');
 }
 
 // --- Applying -------------------------------------------------------------------------------
@@ -261,8 +271,11 @@ const describeChanges = changes => changes.map(change => `${change.scope} change
 
 // Applies a plan. Throws Refused before anything is written; once writing starts it returns
 // { outcome: 'applied' | 'failed' | 'locked', ... } and every request it sent has its log rows.
+// - confirm({ planSha, diff, requests }) runs after the diff is derived and shown, and before the
+//   first write; it throws to stop. Approved mode needs one: Shaun's typed go-ahead.
+// - dryRun stops there instead, having written nothing: { outcome: 'dry-run', ... }.
 export async function applyPlan({
-    planText, client, phase, root, operator, approved = false, now = () => new Date(), log = () => {},
+    planText, client, phase, root, operator, approved = false, confirm, dryRun = false, now = () => new Date(), log = () => {},
 }) {
     const locked = lockedProblem(root);
     if (locked) throw new Refused(locked);
@@ -291,6 +304,16 @@ export async function applyPlan({
         }
     }
     if (problems.length) throw new Refused(problems.join('\n'));
+    const diff = diffLines(items, fresh, mode);
+    if (!sameAsFile(diff, plan.diff)) throw new Refused('the plan\'s diff isn\'t what a fresh read of the store gives: it was edited after plan.mjs made it. Plan again');
+    if (!sameAsFile(writesFor(items), plan.writes)) throw new Refused('the plan\'s list of writes isn\'t what its requests make: it was edited after plan.mjs made it. Plan again');
+    if (mode === 'lifted' && !sameAsFile(proofsFor(items, fresh), plan.proofs)) throw new Refused('the plan\'s proofs aren\'t what a fresh read of the store proves: it was edited after plan.mjs made it. Plan again');
+    log('diff, from a fresh read of the store (the same as the plan\'s):');
+    diff.forEach(line => log(line));
+    const requests = items.map(item => item.request);
+    if (dryRun) return { outcome: 'dry-run', count: items.length, diff };
+    if (approved && typeof confirm !== 'function') throw new Refused('approved mode applies nothing without Shaun\'s go-ahead at his terminal');
+    if (confirm) await confirm({ planSha, diff, requests });
 
     const stamp = planSha.slice(0, 8);
     const beforeFiles = writeSnapshotFiles(root, { channel, label: `before-${stamp}`, now: now() }, fresh);
@@ -448,11 +471,13 @@ async function main(argv) {
         const plan = readPlan(planText);
         const phase = phaseOn(readCalendar());
         say(describePhase(phase));
-        say(`Plan ${files[0]}, made ${plan.created} for ticket ${plan.ticket} (${plan.mode}):`);
-        plan.diff.forEach(say);
-        const token = approved
-            ? await approvedGate({ planSha: sha256(planText) })
-            : readStoreToken('write').token;
+        say(`Plan ${files[0]}, made ${plan.created} for ticket ${plan.ticket} (${plan.mode}), sha256 ${sha256(planText)}`);
+        if (approved) {
+            // What will be sent, exactly. The diff follows once the fresh read is in.
+            say('The exact requests:');
+            (Array.isArray(plan.requests) ? plan.requests : []).forEach((request, index) => say(`  ${index + 1}. ${request.method} ${request.path}${queryString(request.query)} ${JSON.stringify(request.body)}`));
+        }
+        const token = approved ? await askApprovedToken() : readStoreToken('write').token;
         secrets.push(token);
         const storeHash = await commandStoreHash();
         if (storeHash !== plan.store_hash) throw new Refused(`the plan is for store ${plan.store_hash}, and this checkout's store is ${storeHash}`);
@@ -461,9 +486,16 @@ async function main(argv) {
         try {
             if (lock.brokeStale) say(lock.brokeStale);
             const result = await applyPlan({
-                planText, client, phase, root, operator: approved ? 'Shaun at his terminal (--approved)' : operatorName(), approved, log: say,
+                planText,
+                client,
+                phase,
+                root,
+                operator: approved ? 'Shaun at his terminal (--approved)' : operatorName(),
+                approved,
+                confirm: approved ? ({ planSha }) => confirmPlanSha({ planSha }) : undefined,
+                log: say,
             });
-            if (result.outcome === 'applied') say(`applied: ${result.count} request${result.count === 1 ? '' : 's'} on ${plan.channel}; the log is ${path.join(root, 'log.jsonl')}`);
+            if (result.outcome === 'applied') say(`applied: ${result.count} request${result.count === 1 ? '' : 's'} on ${approved ? 'store-wide' : CHANNEL}; the log is ${path.join(root, 'log.jsonl')}`);
             else say(`STOP     ${result.outcome} at request ${result.request + 1}: ${result.message}`);
             if (approved) SMOKE_TESTS.forEach(say);
             return result.outcome === 'applied' ? 0 : 1;

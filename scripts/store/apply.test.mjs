@@ -12,8 +12,9 @@ import { PassThrough } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 import { parseCalendar, phaseOn } from '../lib/release-calendar.mjs';
 import {
-    SMOKE_TESTS, applyPlan, approvedGate, lockedProblem, readPlan,
+    SMOKE_TESTS, applyPlan, askApprovedToken, confirmPlanSha, lockedProblem, readPlan,
 } from './apply.mjs';
+import { Refused } from './allowlist.mjs';
 import { createClient } from './client.mjs';
 import { readLogRows } from './log.mjs';
 import { buildPlan, checkRequests, planDigest } from './plan.mjs';
@@ -58,13 +59,13 @@ async function makePlan(requests, routes, { mode = 'lifted', phase = unset } = {
 }
 
 async function apply(text, routes, {
-    approved = false, phase = unset, root = newRoot(),
+    approved = false, phase = unset, root = newRoot(), confirm = approved ? async () => {} : undefined, dryRun = false,
 } = {}) {
     const calls = [];
     const lines = [];
     const client = createClient({ storeHash: STORE_HASH, token: FAKE_TOKEN, fetch: fixtureFetch(routes, { calls }) });
     const run = applyPlan({
-        planText: text, client, phase, root, operator: 'rook on w0/11', approved, now: clock(), log: line => lines.push(line),
+        planText: text, client, phase, root, operator: 'rook on w0/11', approved, confirm, dryRun, now: clock(), log: line => lines.push(line), wait: async () => {},
     });
     return {
         run, calls, lines, root,
@@ -353,6 +354,7 @@ test('the calendar is read again at apply: a plan made before T-14 for a new wid
 // --- Approved mode: Shaun's store-wide writes ------------------------------------------------
 
 const storeWide = { method: 'PUT', path: '/v3/settings/inventory', body: { option_out_of_stock_behavior: 'label_option' } };
+const stockStoreWide = { method: 'PUT', path: '/v3/settings/inventory', body: { update_stock_behavior: 'order_completed' } };
 
 test('a plain apply refuses an approved plan, and --approved refuses a lifted one', async () => {
     const { text: approvedText } = await makePlan([storeWide], inventoryRoutes(), { mode: 'approved' });
@@ -393,34 +395,60 @@ function terminal(isTTY = true) {
     return { input, output, shown: () => shown };
 }
 
-test('approved mode needs a terminal: without one it refuses before asking anything', async () => {
+test('approved mode needs a terminal: without one each prompt refuses before asking anything', async () => {
     const io = terminal(false);
-    await assert.rejects(approvedGate({ ...io, planSha: 'ab12cd34'.padEnd(64, '0') }), /apply --approved runs only at Shaun's terminal/);
+    await assert.rejects(askApprovedToken(io), /apply --approved runs only at Shaun's terminal/);
+    await assert.rejects(confirmPlanSha({ ...io, planSha: 'ab12cd34'.padEnd(64, '0') }), /apply --approved runs only at Shaun's terminal/);
     assert.equal(io.shown(), '');
 });
 
-test('approved mode asks for the plan sha256\'s first 8 characters, then a token it never shows or keeps', async () => {
-    const planSha = 'ab12cd34'.padEnd(64, '0');
+test('approved mode asks for a token it never shows or keeps', async () => {
     const io = terminal();
-    const asked = approvedGate({ ...io, planSha });
-    io.input.write('AB12CD34\n');
-    await new Promise(resolve => { setImmediate(resolve); });
+    const asked = askApprovedToken(io);
     io.input.write(`${FAKE_TOKEN}\n`);
-    const token = await asked;
-    assert.equal(token, FAKE_TOKEN);
-    assert.match(io.shown(), /first 8 characters of the plan's sha256/);
+    assert.equal(await asked, FAKE_TOKEN);
     assert.match(io.shown(), /hidden/);
     assert.ok(!io.shown().includes(FAKE_TOKEN), 'the token is never echoed');
 
-    const wrong = terminal();
-    const refused = approvedGate({ ...wrong, planSha });
-    wrong.input.write('ab12cd35\n');
-    await assert.rejects(refused, /"ab12cd35" isn't the start of this plan's sha256: stopped/);
+    const empty = terminal();
+    const none = askApprovedToken(empty);
+    empty.input.write('\n');
+    await assert.rejects(none, /no token given: stopped/);
 
     const closed = terminal();
-    const ended = approvedGate({ ...closed, planSha });
+    const ended = askApprovedToken(closed);
     closed.input.end();
     await assert.rejects(ended, /no answer \(stdin closed\): stopped/);
+});
+
+test('the go-ahead is the plan sha256\'s first 8 characters, and a wrong answer isn\'t repeated back', async () => {
+    const planSha = 'ab12cd34'.padEnd(64, '0');
+    const io = terminal();
+    const asked = confirmPlanSha({ ...io, planSha });
+    io.input.write('AB12CD34\n');
+    await asked;
+    assert.match(io.shown(), /type the first 8 characters of the plan's sha256/);
+
+    const wrong = terminal();
+    const refused = confirmPlanSha({ ...wrong, planSha });
+    wrong.input.write(`${FAKE_TOKEN}\n`);
+    await assert.rejects(refused, error => {
+        assert.match(error.message, /^what was typed isn't the start of this plan's sha256: stopped$/);
+        assert.ok(!error.message.includes(FAKE_TOKEN), 'a token pasted at the wrong prompt is never printed again');
+        return true;
+    });
+
+    const closed = terminal();
+    const ended = confirmPlanSha({ ...closed, planSha });
+    closed.input.end();
+    await assert.rejects(ended, /no answer \(stdin closed\): stopped/);
+});
+
+test('approved mode applies nothing without a go-ahead', async () => {
+    const { text } = await makePlan([stockStoreWide], inventoryRoutes(), { mode: 'approved' });
+    const { run, calls } = await apply(text, inventoryRoutes(), { approved: true, confirm: null });
+    await assert.rejects(run, /approved mode applies nothing without Shaun's go-ahead/);
+    assert.ok(calls.every(call => call.method === 'GET'));
 });
 
 test('readPlan checks the format and the digest', async () => {
@@ -519,4 +547,92 @@ test('a plan whose mode was forged is refused, and the log channel never comes f
     assert.equal((await run).outcome, 'applied');
     assert.ok(readLogRows(root).every(row => row.channel === 1895766));
     assert.ok(!fs.existsSync(path.join(root, '1')));
+});
+
+// --- What the approver reads is derived again from a fresh read, never taken from the file --------
+
+test('a plan whose diff was forged is refused before any write, even with its digest remade', async () => {
+    const { plan } = await makePlan([stockStoreWide], inventoryRoutes(), { mode: 'approved' });
+    const forged = { ...structuredClone(plan), diff: [plan.diff[0], '     (no change)'] };
+    forged.digest = planDigest(forged);
+    const { run, calls, root } = await apply(`${JSON.stringify(forged, null, 2)}\n`, inventoryRoutes(), { approved: true });
+    await assert.rejects(run, error => {
+        assert.equal(error.name, 'Refused');
+        assert.match(error.message, /the plan's diff isn't what a fresh read of the store gives: it was edited after plan\.mjs made it\. Plan again/);
+        return true;
+    });
+    assert.ok(calls.every(call => call.method === 'GET'), 'nothing is written');
+    assert.deepEqual(readLogRows(root), []);
+
+    // The same for a lifted plan, with a line dropped from its diff.
+    const { plan: lifted } = await makePlan([unpublish], { [placementGet]: { body: widgets.placement_item } });
+    const shortened = { ...structuredClone(lifted), diff: lifted.diff.slice(0, 1) };
+    shortened.digest = planDigest(shortened);
+    const second = await apply(`${JSON.stringify(shortened, null, 2)}\n`, { [placementGet]: { body: widgets.placement_item } });
+    await assert.rejects(second.run, /the plan's diff isn't what a fresh read of the store gives/);
+    assert.ok(second.calls.every(call => call.method === 'GET'));
+});
+
+test('a plan whose writes, proofs or ticket were forged is refused before any write', async () => {
+    const { plan } = await makePlan([labelOption], inventoryRoutes());
+    const writes = { ...structuredClone(plan), writes: [{ ...plan.writes[0], object: 'settings/storefront/seo' }] };
+    writes.digest = planDigest(writes);
+    const first = await apply(`${JSON.stringify(writes, null, 2)}\n`, inventoryRoutes());
+    await assert.rejects(first.run, /the plan's list of writes isn't what its requests make: it was edited after plan\.mjs made it/);
+    assert.ok(first.calls.every(call => call.method === 'GET'));
+
+    const proofs = structuredClone(plan);
+    proofs.proofs[0].part2[0].evidence = 'proved by a forger';
+    proofs.digest = planDigest(proofs);
+    const second = await apply(`${JSON.stringify(proofs, null, 2)}\n`, inventoryRoutes());
+    await assert.rejects(second.run, /the plan's proofs aren't what a fresh read of the store proves/);
+    assert.ok(second.calls.every(call => call.method === 'GET'));
+
+    const ticket = { ...structuredClone(plan), ticket: '46 | 2026-10-06 | 1 |' };
+    ticket.digest = planDigest(ticket);
+    const third = await apply(`${JSON.stringify(ticket, null, 2)}\n`, inventoryRoutes());
+    await assert.rejects(third.run, /the plan's ticket "46 \| 2026-10-06 \| 1 \|" isn't a ticket name/);
+    assert.deepEqual(third.calls, []);
+});
+
+test('apply shows the diff it derived from its fresh read, then asks for the go-ahead, then writes', async () => {
+    const { plan, text } = await makePlan([stockStoreWide], inventoryRoutes(), { mode: 'approved' });
+    const changed = structuredClone(inventory.global);
+    changed.data.update_stock_behavior = 'order_completed';
+    const events = [];
+    const routes = inventoryRoutes({
+        'GET /v3/settings/inventory': [{ body: inventory.global }, { body: changed }],
+        'PUT /v3/settings/inventory': () => {
+            events.push('PUT');
+            return { body: changed };
+        },
+    });
+    const {
+        run, lines,
+    } = await apply(text, routes, {
+        approved: true,
+        confirm: async ({ planSha, diff, requests }) => {
+            events.push('confirm');
+            assert.equal(planSha, sha256(text));
+            assert.deepEqual(diff, plan.diff);
+            assert.deepEqual(requests, plan.requests);
+            assert.ok(lines.some(line => line.includes('update_stock_behavior: global "order_placed" -> "order_completed"')), lines.join('\n'));
+        },
+    });
+    assert.equal((await run).outcome, 'applied');
+    assert.deepEqual(events, ['confirm', 'PUT']);
+    const fresh = lines.findIndex(line => /^diff, from a fresh read/.test(line));
+    assert.ok(fresh >= 0, lines.join('\n'));
+    assert.deepEqual(lines.slice(fresh + 1, fresh + 1 + plan.diff.length), plan.diff);
+});
+
+test('a go-ahead that is refused stops apply before anything is written or logged', async () => {
+    const { text } = await makePlan([stockStoreWide], inventoryRoutes(), { mode: 'approved' });
+    const { run, calls, root } = await apply(text, inventoryRoutes(), {
+        approved: true,
+        confirm: async () => { throw new Refused('what was typed isn\'t the start of this plan\'s sha256: stopped'); },
+    });
+    await assert.rejects(run, /isn't the start of this plan's sha256: stopped/);
+    assert.ok(calls.every(call => call.method === 'GET'));
+    assert.deepEqual(readLogRows(root), []);
 });
