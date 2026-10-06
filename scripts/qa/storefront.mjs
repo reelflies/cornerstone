@@ -12,6 +12,8 @@
 //   QA_PORT            Browsersync's port (default 3300); the stencil server takes the next
 //                      one. Each agent's worktree gets its own pair, so parallel runs never
 //                      share one (W0-7). release.sh keeps 3300.
+//   QA_ANALYTICS       allow: let the analytics tags load, on the prelaunch host only (W0-6;
+//                      analytics-hosts.mjs). Every other run blocks them.
 //
 // Locally, `stencil start -p 3300` puts Browsersync on 3300 and the stencil server
 // itself on 3301. The gates talk to 3301, so Browsersync's injected script, its
@@ -31,6 +33,7 @@ import { fileURLToPath } from 'url';
 import {
     STENCIL_SLOTS, acquireSlot, cleanupOnExit, currentTicket, lockRoot, portLockName, waitForLock,
 } from '../lib/lock.mjs';
+import { analyticsMode } from './analytics-hosts.mjs';
 import { fetchWithRetries } from './retry.mjs';
 
 export const ROOT = fileURLToPath(new URL('../..', import.meta.url));
@@ -80,6 +83,7 @@ export function checkEnv() {
     const config = readConfig();
     const names = (config.variations || []).map(variation => variation.name);
     if (!names.includes(QA_VARIATION)) throw new Error(`QA_VARIATION "${QA_VARIATION}" isn't a variation in config.json (${names.join(', ')})`);
+    analyticsMode(); // throws on a QA_ANALYTICS this run may not use
 }
 
 // The cookies to set in a browser for QA_BASE_URL, parsed from QA_PREVIEW_COOKIE.
