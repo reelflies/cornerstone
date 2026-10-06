@@ -491,6 +491,25 @@ test('a part-3 read that answers 429 once is read again, and the write goes thro
     assert.equal(rows.at(-1).outcome, 'ok');
 });
 
+test('a settings write whose 1895766 re-read doesn\'t show it fails, part 3 having held, without a lock', async () => {
+    // The PUT answers 200, but 1895766 still reads back null (inheriting "do_nothing").
+    const { result, rows, locked } = await settingsRun({
+        'PUT /v3/settings/inventory?channel_id=1895766': { body: inventory.put_response },
+    });
+    assert.equal(result.outcome, 'failed');
+    assert.equal(locked, null);
+    assert.equal(rows.at(-1).outcome, 'failed');
+    assert.equal(rows.at(-1).message, 'the write answered 200 and part 3 held, but the re-read of 1895766 doesn\'t show option_out_of_stock_behavior as planned: it shows null (inheriting "do_nothing"), not "label_option"');
+});
+
+test('a 1895766 re-read of null shows a planned value equal to the global one, which it inherits', async () => {
+    const same = { ...labelOption, body: { option_out_of_stock_behavior: 'do_nothing' } };
+    const { text } = await makePlan([same], inventoryRoutes());
+    const { run, root } = await apply(text, inventoryRoutes({ 'PUT /v3/settings/inventory?channel_id=1895766': { body: inventory.put_response } }));
+    assert.equal((await run).outcome, 'applied');
+    assert.equal(readLogRows(root).at(-1).outcome, 'ok');
+});
+
 const template = {
     method: 'POST', path: '/v3/content/widget-templates', body: { channel_id: 1895766, name: 'rf-home-lead', template: '<section></section>' },
 };
@@ -649,6 +668,34 @@ test('an update that gets no answer is read back all the same, because it may ha
     assert.match(row.after_sha256, /^[0-9a-f]{64}$/);
 });
 
+test('an update whose re-read doesn\'t show the planned values fails, without a lock', async () => {
+    const { text } = await makePlan([unpublish], { [placementGet]: { body: widgets.placement_item } });
+    const { run, root } = await apply(text, {
+        // The PUT answers 200, but the placement still reads back active.
+        [placementGet]: { body: widgets.placement_item },
+        [placementPut]: { body: widgets.placement_item_inactive },
+    });
+    const result = await run;
+    assert.equal(result.outcome, 'failed');
+    const [, row] = readLogRows(root);
+    assert.deepEqual([row.outcome, row.status], ['failed', 200]);
+    assert.equal(row.message, 'the write answered 200, but the re-read doesn\'t show status as planned: it shows "active", not "inactive"');
+    assert.match(row.after_sha256, /^[0-9a-f]{64}$/);
+    assert.equal(lockedProblem(root), null);
+});
+
+test('a planned field the re-read doesn\'t show at all is named on the row as not checked', async () => {
+    const move = { method: 'PUT', path: `/v3/content/placements/${PLACEMENT}`, body: { channel_id: 1895766, status: 'inactive', widget_uuid: 'f2f2f2f2-1234-4abc-8def-0123456789ab' } };
+    const { text } = await makePlan([move], { [placementGet]: { body: widgets.placement_item } });
+    const { run, root } = await apply(text, {
+        [placementGet]: [{ body: widgets.placement_item }, { body: widgets.placement_item_inactive }],
+        [placementPut]: { body: widgets.placement_item_inactive },
+    });
+    assert.equal((await run).outcome, 'applied');
+    const [, row] = readLogRows(root);
+    assert.deepEqual([row.outcome, row.message], ['ok', 'not checked, as the re-read doesn\'t show them: widget_uuid']);
+});
+
 test('the calendar is read again at apply: a plan made before T-14 for a new widget is refused from T-14', async () => {
     const { text } = await makePlan([template], listRoutes);
     const { run, calls } = await apply(text, listRoutes, { phase: freeze });
@@ -732,6 +779,18 @@ test('an approved write that answers 5xx is read back and its part 3 reported, b
     const [, row] = readLogRows(root);
     assert.deepEqual([row.outcome, row.status, row.message], ['failed', 504, '504: Gateway timeout; may have landed: see the re-read']);
     assert.match(row.after_sha256, /^[0-9a-f]{64}$/);
+});
+
+test('an approved write whose global re-read doesn\'t show it fails, with part 3 still reported', async () => {
+    const { text } = await makePlan([storeWide], inventoryRoutes(), { mode: 'approved' });
+    const { run, lines, root } = await apply(text, inventoryRoutes({
+        'PUT /v3/settings/inventory': { body: inventory.global },
+    }), { approved: true });
+    assert.equal((await run).outcome, 'failed');
+    assert.ok(lines.some(line => /part 3 \(reported, not enforced\): nothing read back changed/.test(line)), lines.join('\n'));
+    const [, row] = readLogRows(root);
+    assert.equal(row.outcome, 'failed');
+    assert.equal(row.message, 'the write answered 200, but the re-read doesn\'t show option_out_of_stock_behavior as planned: it shows "do_nothing", not "label_option"');
 });
 
 function terminal(isTTY = true) {

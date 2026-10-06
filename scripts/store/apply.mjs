@@ -25,6 +25,9 @@
 //    - A refused write stops the run (outcome "failed"); nothing after it is sent. Every write
 //      that was sent is read back, whatever it answered: one that answered 5xx or got no
 //      answer may still have landed, and its row says "may have landed: see the re-read".
+//    - An update or a settings write must read back as planned (for 1895766's settings, null
+//      when the planned value is the global one it inherits). One that doesn't stops the run
+//      as "failed", with no lock: it didn't take, and nothing outside 1895766 is involved.
 //    - A response or re-read naming another channel stops the run and writes LOCKED, and so
 //      does a script that reads back anything but disabled.
 //    - Part 3 is read after every settings write that was sent, whatever it answered, even
@@ -66,7 +69,7 @@ import { CHANNEL, LIVE_CHANNELS, responseChannelProblems } from './channel.mjs';
 import { createClient, describeFailure, queryString } from './client.mjs';
 import { appendLogRow, logRow, unfinishedWarnings } from './log.mjs';
 import {
-    PLAN_FORMAT, TICKET, checkRequests, commandFetch, commandStoreHash, diffLines, isRef, operatorName, planDigest, proofProblem, proofsFor, snapshotProblems, writesFor,
+    PLAN_FORMAT, TICKET, checkRequests, commandFetch, commandStoreHash, diffLines, isRef, operatorName, planDigest, proofProblem, proofsFor, showValue, snapshotProblems, writesFor,
 } from './plan.mjs';
 import { PART3_SCOPES, part3Changes } from './settings-proof.mjs';
 import { storeToolingProblem } from './tooling.mjs';
@@ -299,6 +302,31 @@ const scopeData = (records, request, what, scopes) => Object.fromEntries(scopes.
 const describeChanges = changes => changes.map(change => `${change.scope} changed (${change.keys.join(', ')})`).join('; ');
 const describeUnread = unread => unread.map(({ scope, message }) => `${scope} couldn't be read (${message})`).join('; ');
 
+// Whether a read shows a planned value: equal, or for an object, every planned key shown as
+// planned (the store may add fields of its own, such as ids inside a widget's configuration).
+function shows(planned, read) {
+    if (isObject(planned)) return isObject(read) && Object.entries(planned).every(([key, value]) => Object.hasOwn(read, key) && shows(value, read[key]));
+    if (Array.isArray(planned)) return Array.isArray(read) && read.length === planned.length && planned.every((value, at) => shows(value, read[at]));
+    return isDeepStrictEqual(planned, read);
+}
+
+// What a re-read doesn't show of the body that was sent: keys it shows with another value
+// (`differ`, each worded for the result row), and keys it doesn't show at all (`unshown`). For a
+// channel's settings, `inherited` is the global value read back: a null there inherits it.
+function unconfirmed(body, data, { inherited } = {}) {
+    const differ = [];
+    const unshown = [];
+    if (!isObject(body)) return { differ, unshown };
+    for (const [key, value] of Object.entries(body)) {
+        if (!isObject(data) || !Object.hasOwn(data, key)) unshown.push(key);
+        else if (!shows(value, data[key]) && !(inherited && data[key] === null && isObject(inherited) && shows(value, inherited[key]))) {
+            const now = inherited && data[key] === null ? `null (inheriting ${showValue(isObject(inherited) ? inherited[key] : undefined, key)})` : showValue(data[key], key);
+            differ.push(`${key} as planned: it shows ${now}, not ${showValue(value, key)}`);
+        }
+    }
+    return { differ, unshown };
+}
+
 // Puts back the snapshot's values after a failed part 3: the whole read of each channel that
 // changed (BigCommerce resets a channel's override only when every field is sent, null where it
 // inherited), 1895766 first, and the changed keys of the global value. A scope that couldn't be
@@ -348,7 +376,7 @@ async function restoreSettings({
 // After a lifted settings write was sent, whatever it answered: the re-read of 1895766 and part
 // 3. Returns null to go on, or the outcome that stops the run. Every path writes the result row.
 async function afterLiftedSettingsWrite({
-    client, item, fresh, response, sendError, wait, result, lock, afterRecords, log, root, row, now, runId,
+    client, item, fresh, response, sendError, wait, result, lock, afterRecords, log, root, row, now, runId, sentBody,
 }) {
     const { index, request, what } = item;
     const status = response ? response.status : null;
@@ -401,6 +429,17 @@ async function afterLiftedSettingsWrite({
         });
         return { outcome: 'failed', request: index, message };
     }
+    // Part 3 held. The write itself must show on 1895766, or it didn't take.
+    const own = unconfirmed(sentBody, read.data[String(CHANNEL)], { inherited: read.data.global });
+    const missing = [...own.differ, ...own.unshown.map(key => `${key} at all`)];
+    if (missing.length) {
+        const message = `the write answered ${status} and part 3 held, but the re-read of 1895766 doesn't show ${missing.join('; ')}`;
+        result({
+            status, outcome: 'failed', after_sha256: afterSha, message,
+        });
+        log(`FAIL     ${message}`);
+        return { outcome: 'failed', request: index, message };
+    }
     result({
         status, outcome: 'ok', after_sha256: afterSha, message: '',
     });
@@ -421,7 +460,7 @@ function enabledScripts(data, fallbackId) {
 // have landed, so it is read back too, and its row says so. Returns null to go on, or the
 // outcome that stops the run.
 async function afterWrite({
-    client, item, fresh, response, sendError, wait, result, lock, afterRecords, log, mode, created,
+    client, item, fresh, response, sendError, wait, result, lock, afterRecords, log, mode, created, sentBody,
 }) {
     const { index, request, what } = item;
     const where = { request: index, method: request.method, path: request.path };
@@ -497,8 +536,27 @@ async function afterWrite({
         });
         return { outcome: 'failed', request: index, message: failure };
     }
+    // An update or a settings write must read back as planned, or it didn't take. A settings
+    // read shows every key it takes (part 2), so a key it doesn't show fails too; an object's
+    // read may name a field differently (a placement's widget_uuid is its widget.uuid), so a
+    // key it doesn't show is only named on the row.
+    let note = '';
+    if (what.action === 'update' || what.kind === 'settings') {
+        const data = what.kind === 'settings' ? records[0].data : records.find(record => record.scope === 'item')?.data;
+        const check = unconfirmed(sentBody, data);
+        const missing = [...check.differ, ...(what.kind === 'settings' ? check.unshown.map(key => `${key} at all`) : [])];
+        if (missing.length) {
+            const message = `the write answered ${status}, but the re-read doesn't show ${missing.join('; ')}`;
+            result({
+                id, status, outcome: 'failed', after_sha256: afterSha, message,
+            });
+            log(`FAIL     ${message}`);
+            return { outcome: 'failed', request: index, message };
+        }
+        if (what.kind !== 'settings' && check.unshown.length) note = `not checked, as the re-read doesn't show them: ${check.unshown.join(', ')}`;
+    }
     result({
-        id, status, outcome: 'ok', after_sha256: afterSha, message: '',
+        id, status, outcome: 'ok', after_sha256: afterSha, message: note,
     });
     log(`ok       ${index + 1}. ${status}${id ? `, ${what.object} ${id}` : ''}`);
     return null;
@@ -608,7 +666,7 @@ export async function applyPlan({
             sendError = error;
         }
         const context = {
-            client, item, fresh, response, sendError, wait, result, lock, afterRecords, log, mode, created, root, row, now, runId,
+            client, item, fresh, response, sendError, wait, result, lock, afterRecords, log, mode, created, root, row, now, runId, sentBody: body,
         };
         // eslint-disable-next-line no-await-in-loop
         const stop = liftedSettings ? await afterLiftedSettingsWrite(context) : await afterWrite(context);
