@@ -910,8 +910,10 @@ test('plan.mjs then apply.mjs, on fixture routes: the plan file, the writes, the
         [placementGet]: [{ body: widgets.placement_item }, { body: widgets.placement_item }, { body: widgets.placement_item_inactive }],
         [placementPut]: { body: widgets.placement_item_inactive },
     };
-    const planned = cli(CHECKOUT_PLAN, ['--ticket', '46', '--changes', changes, '--out', path.join(root, 'plan.json')], { root, routes });
+    const planned = cli(CHECKOUT_PLAN, ['--ticket', '46', '--changes', changes], { root, routes });
     assert.equal(planned.status, 0, planned.output);
+    const planFile = planned.stdout.match(/^plan {5}(.+)$/m)[1];
+    assert.equal(path.dirname(planFile), path.join(root, 'plans'));
     assert.match(planned.stdout, /status: "active" -> "inactive"/);
     assert.match(planned.stdout, /sha256 {3}[0-9a-f]{64}/);
     assert.match(planned.stdout, /Next: review the diff, then node scripts\/store\/apply\.mjs/);
@@ -921,7 +923,7 @@ test('plan.mjs then apply.mjs, on fixture routes: the plan file, the writes, the
         [placementGet]: [{ body: widgets.placement_item }, { body: widgets.placement_item_inactive }],
         [placementPut]: { body: widgets.placement_item_inactive },
     }));
-    const applied = cli(CHECKOUT_APPLY, [path.join(root, 'plan.json')], { root, routes: undefined, extraEnv: { RF_STORE_FIXTURES: path.join(root, 'routes.json') } });
+    const applied = cli(CHECKOUT_APPLY, [planFile], { root, routes: undefined, extraEnv: { RF_STORE_FIXTURES: path.join(root, 'routes.json') } });
     assert.equal(applied.status, 0, applied.output);
     assert.match(applied.stdout, /applied: 1 request/);
     const sent = fs.readFileSync(path.join(root, 'fixture-calls.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
@@ -936,10 +938,11 @@ test('apply.mjs --dry-run runs every check with the writer token, shows the deri
     fs.mkdirSync(root, { recursive: true });
     const changes = path.join(root, 'changes.json');
     fs.writeFileSync(changes, JSON.stringify([unpublish]));
-    const planned = cli(CHECKOUT_PLAN, ['--ticket', '46', '--changes', changes, '--out', path.join(root, 'plan.json')], { root, routes: { [placementGet]: { body: widgets.placement_item } } });
+    const planned = cli(CHECKOUT_PLAN, ['--ticket', '46', '--changes', changes], { root, routes: { [placementGet]: { body: widgets.placement_item } } });
     assert.equal(planned.status, 0, planned.output);
+    const planFile = planned.stdout.match(/^plan {5}(.+)$/m)[1];
     fs.rmSync(path.join(root, 'fixture-calls.jsonl'));
-    const dry = cli(CHECKOUT_APPLY, ['--dry-run', path.join(root, 'plan.json')], { root, routes: { [placementGet]: { body: widgets.placement_item } } });
+    const dry = cli(CHECKOUT_APPLY, ['--dry-run', planFile], { root, routes: { [placementGet]: { body: widgets.placement_item } } });
     assert.equal(dry.status, 0, dry.output);
     assert.match(dry.stdout, /diff, from a fresh read of the store/);
     assert.match(dry.stdout, /status: "active" -> "inactive"/);

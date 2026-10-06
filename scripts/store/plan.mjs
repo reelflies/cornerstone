@@ -4,19 +4,25 @@
 // settings write, and writes the exact requests, the snapshot's sha256 and a diff to a plan file.
 // It sends GETs only (a read-only client), so it writes nothing to the store.
 //
-//   node scripts/store/plan.mjs --ticket 46 --changes widgets/home-lead/changes.json
-//   node scripts/store/plan.mjs --ticket 21 --changes store-wide.json --approved   # for Shaun's batch
-//   … --out <plan file>                     default ~/reelflies/store-snapshots/plans/<time>-<ticket>.json
+//   node ~/reelflies/theme/cornerstone/scripts/store/plan.mjs --ticket 46 --changes <changes file>
+//   node ~/reelflies/theme/cornerstone/scripts/store/plan.mjs --ticket 21 --changes store-wide.json --approved   # for Shaun's batch
 //
-// The changes file is a JSON array of requests, or {"requests": [...]}, each
+// The plan file goes to ~/reelflies/store-snapshots/plans/<time>-<ticket>.json, never over
+// another, and nowhere else.
+//
+// The changes file is read only from this checkout, one of its worktrees or the store root, and
+// only a .json file (never secrets.stencil.json). It is a JSON array of requests, or
+// {"requests": [...]}, each
 // {"method": "POST" or "PUT", "path": "/v3/…", "query": {...}, "body": ...}. A widget create may
 // take the uuid of a template or widget created earlier in the same plan:
 // "widget_template_uuid": {"$created": 0} (request indexes count from 0).
 //
-// Then review the diff, and apply: `node scripts/store/apply.mjs <plan file>`. An approved plan
-// is applied by Shaun alone, at his terminal: `node scripts/store/apply.mjs --approved <plan file>`.
+// Then review the diff, and apply: `node ~/reelflies/theme/cornerstone/scripts/store/apply.mjs
+// <plan file>`. An approved plan is applied by Shaun alone, at his terminal:
+// `node scripts/store/apply.mjs --approved <plan file>`.
 // docs/store-writes.md has the whole routine.
 
+import { spawnSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -35,6 +41,7 @@ import { proveSettingsWrite } from './settings-proof.mjs';
 import {
     canonicalJson, readsFor, sha256, storeRoot, takeSnapshot, timeStamp, writeSnapshotFiles,
 } from './snapshot.mjs';
+import { REPO_ROOT } from './tooling.mjs';
 
 export const PLAN_FORMAT = 'reelflies-store-plan/1';
 export const MAX_REQUESTS = 50;
@@ -291,19 +298,67 @@ export async function buildPlan({
 
 const slug = text => String(text).replace(/[^A-Za-z0-9-]+/g, '-');
 
-// Writes the plan, never over another. Returns its file and the sha256 of its bytes, the value
-// Shaun types the first 8 characters of in approved mode.
-export function writePlan(root, plan, { out, now = new Date() } = {}) {
-    const file = out || path.join(root, 'plans', `${timeStamp(now)}-${slug(plan.ticket)}.json`);
+// Writes the plan under <root>/plans/, never over another. Returns its file and the sha256 of its
+// bytes, the value Shaun types the first 8 characters of in approved mode.
+export function writePlan(root, plan, { now = new Date() } = {}) {
+    const file = path.join(root, 'plans', `${timeStamp(now)}-${slug(plan.ticket)}.json`);
     fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
     const text = `${JSON.stringify(plan, null, 2)}\n`;
     fs.writeFileSync(file, text, { flag: 'wx', mode: 0o600 });
     return { file, sha256: sha256(text) };
 }
 
+const realpathOr = file => {
+    try {
+        return fs.realpathSync(file);
+    } catch {
+        return path.resolve(file);
+    }
+};
+const isInside = (file, dir) => {
+    const relative = path.relative(realpathOr(dir), file);
+    return Boolean(relative) && !relative.startsWith('..') && !path.isAbsolute(relative);
+};
+
+// This checkout's worktrees (the main clone and ~/reelflies/theme/worktrees/<branch>), where a
+// ticket keeps its changes files.
+export function listWorktrees(repo = REPO_ROOT) {
+    const { status, stdout } = spawnSync('git', ['-C', repo, 'worktree', 'list', '--porcelain'], { encoding: 'utf8', timeout: 30000 });
+    if (status !== 0) return [];
+    return (stdout || '').split('\n').filter(line => line.startsWith('worktree ')).map(line => line.slice('worktree '.length));
+}
+
+// The requests in a changes file. The command runs with no prompt once the permission rules are
+// on, so it reads only a .json file inside this checkout, one of its worktrees or the store root,
+// judged by where a link leads, and never secrets.stencil.json. A file that isn't JSON is named,
+// never quoted (V8's parse error shows its first characters).
+export function readChanges(file, { root, repo = REPO_ROOT, worktrees = listWorktrees(repo) } = {}) {
+    const secret = name => /^secrets\.stencil\.json$/i.test(path.basename(name));
+    if (secret(file)) throw new Refused('secrets.stencil.json is never read as a changes file');
+    if (!file.toLowerCase().endsWith('.json')) throw new Refused(`the changes file must be a .json file, and ${file} isn't`);
+    let real;
+    try {
+        real = fs.realpathSync(file);
+    } catch (error) {
+        throw new Refused(`can't read the changes file ${file} (${error.code || error.message})`);
+    }
+    if (secret(real)) throw new Refused('secrets.stencil.json is never read as a changes file');
+    if (![repo, ...worktrees, root].some(dir => isInside(real, dir))) {
+        throw new Refused(`the changes file must be inside this checkout, one of its worktrees or the store root (${root}), and ${file} isn't`);
+    }
+    let changes;
+    try {
+        changes = JSON.parse(fs.readFileSync(real, 'utf8'));
+    } catch (error) {
+        throw new Refused(error.code ? `can't read the changes file ${file} (${error.code})` : `the changes file ${file} isn't JSON`);
+    }
+    if (Array.isArray(changes)) return changes;
+    return isObject(changes) ? changes.requests : undefined;
+}
+
 // --- The command ----------------------------------------------------------------------------
 
-const USAGE = 'usage: node scripts/store/plan.mjs --ticket <NN> --changes <file> [--approved] [--out <plan file>]';
+const USAGE = 'usage: node ~/reelflies/theme/cornerstone/scripts/store/plan.mjs --ticket <NN> --changes <file> [--approved]';
 export const TICKET = /^[A-Za-z0-9][A-Za-z0-9-]{0,19}$/;
 
 export function parseArgs(argv) {
@@ -311,7 +366,7 @@ export function parseArgs(argv) {
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i];
         if (arg === '--approved') options.approved = true;
-        else if (['--ticket', '--changes', '--out'].includes(arg) && i + 1 < argv.length) options[arg.slice(2)] = argv[++i];
+        else if (['--ticket', '--changes'].includes(arg) && i + 1 < argv.length) options[arg.slice(2)] = argv[++i];
         else throw new Error(`unknown or incomplete argument ${arg}`);
     }
     if (!options.ticket || !TICKET.test(options.ticket)) throw new Error('--ticket is required: the ticket the write is for, such as 46 or W0-11');
@@ -373,8 +428,7 @@ async function main(argv) {
         const root = storeRoot();
         if (fs.existsSync(path.join(root, 'LOCKED'))) say(`WARN     ${path.join(root, 'LOCKED')} exists: apply refuses every plan until Shaun removes it`);
         unfinishedWarnings(root).forEach(say);
-        const changes = JSON.parse(fs.readFileSync(options.changes, 'utf8'));
-        const requests = Array.isArray(changes) ? changes : changes.requests;
+        const requests = readChanges(options.changes, { root });
         const mode = options.approved ? 'approved' : 'lifted';
         const phase = phaseOn(readCalendar());
         say(describePhase(phase));
@@ -392,7 +446,7 @@ async function main(argv) {
             requests, ticket: options.ticket, mode, phase, client, storeHash, operator: operatorName(), now,
         });
         const files = writeSnapshotFiles(root, { channel: plan.channel, label: 'plan', now }, snapshot);
-        const written = writePlan(root, plan, { out: options.out, now });
+        const written = writePlan(root, plan, { now });
         say('');
         plan.diff.forEach(say);
         plan.proofs.forEach(proof => say(`proof    request ${proof.index + 1}, settings/${proof.settings}: ${proof.part1.evidence}; ${proof.part2.map(item => `${item.key} ${item.evidence}`).join('; ')}`));

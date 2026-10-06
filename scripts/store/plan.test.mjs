@@ -9,7 +9,7 @@ import path from 'node:path';
 import { parseCalendar, phaseOn } from '../lib/release-calendar.mjs';
 import { createClient } from './client.mjs';
 import {
-    PLAN_FORMAT, buildPlan, checkRequests, commandFetch, commandStoreHash, planDigest, writePlan,
+    PLAN_FORMAT, buildPlan, checkRequests, commandFetch, commandStoreHash, parseArgs, planDigest, readChanges, writePlan,
 } from './plan.mjs';
 import { sha256 } from './snapshot.mjs';
 import {
@@ -340,4 +340,44 @@ test('the fixture routes are a test seam: refused outside node --test, and requi
     await assert.rejects(commandFetch(tmp, { NODE_TEST_CONTEXT: 'child-v8', RF_STORE_ROOT: tmp }), /under node --test the store helper never reaches the network: set RF_STORE_FIXTURES/);
     assert.equal(typeof await commandFetch(tmp, { NODE_TEST_CONTEXT: 'child-v8', RF_STORE_FIXTURES: routes }), 'function');
     assert.equal(await commandFetch(tmp, {}), fetch, 'a real run uses the network');
+});
+
+// --- What plan.mjs reads and writes on this Mac ------------------------------------------------
+
+test('plan.mjs takes no --out: a plan file goes only under <root>/plans/', () => {
+    assert.throws(() => parseArgs(['--ticket', '46', '--changes', 'changes.json', '--out', path.join(tmp, '.zshenv')]), /unknown or incomplete argument --out/);
+    assert.deepEqual(parseArgs(['--ticket', '46', '--changes', 'changes.json']), { approved: false, ticket: '46', changes: 'changes.json' });
+});
+
+test('the changes file is read only from the checkout, its worktrees or the store root, and only as JSON', () => {
+    const root = path.join(tmp, 'changes-root');
+    const repo = path.join(tmp, 'changes-repo');
+    const worktree = path.join(tmp, 'changes-worktree');
+    const elsewhere = path.join(tmp, 'changes-elsewhere');
+    for (const dir of [root, repo, worktree, elsewhere]) fs.mkdirSync(dir, { recursive: true });
+    const write = (dir, name, text) => {
+        const file = path.join(dir, name);
+        fs.writeFileSync(file, text);
+        return file;
+    };
+    const read = file => readChanges(file, { root, repo, worktrees: [worktree] });
+    const requests = [unpublish];
+    assert.deepEqual(read(write(root, 'a.json', JSON.stringify(requests))), requests);
+    assert.deepEqual(read(write(repo, 'b.json', JSON.stringify({ requests }))), requests);
+    assert.deepEqual(read(write(worktree, 'c.json', JSON.stringify(requests))), requests);
+
+    const outside = write(elsewhere, 'd.json', JSON.stringify(requests));
+    assert.throws(() => read(outside), error => error.name === 'Refused' && /the changes file must be inside this checkout, one of its worktrees or the store root/.test(error.message));
+    // A link inside the checkout to a file outside it is judged by where it leads.
+    fs.symlinkSync(outside, path.join(repo, 'link.json'));
+    assert.throws(() => read(path.join(repo, 'link.json')), /must be inside this checkout/);
+    assert.throws(() => read(write(repo, 'notes.txt', '[]')), /the changes file must be a \.json file/);
+    assert.throws(() => read(write(repo, 'secrets.stencil.json', '{"accessToken": "x"}')), /secrets\.stencil\.json is never read as a changes file/);
+    assert.throws(() => read(path.join(repo, 'missing.json')), /can't read the changes file .*missing\.json \(ENOENT\)/);
+    // A file that isn't JSON is named, and none of its text is shown (V8's parse error quotes it).
+    assert.throws(() => read(write(repo, 'env.json', 'RF_FAKE_TOKEN=abc123\n')), error => {
+        assert.match(error.message, /isn't JSON/);
+        assert.ok(!error.message.includes('RF_FAKE'), error.message);
+        return true;
+    });
 });
