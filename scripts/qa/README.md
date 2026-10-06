@@ -66,17 +66,33 @@ Without `QA_BASE_URL`, each gate uses `npx stencil start -c $QA_CHANNEL -v "$QA_
 
 When a page is pinned for a channel, axe, the screenshots and the raw-HTML check all cover it on the next run.
 
+**Mask or hide.** A screenshot can leave live content out of the comparison in two ways, and they differ in what happens to the page's size:
+
+- **A mask** paints a box over the element after layout, so the page keeps its size. Use it for content whose pixels change but whose size holds still: a price, a stock line, a badge, a cart count.
+- **Hiding** takes the content out of the layout through a stylesheet the screenshot applies (`toHaveScreenshot`'s `stylePath`), so it can't change the page's size. Use it for content that can change a page's height: a widget someone applies, a live list whose card titles wrap to more or fewer lines, or a bar the store adds after the page has loaded. A mask can't help there, because a full-page shot of a different height fails, however much of it is masked.
+
 **What the screenshots mask** (`masksFor(channel, template)`):
 
-- **`LIVE_DATA`, on every page:** prices, stock and SKU lines, ratings and review counts, sale and sold-out badges, cart counts and totals, pagination, and store content edited outside the theme (marketing banners and widgets).
-- **A channel's `mask`, on one page only:** content that the pin can't hold still. Channel 1's category page masks its whole `.productGrid`, and its product page masks the related products, because the live reelflies.ca catalogue decides which products they list.
-- **Everything else is diffed:** product cards (photo, name, layout), grids and carousels stay visible, so a change to a card or to a grid's layout fails the run.
+- **`LIVE_DATA`, on every page:** prices, stock and SKU lines, ratings and review counts, sale and sold-out badges, cart counts and totals, pagination, and marketing banners.
+- **A channel's `mask`, on one page only:** content that the pin can't hold still, but whose size can't move the page. Channel 1's category page masks its whole `.productGrid`, because the live reelflies.ca catalogue decides which products it lists.
+- **The boxes a channel holds** (below), so a reviewer sees a mask where the cards were, not an empty space.
+
+**What the screenshots hide** (`screenshotStyle(channel, template)` in `pages.mjs`; W0-5). Each test writes the stylesheet into its output folder (`screenshotStylePath` in `fixtures.mjs`), because `stylePath` reads only from a file.
+
+- **`HIDDEN`, on every page and channel, out of the layout** (`display: none`):
+  - **Widgets** (`[data-widget-id]`), from Page Builder or the Widgets API. A widget applied on 1895766, such as the hero (46), the shipping strip (27) or a home section (47–49), would otherwise change every page's height at once, and every gate and the release would fail together. Each widget is checked from its own source instead (W0-9). Channel 1's header widget (81 px at 375) is out of its shots for the same reason.
+  - **The store's cookie banner** (`#consent-manager`), **and the bar it leaves after a choice** (`#consent-manager-update-banner`, "Manage Website Data Collection Preferences"). The bar is 48 px tall at the end of the page, and appears about a second after "Reject all". A shot taken before it appeared made the channel-1 product page fail once at 375 (375x4101 against a 375x4149 baseline), and pass on a rerun.
+- **A channel's `hold`, on one page only:** a box whose contents set its height. The stylesheet takes everything inside the box out, and holds the box at the height given, so the page keeps one size whatever the live list holds. Channel 1's product page holds its related products' carousels (`#tab-related .productCarousel` and `#tab-similar .productCarousel`, 320 px). Their heading and the section around them stay in the shot, because ticket 39 replaces the carousel with a grid and ticket 40 adds the reviews below it. Ticket 39 points `hold` at its grid.
+- `HIDDEN` and `hold` apply to the screenshots only. axe and the raw-HTML check still see the whole page.
+
+**Everything else is diffed:** product cards (photo, name, layout), grids and carousels stay visible, so a change to a card or to a grid's layout fails the run. That includes the description on channel 1's product page: its pin's description was the same on 2026-10-06 as in the 2026-09-07 product export.
 
 **To get a listing's cards into a baseline** (for example ticket 31's category grid, or ticket 48's home bands), the listing must hold still:
 
 - Pin a page whose products don't change: a dedicated test category on ReelFlies_CA, or a fixed sort such as `?sort=alphaasc` on a category nobody edits.
-- Then drop that page's entry from its channel's `mask`, if it has one.
-- Never mask cards globally. If a card shows a new live value, add just that value's selector to `LIVE_DATA`.
+- Then drop that page's entry from its channel's `mask` or `hold`, if it has one.
+- Never mask or hide cards globally. If a card shows a new live value, add just that value's selector to `LIVE_DATA`.
+- **For channel 1's product pin,** the steadiest choice is a product whose related products are set by hand, because automatic ones change when a product with a similar name is added. Channel 1's related lists can't be told apart from the storefront: the product's `related_products` in the catalogue API is `[-1]` when they are automatic. Changing a product's related products is a catalogue write, so it isn't done for the gates.
 
 ## Bundle limits (`scripts/check-bundle.mjs`)
 
@@ -127,7 +143,7 @@ Every pinned page, at 375 and 1280, runs with the tags WCAG 2.0–2.2 A and AA p
 
 1. Each page scrolls once so lazy images load.
 2. The store's cookie banner is dismissed by pressing Enter on "Reject all", because it is fixed to the viewport and would cover the template. A click would leave the pointer over whatever the banner covered, and on the desktop product page that opens EasyZoom's hover zoom.
-3. A full-page screenshot is compared with the baseline, with `masksFor(channel, template)` masked.
+3. A full-page screenshot is compared with the baseline, with `masksFor(channel, template)` masked and `screenshotStyle(channel, template)` applied ("Mask or hide" above).
 
 **The threshold** is in `playwright.config.mjs`. A pixel counts as changed when its colour moves more than 0.2 (Playwright's `threshold`). A run fails when more than 0.2% of the pixels change (`maxDiffPixelRatio`).
 
@@ -137,6 +153,8 @@ Every pinned page, at 375 and 1280, runs with the tags WCAG 2.0–2.2 A and AA p
 - A 200 × 100 px change fails.
 - A 10 × 10 px change passes.
 
+It also tries channel 1's product-page stylesheet on a product page in miniature, with no baseline. A shot taken before the cookie bar appears matches one taken after it. A taller widget and taller related cards leave the shot as it was, and the held box measures its height. A change to the description or to the related section's heading still changes the shot.
+
 **Updating baselines:** run `npm run qa:screens -- --update-snapshots`. Then look at every changed PNG before committing it. A diff is the point of the gate: update a baseline only for a change you meant.
 
 **When a template ticket lands:**
@@ -144,7 +162,7 @@ Every pinned page, at 375 and 1280, runs with the tags WCAG 2.0–2.2 A and AA p
 1. Pin its page in `pages.mjs` under each channel where it renders.
 2. Run `npm run qa:screens -- --update-snapshots` (and `QA_CHANNEL=1` if it needs the fallback).
 3. Review the new PNGs and commit them with the template.
-4. If the page shows new live data, add its selector to `LIVE_DATA`. If part of the page can't be pinned, mask it for that page only, in its channel's `mask`.
+4. If the page shows new live data, add its selector to `LIVE_DATA`. If part of the page can't be pinned, leave it out for that page only: in its channel's `mask` if its size holds still, or in its channel's `hold` if it can change the page's height.
 
 **Per variation:** run with `QA_VARIATION="ReelFlies US"` to make or check that variation's set. Only the ReelFlies CA sets exist today, so a release with ReelFlies US fails at the screenshots until its set is made. Both variations still have empty settings, so a US set would be identical.
 
