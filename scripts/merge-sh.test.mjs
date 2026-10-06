@@ -122,9 +122,9 @@ test('every gh pr call names the repo, and every API call is for it', () => {
 
 test('a docs-only PR merges with CI and rf/review alone', () => {
     const result = run(['12'], mutate(fixture => {
-        fixture.files = [{ filename: 'docs/research/07-probes.md', status: 'added' }, { filename: 'RELEASES.md', status: 'modified' }];
+        fixture.files = [{ filename: 'docs/research/07-probes.md', status: 'added' }, { filename: 'README.md', status: 'modified' }];
         fixture.statuses = statuses(['rf/review']);
-        fixture.pr.body = 'Release log.\n\nBaselines: none\n';
+        fixture.pr.body = 'Research notes.\n\nBaselines: none\n';
     }));
     assert.equal(result.status, 0, result.output);
     assert.ok(merged(result.calls));

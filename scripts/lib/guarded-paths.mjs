@@ -6,7 +6,9 @@
 //
 // A pattern is a repo-relative path. A trailing slash guards everything under that folder.
 // `*` matches within one path segment. A pattern that matches a folder guards what is in it,
-// so `scripts/catalogue/apply*` covers both `apply.mjs` and an `apply/` folder.
+// so `scripts/catalogue/apply*` covers both `apply.mjs` and an `apply/` folder. Matching
+// ignores case: the Mac's file system does, so a PR adding `.Claude/settings.json` or
+// `Scripts/store/x.mjs` lands in the guarded folder when it is checked out there.
 
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -25,7 +27,7 @@ export function readGuardedPaths(file = GUARDED_PATHS_FILE) {
     return parseGuardedPaths(fs.readFileSync(file, 'utf8'));
 }
 
-const globRegex = glob => new RegExp(`^${glob.split('*').map(part => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('[^/]*')}$`);
+const globRegex = glob => new RegExp(`^${glob.split('*').map(part => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('[^/]*')}$`, 'i');
 
 export function isGuarded(file, patterns) {
     const segments = file.split('/');
