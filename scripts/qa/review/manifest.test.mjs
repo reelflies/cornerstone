@@ -129,7 +129,7 @@ describe('a review render', () => {
 });
 
 describe('where the manifest is', () => {
-    it('is scripts/qa/results/manifest.json, or QA_MANIFEST, so an overlay worktree can write the ticket worktree\'s (W0-8)', () => {
+    it('is scripts/qa/results/manifest.json, or QA_MANIFEST, such as the host batch\'s in its results folder', () => {
         assert.equal(manifestFile({}), MANIFEST);
         assert.equal(manifestFile({ QA_MANIFEST: 'elsewhere/manifest.json' }), path.resolve('elsewhere/manifest.json'));
     });
