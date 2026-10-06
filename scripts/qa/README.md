@@ -30,7 +30,9 @@ CI has no store credentials, so anything that renders the storefront runs locall
 | `QA_VARIATION` | `ReelFlies CA` | Theme variation; it must exist in `config.json` |
 | `QA_BASE_URL` | none | Test this host (for example the prelaunch host) instead of a local `stencil start` |
 | `QA_PREVIEW_COOKIE` | none | Cookie for the prelaunch host, as `name=value; name2=value2`. It goes only to `QA_BASE_URL` and is never printed. A run that sends it keeps no Playwright traces, because a trace records every request's Cookie header. |
-| `QA_FRESH_SERVER` | none | `1` (`release.sh` sets it): never reuse a running server. Each gate starts its own, and the run stops if anything already answers on 3300 or 3301. |
+| `QA_FRESH_SERVER` | none | `1` (`release.sh` sets it): never reuse a running server. Each gate starts its own, and the run stops if anything already answers on its ports. |
+| `QA_PORT` | `3300` | Browsersync's port; the stencil server takes the next one. Each agent's worktree runs on the pair the orchestrator assigns (3400, 3500 and so on), so parallel runs never share ports. `release.sh` always uses 3300. See [Parallel runs](#parallel-runs). |
+| `RF_TICKET` | the branch | The ticket the run's locks name, for anyone waiting on them. |
 | `QA_REFERENCE_HTML` | none | The reference page the review pages' reference screens are shot from, instead of `plan/design/reelflies-reference.html` above the checkout ("Review pages") |
 | `QA_MANIFEST` | `scripts/qa/results/manifest.json` | The screenshot manifest a run writes, for example a ticket worktree's from W0-8's overlay worktree ("Review pages") |
 
@@ -40,17 +42,56 @@ CI has no store credentials, so anything that renders the storefront runs locall
 read -rs QA_PREVIEW_COOKIE && export QA_PREVIEW_COOKIE    # paste name=value; name2=value2, then Return
 ```
 
-Without `QA_BASE_URL`, each gate uses `npx stencil start -c $QA_CHANNEL -v "$QA_VARIATION" -p 3300` (`scripts/qa/storefront.mjs`):
+Without `QA_BASE_URL`, each gate uses `npx stencil start -c $QA_CHANNEL -v "$QA_VARIATION" -p $QA_PORT` (`scripts/qa/storefront.mjs`):
 
-- **Ports.** Browsersync takes 3300 and the stencil server 3301. The gates talk to 3301, so Browsersync's injected script, its overlay and its websocket stay out of the results.
-- **Reuse.** A server already on 3301 is reused, but only if it renders `QA_CHANNEL` and `QA_VARIATION`. Both are read from `?debug=context`: `settings.channel_id`, and `settings.theme_config_id`, which stencil start sets from the variation's position in `config.json`. Otherwise the run stops at once, so one set's screenshots can never be compared with, or written as, another's.
+- **Ports.** Browsersync takes `QA_PORT` (3300 by default) and the stencil server the next port (3301). The gates talk to the stencil server, so Browsersync's injected script, its overlay and its websocket stay out of the results.
+- **Locks.** Before it uses a local server, a gate takes its port pair's lock, and a stencil start slot if it starts the server. See [Parallel runs](#parallel-runs).
+- **Reuse.** A server already on the stencil server's port is reused, but only if it renders `QA_CHANNEL` and `QA_VARIATION`. Both are read from `?debug=context`: `settings.channel_id`, and `settings.theme_config_id`, which stencil start sets from the variation's position in `config.json`. Otherwise the run stops at once, so one set's screenshots can never be compared with, or written as, another's.
   - The same check runs on every server a gate starts, before its first page.
   - `?debug=context` is asked again after a 5xx or a 429, as a pinned page is (below). If it still doesn't answer with the page context, the run stops and names the status it ended on.
-- **No reuse with `QA_FRESH_SERVER=1`.** A server already running could come from another checkout, worktree or branch, even with the right channel and variation, and the gates would then pass on code other than the commit being pushed. So nothing is reused: each gate starts its own server from this checkout. If anything already answers on 3300 or 3301, the run stops before starting one, names the port, and says to stop that server first. `qa:prepush` checks once before the first gate, and each gate checks again for itself (`serverPlan` in `storefront.mjs`; the Playwright config checks before its `webServer` starts).
-- **Fresh start.** A fresh server starts from an empty `assets/dist` and is ready once its webpack dev build is served. The gates stop the server again when they finish, with its whole process group. With `QA_FRESH_SERVER=1`, `qa:prepush` then waits until 3300 and 3301 are free (up to 15 s) before the next gate starts, and fails the gate if they aren't.
+- **No reuse with `QA_FRESH_SERVER=1`.** A server already running could come from another checkout, worktree or branch, even with the right channel and variation, and the gates would then pass on code other than the commit being pushed. So nothing is reused: each gate starts its own server from this checkout. If anything already answers on its two ports, the run stops before starting one, names the port, and says to stop that server first. A gate run on the same ports in another checkout isn't such a server: the run waits for its port lock instead. `qa:prepush` checks once before the first gate, and each gate checks again for itself (`serverPlan` in `storefront.mjs`; the Playwright config checks before its `webServer` starts).
+- **Fresh start.** A fresh server starts from an empty `assets/dist` and is ready once its webpack dev build is served. The gates stop the server again when they finish, with its whole process group. With `QA_FRESH_SERVER=1`, `qa:prepush` then waits until both ports are free (up to 15 s) before the next gate starts, and fails the gate if they aren't.
   - **The dev build stays in `assets/dist`.** That is about 2 MB of scripts with their sources inlined as source maps, and upstream's clean step never removes them. `stencil bundle` zips all of `assets/`, and so does `stencil push` without `-f`, which bundles again.
   - **So after a gate run, run `rm -rf assets/dist` before you bundle or push by hand.** `check-bundle.mjs` fails a zip that ships dev-build scripts.
   - **`release.sh` pushes exactly the zip it checked** (`stencil push -f <zip>`), so gates run after `check-bundle.mjs` can't change what ships. Keep both true if the order in `release.sh` changes.
+
+## Parallel runs
+
+Agents build tickets in parallel, each in its own worktree, and each worktree's gates start their own `stencil start`s (W0-7). Each `stencil start` runs a webpack dev build and proxies every page to the live stores. So:
+
+- **A port pair per worktree.** The orchestrator gives each worktree a `QA_PORT`, 3400, 3500 and so on, and its gates use that port and the next one. Set it in the worktree's shell before any `npm run qa:*`:
+
+  ```sh
+  export QA_PORT=3400   # Browsersync on 3400, the stencil server on 3401
+  npm run qa:prepush
+  ```
+
+  The Playwright config and `raw-html.mjs` read the same variable. The start log is named by the port: `$TMPDIR/rf-qa-stencil-start-<port>.log`. A run in a linked worktree without `QA_PORT` prints a `WARNING` line, because it would use the release's 3300.
+- **Its port pair's lock.** Each gate run holds `~/reelflies/theme/.locks/port-<QA_PORT>` while it runs. A second run on the same ports, from any checkout, waits for it with a `WAIT` line naming the holder, instead of failing on a busy port or reusing a server that another checkout started.
+- **At most three `stencil start`s on the Mac.** A gate takes a slot, `~/reelflies/theme/.locks/stencil-1` to `stencil-3`, before it starts its server, and waits while all three are taken (a `WAIT` line names the holders, and a `SLOT` line says which slot it got). A gate that reuses a running server takes no slot. The release takes slots like any other run: each of its three gates takes one.
+- **Waits** last up to 40 minutes, longer than a slot's or a port's 30-minute limit, so a lock whose holder died goes stale and is broken while the run waits. After that the run fails, naming the holders.
+- Both locks are released when the gate ends, also when it exits early. A run that is killed (`SIGKILL`, or a closed terminal) leaves them until they are stale.
+
+**The locks** are folders under `~/reelflies/theme/.locks/` (`RF_LOCK_ROOT` moves them; the tests use it), taken with an atomic `mkdir` by `scripts/lib/lock.mjs`:
+
+| Lock | Held by | Stale after |
+|---|---|---|
+| `release` | `scripts/release.sh`, for the whole release or dry run ([releasing](../../docs/releasing.md)) | 90 min |
+| `merge` | W0-13's `scripts/merge.sh` | 15 min |
+| `stencil-1` … `stencil-3` | a gate run, while its `stencil start` runs | 30 min |
+| `port-<n>` | a gate run on the ports `n` and `n + 1` | 30 min |
+
+- Each holds `owner.json` (owner, ticket, pid, host and start time) and `owner.txt` with the same facts as lines.
+- **Stale:** a lock older than its limit whose pid isn't running is broken, with a `STALE` line naming the old holder. A lock whose holder still runs is never broken, however old.
+- A lock with no pid to check (written by hand) goes stale on age alone, after its limit or 45 minutes, whichever is longer.
+- To see who holds what: `cat ~/reelflies/theme/.locks/*/owner.txt`.
+
+**From wave 0's interim lock to these.** Until W0-7, every `stencil start` used 3300 and 3301, so agents held one hand-made lock, `~/reelflies/theme/.locks/stencil`, around any `stencil start`, `npm run qa:*` or `release.sh` run. Worktrees made from `master` after W0-7 don't need it:
+
+1. **Worktrees made, or rebased onto `master`, after W0-7:** run with the `QA_PORT` the orchestrator assigned, and take no lock by hand. The gates take their port lock and slots themselves.
+2. **Anything still on 3300 and 3301** (`release.sh`, and any worktree from before W0-7) keeps taking `.locks/stencil` by hand, as in wave 0, while any worktree from before W0-7 is still in use. Those worktrees take no port lock or slot, so the hand lock is all that keeps them apart from the release, and until they are gone a fourth `stencil start` can run beside the three slots.
+3. **The release lock is now `release.sh`'s own.** Don't take `~/reelflies/theme/.locks/release` by hand around `release.sh` any more: it would find the lock held and stop, naming you.
+4. **Once no worktree from before W0-7 is left,** nothing takes `.locks/stencil` any more, and the orchestrator deletes it.
 
 **The channel-1 fallback.** ReelFlies_CA has no products and no tree-4 categories yet, so its product and category pages 404. Until they exist, `QA_CHANNEL=1` renders this repo's templates with live reelflies.ca data. It is read-only: stencil start only reads from the store. Channel 1 has only a product page and a category page pinned.
 
@@ -241,7 +282,7 @@ QA_CHANNEL=1 npm run qa:raw-html                          # product and category
 QA_BASE_URL=https://<prelaunch host> npm run qa:raw-html    # with QA_PREVIEW_COOKIE read as above
 ```
 
-It exits 1 on a failed check, and 2 when the storefront can't be reached or, with `QA_FRESH_SERVER=1`, when something already answers on 3300 or 3301.
+It exits 1 on a failed check, and 2 when the storefront can't be reached or, with `QA_FRESH_SERVER=1`, when something already answers on `QA_PORT` or the port after it.
 
 **Not run on prelaunch yet.** The product and category runs so far were on channel 1 through `stencil start -c 1`. The prelaunch run needs the preview cookie (ticket 11) and ReelFlies_CA's product and category pins (refactor tickets 13 and 14).
 
@@ -483,6 +524,7 @@ It writes `results/review/pr-<number>/` with each baseline the working tree chan
 - `harness-selftest.spec.mjs` runs with `qa:axe`, `qa:screens` and `qa:quick-view`, on pages it serves itself. It proves that a pinned page answering with the wrong status fails the run without being asked again, that one answering 5xx twice or 429 four times fails, and that dismissing the cookie banner leaves nothing hovered. Its 5xx and 429 retry cases answer the pinned 404 page (or the channel's first page) with a 500, or a 429 with `Retry-After: 1`, once and then let the request through, so the second answer is the storefront's real one.
 - `widget-screens.spec.mjs` runs with `qa:screens`, because the script's `screens` filter matches its name.
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
+- `storefront.test.mjs` also covers `QA_PORT`, the start log's name and the locks a gate holds, `playwright-config.test.mjs` that the config reads `QA_PORT` and holds the locks only in the runner, and `scripts/lib/lock.test.mjs` the locks themselves: the stale rules, waiting, the three slots across processes, and the command line `release.sh` uses.
 - `npm run test:scripts` runs every `scripts/**/*.test.mjs` with `node --test`, the fixture renders included.
 - Jest runs `assets/js/test-unit/`. `jest.config.js` ignores `scripts/`, because Jest 30 would otherwise match `*.test.mjs` and `*.spec.mjs` too.
 - `screens-reference.spec.mjs` runs with `qa:screens`, because its name matches the filter, and never fails it. `review-live.spec.mjs` runs only when named. Neither is a gate. `review/manifest-reporter.test.mjs` checks both against `package.json`'s filters.
