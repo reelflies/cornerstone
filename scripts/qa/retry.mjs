@@ -40,6 +40,30 @@ export function retryAfterMs(value, now = Date.now()) {
     return Number.isNaN(date) ? null : Math.max(0, date - now);
 }
 
+// The retry an answer with `status` earns, before the limit: { wait, note, reason }, or null.
+function plannedTry(status, { retryAfter, earlier, now }) {
+    if (isServerError(status)) {
+        if (earlier.some(isServerError)) return null;
+        return {
+            wait: RETRY_DELAY_MS,
+            note: `once more in ${seconds(RETRY_DELAY_MS)} (stencil start's request to the store can drop)`,
+            reason: `the next retry would wait ${seconds(RETRY_DELAY_MS)}`,
+        };
+    }
+    if (status !== 429) return null;
+
+    const retry = earlier.filter(earlierStatus => earlierStatus === 429).length + 1;
+    if (retry > RATE_LIMIT_DELAYS_MS.length) return null;
+    const asked = retryAfterMs(retryAfter, now);
+    const wait = asked ?? RATE_LIMIT_DELAYS_MS[retry - 1];
+    const why = `retry ${retry} of ${RATE_LIMIT_DELAYS_MS.length}; the store is limiting requests`;
+    return {
+        wait,
+        note: `again in ${seconds(wait)}${asked === null ? '' : ', as its Retry-After asks'} (${why})`,
+        reason: asked === null ? `the next retry would wait ${seconds(wait)}` : `its Retry-After asks for ${seconds(wait)}`,
+    };
+}
+
 // What follows an answer with `status`, given the statuses `earlier` answered to the same
 // request and the ms already `waited` for it:
 //   null              the answer stands
@@ -48,24 +72,14 @@ export function retryAfterMs(value, now = Date.now()) {
 export function nextTry(status, {
     retryAfter = null, earlier = [], waited = 0, now = Date.now(),
 } = {}) {
-    if (isServerError(status)) {
-        if (earlier.some(isServerError)) return null;
-        return { wait: RETRY_DELAY_MS, note: `once more in ${seconds(RETRY_DELAY_MS)} (stencil start's request to the store can drop)` };
-    }
-    if (status !== 429) return null;
-
-    const retry = earlier.filter(earlierStatus => earlierStatus === 429).length + 1;
-    if (retry > RATE_LIMIT_DELAYS_MS.length) return null;
-    const asked = retryAfterMs(retryAfter, now);
-    const wait = asked ?? RATE_LIMIT_DELAYS_MS[retry - 1];
-    if (waited + wait > MAX_WAIT_MS) {
-        const reason = asked === null ? `the next retry would wait ${seconds(wait)}` : `its Retry-After asks for ${seconds(wait)}`;
+    const next = plannedTry(status, { retryAfter, earlier, now });
+    if (!next) return null;
+    if (waited + next.wait > MAX_WAIT_MS) {
         return {
-            giveUp: `, and ${reason}, which would take the waits for this request past the gates' limit of ${seconds(MAX_WAIT_MS)}, so it isn't asked again. The store is limiting requests; run the gates later.`,
+            giveUp: `, and ${next.reason}, which would take the waits for this request past the gates' limit of ${seconds(MAX_WAIT_MS)}, so it isn't asked again. The store is limiting requests; run the gates later.`,
         };
     }
-    const why = `retry ${retry} of ${RATE_LIMIT_DELAYS_MS.length}; the store is limiting requests`;
-    return { wait, note: `again in ${seconds(wait)}${asked === null ? '' : ', as its Retry-After asks'} (${why})` };
+    return { wait: next.wait, note: next.note };
 }
 
 // Asks for something with `ask` until its answer stands (nextTry), and resolves to that

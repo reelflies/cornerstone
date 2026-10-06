@@ -5,7 +5,9 @@
 // - A 429 is asked again up to three times: after its Retry-After when it sends one,
 //   otherwise after 2, 4 and 8 s. A fourth 429 is the answer.
 // - Any other status is the page's real answer and is never asked again.
-// - A Retry-After that would take one request's waits past MAX_WAIT_MS isn't waited for.
+// - A wait that would take one request's waits past MAX_WAIT_MS isn't waited for, after a
+//   429 or a 5xx.
+// - A Retry-After is read as whole seconds or an HTTP date, and anything else as missing.
 //
 //   node --test scripts/qa/retry.test.mjs
 
@@ -21,7 +23,7 @@ describe('the waits', () => {
         assert.deepEqual(RATE_LIMIT_DELAYS_MS, [2000, 4000, 8000]);
     });
 
-    it('stay under the most the gates wait for one request, whatever mix of 5xx and 429 comes', () => {
+    it('leave the schedule alone under MAX_WAIT_MS, whatever mix of 5xx and 429 comes', () => {
         assert.ok(RETRY_DELAY_MS + RATE_LIMIT_DELAYS_MS.reduce((sum, ms) => sum + ms, 0) <= MAX_WAIT_MS);
     });
 });
@@ -101,6 +103,13 @@ describe('after an answer', () => {
         assert.match(next.giveUp, /^, and the next retry would wait 8 s, which would take the waits for this request past the gates' limit of 30 s/);
     });
 
+    it('doesn\'t ask a 5xx again when its 2 s would take the waits for one request past MAX_WAIT_MS, and says so', () => {
+        const next = nextTry(500, { earlier: [429], waited: 30000 });
+        assert.equal(next.wait, undefined);
+        assert.equal(next.giveUp, ', and the next retry would wait 2 s, which would take the waits for this request past the gates\' limit of 30 s, so it isn\'t asked again. The store is limiting requests; run the gates later.');
+        assert.equal(nextTry(502, { earlier: [429], waited: 28000 }).wait, RETRY_DELAY_MS, 'exactly 30 s in all is still waited for');
+    });
+
     it('takes every other status as the answer', () => {
         [200, 301, 304, 400, 403, 404, 410, undefined].forEach(status => assert.equal(nextTry(status), null, String(status)));
     });
@@ -175,6 +184,15 @@ describe('asking with retries', () => {
         assert.deepEqual(seen.waits, [20000]);
         assert.deepEqual(seen.dropped, [429], 'the answer it resolves to is left for the caller to read');
         assert.match(seen.lines[1], /^WARNING {2}product \/flies\/ returned HTTP 429, and its Retry-After asks for 20 s, which would take the waits for this request past the gates' limit of 30 s/);
+    });
+
+    it('never waits more than MAX_WAIT_MS for one request: a 5xx after a 30 s Retry-After is the answer', async () => {
+        const { seen, ask, options } = script({ status: 429, retryAfter: '30' }, 500, 200);
+        assert.equal((await withRetries(ask, options)).status, 500);
+        assert.equal(seen.asked, 2);
+        assert.deepEqual(seen.waits, [30000]);
+        assert.ok(seen.waits.reduce((sum, ms) => sum + ms, 0) <= MAX_WAIT_MS);
+        assert.match(seen.lines[1], /^WARNING {2}product \/flies\/ returned HTTP 500, and the next retry would wait 2 s, which would take the waits for this request past the gates' limit of 30 s/);
     });
 
     it('asks once more after a 5xx and up to three times after a 429, in any order', async () => {
