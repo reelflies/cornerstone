@@ -235,10 +235,22 @@ export function isUnpublish(what, request) {
         && request.body.status === 'inactive' && Object.keys(request.body).every(key => key === 'status' || key === 'channel_id');
 }
 
-// The release calendar (W0-13): from T-14, new widgets, placements and widget content edits are
-// refused, and only unpublishing is allowed. The limits only tighten, so this holds after the Flip.
-export function calendarRefusal(what, request, phase) {
-    if (what.kind !== 'widget' || phase.limits.widgetEdits !== 'unpublish-only') return null;
-    if (isUnpublish(what, request)) return null;
-    return `${label(request)}: from T-14 widgets may only be unpublished (ticket 57): a placement PUT with only "status": "inactive". ${describePhase(phase)}`;
+// The phases from the Flip on (scripts/lib/release-calendar.mjs).
+const AFTER_FLIP = ['T-0', 'T+30'];
+
+// The release calendar (W0-13), for lifted writes:
+// - from T-14, new widgets, placements and widget content edits are refused, and only
+//   unpublishing is allowed (ticket 57).
+// - from the Flip, 1895766 is live reelflies.ca, so every other lifted write is refused too, as
+//   writes to channel 1 are Shaun's (HANDOFF), until he says otherwise (ticket 58). Revisitable.
+// The limits only tighten. Shaun's approved writes aren't limited by the calendar.
+export function calendarRefusal(what, request, phase, mode = 'lifted') {
+    if (mode !== 'lifted' || isUnpublish(what, request)) return null;
+    if (what.kind === 'widget' && phase.limits.widgetEdits === 'unpublish-only') {
+        return `${label(request)}: from T-14 widgets may only be unpublished (ticket 57): a placement PUT with only "status": "inactive". ${describePhase(phase)}`;
+    }
+    if (AFTER_FLIP.includes(phase.phase)) {
+        return `${label(request)}: after the Flip 1895766 is live reelflies.ca: lifted writes there are refused, bar unpublishing a widget, until Shaun says otherwise (ticket 58). ${describePhase(phase)}`;
+    }
+    return null;
 }

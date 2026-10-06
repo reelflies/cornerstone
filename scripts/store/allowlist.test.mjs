@@ -178,7 +178,38 @@ test('from T-14, and after the Flip, new widgets, placements and widget content 
     }
 });
 
-test('the freeze names widgets only: pages, scripts, associations and settings follow their own rules', () => {
+test('the content freeze names widgets only: before the Flip, pages, scripts, associations and settings follow their own rules', () => {
     const page = { method: 'PUT', path: '/v3/content/pages/42', body: { channel_id: 1895766, body: '<p>x</p>' } };
     assert.equal(calendarRefusal(lifted(page), page, freeze), null);
+});
+
+test('after the Flip 1895766 is live reelflies.ca: every lifted write but unpublishing a widget is refused', () => {
+    const dayThirty = phaseOn(calendar, '2027-04-01'); // T+30
+    const others = [
+        { method: 'PUT', path: '/v3/content/pages/42', body: { channel_id: 1895766, body: '<p>x</p>' } },
+        { method: 'POST', path: '/v3/content/pages', body: { channel_id: 1895766, name: 'Chart', type: 'page' } },
+        {
+            method: 'POST', path: '/v3/content/scripts', body: { channel_id: 1895766, name: 'rf', enabled: false },
+        },
+        {
+            method: 'PUT',
+            path: '/v3/storefront/custom-template-associations',
+            body: [{
+                channel_id: 1895766, entity_type: 'category', entity_id: 7, file_name: 'rf-noindex',
+            }],
+        },
+        {
+            method: 'PUT', path: '/v3/settings/storefront/robotstxt', query: { channel_id: 1895766 }, body: { robots_txt_content: 'User-agent: *' },
+        },
+    ];
+    for (const phase of [after, dayThirty]) {
+        for (const request of others) {
+            const reason = calendarRefusal(lifted(request), request, phase);
+            assert.match(reason, /after the Flip 1895766 is live reelflies\.ca: lifted writes there are refused, bar unpublishing a widget, until Shaun says otherwise \(ticket 58\)/, JSON.stringify(request));
+        }
+        assert.equal(calendarRefusal(lifted(unpublish), unpublish, phase), null);
+    }
+    // Shaun's approved writes aren't agents' lifted writes: the calendar doesn't limit them.
+    const storeWide = { method: 'PUT', path: '/v3/settings/inventory', body: { option_out_of_stock_behavior: 'label_option' } };
+    assert.equal(calendarRefusal(classify(storeWide, { mode: 'approved' }), storeWide, after, 'approved'), null);
 });

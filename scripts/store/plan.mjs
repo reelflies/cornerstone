@@ -93,7 +93,7 @@ export function checkRequests(requests, { mode, phase }) {
         try {
             const what = classify(request, { mode });
             const found = mode === 'lifted' ? requestChannelProblems(request, what) : [];
-            const frozen = calendarRefusal(what, request, phase);
+            const frozen = calendarRefusal(what, request, phase, mode);
             if (frozen) found.push(frozen);
             problems.push(...found.map(problem => `request ${index + 1}: ${problem}`));
             items.push({ index, request, what });
