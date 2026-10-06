@@ -245,6 +245,85 @@ On desktop, on the pinned category page, it checks that:
 
 It needs a category page with products, so run it with `QA_CHANNEL=1` until ReelFlies_CA has one. The behaviour behind it is unit-tested in `assets/js/test-unit/theme/reelflies/lazy-quick-view.spec.js`.
 
+## Review pages (`review/`)
+
+Review is per wave, through rolling checkpoints (W0-10 in `plan/build-pipeline.md`). The generator writes a local page with its images. It never publishes anything and never tags: the orchestrator publishes each checkpoint page as a private claude.ai artifact, keeps its source in `plan/reviews/review-NN/`, and cuts the checkpoint tag.
+
+**The manifest.** Every screenshot run records what it shot in `scripts/qa/results/manifest.json` (ignored by git):
+
+- `screens.spec.mjs` annotates each template shot (`shotAnnotation(themeShot(…))`), and the manifest reporter (`review/manifest-reporter.mjs`, in `playwright.config.mjs`) writes the entries with each test's status when the run ends. A run that annotates nothing, such as axe, leaves the file as it was.
+- Each entry has the page, path, width, channel, variation, overlay or state (W0-8 fills these), baseline path and reference anchor, plus the status, the commit and when it ran. A failed shot keeps a copy of its render in `results/manifest-actual/`, because the next run empties Playwright's output folder.
+- Runs add up: a run replaces the entries it shot again and keeps the rest, so the ReelFlies_CA run and the `QA_CHANNEL=1` run fill one manifest.
+
+**The reference screens.** `screens-reference.spec.mjs` runs with every `npm run qa:screens`. It shoots each storefront screen of the reference design, `plan/design/reelflies-reference.html`, at 375 and 1280 into `results/reference/`:
+
+- The page's Options are set first: "Heading face" Onest, the fly-type links row off, sage buy buttons, a visitor in Canada and no build notes (`REFERENCE_SETTINGS` in `review/reference.mjs`).
+- Each shot is the store frame alone, 1280 px wide on desktop and 375 on a phone.
+- The anchors are `home`, `fly-type` (Dry Flies), `species` (Trout Flies), `species-hub`, `hook-chart`, `product` (4877, Adams Parachute), `cart` and `brand` (`REFERENCE_ANCHORS`). A template is compared with the anchor of the same name. The stock `category` template is compared with `fly-type`, which ticket 32 turns it into, and `404` has no reference screen.
+- The page is found in `plan/design/` above the checkout, from the main clone or any worktree, or at `QA_REFERENCE_HTML`. Where it isn't (CI, another machine), the spec is skipped. Nothing here is a baseline or a gate.
+
+**The live home page.** Page baselines mask or hide widget regions, so section 6 of a checkpoint page has its own shot, with nothing masked:
+
+```sh
+npx playwright test --config scripts/qa/playwright.config.mjs review-live    # this checkout through stencil start
+QA_BASE_URL=https://<prelaunch host> QA_PREVIEW_COOKIE='…' npx playwright test --config scripts/qa/playwright.config.mjs review-live
+```
+
+**A checkpoint page,** from a clean `master`, holding the stencil lock for the runs:
+
+```sh
+npm run qa:screens                       # ReelFlies_CA, with the reference screens
+QA_CHANNEL=1 npm run qa:screens          # channel 1's product and category
+npx playwright test --config scripts/qa/playwright.config.mjs review-live
+rm -rf assets/dist
+node scripts/qa/review/review.mjs --input <notes.json>
+```
+
+- **Name and range.** It names the page after the newest `review-NN` tag (`review-00` when there is none), and covers the baselines changed from that tag to `HEAD`. `--name review-NN` regenerates a page; `--since <tag>` or `--since none` sets the range by hand.
+- **Output.** `results/review/<name>/index.html` is the page to publish, with its `images/` folder. `preview.html` is the same page inside the document claude.ai adds, to view it locally. `--inline` puts the images inside `index.html` instead, as `data:` URIs.
+- **Images** are re-encoded in Playwright's Chromium as WebP at about 200 KB each (JPEG for a page taller than WebP's 16,383 px). The run fails if the page and its images come to more than 16,000,000 B, the artifact limit.
+- **When it finishes,** it prints the tag command for the orchestrator: `git tag review-NN <sha> && git push origin review-NN`.
+
+The page shows, in this order:
+
+1. For Shaun: approvals waiting, each with its diff; paired channel-1 releases pending; tokens and cookie sessions needed; DRAFT copy.
+2. The defaults taken since the last checkpoint, each marked revisitable, with its ticket and wave.
+3. Each template at 375 and 1280 beside its reference screen, or "No reference screen". Reference screens no template renders yet follow.
+4. Before and after for every baseline changed since the last checkpoint tag, grouped by the ticket named in the title of its newest commit. Re-baseline epochs are listed apart, with their cause: a commit the notes list under `epochs`, or one whose title says "epoch".
+5. reelflies.com: the build's uuid for the My Themes preview, and any channel 1855224 renders in the manifest.
+6. The live home page on 1895766, with its widgets.
+7. Criteria waiting on refactor 13 or 14, a token, the cookie or an approval.
+
+**The checkpoint notes** (`--input`) hold what git and the manifest can't know. Every key is optional, and a misspelt key stops the run:
+
+```json
+{
+  "title": "Wave 1: the skin and the scaffold",
+  "intro": "One paragraph under the title. `Backticks` mark commands and paths.",
+  "date": "2026-10-20",
+  "forShaun": {
+    "approvals": [{ "ticket": "18", "title": "The Fly Sizes catalogue fix", "detail": "…", "diff": "- old\n+ new" }],
+    "pairedReleases": [{ "uuid": "…", "commit": "…", "note": "…" }],
+    "access": [{ "ticket": "11", "what": "The prelaunch preview cookie", "why": "…" }],
+    "draftCopy": [{ "ticket": "22", "where": "Shipping policy page", "text": "…" }]
+  },
+  "defaults": [{ "ticket": "25", "text": "…" }],
+  "tickets": { "25": { "wave": "1", "title": "Skin foundation" } },
+  "epochs": [{ "commit": "abc1234", "cause": "The hero widget applied on 1895766 (ticket 46)" }],
+  "com": { "uuid": "…", "commit": "…", "pushedAt": "…", "note": "…" },
+  "liveHome": { "note": "…" },
+  "waiting": [{ "ticket": "16", "criterion": "…", "trigger": "refactor 13 and 14" }]
+}
+```
+
+**PR mode,** for the skeptic (section 7, step 6 of the build pipeline). In the ticket's worktree, after its screenshot run:
+
+```sh
+node scripts/qa/review/review.mjs --pr <number> [--base origin/master]
+```
+
+It writes `results/review/pr-<number>/` with each baseline the working tree changes against its merge base with `--base` (new, untracked baselines too), before and after, beside its reference screen. The page says it is local only, and it is never published.
+
 ## Which runner picks up what
 
 - Playwright runs `scripts/qa/*.spec.mjs` with this folder's config.
@@ -252,4 +331,5 @@ It needs a category page with products, so run it with `QA_CHANNEL=1` until Reel
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
 - `npm run test:scripts` runs every `scripts/**/*.test.mjs` with `node --test`.
 - Jest runs `assets/js/test-unit/`. `jest.config.js` ignores `scripts/`, because Jest 30 would otherwise match `*.test.mjs` and `*.spec.mjs` too.
-- Playwright writes its report, traces and failed diffs to `scripts/qa/results/`, which is ignored by git. A run with `QA_PREVIEW_COOKIE` writes no traces, so the cookie never lands there.
+- `screens-reference.spec.mjs` runs with `qa:screens`, because its name matches the filter. `review-live.spec.mjs` runs only when named. Neither is a gate.
+- Playwright writes its report, traces and failed diffs to `scripts/qa/results/`, which is ignored by git. The manifest reporter writes `results/manifest.json` there too, and the review pages go to `results/review/`. A run with `QA_PREVIEW_COOKIE` writes no traces, so the cookie never lands there.
