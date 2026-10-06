@@ -69,10 +69,19 @@ Agents build tickets in parallel, each in its own worktree, and each worktree's 
   The Playwright config and `raw-html.mjs` read the same variable. The start log is named by the port: `$TMPDIR/rf-qa-stencil-start-<port>.log`. A run in a linked worktree without `QA_PORT` prints a `WARNING` line, because it would use the release's 3300.
 - **Its port pair's lock.** Each gate run holds `~/reelflies/theme/.locks/port-<QA_PORT>` while it runs. A second run on the same ports, from any checkout, waits for it with a `WAIT` line naming the holder, instead of failing on a busy port or reusing a server that another checkout started.
 - **At most three `stencil start`s on the Mac.** A gate takes a slot, `~/reelflies/theme/.locks/stencil-1` to `stencil-3`, before it starts its server, and waits while all three are taken (a `WAIT` line names the holders, and a `SLOT` line says which slot it got). A gate that reuses a running server takes no slot. The release takes slots like any other run: each of its three gates takes one.
-- **Waits** last up to 40 minutes, longer than a slot's or a port's 30-minute limit, so a lock whose holder died goes stale and is broken while the run waits. After that the run fails, naming the holders.
-- Both locks are released when the gate ends, also when it exits early. A run that is killed (`SIGKILL`, or a closed terminal) leaves them until they are stale.
+- **The ports are checked again once a gate has its slot,** because the wait can last minutes and a server that takes no lock (a worktree from before W0-7) can come up on them meanwhile. With `QA_FRESH_SERVER=1` the run then stops, as it would have before the wait. And a gate trusts only the `stencil start` it started: if that one exits before it is ready, the gate fails, even when something else answers on its port.
+- **A `stencil start` by hand** goes through `node scripts/qa/serve.mjs`, so it counts toward the three too. It takes the port lock and a slot, waits for them like a gate, refuses while anything answers on its ports, and runs `stencil start` until Ctrl-C, which stops the server and releases both:
 
-**The locks** are folders under `~/reelflies/theme/.locks/` (`RF_LOCK_ROOT` moves them; the tests use it), taken with an atomic `mkdir` by `scripts/lib/lock.mjs`:
+  ```sh
+  QA_PORT=3400 node scripts/qa/serve.mjs                                                  # ReelFlies_CA
+  QA_PORT=3400 QA_CHANNEL=1855224 QA_VARIATION="ReelFlies US" node scripts/qa/serve.mjs   # .com's data (read-only)
+  ```
+
+  Like the gates, it leaves its dev build in `assets/dist`. A bare `npx stencil start` takes no slot, so don't run one in a worktree made after W0-7.
+- **Waits** last up to 40 minutes, longer than a slot's or a port's 30-minute limit, so a lock whose holder died goes stale and is broken while the run waits. After that the run fails, naming the holders.
+- **Both locks are released when the gate ends,** also when it exits early, and when it is stopped by Ctrl-C (`SIGINT`), `SIGTERM` (a kill, or a tool's timeout) or `SIGHUP` (a closed terminal). A `stencil start` the gate started is stopped with it. Only `SIGKILL`, which can't be caught, leaves the locks until they are stale.
+
+**The locks** are folders under `~/reelflies/theme/.locks/`, taken with an atomic `mkdir` by `scripts/lib/lock.mjs`. `RF_LOCK_ROOT` moves them for the tests, and only under `node --test`: a real run refuses it, so no release or gate can take a lock or a slot that other runs don't see.
 
 | Lock | Held by | Stale after |
 |---|---|---|
@@ -83,12 +92,14 @@ Agents build tickets in parallel, each in its own worktree, and each worktree's 
 
 - Each holds `owner.json` (owner, ticket, pid, host and start time) and `owner.txt` with the same facts as lines.
 - **Stale:** a lock older than its limit whose pid isn't running is broken, with a `STALE` line naming the old holder. A lock whose holder still runs is never broken, however old.
+- The pid is checked whatever host the lock names: the folders are on this Mac's own disk, and macOS can rename the host from the network mid-run.
 - A lock with no pid to check (written by hand) goes stale on age alone, after its limit or 45 minutes, whichever is longer.
+- Breaking a stale lock removes only a lock folder (its owner files, then the folder). Anything else at a lock's path is left alone, and the run stops naming it.
 - To see who holds what: `cat ~/reelflies/theme/.locks/*/owner.txt`.
 
 **From wave 0's interim lock to these.** Until W0-7, every `stencil start` used 3300 and 3301, so agents held one hand-made lock, `~/reelflies/theme/.locks/stencil`, around any `stencil start`, `npm run qa:*` or `release.sh` run. Worktrees made from `master` after W0-7 don't need it:
 
-1. **Worktrees made, or rebased onto `master`, after W0-7:** run with the `QA_PORT` the orchestrator assigned, and take no lock by hand. The gates take their port lock and slots themselves.
+1. **Worktrees made, or rebased onto `master`, after W0-7:** run with the `QA_PORT` the orchestrator assigned, and take no lock by hand. The gates take their port lock and slots themselves, and so does `serve.mjs` for a `stencil start` by hand.
 2. **Anything still on 3300 and 3301** (`release.sh`, and any worktree from before W0-7) keeps taking `.locks/stencil` by hand, as in wave 0, while any worktree from before W0-7 is still in use. Those worktrees take no port lock or slot, so the hand lock is all that keeps them apart from the release, and until they are gone a fourth `stencil start` can run beside the three slots.
 3. **The release lock is now `release.sh`'s own.** Don't take `~/reelflies/theme/.locks/release` by hand around `release.sh` any more: it would find the lock held and stop, naming you.
 4. **Once no worktree from before W0-7 is left,** nothing takes `.locks/stencil` any more, and the orchestrator deletes it.
@@ -524,7 +535,7 @@ It writes `results/review/pr-<number>/` with each baseline the working tree chan
 - `harness-selftest.spec.mjs` runs with `qa:axe`, `qa:screens` and `qa:quick-view`, on pages it serves itself. It proves that a pinned page answering with the wrong status fails the run without being asked again, that one answering 5xx twice or 429 four times fails, and that dismissing the cookie banner leaves nothing hovered. Its 5xx and 429 retry cases answer the pinned 404 page (or the channel's first page) with a 500, or a 429 with `Retry-After: 1`, once and then let the request through, so the second answer is the storefront's real one.
 - `widget-screens.spec.mjs` runs with `qa:screens`, because the script's `screens` filter matches its name.
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
-- `storefront.test.mjs` also covers `QA_PORT`, the start log's name and the locks a gate holds, `playwright-config.test.mjs` that the config reads `QA_PORT` and holds the locks only in the runner, and `scripts/lib/lock.test.mjs` the locks themselves: the stale rules, waiting, the three slots across processes, and the command line `release.sh` uses.
+- `storefront.test.mjs` also covers `QA_PORT`, the start log's name, the locks a gate holds (and the ports checked again after a slot wait), trusting only the server a gate started, and stopping that server when the gate is stopped by a signal. `playwright-config.test.mjs` covers that the config reads `QA_PORT` and holds the locks only in the runner, `prepush.test.mjs` what `qa:prepush` checks before its first gate, `serve.test.mjs` the locks around a `stencil start` by hand, and `scripts/lib/lock.test.mjs` the locks themselves: the stale rules, waiting, the three slots across processes, the signals, `RF_LOCK_ROOT`, and the command line `release.sh` uses.
 - `npm run test:scripts` runs every `scripts/**/*.test.mjs` with `node --test`, the fixture renders included.
 - Jest runs `assets/js/test-unit/`. `jest.config.js` ignores `scripts/`, because Jest 30 would otherwise match `*.test.mjs` and `*.spec.mjs` too.
 - `screens-reference.spec.mjs` runs with `qa:screens`, because its name matches the filter, and never fails it. `review-live.spec.mjs` runs only when named. Neither is a gate. `review/manifest-reporter.test.mjs` checks both against `package.json`'s filters.
