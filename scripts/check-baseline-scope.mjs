@@ -14,8 +14,10 @@
 //
 // A baseline is scripts/qa/baselines/<set>/<kind>[@pin][~state][+overlay]-<project>-<platform>.png.
 // A kind covers its plain pin on every channel and in every UI state; kind@pin covers that pin;
-// "overlay <name>" covers every baseline under that overlay. A path in any other shape is
-// covered only by an epoch. scripts/qa/README.md, "Declaring changed baselines", has more.
+// "overlay <name>" covers every baseline under that overlay. A path in any other shape,
+// including the folder or extension in another case (the Mac's file system ignores case), is
+// covered only by an epoch, and an epoch PR changes nothing but baselines.
+// scripts/qa/README.md, "Declaring changed baselines", has more.
 
 import { spawnSync } from 'child_process';
 import fs from 'fs';
@@ -65,6 +67,9 @@ export function parseDeclaration(body) {
     return { type: 'list', line, items: items.map(parseItem) };
 }
 
+// Anything under the baselines folder, in any case.
+const underBaselines = file => file.toLowerCase().startsWith(BASELINES_DIR);
+
 // The parts of a baseline's path, or null when it isn't in the shape the check knows.
 export function parseBaselinePath(file) {
     if (!file.startsWith(BASELINES_DIR)) return null;
@@ -110,19 +115,30 @@ function cover(declaration, file) {
 
 // files: every path the PR changes, adds, deletes or renames (both names of a rename).
 export function checkScope({ body, files }) {
-    const pngs = [...new Set(files)].filter(file => file.startsWith(BASELINES_DIR) && file.endsWith('.png'));
+    const unique = [...new Set(files)];
+    const pngs = unique.filter(file => underBaselines(file) && file.toLowerCase().endsWith('.png'));
+    const refuseAll = (declaration, error, reason) => ({
+        ok: false,
+        declaration,
+        error,
+        files: pngs.map(file => ({
+            file, parsed: parseBaselinePath(file), covered: false, reason,
+        })),
+    });
     let declaration;
     try {
         declaration = parseDeclaration(body);
     } catch (error) {
-        return {
-            ok: false,
-            declaration: null,
-            error: error.message,
-            files: pngs.map(file => ({
-                file, parsed: parseBaselinePath(file), covered: false, reason: 'the "Baselines:" line is malformed',
-            })),
-        };
+        return refuseAll(null, error.message, 'the "Baselines:" line is malformed');
+    }
+    if (declaration?.type === 'epoch') {
+        // Section 6.6: an epoch PR re-records baselines and carries nothing else, so the line
+        // can't wave through a code PR's baselines.
+        const others = unique.filter(file => !underBaselines(file));
+        if (others.length) {
+            const named = others.slice(0, 5).join(', ') + (others.length > 5 ? `, and ${others.length - 5} more` : '');
+            return refuseAll(declaration, `"Baselines: epoch" is for the orchestrator's re-baseline epoch PRs, which change baselines only, and this PR also changes ${named}`, 'an epoch covers baselines only in a baselines-only PR');
+        }
     }
     if (!pngs.length) {
         return {
@@ -130,14 +146,7 @@ export function checkScope({ body, files }) {
         };
     }
     if (!declaration) {
-        return {
-            ok: false,
-            declaration,
-            error: `the PR changes ${pngs.length} baseline${pngs.length === 1 ? '' : 's'} but its body has no "Baselines:" line`,
-            files: pngs.map(file => ({
-                file, parsed: parseBaselinePath(file), covered: false, reason: 'not declared',
-            })),
-        };
+        return refuseAll(declaration, `the PR changes ${pngs.length} baseline${pngs.length === 1 ? '' : 's'} but its body has no "Baselines:" line`, 'not declared');
     }
     const results = pngs.map(file => cover(declaration, file));
     return {

@@ -122,6 +122,25 @@ test('an unrecognised baseline path fails unless the PR is a re-baseline epoch',
     assert.equal(epoch.declaration.type, 'epoch');
 });
 
+test('an epoch covers baselines only in a PR that changes nothing but baselines', () => {
+    const mixed = checkScope({ body: 'Baselines: epoch 18\'s apply', files: [HOME, 'assets/js/theme/reelflies/header.js', 'scripts/qa/pages.mjs'] });
+    assert.equal(mixed.ok, false);
+    assert.match(mixed.error, /epoch.*change baselines only.*assets\/js\/theme\/reelflies\/header\.js, scripts\/qa\/pages\.mjs/);
+    assert.deepEqual(outside(mixed), [HOME]);
+    const codeOnly = checkScope({ body: 'Baselines: epoch nothing', files: ['assets/js/app.js'] });
+    assert.equal(codeOnly.ok, false, 'an epoch line on a PR with no baseline is a misuse too');
+});
+
+test('a baseline path in another case still counts, and only an epoch covers it', () => {
+    const upper = 'Scripts/QA/baselines/1895766-reelflies-ca/home-phone-375-darwin.png';
+    const shouting = png('1895766-reelflies-ca', 'home-phone-375-darwin.PNG');
+    const none = checkScope({ body: 'Baselines: none', files: [upper, shouting] });
+    assert.equal(none.ok, false);
+    assert.deepEqual(outside(none), [upper, shouting]);
+    assert.deepEqual(outside(checkScope({ body: 'Baselines: home', files: [upper, shouting] })), [upper, shouting]);
+    assert.equal(checkScope({ body: 'Baselines: epoch case', files: [upper, shouting] }).ok, true);
+});
+
 test('a malformed line fails the check with its reason', () => {
     const result = checkScope({ body: 'Baselines: none, home', files: [] });
     assert.equal(result.ok, false);
