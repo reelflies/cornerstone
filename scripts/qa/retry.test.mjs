@@ -42,6 +42,10 @@ describe('reading Retry-After', () => {
     it('ignores a missing or unreadable value', () => {
         [undefined, null, '', 'soon', '-5', '1.5'].forEach(value => assert.equal(retryAfterMs(value, now), null, String(value)));
     });
+
+    it('reads a date only in the HTTP-date form, so text with a number in it isn\'t taken for a date gone by', () => {
+        ['hello 2', 'Later 5', '2026-10-06T10:00:07Z', 'Tue, 06 Oct 2026 10:00:07'].forEach(value => assert.equal(retryAfterMs(value, now), null, value));
+    });
 });
 
 describe('after an answer', () => {

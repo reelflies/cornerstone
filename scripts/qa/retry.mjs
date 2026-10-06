@@ -27,12 +27,16 @@ export const MAX_WAIT_MS = 30000;
 const isServerError = status => status >= 500;
 const seconds = ms => `${Number((ms / 1000).toFixed(1))} s`;
 
+// The IMF-fixdate form of an HTTP date, "Tue, 06 Oct 2026 10:00:07 GMT". Date.parse alone
+// would take almost any text with a number in it ("Later 5") for a date long gone.
+const HTTP_DATE = /^[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT$/;
+
 // A Retry-After header in ms: delay-seconds, or an HTTP date (the time left until then, 0
 // once it has passed). null when it is missing or can't be read.
 export function retryAfterMs(value, now = Date.now()) {
     const text = String(value ?? '').trim();
     if (/^\d+$/.test(text)) return Number(text) * 1000;
-    const date = /[a-z]/i.test(text) ? Date.parse(text) : NaN;
+    const date = HTTP_DATE.test(text) ? Date.parse(text) : NaN;
     return Number.isNaN(date) ? null : Math.max(0, date - now);
 }
 
