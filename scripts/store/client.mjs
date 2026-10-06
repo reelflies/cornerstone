@@ -10,10 +10,15 @@
 // - The client retries nothing: a write sent twice could create two objects. A failed read
 //   before any write stops the plan or the apply, which is run again; apply.mjs tries each GET
 //   after a write up to 3 times, because part 3 must be read.
+// - Every request gives up after REQUEST_TIMEOUT_MS with no answer (a thrown error, as a dropped
+//   connection is). A write that hangs then reaches apply.mjs's re-read and part 3 in the same
+//   run, instead of the run being killed by a tool's timeout first.
 // - Errors and failure descriptions carry the status and BigCommerce's own title, never the
 //   request's headers. Callers print through release-redact.mjs anyway.
 
 export const API_HOST = 'https://api.bigcommerce.com';
+// Well under the 120 s after which Claude Code's Bash tool kills a command by default.
+export const REQUEST_TIMEOUT_MS = 30000;
 
 const QUERY_KEY = /^[a-z_]+(:[a-z]+)?$/;
 const STORE_HASH = /^[a-z0-9]{4,32}$/;
@@ -29,7 +34,7 @@ export function queryString(query) {
 }
 
 export function createClient({
-    storeHash, token, fetch: fetchImpl = fetch, readOnly = false,
+    storeHash, token, fetch: fetchImpl = fetch, readOnly = false, timeoutMs = REQUEST_TIMEOUT_MS,
 }) {
     if (!STORE_HASH.test(String(storeHash))) throw new Error(`${JSON.stringify(storeHash)} isn't a store hash`);
     if (!token) throw new Error('the store client has no token');
@@ -39,10 +44,18 @@ export function createClient({
         if (readOnly && method !== 'GET') throw new Error(`this client is read-only: ${method} ${path} refused`);
         const headers = { 'X-Auth-Token': token, Accept: 'application/json' };
         if (body !== undefined) headers['Content-Type'] = 'application/json';
-        const response = await fetchImpl(`${API_HOST}/stores/${storeHash}${path}${queryString(query)}`, {
-            method, headers, body: body === undefined ? undefined : JSON.stringify(body),
-        });
-        const text = await response.text();
+        const signal = AbortSignal.timeout(timeoutMs);
+        let response;
+        let text;
+        try {
+            response = await fetchImpl(`${API_HOST}/stores/${storeHash}${path}${queryString(query)}`, {
+                method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal,
+            });
+            text = await response.text();
+        } catch (error) {
+            if (signal.aborted) throw new Error(`${method} ${path}${queryString(query)} got no answer within ${timeoutMs / 1000} s`);
+            throw error;
+        }
         let parsed = null;
         try {
             parsed = text ? JSON.parse(text) : null;

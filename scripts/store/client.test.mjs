@@ -2,7 +2,9 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createClient, describeFailure, queryString } from './client.mjs';
+import {
+    REQUEST_TIMEOUT_MS, createClient, describeFailure, queryString,
+} from './client.mjs';
 import { FAKE_TOKEN, STORE_HASH, fixtureFetch } from './fixtures/store.mjs';
 
 test('the query string sorts its keys, keeps the filter colon, and encodes values', () => {
@@ -49,4 +51,39 @@ test('a failure names the status and BigCommerce\'s title, never the token', asy
     assert.ok(!text.includes(FAKE_TOKEN));
     assert.equal(describeFailure({ status: 422, body: { title: 'Invalid', errors: { channel_id: 'is required' } } }), '422: Invalid (channel_id: is required)');
     assert.equal(describeFailure({ status: 500, body: null, text: 'x'.repeat(500) }).length < 260, true);
+});
+
+test('a request with no answer in time is abandoned, so a hung write reaches part 3 in the same run', { timeout: 10000 }, async () => {
+    // A fetch that answers only when it is aborted, as a socket BigCommerce never answers on.
+    const hanging = (url, init = {}) => new Promise((resolve, reject) => {
+        const keepAlive = setTimeout(() => reject(new Error('the client never gave up')), 5000);
+        if (!init.signal) return;
+        init.signal.addEventListener('abort', () => {
+            clearTimeout(keepAlive);
+            reject(init.signal.reason);
+        });
+    });
+    const client = createClient({
+        storeHash: STORE_HASH, token: FAKE_TOKEN, fetch: hanging, timeoutMs: 50,
+    });
+    await assert.rejects(client.request({
+        method: 'PUT', path: '/v3/settings/inventory', query: { channel_id: 1895766 }, body: {},
+    }), error => {
+        assert.equal(error.message, 'PUT /v3/settings/inventory?channel_id=1895766 got no answer within 0.05 s');
+        assert.ok(!error.message.includes(FAKE_TOKEN));
+        return true;
+    });
+    // By default well under the 120 s after which Claude Code's Bash tool kills a command.
+    assert.equal(REQUEST_TIMEOUT_MS, 30000);
+    let signal = null;
+    const answered = createClient({
+        storeHash: STORE_HASH,
+        token: FAKE_TOKEN,
+        fetch: async (url, init) => {
+            ({ signal } = init);
+            return new Response('{}', { status: 200 });
+        },
+    });
+    await answered.get('/v3/content/widgets');
+    assert.ok(signal instanceof AbortSignal, 'every request carries a timeout');
 });
