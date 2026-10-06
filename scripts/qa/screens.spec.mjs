@@ -2,7 +2,10 @@
 // seam 1; ticket 16), against the baselines in
 // scripts/qa/baselines/<channel>-<variation>/. Live data is masked (masksFor in
 // pages.mjs: LIVE_DATA on every page, plus the channel's own masks for that page), so the
-// diffs don't fail on prices, stock, cart counts or catalogue changes.
+// diffs don't fail on prices, stock, cart counts or catalogue changes. Content that could
+// change a page's height is hidden instead, through a stylesheet (screenshotStyle in
+// pages.mjs; W0-5): widgets and the cookie banner and bar on every page, and the boxes a
+// channel holds at a fixed height, such as channel 1's related products.
 //
 // A missing baseline fails the run: a plain run never writes one (updateSnapshots in
 // playwright.config.mjs), so a release can't pass on a set nobody has reviewed.
@@ -17,7 +20,7 @@ import {
     BASELINE_SET, QA_CHANNEL, QA_VARIATION, ROOT,
 } from './storefront.mjs';
 import {
-    PAGES, dismissCookieBanner, expect, storefrontPage, test,
+    PAGES, dismissCookieBanner, expect, screenshotStylePath, storefrontPage, test,
 } from './fixtures.mjs';
 
 for (const [template, pagePath] of Object.entries(PAGES)) {
@@ -33,6 +36,7 @@ for (const [template, pagePath] of Object.entries(PAGES)) {
         await expect(page).toHaveScreenshot([BASELINE_SET, `${template}.png`], {
             fullPage: true,
             mask: masksFor(QA_CHANNEL, template).map(selector => page.locator(selector)),
+            stylePath: screenshotStylePath(testInfo, QA_CHANNEL, template),
         });
     });
 }

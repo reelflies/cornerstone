@@ -14,6 +14,10 @@
 //                 neither the page nor a reason here.
 //   mask          optional, template -> selectors the screenshots also mask on that page:
 //                 content these pins can't hold still, such as a live product list
+//   hold          optional, template -> { selector: height in px }: live content whose
+//                 height these pins can't hold still. The screenshot takes everything
+//                 inside each box out and holds the box at that height, so the page keeps
+//                 its size, and masks the box (screenshotStyle and masksFor below).
 
 export const CHANNELS = {
     1895766: {
@@ -36,14 +40,27 @@ export const CHANNELS = {
         // until ReelFlies_CA has products. Nothing here ever writes to channel 1.
         name: 'reelflies.ca (live, read-only)',
         pages: {
-            product: '/realistic-flying-hot-butt-hopper-brown/', // the reference page's hero product (6178)
+            // The reference page's hero product (6178). Its description was the same on
+            // 2026-10-06 as in the 2026-09-07 product export. Its five related products
+            // look automatic (all hoppers named like it), so a new hopper could change
+            // them: `hold` below keeps that from moving the page.
+            product: '/realistic-flying-hot-butt-hopper-brown/',
             category: '/flies/realistic-trout-flies/', // tree 1; 12 cards with Quick view, and facets
         },
         // The live catalogue decides which products these pages list, so the lists can't
         // be pinned here. Pin a listing that holds still before unmasking one.
         mask: {
             category: ['.productGrid'],
-            product: ['#tab-related', '#tab-similar'], // Related Products, Customers Also Viewed
+        },
+        // The related products' cards (Related Products, and Customers Also Viewed when the
+        // store shows it), whose titles wrap to two or three lines, so the live list sets
+        // the page's height. The heading and the section around them stay in the shot,
+        // because tickets 39 and 40 change them; ticket 39 points these at its grid.
+        hold: {
+            product: {
+                '#tab-related .productCarousel': 320,
+                '#tab-similar .productCarousel': 320,
+            },
         },
     },
 };
@@ -58,14 +75,13 @@ export const expectedStatus = template => (template === '404' ? 404 : 200);
 
 // Live data the screenshots mask on every page, so they don't fail on price, stock or
 // catalogue changes: prices, stock and SKU lines, ratings and review counts, sale and
-// sold-out badges, cart counts and totals, page counts, and store content edited outside
-// the theme (marketing banners, and Page Builder or Widgets API widgets). Product cards,
-// grids and carousels stay visible; a page whose list isn't pinned masks it through its
-// channel's `mask`. Tickets 46-49 replace the widget mask with pinned widget content when
-// the home page's widgets are synced from widgets/.
+// sold-out badges, cart counts and totals, page counts, and marketing banners. Product
+// cards, grids and carousels stay visible; a page whose list isn't pinned masks it through
+// its channel's `mask`, or holds it through `hold`. A mask keeps the layout, so it suits
+// content whose size holds still while its pixels change. Content that can change a
+// page's height is hidden instead (HIDDEN and `hold`).
 export const LIVE_DATA = [
     '.banners',
-    '[data-widget-id]',
     '.pagination',
     '.price-section',
     '.price',
@@ -85,9 +101,48 @@ export const LIVE_DATA = [
     '.cart-total-value',
 ];
 
-// Everything the screenshot of one pinned page masks.
+// What the screenshots take out of the layout on every page and channel (W0-5): content
+// that isn't the theme's and can change a page's height, which a mask can't stop.
+// - Page Builder and Widgets API widgets: one applied on 1895766 (a hero, the shipping
+//   strip, a home section) would change every page's height at once. Each widget is
+//   checked from its own source instead (W0-9).
+// - The store's cookie banner, and the 48 px bar it leaves at the end of the page about a
+//   second after "Reject all". A shot taken before the bar appeared made the channel-1
+//   product page at 375 fail once (375x4101 against a 375x4149 baseline).
+export const HIDDEN = [
+    '[data-widget-id]',
+    '#consent-manager',
+    '#consent-manager-update-banner',
+];
+
+// The boxes one pinned page holds at a fixed height, as [selector, height] pairs.
+const heldBoxes = (channel, template) => Object.entries(CHANNELS[channel]?.hold?.[template] || {});
+
+// Everything the screenshot of one pinned page masks: LIVE_DATA, its channel's masks, and
+// the boxes it holds, so a reviewer sees a held box as a mask rather than an empty space.
 export function masksFor(channel, template) {
-    return [...LIVE_DATA, ...(CHANNELS[channel]?.mask?.[template] || [])];
+    return [
+        ...LIVE_DATA,
+        ...(CHANNELS[channel]?.mask?.[template] || []),
+        ...heldBoxes(channel, template).map(([selector]) => selector),
+    ];
+}
+
+// The stylesheet the screenshot of one page applies (toHaveScreenshot's stylePath, written
+// by screenshotStylePath in fixtures.mjs): HIDDEN on every page, and the page's held boxes.
+export function screenshotStyle(channel, template) {
+    const held = heldBoxes(channel, template).map(([selector, height]) => [
+        `/* held at ${height}px: what is inside never changes the page's size */`,
+        `${selector} { height: ${height}px !important; min-height: ${height}px !important; max-height: ${height}px !important; overflow: hidden !important; }`,
+        `${selector} > * { display: none !important; }`,
+    ].join('\n'));
+    const css = [
+        `/* scripts/qa/pages.mjs: channel ${channel}, ${template} */`,
+        '/* out of the layout on every page */',
+        `${HIDDEN.join(',\n')} { display: none !important; }`,
+        ...held,
+    ].join('\n');
+    return `${css}\n`;
 }
 
 export function pinnedChannel(channel) {
