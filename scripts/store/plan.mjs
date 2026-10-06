@@ -172,11 +172,13 @@ function entityDiff({ request, what }, snapshot) {
     if (what.action === 'create') {
         const bodies = Array.isArray(request.body) ? request.body : [request.body];
         const existing = recordFor(snapshot, `GET ${what.entity.base}${queryString({ [what.entity.listChannelQuery]: CHANNEL })}`)?.data || [];
+        // Every field the create sets, as an update shows a change: a placement created active,
+        // a script's src and location, or a page made the homepage all show in the reviewed diff.
         return bodies.flatMap(body => {
             const lines = [`${INDENT}+ new ${what.object}${body[nameField] !== undefined ? ` ${showValue(body[nameField])}` : ''}`];
-            Object.entries(body).filter(([, value]) => isRef(value)).forEach(([key, value]) => lines.push(`${INDENT}${key}: ${showValue(value)}`));
             const twin = body[nameField] !== undefined && existing.find(item => isObject(item) && item[nameField] === body[nameField]);
             if (twin && what.object !== 'placements') lines.push(`${INDENT}! 1895766 already has a ${what.object} named ${showValue(body[nameField])} (${twin[what.entity.idField]})`);
+            Object.entries(body).forEach(([key, value]) => lines.push(`${INDENT}${key}: (none) -> ${showValue(value, key)}`));
             return lines;
         });
     }
@@ -220,7 +222,7 @@ function settingsDiff({ request }, snapshot, mode) {
 }
 
 function promotionDiff({ request, what }, snapshot) {
-    if (what.action === 'create') return [`${INDENT}+ new promotion ${showValue(request.body.name)}`];
+    if (what.action === 'create') return [`${INDENT}+ new promotion ${showValue(request.body.name)}`, ...Object.entries(request.body).map(([key, value]) => `${INDENT}${key}: (none) -> ${showValue(value, key)}`)];
     const current = recordFor(snapshot, `GET ${request.path}`)?.data || {};
     const lines = Object.entries(request.body).filter(([key, value]) => !isDeepStrictEqual(current[key], value)).map(([key, value]) => `${INDENT}${key}: ${showValue(current[key], key)} -> ${showValue(value, key)}`);
     return lines.length ? lines : [`${INDENT}(no change)`];

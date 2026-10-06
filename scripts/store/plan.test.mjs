@@ -178,8 +178,8 @@ test('a create may take the uuid of a template or widget created earlier in the 
         'GET /v3/content/placements?channel_id:in=1895766&limit=250&page=1': { body: widgets.placements_list },
     });
     const { plan: made } = await result;
-    assert.match(made.diff.join('\n'), /widget_template_uuid: the uuid request 1 creates/);
-    assert.match(made.diff.join('\n'), /widget_uuid: the uuid request 2 creates/);
+    assert.match(made.diff.join('\n'), /widget_template_uuid: \(none\) -> the uuid request 1 creates/);
+    assert.match(made.diff.join('\n'), /widget_uuid: \(none\) -> the uuid request 2 creates/);
 });
 
 test('a reference must point back to the right kind of create, and only where an id is taken', () => {
@@ -188,6 +188,62 @@ test('a reference must point back to the right kind of create, and only where an
     assert.throws(check([{ method: 'POST', path: '/v3/content/widgets', body: { channel_id: 1895766, widget_template_uuid: { $created: 0 } } }]), /request 1: widget_template_uuid refers to request 1, which isn't an earlier create/);
     assert.throws(check([template, { method: 'POST', path: '/v3/content/placements', body: { channel_id: 1895766, widget_uuid: { $created: 0 } } }]), /request 2: widget_uuid must refer to a widgets create, and request 1 creates widget-templates/);
     assert.throws(check([template, { method: 'POST', path: '/v3/content/widgets', body: { channel_id: 1895766, name: { $created: 0 } } }]), /request 2: a \{"\$created": n\} reference may only be widget_template_uuid or widget_uuid, not name/);
+});
+
+test('a create\'s diff lists every field it sets, so the reviewed diff shows what will be written', async () => {
+    const placement = {
+        method: 'POST',
+        path: '/v3/content/placements',
+        body: {
+            channel_id: 1895766, widget_uuid: 'f2f2f2f2-1234-4abc-8def-0123456789ab', template_file: 'pages/home', region: 'home_below_menu', status: 'active',
+        },
+    };
+    const script = {
+        method: 'POST',
+        path: '/v3/content/scripts',
+        body: {
+            channel_id: 1895766, name: 'tag', src: 'https://third-party.example/tag.js', kind: 'src', location: 'head', visibility: 'all_pages', consent_category: 'analytics', enabled: false,
+        },
+    };
+    const page = {
+        method: 'POST',
+        path: '/v3/content/pages',
+        body: {
+            channel_id: 1895766, name: 'Returns', type: 'page', is_homepage: true, is_visible: true,
+        },
+    };
+    const { result } = plan([placement, script, page], {
+        'GET /v3/content/placements?channel_id:in=1895766&limit=250&page=1': { body: widgets.placements_list },
+        'GET /v3/content/scripts?channel_id:in=1895766&limit=250&page=1': { body: content.scripts_list },
+        'GET /v3/content/pages?channel_id=1895766&limit=250&page=1': { body: content.pages_list },
+    });
+    const { plan: made } = await result;
+    assert.deepEqual(made.diff, [
+        '1. POST /v3/content/placements (placements create)',
+        '     + new placements "home_below_menu"',
+        '     channel_id: (none) -> 1895766',
+        '     widget_uuid: (none) -> "f2f2f2f2-1234-4abc-8def-0123456789ab"',
+        '     template_file: (none) -> "pages/home"',
+        '     region: (none) -> "home_below_menu"',
+        '     status: (none) -> "active"',
+        '2. POST /v3/content/scripts (scripts create)',
+        '     + new scripts "tag"',
+        '     channel_id: (none) -> 1895766',
+        '     name: (none) -> "tag"',
+        '     src: (none) -> "https://third-party.example/tag.js"',
+        '     kind: (none) -> "src"',
+        '     location: (none) -> "head"',
+        '     visibility: (none) -> "all_pages"',
+        '     consent_category: (none) -> "analytics"',
+        '     enabled: (none) -> false',
+        '3. POST /v3/content/pages (pages create)',
+        '     + new pages "Returns"',
+        '     channel_id: (none) -> 1895766',
+        '     name: (none) -> "Returns"',
+        '     type: (none) -> "page"',
+        '     is_homepage: (none) -> true',
+        '     is_visible: (none) -> true',
+    ]);
 });
 
 test('a create warns when the channel already has one of the same name', async () => {
