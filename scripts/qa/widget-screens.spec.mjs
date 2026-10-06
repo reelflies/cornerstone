@@ -11,8 +11,12 @@
 // for QA_VARIATION.
 //
 //   npm run qa:screens
-//   npm run qa:screens -- --update-snapshots      # after a reviewed, intended change
 //   npx playwright test --config scripts/qa/playwright.config.mjs widget-screens   # these only
+//
+// After a reviewed, intended change, rewrite the widget baselines only. `npm run qa:screens --
+// --update-snapshots` would rewrite every drifted page baseline too (build pipeline 6.6):
+//
+//   npx playwright test --config scripts/qa/playwright.config.mjs widget-screens --update-snapshots
 
 /* eslint-env browser */ // the page.evaluate callbacks run in the page
 
@@ -24,14 +28,16 @@ import { WIDGETS_DIR, themeConfig, widgetCases } from './render/render.mjs';
 import { SELFTEST_WIDGETS, openWidget } from './render/widget-page.mjs';
 
 const shotName = ({ widget, name }) => ['widgets', slug(QA_VARIATION), `${widget}-${name}.png`];
+const baselinePath = (testInfo, widgetCase) => testInfo.snapshotPath(...shotName(widgetCase), { kind: 'screenshot' });
 
 for (const widgetCase of widgetCases([WIDGETS_DIR, SELFTEST_WIDGETS]).filter(({ shot }) => shot)) {
     const { widget, name, file } = widgetCase;
     test(`widget ${widget} (${name}) matches its baseline`, async ({ page }, testInfo) => {
-        const baseline = testInfo.snapshotPath(...shotName(widgetCase), { kind: 'screenshot' });
+        const baseline = baselinePath(testInfo, widgetCase);
         if (testInfo.config.updateSnapshots === 'none' && !fs.existsSync(baseline)) {
             throw new Error(`there is no baseline for the widget ${widget}'s fixture ${path.relative(ROOT, file)} with "${QA_VARIATION}" at ${testInfo.project.name}: ${path.relative(ROOT, baseline)} doesn't exist. `
-                + `Make it with \`QA_VARIATION="${QA_VARIATION}" npm run qa:screens -- --update-snapshots\`, then review the PNG and commit it with the widget.`);
+                + `Make it with \`QA_VARIATION="${QA_VARIATION}" npx playwright test --config scripts/qa/playwright.config.mjs widget-screens --update-snapshots\`, `
+                + 'which rewrites widget baselines only, then review the PNG and commit it with the widget.');
         }
 
         const { widget: element, problems } = await openWidget(page, widgetCase, { variation: QA_VARIATION });
@@ -43,7 +49,9 @@ for (const widgetCase of widgetCases([WIDGETS_DIR, SELFTEST_WIDGETS]).filter(({ 
 // Proves the widget shots check what they claim. The self-test widget's own baseline is
 // checked by the loop above, so an unchanged widget matching it is already proven.
 // While --update-snapshots is rewriting baselines, a changed widget would overwrite the
-// baseline instead of failing against it, so the change check waits for a normal run.
+// baseline instead of failing against it, so the change check waits for a normal run. With
+// no baseline yet, --update-snapshots=missing would write the changed widget as the baseline,
+// so the change check waits for one too (the loop above reports it missing).
 const updating = testInfo => !['none', 'missing'].includes(testInfo.config.updateSnapshots);
 const selftest = () => widgetCases([SELFTEST_WIDGETS]).find(({ name }) => name === 'default');
 // The self-test widget with a different background or product photo URL.
@@ -67,6 +75,7 @@ test.describe('widget shot self-test', () => {
 
     test('a changed widget fails its baseline', async ({ page }, testInfo) => {
         test.skip(updating(testInfo), 'baselines are being rewritten');
+        test.skip(!fs.existsSync(baselinePath(testInfo, selftest())), 'the self-test widget has no baseline yet for this variation');
         const { widget } = await openWidget(page, selftestWith({ background: '#e4007c' }), { variation: QA_VARIATION });
         await expect(expect(widget).toHaveScreenshot(shotName(selftest()))).rejects.toThrow(/pixels \(ratio [\d.]+ of all image pixels\) are different/);
     });
