@@ -8,10 +8,10 @@
 //   QA_BASE_URL=https://<prelaunch host> QA_PREVIEW_COOKIE='<name>=<value>' npm run qa:raw-html
 //
 // - Pages: every page pinned for QA_CHANNEL in scripts/qa/pages.mjs. Each must answer
-//   200, or 404 for the 404 page. A page that answers 5xx is fetched once more after 2 s
-//   (RETRY_DELAY_MS in storefront.mjs). A channel must pin a product and a category page
-//   (RAW_HTML_REQUIRED), or give the reason it can't yet in notPinnedYet, which is
-//   reported as a warning.
+//   200, or 404 for the 404 page. A page that answers 5xx is fetched once more after 2 s,
+//   and one that answers 429 up to three times with backoff (retry.mjs). A channel must
+//   pin a product and a category page (RAW_HTML_REQUIRED), or give the reason it can't yet
+//   in notPinnedYet, which is reported as a warning.
 // - Host: QA_BASE_URL, or else a local `stencil start` (scripts/qa/storefront.mjs),
 //   reused when one is running (it must render QA_CHANNEL and QA_VARIATION), and started
 //   and stopped here when not. With QA_FRESH_SERVER=1 it is always started here.
@@ -24,12 +24,12 @@
 
 import fs from 'fs';
 import path from 'path';
-import { setTimeout as sleep } from 'timers/promises';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { isMain } from '../lib/is-main.mjs';
 import { RAW_HTML_REQUIRED, expectedStatus, pinnedChannel } from './pages.mjs';
+import { fetchWithRetries } from './retry.mjs';
 import {
-    BASE_URL, HEADERS, IS_LOCAL, PREVIEW_COOKIE, QA_CHANNEL, RETRY_DELAY_MS, useStorefront, worthRetrying,
+    BASE_URL, HEADERS, IS_LOCAL, PREVIEW_COOKIE, QA_CHANNEL, useStorefront,
 } from './storefront.mjs';
 
 const ASSERTIONS_DIR = fileURLToPath(new URL('raw-html/assertions/', import.meta.url));
@@ -85,18 +85,12 @@ export function pagesToFetch({ pages, notPinnedYet = {} }) {
 
 // Follows up to five redirects by hand, so the preview cookie only ever goes to the
 // QA_BASE_URL host it belongs to, never to a host a redirect points at. A request that
-// answers 5xx is made once more after RETRY_DELAY_MS (storefront.mjs says why).
+// answers 5xx or 429 is made again as retry.mjs says.
 export async function fetchPage(baseUrl, { kind, path: pagePath }, redirects = 5) {
     const url = new URL(pagePath, baseUrl);
     const headers = { ...HEADERS, Accept: 'text/html', 'User-Agent': USER_AGENT };
     if (PREVIEW_COOKIE && !IS_LOCAL && url.origin === new URL(BASE_URL).origin) headers.Cookie = PREVIEW_COOKIE;
-    let response = await fetch(url, { headers, redirect: 'manual' });
-    if (worthRetrying(response.status)) {
-        console.log(`RETRY    ${kind} ${pagePath} returned HTTP ${response.status}; fetching it once more in ${RETRY_DELAY_MS / 1000} s (stencil start's request to the store can drop)`);
-        await response.arrayBuffer();
-        await sleep(RETRY_DELAY_MS);
-        response = await fetch(url, { headers, redirect: 'manual' });
-    }
+    const response = await fetchWithRetries(url, { headers, redirect: 'manual' }, { what: `${kind} ${pagePath}` });
     const location = response.headers.get('location');
     if (location && response.status >= 300 && response.status < 400 && redirects > 0) {
         return fetchPage(url, { kind, path: new URL(location, url).href }, redirects - 1);

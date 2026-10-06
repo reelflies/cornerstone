@@ -36,13 +36,7 @@ export const FRESH_SERVER = process.env.QA_FRESH_SERVER === '1';
 export const READY_URL = `${LOCAL_URL}/stencil/00000000-0000-0000-0000-000000000001/dist/theme-bundle.main.js`;
 // The renderer throws on a request without Accept-Language, so every request sends one.
 export const HEADERS = { 'Accept-Language': 'en-CA,en;q=0.9' };
-// stencil start proxies each page to the store, and a dropped upstream connection
-// ("AxiosError: stream has been aborted" in stencil-cli's renderer.module.js) makes that one
-// request answer 5xx. A gate that gets a 5xx says so, waits this long and asks once more; a
-// second 5xx fails as any wrong status does. A 4xx, or a 200 where a 404 belongs, is the
-// page's real answer and is never asked again.
-export const RETRY_DELAY_MS = 2000;
-export const worthRetrying = status => status >= 500;
+// When a 5xx or a 429 is asked again, and how long the gates wait first: retry.mjs.
 
 // The webpack clean step never deletes anything, so a fresh server starts from an empty
 // assets/dist and is ready only once its dev build has written main.js.
