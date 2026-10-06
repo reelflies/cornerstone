@@ -110,7 +110,7 @@ export function formatStoreWrites(rows, { since } = {}) {
 function main(argv) {
     const sinceIndex = argv.indexOf('--since');
     const since = sinceIndex >= 0 ? argv[sinceIndex + 1] : undefined;
-    const unknown = argv.filter((arg, index) => arg !== '--since' && index !== sinceIndex + 1);
+    const unknown = argv.filter((arg, index) => index !== sinceIndex && !(sinceIndex >= 0 && index === sinceIndex + 1));
     if (unknown.length || (sinceIndex >= 0 && !/^\d{4}-\d{2}-\d{2}$/.test(since || ''))) {
         console.error('usage: node scripts/store/log.mjs [--since YYYY-MM-DD]');
         return 2;

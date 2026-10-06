@@ -108,6 +108,13 @@ test('the CLI prints the mirror for the orchestrator, and only under node --test
     assert.match(result.stdout, /\| placements \|/);
     const usage = spawnSync(process.execPath, [SCRIPT, '--since'], { encoding: 'utf8', env: { ...process.env, RF_STORE_ROOT: root } });
     assert.equal(usage.status, 2);
+    // A date without --since is a mistake, not "every row": a mirror built from it would repeat
+    // rows RELEASES.md already has.
+    for (const args of [['2026-10-06'], ['2026-10-06', '--since', '2026-10-06'], ['--since', '2026-10-06', 'extra']]) {
+        const wrong = spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8', env: { ...process.env, RF_STORE_ROOT: root } });
+        assert.equal(wrong.status, 2, `${args.join(' ')}: ${wrong.stdout}`);
+        assert.match(wrong.stderr, /^usage: node scripts\/store\/log\.mjs \[--since YYYY-MM-DD\]/);
+    }
     const outside = spawnSync(process.execPath, [SCRIPT], { encoding: 'utf8', env: { ...process.env, RF_STORE_ROOT: root, NODE_TEST_CONTEXT: '' } });
     assert.equal(outside.status, 1);
     assert.match(outside.stderr, /RF_STORE_ROOT is a test seam/);
