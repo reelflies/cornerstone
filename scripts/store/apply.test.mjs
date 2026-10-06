@@ -437,6 +437,56 @@ test('a response that names another channel stops the run and locks the helper; 
     assert.match(lockedProblem(root), /a write's response named another channel/);
 });
 
+const content = loadFixture('content.json');
+const SCRIPT = '5c5c5c5c-1234-4abc-8def-0123456789ab';
+const scriptCreate = {
+    method: 'POST',
+    path: '/v3/content/scripts',
+    body: {
+        channel_id: 1895766, name: 'rf-web-vitals', html: '<script>/* vitals */</script>', kind: 'script_tag', location: 'footer', visibility: 'storefront', consent_category: 'analytics', enabled: false,
+    },
+};
+const scriptsList = 'GET /v3/content/scripts?channel_id:in=1895766&limit=250&page=1';
+
+test('a script that answers enabled after its create stops the run and locks the helper', async () => {
+    const { text } = await makePlan([scriptCreate], { [scriptsList]: { body: content.scripts_list } });
+    const { run, root } = await apply(text, {
+        [scriptsList]: { body: content.scripts_list },
+        'POST /v3/content/scripts': { body: content.script_item_enabled },
+        [`GET /v3/content/scripts/${SCRIPT}`]: { body: content.script_item_enabled },
+    });
+    const result = await run;
+    assert.equal(result.outcome, 'locked');
+    const rows = readLogRows(root);
+    assert.deepEqual(rows.map(row => [row.row, row.outcome]), [['intent', undefined], ['result', 'stopped']]);
+    assert.match(rows[1].message, /script 5c5c5c5c-1234-4abc-8def-0123456789ab is enabled on the store: scripts stay disabled until Shaun enables one/);
+    assert.match(lockedProblem(root), /a script read back enabled after a write/);
+});
+
+test('a script update whose re-read shows it enabled stops the run and locks the helper', async () => {
+    const update = { method: 'PUT', path: `/v3/content/scripts/${SCRIPT}`, body: { channel_id: 1895766, html: '<script>/* vitals 2 */</script>' } };
+    const scriptGet = `GET /v3/content/scripts/${SCRIPT}`;
+    const { text } = await makePlan([update], { [scriptGet]: { body: content.script_item_disabled } });
+    const { run, root } = await apply(text, {
+        [scriptGet]: [{ body: content.script_item_disabled }, { body: content.script_item_enabled }],
+        [`PUT /v3/content/scripts/${SCRIPT}`]: { body: content.script_item_disabled },
+    });
+    assert.equal((await run).outcome, 'locked');
+    assert.match(lockedProblem(root), /a script read back enabled after a write/);
+    assert.equal(readLogRows(root).at(-1).outcome, 'stopped');
+});
+
+test('a disabled script create is applied, and reads back disabled', async () => {
+    const { text } = await makePlan([scriptCreate], { [scriptsList]: { body: content.scripts_list } });
+    const { run, root } = await apply(text, {
+        [scriptsList]: { body: content.scripts_list },
+        'POST /v3/content/scripts': { body: content.script_item_disabled },
+        [`GET /v3/content/scripts/${SCRIPT}`]: { body: content.script_item_disabled },
+    });
+    assert.equal((await run).outcome, 'applied');
+    assert.equal(lockedProblem(root), null);
+});
+
 test('a create that answers without an id stops the run before a request that refers to it is sent', async () => {
     const { text } = await makePlan([template, widget], listRoutes);
     const noId = structuredClone(widgets.template_created);

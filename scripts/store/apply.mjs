@@ -371,6 +371,14 @@ async function afterLiftedSettingsWrite({
     return null;
 }
 
+// The scripts in a response's or a re-read's data that aren't disabled. Every script the helper
+// writes stays disabled (decision 4), so one that reads back otherwise stops the run.
+function enabledScripts(data, fallbackId) {
+    return (Array.isArray(data) ? data : [data])
+        .filter(item => !isObject(item) || item.enabled !== false)
+        .map(item => `script ${(isObject(item) && item.uuid) || fallbackId || '(no uuid)'} is enabled on the store: scripts stay disabled until Shaun enables one`);
+}
+
 // After any other write: the response's checks, the re-read, and in approved mode part 3's
 // report. Returns null to go on, or the outcome that stops the run.
 async function afterWrite({
@@ -397,6 +405,16 @@ async function afterWrite({
             return { outcome: 'locked', request: index, message };
         }
     }
+    const scriptLock = (problems, fields) => {
+        const message = problems.join('; ');
+        result({ ...fields, outcome: 'stopped', message });
+        lock(`a script read back enabled after a write: ${message}`, where);
+        return { outcome: 'locked', request: index, message };
+    };
+    if (what.object === 'scripts') {
+        const enabled = enabledScripts(response.body && response.body.data, what.id);
+        if (enabled.length) return scriptLock(enabled, { id: what.id, status: response.status });
+    }
     const ids = createdIds(item, response);
     if (what.action === 'create' && ids.length) created.set(index, ids[0]);
     const id = what.id ?? (ids.length ? ids.join(',') : null);
@@ -416,6 +434,12 @@ async function afterWrite({
     }
     afterRecords.push(...records);
     let afterSha = sha256(canonicalJson(records));
+    if (what.object === 'scripts') {
+        // Only a read of the script itself: a channel's list (a create that gave no uuid) also
+        // holds scripts the helper didn't write.
+        const enabled = records.filter(record => record.scope === 'item').flatMap(record => enabledScripts(record.data, id));
+        if (enabled.length) return scriptLock(enabled, { id, status: response.status, after_sha256: afterSha });
+    }
     if (what.kind === 'settings' && mode === 'approved' && APPROVED_SETTINGS[what.settingsPath].channelReads) {
         const scopes = [...LIVE_CHANNELS, CHANNEL].map(String);
         const read = await readScopes(client, item, scopes, wait);
