@@ -716,6 +716,26 @@ test('plan.mjs then apply.mjs, on fixture routes: the plan file, the writes, the
     assert.ok(!applied.output.includes(FAKE_TOKEN));
 });
 
+test('apply.mjs --dry-run runs every check with the writer token, shows the derived diff, and sends and logs nothing', () => {
+    const root = newRoot();
+    fs.mkdirSync(root, { recursive: true });
+    const changes = path.join(root, 'changes.json');
+    fs.writeFileSync(changes, JSON.stringify([unpublish]));
+    const planned = cli(CHECKOUT_PLAN, ['--ticket', '46', '--changes', changes, '--out', path.join(root, 'plan.json')], { root, routes: { [placementGet]: { body: widgets.placement_item } } });
+    assert.equal(planned.status, 0, planned.output);
+    fs.rmSync(path.join(root, 'fixture-calls.jsonl'));
+    const dry = cli(CHECKOUT_APPLY, ['--dry-run', path.join(root, 'plan.json')], { root, routes: { [placementGet]: { body: widgets.placement_item } } });
+    assert.equal(dry.status, 0, dry.output);
+    assert.match(dry.stdout, /diff, from a fresh read of the store/);
+    assert.match(dry.stdout, /status: "active" -> "inactive"/);
+    assert.match(dry.stdout, /dry run: 1 request checked against a fresh read of the store; nothing was sent or logged/);
+    const sent = fs.readFileSync(path.join(root, 'fixture-calls.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
+    assert.deepEqual(sent.map(call => call.method), ['GET']);
+    assert.deepEqual(readLogRows(root), []);
+    assert.ok(!fs.existsSync(path.join(root, '1895766', 'placements')) || fs.readdirSync(path.join(root, '1895766', 'placements')).every(file => file.endsWith('-plan.json')), 'no before or after snapshot');
+    assert.ok(!dry.output.includes(FAKE_TOKEN));
+});
+
 test('apply.mjs refuses to write from a checkout whose store tooling isn\'t origin/master\'s, before the writer token is read', async () => {
     const root = newRoot();
     fs.mkdirSync(root, { recursive: true });

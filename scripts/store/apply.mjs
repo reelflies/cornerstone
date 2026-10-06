@@ -3,6 +3,7 @@
 // the plan's, with a log row before and after each request and a re-read of every object written.
 //
 //   node scripts/store/apply.mjs <plan file>               lifted writes on 1895766 (agents may)
+//   node scripts/store/apply.mjs --dry-run <plan file>     steps 1 to 6 with the writer token; sends nothing
 //   node scripts/store/apply.mjs --approved <plan file>    Shaun's approved store-wide writes
 //
 // In order, it:
@@ -566,11 +567,12 @@ export async function applyPlan({
 
 // --- The command ----------------------------------------------------------------------------
 
-const USAGE = 'usage: node scripts/store/apply.mjs [--approved] <plan file>';
+const USAGE = 'usage: node scripts/store/apply.mjs [--approved] [--dry-run] <plan file>';
 
 async function main(argv) {
     const approved = argv.includes('--approved');
-    const files = argv.filter(arg => arg !== '--approved');
+    const dryRun = argv.includes('--dry-run');
+    const files = argv.filter(arg => arg !== '--approved' && arg !== '--dry-run');
     if (files.length !== 1 || files[0].startsWith('-')) {
         console.error(USAGE);
         return 2;
@@ -618,8 +620,13 @@ async function main(argv) {
             operator: approved ? 'Shaun at his terminal (--approved)' : operatorName(),
             approved,
             confirm: approved ? ({ planSha }) => confirmPlanSha({ planSha }) : undefined,
+            dryRun,
             log: say,
         });
+        if (result.outcome === 'dry-run') {
+            say(`dry run: ${result.count} request${result.count === 1 ? '' : 's'} checked against a fresh read of the store; nothing was sent or logged`);
+            return 0;
+        }
         if (result.outcome === 'applied') say(`applied: ${result.count} request${result.count === 1 ? '' : 's'} on ${approved ? 'store-wide' : CHANNEL}; the log is ${path.join(root, 'log.jsonl')}`);
         else say(`STOP     ${result.outcome} at request ${result.request + 1}: ${result.message}`);
         if (approved) SMOKE_TESTS.forEach(say);
