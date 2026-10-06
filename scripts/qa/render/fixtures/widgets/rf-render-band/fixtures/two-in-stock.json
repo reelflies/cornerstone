@@ -1,0 +1,19 @@
+{
+    "description": "Two products in stock and one sold out in every size.",
+    "page": "pages/home",
+    "region": "home_below_top_products",
+    "configuration": {
+        "heading": "Best sellers"
+    },
+    "data": {
+        "site": {
+            "products": {
+                "edges": [
+                    { "node": { "entityId": 5663, "name": "Parachute Adams", "inventory": { "isInStock": true }, "prices": { "price": { "value": 0.95, "currencyCode": "CAD" } } } },
+                    { "node": { "entityId": 5664, "name": "Elk Hair Caddis", "inventory": { "isInStock": true }, "prices": { "price": { "value": 0.85, "currencyCode": "CAD" } } } },
+                    { "node": { "entityId": 5665, "name": "Royal Wulff", "inventory": { "isInStock": false }, "prices": { "price": { "value": 0.95, "currencyCode": "CAD" } } } }
+                ]
+            }
+        }
+    }
+}

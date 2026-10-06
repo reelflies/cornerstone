@@ -1,0 +1,13 @@
+{
+    "product": {
+        "id": 5663,
+        "name": "Parachute Adams",
+        "image": {
+            "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/5663/20001/parachute-adams.jpg",
+            "alt": "Parachute Adams dry fly"
+        },
+        "price": {
+            "without_tax": { "formatted": "$0.95", "value": 0.95, "currency": "CAD" }
+        }
+    }
+}

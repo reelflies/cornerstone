@@ -1,0 +1,11 @@
+{{!-- Test partial for scripts/qa/render/render.test.mjs: one line per whitelisted helper the
+      ReelFlies partials rely on (split, trim, inArray, assignVar, getVar, getImageSrcset),
+      plus lang. --}}
+<p class="split">{{#each (split description '<!--more-->')}}[{{{trim this}}}]{{/each}}</p>
+<p class="trim">[{{trim padded}}]</p>
+<p class="in-array">{{#inArray ids 'b'}}has b{{else}}no b{{/inArray}}, {{#inArray ids 'z'}}has z{{else}}no z{{/inArray}}</p>
+{{assignVar 'rf_banner' 1}}
+{{> components/reelflies/rf-render-flag}}
+<img class="srcset" src="{{getImageSrcset image 1x='320w'}}" srcset="{{getImageSrcset image 1x='320w' 2x='640w'}}" alt="">
+<img class="default-sizes" srcset="{{getImageSrcset image use_default_sizes=true}}" alt="">
+<p class="lang">{{lang 'common.generic_error'}}</p>
