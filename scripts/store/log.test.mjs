@@ -8,7 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-    LOG_NAME, appendLogRow, formatStoreWrites, logRow, readLogRows,
+    LOG_NAME, appendLogRow, formatStoreWrites, logRow, readLogRows, unfinishedWarnings, unfinishedWrites,
 } from './log.mjs';
 
 const SCRIPT = fileURLToPath(new URL('./log.mjs', import.meta.url));
@@ -98,6 +98,36 @@ test('the RELEASES.md mirror has one line per request, its outcome, and a missin
     assert.match(lines[2], /^\| 2026-10-06 20:00 UTC \| 1895766 \| placements \| e1e1e1e1-1234-4abc-8def-0123456789ab \| update \| ok \(200\) \| 46 \| rook on t46\/hero \| aaaaaaaa \| bbbbbbbb \|$/);
     assert.match(lines[3], /\| settings\/inventory \| – \| settings \| no result row: the run stopped mid-request \|/);
     assert.deepEqual(formatStoreWrites(rows, { since: '2026-10-07' }).length, 2);
+});
+
+test('an intent row with no result row of its own is an unfinished write, even when the same plan ran again', () => {
+    const ok = { status: 200, outcome: 'ok' };
+    const rows = [
+        logRow({ row: 'intent', ...base }),
+        logRow({ row: 'result', ...base, ...ok }),
+        logRow({ row: 'intent', ...base, request: 1 }),
+        // The same plan run again: its own result row doesn't finish the first run's intent.
+        logRow({
+            row: 'intent', ...base, date: '2026-10-06T21:00:00.000Z', request: 2,
+        }),
+        logRow({
+            row: 'intent', ...base, date: '2026-10-06T21:30:00.000Z', request: 2,
+        }),
+        logRow({
+            row: 'result', ...base, date: '2026-10-06T21:30:01.000Z', request: 2, ...ok,
+        }),
+    ];
+    assert.deepEqual(unfinishedWrites(rows).map(row => [row.request, row.date]), [[1, base.date], [2, '2026-10-06T21:00:00.000Z']]);
+    assert.deepEqual(unfinishedWrites(rows.slice(0, 2)), []);
+});
+
+test('plan and apply warn of each unfinished write, naming what to check before writing it again', () => {
+    const root = path.join(tmp, 'unfinished');
+    assert.deepEqual(unfinishedWarnings(root), [], 'no log yet');
+    appendLogRow(root, logRow({ row: 'intent', ...base }));
+    const [line, ...rest] = unfinishedWarnings(root);
+    assert.deepEqual(rest, []);
+    assert.equal(line, `WARN     log.jsonl has an intent row with no result row: 2026-10-06 20:00 UTC, PUT ${base.path} (placements update ${base.id}), plan bbbbbbbb request 1, ticket 46. That run stopped mid-request, so the write may have landed: check the object on the store before writing it again`);
 });
 
 test('the CLI prints the mirror for the orchestrator, and only under node --test may RF_STORE_ROOT move it', () => {

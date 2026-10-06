@@ -7,6 +7,9 @@
 // the mode, the plan's sha256, the request's index, method and path, and for a result the HTTP
 // status, the outcome (ok, failed or stopped), the re-read's sha256 and a message.
 //
+// An intent row that no result row answers means a run stopped mid-request, so its write may
+// have landed: plan.mjs and apply.mjs warn of each one before they read the store.
+//
 // The orchestrator mirrors new rows into RELEASES.md's "Store writes" section through each
 // release-log PR (plan/build-pipeline.md section 6.5). This prints them as that table's rows:
 //
@@ -88,6 +91,32 @@ export function readLogRows(root) {
 const cell = value => String(value ?? '–').replace(/\|/g, '\\|').replace(/\s+/g, ' ');
 const when = date => `${date.slice(0, 10)} ${date.slice(11, 16)} UTC`;
 const pairKey = row => [row.plan_sha256, row.request, row.action, row.channel].join('|');
+
+// The intent rows no result row answers: a run that stopped mid-request (killed, or the Mac
+// slept), so its write may have landed. A result row answers the latest open intent row of the
+// same plan, request, action and channel, so a plan run again doesn't hide an earlier run's gap.
+export function unfinishedWrites(rows) {
+    const open = new Map();
+    for (const row of rows) {
+        const key = pairKey(row);
+        if (row.row === 'intent') open.set(key, [...(open.get(key) || []), row]);
+        else if (row.row === 'result' && open.has(key)) open.get(key).pop();
+    }
+    const left = new Set([...open.values()].flat());
+    return rows.filter(row => left.has(row));
+}
+
+// plan.mjs and apply.mjs print these before they read the store: one WARN line per unfinished
+// write. A lifted settings write that stopped mid-request has also left LOCKED (apply.mjs).
+export function unfinishedWarnings(root) {
+    let rows;
+    try {
+        rows = readLogRows(root);
+    } catch (error) {
+        return [`WARN     ${path.join(root, LOG_NAME)} can't be read (${error.message}), so an unfinished write can't be found`];
+    }
+    return unfinishedWrites(rows).map(row => `WARN     ${LOG_NAME} has an intent row with no result row: ${when(row.date)}, ${row.method} ${row.path} (${row.object} ${row.action}${row.id ? ` ${row.id}` : ''}), plan ${row.plan_sha256 ? row.plan_sha256.slice(0, 8) : '–'} request ${Number.isInteger(row.request) ? row.request + 1 : '–'}, ticket ${row.ticket}. That run stopped mid-request, so the write may have landed: check the object on the store before writing it again`);
+}
 
 // The rows for RELEASES.md's "Store writes" table: one per request, from its intent row, with its
 // result's outcome, or a note that the run stopped before one was written.

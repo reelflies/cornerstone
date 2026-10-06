@@ -30,6 +30,7 @@ import { redact } from '../release-redact.mjs';
 import { Refused, calendarRefusal, classify } from './allowlist.mjs';
 import { CHANNEL, requestChannelProblems } from './channel.mjs';
 import { createClient, queryString } from './client.mjs';
+import { unfinishedWarnings } from './log.mjs';
 import { proveSettingsWrite } from './settings-proof.mjs';
 import {
     canonicalJson, readsFor, sha256, storeRoot, takeSnapshot, timeStamp, writeSnapshotFiles,
@@ -369,6 +370,7 @@ async function main(argv) {
     try {
         const root = storeRoot();
         if (fs.existsSync(path.join(root, 'LOCKED'))) say(`WARN     ${path.join(root, 'LOCKED')} exists: apply refuses every plan until Shaun removes it`);
+        unfinishedWarnings(root).forEach(say);
         const changes = JSON.parse(fs.readFileSync(options.changes, 'utf8'));
         const requests = Array.isArray(changes) ? changes : changes.requests;
         const mode = options.approved ? 'approved' : 'lifted';

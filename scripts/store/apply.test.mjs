@@ -18,7 +18,7 @@ import {
 } from './apply.mjs';
 import { Refused } from './allowlist.mjs';
 import { createClient } from './client.mjs';
-import { readLogRows } from './log.mjs';
+import { appendLogRow, logRow, readLogRows } from './log.mjs';
 import { buildPlan, checkRequests, planDigest } from './plan.mjs';
 import { readsFor, sha256, takeSnapshot } from './snapshot.mjs';
 import { storeCheckout } from './fixtures/checkout.mjs';
@@ -125,6 +125,20 @@ test('an unpublish is applied exactly as planned: fresh snapshot, intent row, th
     const files = fs.readdirSync(path.join(root, '1895766', 'placements')).map(file => file.replace(/^.*Z-/, '')).sort();
     assert.deepEqual(files, [`after-${planSha.slice(0, 8)}.json`, `before-${planSha.slice(0, 8)}.json`]);
     assert.equal(lockedProblem(root), null);
+});
+
+test('apply warns of a write an earlier run left without a result row, before its own reads', async () => {
+    const { text } = await makePlan([unpublish], { [placementGet]: { body: widgets.placement_item } });
+    const root = newRoot();
+    appendLogRow(root, logRow({
+        row: 'intent', date: '2026-10-06T19:00:00.000Z', channel: 1895766, object: 'widgets', id: null, action: 'create', snapshot_sha256: 'a'.repeat(64), ticket: '46', operator: 'rook on t46/hero', mode: 'lifted', plan_sha256: 'b'.repeat(64), request: 0, method: 'POST', path: '/v3/content/widgets',
+    }));
+    const { run, lines } = await apply(text, {
+        [placementGet]: [{ body: widgets.placement_item }, { body: widgets.placement_item_inactive }],
+        [placementPut]: { body: widgets.placement_item_inactive },
+    }, { root });
+    assert.equal((await run).outcome, 'applied');
+    assert.match(lines[0], /^WARN {5}log\.jsonl has an intent row with no result row: 2026-10-06 19:00 UTC, POST \/v3\/content\/widgets \(widgets create\)/);
 });
 
 test('a stale plan is refused: the fresh snapshot differs, and nothing is written or logged', async () => {

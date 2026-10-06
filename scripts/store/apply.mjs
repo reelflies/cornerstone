@@ -62,7 +62,7 @@ import { redact } from '../release-redact.mjs';
 import { APPROVED_SETTINGS, Refused } from './allowlist.mjs';
 import { CHANNEL, LIVE_CHANNELS, responseChannelProblems } from './channel.mjs';
 import { createClient, describeFailure, queryString } from './client.mjs';
-import { appendLogRow, logRow } from './log.mjs';
+import { appendLogRow, logRow, unfinishedWarnings } from './log.mjs';
 import {
     PLAN_FORMAT, TICKET, checkRequests, commandFetch, commandStoreHash, diffLines, isRef, operatorName, planDigest, proofProblem, proofsFor, snapshotProblems, writesFor,
 } from './plan.mjs';
@@ -508,6 +508,7 @@ export async function applyPlan({
 }) {
     const locked = lockedProblem(root);
     if (locked) throw new Refused(locked);
+    unfinishedWarnings(root).forEach(line => log(line));
     const plan = readPlan(planText);
     const planSha = sha256(planText);
     if (!['lifted', 'approved'].includes(plan.mode)) throw new Refused(`the plan's mode ${JSON.stringify(plan.mode)} is neither lifted nor approved`);
