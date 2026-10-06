@@ -1,0 +1,8 @@
+{
+    "description": "No products: the band renders an empty list. Render tests only, so no element shot.",
+    "shot": false,
+    "configuration": {
+        "heading": "Best sellers"
+    },
+    "data": { "site": { "products": { "edges": [] } } }
+}

@@ -10,6 +10,8 @@ The checks every theme change is held to (ticket 16; spec "Testing Decisions", s
 | Raw HTML (curl) | `npm run qa:raw-html` | no | yes (release.sh, through `qa:prepush`) |
 | Screenshot diffs | `npm run qa:screens` | no | yes (release.sh, through `qa:prepush`); also after each upstream merge, and in each template ticket |
 | Quick view | `npm run qa:quick-view` | no | no |
+| Fixture renders of partials and widgets | `npm run test:scripts` | yes | yes (release.sh) |
+| Widget element shots | `npm run qa:screens`, with the page shots | no | yes (release.sh, through `qa:prepush`) |
 
 CI has no store credentials, so anything that renders the storefront runs locally or from `release.sh`. `npm run qa:prepush` (`prepush.mjs`) runs axe, the raw-HTML check and the screenshot diffs, in that order. It runs all three even when one fails, exits non-zero if any failed, and ends with each gate's result.
 
@@ -243,6 +245,137 @@ It exits 1 on a failed check, and 2 when the storefront can't be reached or, wit
 
 **Not run on prelaunch yet.** The product and category runs so far were on channel 1 through `stencil start -c 1`. The prelaunch run needs the preview cookie (ticket 11) and ReelFlies_CA's product and category pins (refactor tickets 13 and 14).
 
+## Fixture renders (`render/`)
+
+The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixture JSON instead of store data. So a template can be tested before the store has its data: ReelFlies_CA has no tree-4 categories until refactor 13, but the Species pages, the hub, the chips, the description split and the hook chart rows can be tested now. And a widget is checked from its source, not from what the store shows. Tickets 32, 34, 35, 36 and 46–49 use it.
+
+| File | What |
+|---|---|
+| `render/render.mjs` | `renderPartial` and `renderWidget`, `readFixture`, `widgetCases`, `themeConfig` |
+| `render/html-checks.mjs` | `unbalancedTags(html)`: elements closed in the wrong place, closed with nothing open, or never closed |
+| `render/widget-page.mjs` | the fixture page a widget shot is taken on |
+| `widget-screens.spec.mjs` | the widget element shots |
+| `render/example/` | the worked example below |
+
+### Partials
+
+`renderPartial(name, context, options)` renders a theme template with `context` as its store data, and resolves to the HTML. It renders the way `stencil start` does:
+
+- through `@bigcommerce/stencil-paper` and the `@bigcommerce/stencil-paper-handlebars` 6.5.1 it wraps, the versions stencil-cli 9.1.0 pins, with config.json's `handlebars_v4`
+- with every partial the template includes, found by stencil-cli's own patterns: first in the `templates` folders the test passes, then in the theme's `templates/`
+- with `theme_settings` from config.json, the variation's settings on top, as stencil start merges them, and the strings in `lang/`
+- with a fresh renderer each time, so `assignVar` and `getVar` start empty, as each page request does
+
+**The fixture** is the store data, shaped as `?debug=context` shows it on a real page, for example `{ "category": { "name": …, "description": …, "subcategories": [ … ] } }`. Two keys are laid over the defaults, key by key:
+
+- `theme_settings`, to render with a setting changed, such as a switch off or `rf_menu_type_ids` set
+- `settings`, the store's site settings
+
+**Options:** `variation` (default `ReelFlies CA`), `templates` (folders searched before `templates/`, for partials that exist only for a test), `regions` (region name to HTML) and `strict`.
+
+**Helpers.** Every helper the store whitelists works as it does there. `render.test.mjs` proves the ones ReelFlies partials rely on: `split`, `inArray`, `trim`, `assignVar`, `getVar` and `getImageSrcset`, plus `lang`.
+
+**A helper the store doesn't have fails the render.** The store renders `{{shout name}}` as nothing, so a typo, or a helper outside the whitelist, would pass every test. The renderer fails instead, naming the helper and the template, whether the call has arguments or hash arguments only (`{{{regoin name="…"}}}`). `strict: false` renders it as the store does. A plain `{{name}}` that matches nothing still renders empty: that is a missing value, not a helper.
+
+**Reading the output:** `findTags` from `raw-html/html.mjs` lists tags with their attributes, and `unbalancedTags` from `render/html-checks.mjs` checks the markup. `unbalancedTags` asks for explicit closing tags, which is stricter than a browser.
+
+**Where a ticket's tests go:** `scripts/qa/render/partials/<partial>.test.mjs`, with its fixtures in `scripts/qa/render/partials/<partial>/`. A real partial is in the theme's `templates/`, which is always searched, so it needs no `templates` option. Adding them touches nothing in the harness.
+
+### Widgets
+
+**The widget folder** (W0-9 sets this layout; ticket 46's sync reads `template.html` and ignores `fixtures/`):
+
+| Path | What |
+|---|---|
+| `widgets/<name>/template.html` | the widget template |
+| `widgets/<name>/fixtures/<case>.json` | its fixtures |
+| `widgets/<name>/fixtures/files/` | the images its fixture data points at |
+| `widgets/_shared/<partial>.html` | markup two widgets share (ticket 48's product card), included as `{{> _shared/<partial>}}`. A store widget template can't include partials, so the sync must inline these before upload. |
+
+Ticket 46 adds the schema, the query and `channels/<channel>.json` beside `template.html`.
+
+**A widget fixture:**
+
+```json
+{
+    "description": "The hero with the bass banner and both buttons.",
+    "page": "pages/home",
+    "region": "home_below_menu",
+    "configuration": { "heading": "Hand-tied fly fishing flies, sold one at a time." },
+    "data": { "site": { "product": { "name": "Parachute Adams" } } }
+}
+```
+
+- `configuration` is the widget's `widget_configuration`. The template reads its keys at the top level, as on the store.
+- `data` is the `storefront_api_query` result, which the template reads as `_.data`. Save a real response and keep its URLs: shots answer store CDN image URLs from `fixtures/files/` (below).
+- `_.id` is a fixed id, so a shot is the same on every run.
+- `page` and `region` say where the widget sits. A fixture for render tests only sets `"shot": false` instead.
+- `page_context` (optional) is the page's own store data, shaped as `?debug=context` shows it, for a region inside a condition. `cart.html` renders `cart_below_totals` only when the cart has items, so a widget there needs `"page_context": { "cart": { "quantity": 1, "items": [ … ] } }`. The page's `template` is always `page`, as on the store.
+- `"chrome": true` (optional) renders the theme's header and footer round the page, as `layout/base.html` does, for a widget in a header or footer region such as `header_bottom--global` (ticket 27's shipping strip). Use it only there: the phone header is fixed, so it could cover a widget lower down.
+
+`renderWidget(name, fixture, { root })` resolves to the template's output, for render tests under `node --test` (Jest ignores `scripts/`). For example, ticket 48's "a changed price in the fixture changes the rendered price" is a `renderWidget` call with the price changed (`render.test.mjs` has the same test on a test widget). Put a widget's render tests in `scripts/qa/render/widgets/<name>.test.mjs`.
+
+**A widget template gets no page context.** Besides the unknown helpers above, `renderWidget` fails on `lang`, `langJson`, `inject`, `jsContext` and `region`, which read the theme's lang strings, the page's jsContext and its regions. Put a widget's text in its `widget_configuration`. `strict: false` renders them as stencil-paper-handlebars does: `lang` as nothing, and `jsContext` as the renderer's own. This is a revisitable default: BigCommerce doesn't document which helpers its widget renderer has.
+
+### Widget element shots (`widget-screens.spec.mjs`)
+
+Page baselines hide widget regions ("What the screenshots hide" above), because a widget placed on the store would change every page's height. Each widget is checked here instead, from its source, so its baseline changes in the same commit as its template, or as the theme CSS it uses, and never with the store's state.
+
+- **Which fixtures:** every `widgets/<name>/fixtures/<case>.json` without `"shot": false`, at 375 and 1280, for `QA_VARIATION`.
+- **When:** its name ends in "screens", so `npm run qa:screens`, and so `qa:prepush` and `release.sh`, run it with the page shots, with the same thresholds. To run only the widget shots: `npx playwright test --config scripts/qa/playwright.config.mjs widget-screens`. Both start the storefront server as `qa:screens` does, although the widget shots don't use it.
+- **The page:** the fixture's page template, rendered inside the theme's own `components/common/body` (`render/widget-layout.html` stands in for `layout/base.html`). So the widget sits in the same boxes as on the storefront: `home_below_menu` outside `.container`, `home_below_top_products` inside `.container .main.full`. The store's wrapper goes round it (`data-widget-id`, `data-placement-id`, `data-placement-status`). The page loads the theme's Google Fonts and `theme.css`, compiled from this checkout for the variation with stencil-cli's compiler and engine, as stencil start compiles it. It has no scripts, and no header or footer unless the fixture sets `"chrome": true`.
+- **No request reaches the store.** The page is on a made-up origin, and Playwright answers each request itself:
+  - the page and the compiled CSS
+  - the theme's `assets/`, for the CSS's relative URLs
+  - any other path on that origin, and any `cdn*.bigcommerce.com` URL, with the file of the same name in the widget's `fixtures/files/`, whatever its size segment. So `…/images/stencil/320w/…/fly.jpg` and `…/1280w/…/fly.jpg` both get `fixtures/files/fly.jpg`.
+  - Google Fonts load as on the storefront. Anything else is blocked.
+
+  A blocked request, or a file that isn't in `fixtures/files/`, fails the shot and is named.
+- **Baselines:** `baselines/widgets/<variation>/<widget>-<case>-<project>-<platform>.png`, for example `baselines/widgets/reelflies-ca/home-lead-default-phone-375-darwin.png`. A missing baseline fails, as for pages. Make or update them with `npx playwright test --config scripts/qa/playwright.config.mjs widget-screens --update-snapshots`, under the stencil lock, then look at each PNG. That rewrites widget baselines only: `npm run qa:screens -- --update-snapshots` would also rewrite every page baseline that has drifted, which a widget PR must never do (section 6.6). The PR's `Baselines:` line names them as `widget <name>` (section 6.6 of the build pipeline).
+- **What the page doesn't show:** layout containers Page Builder may add round a placement, the theme's scripts (lazysizes, carousels), and the header and footer's own data (menus, logo, cart count), which a `chrome` page renders from an empty context. The review page shows the live home page with its widgets (W0-10).
+
+**The self-test** is the widget `rf-selftest`, in `render/selftest/widgets/`, outside `widgets/` so no sync ever uploads it. Its baselines are checked like any widget's, and four more tests prove that:
+
+- the theme CSS, with the variation's settings, styles the widget (its `.button--primary` has the variation's `button--primary-backgroundColor`)
+- a changed widget (a new background) fails its baseline
+- a request outside the fixture (a photo on reelflies.ca) is blocked and fails the shot
+- a fixture file that isn't there fails the shot
+
+A theme change that restyles buttons or headings changes the self-test's baselines too: update them in the same commit and name `widget rf-selftest` on the `Baselines:` line.
+
+### Worked example
+
+`render/example/` tests a partial from fixture JSON, with two fixtures that pass and one that fails. Copy it for your own partial.
+
+- **The partial,** `example/templates/components/reelflies/example-intro.html`, splits a category description at `<!--more-->` with `split` and `trim`, as ticket 32's intro does. The part before the marker sits under the H1, and the rest goes below. Without the marker, the whole description goes below.
+- **The fixtures,** in `example/fixtures/`:
+  - `marker.json` and `no-marker.json` pass.
+  - `marker-in-paragraph.json` is the failing fixture. The store's editor can save the marker inside its own paragraph (`<p><!--more--></p>`), and the split then leaves the lead's `<p>` open and closes it again below. Ticket 32's split has to allow for it.
+- **The test,** `example/example.test.mjs`:
+
+  ```js
+  const render = name => renderPartial('components/reelflies/example-intro', readFixture(path.join(HERE, 'fixtures', name)), {
+      templates: [path.join(HERE, 'templates')], // only because this example lives outside templates/
+  });
+
+  it('puts the part before <!--more--> under the H1, and the rest below', async () => {
+      const html = await render('marker.json');
+      assert.equal(findTags(html, 'h1').length, 1);
+      assert.equal(inner(html, 'rf-example-intro__lead'), '<p>Flies that float on the surface, tied by hand.</p>');
+      assert.deepEqual(unbalancedTags(html), []);
+  });
+
+  it('fails the markup check when the marker was saved inside a paragraph', async () => {
+      assert.deepEqual(unbalancedTags(await render('marker-in-paragraph.json')), [
+          '</div> closes <p>, which is still open',
+          '</p> closes nothing',
+      ]);
+  });
+  ```
+
+  The last test asserts that the failing fixture fails, so the check can't quietly stop working.
+- **Run it:** `node --test scripts/qa/render/example/example.test.mjs`. CI runs it, with every other `*.test.mjs`, through `npm run test:scripts`.
+
 ## Quick view (`quick-view.spec.mjs`)
 
 On desktop, on the pinned category page, it checks that:
@@ -348,8 +481,9 @@ It writes `results/review/pr-<number>/` with each baseline the working tree chan
 
 - Playwright runs `scripts/qa/*.spec.mjs` with this folder's config.
 - `harness-selftest.spec.mjs` runs with `qa:axe`, `qa:screens` and `qa:quick-view`, on pages it serves itself. It proves that a pinned page answering with the wrong status fails the run without being asked again, that one answering 5xx twice or 429 four times fails, and that dismissing the cookie banner leaves nothing hovered. Its 5xx and 429 retry cases answer the pinned 404 page (or the channel's first page) with a 500, or a 429 with `Retry-After: 1`, once and then let the request through, so the second answer is the storefront's real one.
+- `widget-screens.spec.mjs` runs with `qa:screens`, because the script's `screens` filter matches its name.
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
-- `npm run test:scripts` runs every `scripts/**/*.test.mjs` with `node --test`.
+- `npm run test:scripts` runs every `scripts/**/*.test.mjs` with `node --test`, the fixture renders included.
 - Jest runs `assets/js/test-unit/`. `jest.config.js` ignores `scripts/`, because Jest 30 would otherwise match `*.test.mjs` and `*.spec.mjs` too.
 - `screens-reference.spec.mjs` runs with `qa:screens`, because its name matches the filter, and never fails it. `review-live.spec.mjs` runs only when named. Neither is a gate. `review/manifest-reporter.test.mjs` checks both against `package.json`'s filters.
 - Playwright writes its report, traces and failed diffs to `scripts/qa/results/`, which is ignored by git. The manifest reporter writes `results/manifest.json` there too, and the review pages go to `results/review/`. A run with `QA_PREVIEW_COOKIE` writes no traces, so the cookie never lands there.

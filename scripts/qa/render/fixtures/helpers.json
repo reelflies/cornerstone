@@ -1,0 +1,11 @@
+{
+    "description": " <p>Flies that float.</p> <!--more--> <p>How to pick one.</p> ",
+    "padded": "   Elk Hair Caddis   ",
+    "ids": ["a", "b", "c"],
+    "image": {
+        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/5663/20001/parachute-adams.jpg",
+        "alt": "Parachute Adams dry fly",
+        "width": 700,
+        "height": 700
+    }
+}
