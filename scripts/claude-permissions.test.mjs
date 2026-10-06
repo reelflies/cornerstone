@@ -9,6 +9,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -56,6 +57,9 @@ const bash = command => ({ tool: 'Bash', command });
 const read = file => ({ tool: 'Read', file: file.replace(/^~\//, `${HOME}/`) });
 
 const API = 'https://api.bigcommerce.com/stores/abc123/v3/content/widgets';
+// The main clone: merge.sh, status.mjs, the store helper and real releases run from there.
+const MAIN = '/Users/rook/reelflies/theme/cornerstone';
+const MAIN_TILDE = '~/reelflies/theme/cornerstone';
 
 const MUST_DENY = [
     // A bare stencil push or release, in every spelling that reaches the CLI.
@@ -95,6 +99,9 @@ const MUST_DENY = [
     bash(`curl -sS ${API} --form file=@hero.png`),
     bash(`curl -sS ${API} -T body.json`),
     bash(`curl -sS ${API} --upload-file body.json`),
+    // A path that climbs out of scripts/store/ after the allowed prefix.
+    bash(`node ${MAIN}/scripts/store/../merge.mjs 12`),
+    bash(`node ${MAIN_TILDE}/scripts/store/../../worktrees/t27-header/scripts/store/apply.mjs`),
     // The Keychain items behind W0-11's helper.
     bash('security find-generic-password -s reelflies-store-writer -w'),
     bash('security find-internet-password -s api.bigcommerce.com'),
@@ -125,18 +132,43 @@ const MUST_DENY = [
     read('~/reelflies/report/data/pull.log'),
 ];
 
+// Known false positives, pinned so a change to them is deliberate (docs/permissions.md).
+const KNOWN_FALSE_POSITIVES = [
+    bash(`curl -X GET ${API}`),
+    bash(`curl -sS -G --data-urlencode 'keyword=hook' ${API}`),
+    bash(`curl -sS -G ${API} -d limit=5`),
+];
+
 const MUST_ALLOW = [
+    bash(`${MAIN}/scripts/merge.sh 12`),
+    bash(`${MAIN_TILDE}/scripts/merge.sh --check 12`),
+    bash(`${MAIN}/scripts/release.sh --channel 1895766 --variation "ReelFlies CA" --confirm-nonprod 1895766`),
+    bash(`${MAIN_TILDE}/scripts/release.sh --channel 1895766 --variation "ReelFlies CA" --dry-run`),
     bash('scripts/release.sh --channel 1895766 --variation "ReelFlies CA" --dry-run'),
-    bash('./scripts/release.sh --channel 1895766 --variation "ReelFlies CA" --confirm-nonprod 1895766'),
+    bash('./scripts/release.sh --channel 1895766 --variation "ReelFlies CA" --dry-run'),
+    bash(`node ${MAIN}/scripts/store/plan.mjs --channel 1895766 widgets`),
+    bash(`node ${MAIN_TILDE}/scripts/store/plan.mjs --channel 1895766 widgets`),
+    bash(`node ${MAIN}/scripts/status.mjs --pr 12 --sha 0123456789abcdef0123456789abcdef01234567 --context rf/spec --state success`),
+    bash(`node ${MAIN_TILDE}/scripts/status.mjs --pr 12 --sha 0123456789abcdef0123456789abcdef01234567 --context rf/spec --state success`),
+];
+
+// Not denied, but not pre-approved either: a copy in some other checkout, which may hold an
+// agent's own edit, asks first.
+const NOT_PRE_APPROVED = [
     bash('scripts/merge.sh 12'),
     bash('./scripts/merge.sh --check 12'),
+    bash('/Users/rook/reelflies/theme/worktrees/t27-header/scripts/merge.sh 12'),
+    bash('scripts/release.sh --channel 1895766 --variation "ReelFlies CA" --confirm-nonprod 1895766'),
+    bash('./scripts/release.sh --channel 1895766 --variation "ReelFlies CA" --dry-run --confirm-nonprod 1895766'),
     bash('node scripts/store/plan.mjs --channel 1895766 widgets'),
+    bash('node /Users/rook/reelflies/theme/worktrees/t27-header/scripts/store/apply.mjs'),
     bash('node scripts/status.mjs --pr 12 --sha 0123456789abcdef0123456789abcdef01234567 --context rf/spec --state success'),
 ];
 
 // Commands agents need every day, which no deny rule may catch.
 const MUST_PASS = [
     ...MUST_ALLOW,
+    ...NOT_PRE_APPROVED,
     bash('npx stencil bundle --name ci-bundle'),
     bash('npx stencil start -c 1895766 -v "ReelFlies CA"'),
     bash('gh pr view 12 -R reelflies/reelflies-cornerstone --json state'),
@@ -168,7 +200,10 @@ test('the draft holds only permission rules, each once', () => {
 
 test('the rules are in one place: the draft, or settings.json once Shaun has turned them on', () => {
     assert.ok(!(fs.existsSync(ACTIVE) && fs.existsSync(DRAFT)), 'rename the draft to settings.json; keep one copy');
-    assert.ok(!fs.existsSync(path.join(ROOT, '.claude', 'settings.local.json')), 'settings.local.json is personal: it never goes in the repo');
+    // settings.local.json is personal and gitignored: Claude Code may create one in any
+    // checkout, but it never goes in the repo.
+    const tracked = spawnSync('git', ['ls-files', '--error-unmatch', '.claude/settings.local.json'], { cwd: ROOT, encoding: 'utf8' });
+    assert.equal(tracked.status, 1, `.claude/settings.local.json must not be tracked: ${tracked.stdout}${tracked.stderr}`);
 });
 
 test('every deny rule fires on at least one probe', () => {
@@ -203,8 +238,15 @@ for (const probe of MUST_PASS) {
     });
 }
 
-test('the allow rules cover the release, merge, store and status entry points, and nothing else', () => {
+for (const probe of KNOWN_FALSE_POSITIVES) {
+    test(`known false positive, denied: ${probe.command}`, () => {
+        assert.ok(firing(deny, probe).length, 'docs/permissions.md lists this as denied; change both together');
+    });
+}
+
+test('the allow rules cover the main clone\'s release, merge, store and status entry points, and nothing else', () => {
     for (const probe of MUST_ALLOW) assert.ok(firing(allow, probe).length, probe.command);
+    for (const probe of NOT_PRE_APPROVED) assert.deepEqual(firing(allow, probe).map(rule => rule.rule), [], probe.command);
     for (const command of ['npx stencil push -c 1895766', 'gh pr merge 12', 'node scripts/qa/prepush.mjs', 'node scripts/storefront.mjs', 'scripts/release-calendar.json']) {
         assert.deepEqual(firing(allow, bash(command)).map(rule => rule.rule), [], command);
     }
