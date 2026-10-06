@@ -37,7 +37,8 @@ export default defineConfig({
     workers: 3,
     retries: 0,
     timeout: 90000,
-    reporter: [['list'], ['html', { outputFolder: 'results/report', open: 'never' }]],
+    // The manifest reporter writes results/manifest.json for the review pages (W0-10).
+    reporter: [['list'], ['html', { outputFolder: 'results/report', open: 'never' }], ['./review/manifest-reporter.mjs']],
     // A missing baseline fails instead of being written, so no run can make one that every
     // later run then passes unreviewed. `-- --update-snapshots` writes them on purpose.
     updateSnapshots: 'none',
