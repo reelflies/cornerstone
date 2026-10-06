@@ -23,9 +23,15 @@
 import fs from 'fs';
 import path from 'path';
 import { expect, test } from '@playwright/test';
-import { QA_VARIATION, ROOT, slug } from './storefront.mjs';
+import {
+    QA_OVERLAY, QA_VARIATION, ROOT, slug,
+} from './storefront.mjs';
 import { WIDGETS_DIR, themeConfig, widgetCases } from './render/render.mjs';
 import { SELFTEST_WIDGETS, openWidget } from './render/widget-page.mjs';
+
+// An overlay (W0-8) changes what the storefront server renders; widget shots render from their
+// fixtures, with this checkout's config.json, so a run under an overlay would only repeat them.
+test.skip(Boolean(QA_OVERLAY), `widget shots render from their fixtures, not under an overlay (QA_OVERLAY=${QA_OVERLAY})`);
 
 const shotName = ({ widget, name }) => ['widgets', slug(QA_VARIATION), `${widget}-${name}.png`];
 const baselinePath = (testInfo, widgetCase) => testInfo.snapshotPath(...shotName(widgetCase), { kind: 'screenshot' });

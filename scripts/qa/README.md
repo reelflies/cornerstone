@@ -13,6 +13,8 @@ The checks every theme change is held to (ticket 16; spec "Testing Decisions", s
 | Fixture renders of partials and widgets | `npm run test:scripts` | yes | yes (release.sh) |
 | Widget element shots | `npm run qa:screens`, with the page shots | no | yes (release.sh, through `qa:prepush`) |
 | Host batch on the prelaunch host | `npm run qa:prelaunch` | no | no: once per checkpoint, in the operator's shell with the preview cookie ([Host batch](#host-batch-qaprelaunch)) |
+| UI states (drawer, panel) and kind@name pins | with `qa:axe` and `qa:screens` | no | yes (release.sh, through `qa:prepush`) |
+| Overlays | `QA_OVERLAY=<name> npm run qa:screens` (and `qa:axe`, `qa:raw-html`) | no | no: refused with `QA_FRESH_SERVER=1` ([Render modes](#render-modes-w0-8)) |
 
 CI has no store credentials, so anything that renders the storefront runs locally or from `release.sh`. Every browser gate blocks the analytics tags, and on a live channel refuses every write ([Analytics and live-store writes](#analytics-and-live-store-writes-network-guardmjs)). `npm run qa:prepush` (`prepush.mjs`) runs axe, the raw-HTML check and the screenshot diffs, in that order. It runs all three even when one fails, exits non-zero if any failed, and ends with each gate's result.
 
@@ -32,11 +34,13 @@ CI has no store credentials, so anything that renders the storefront runs locall
 | `QA_BASE_URL` | none | Test this host (for example the prelaunch host) instead of a local `stencil start` |
 | `QA_PREVIEW_COOKIE` | none | Cookie for the prelaunch host, as `name=value; name2=value2`. It goes only to `QA_BASE_URL` and is never printed. A run that sends it keeps no Playwright traces, because a trace records every request's Cookie header. |
 | `QA_FRESH_SERVER` | none | `1` (`release.sh` sets it): never reuse a running server. Each gate starts its own, and the run stops if anything already answers on its ports. |
-| `QA_PORT` | `3300` | Browsersync's port; the stencil server takes the next one. Each agent's worktree runs on the pair the orchestrator assigns (3400, 3500 and so on), so parallel runs never share ports. `release.sh` always uses 3300. See [Parallel runs](#parallel-runs). |
+| `QA_PORT` | `3300` | Browsersync's port; the stencil server takes the next one. Each agent's worktree runs on the pair the orchestrator assigns (3400, 3500 and so on), so parallel runs never share ports. `release.sh` always uses 3300. An overlay run takes `QA_PORT` + 10 and the port after it. See [Parallel runs](#parallel-runs). |
 | `QA_ANALYTICS` | none (blocked) | `allow` lets the analytics tags load, on the prelaunch host only and only before the Flip (`scripts/release-calendar.json`); anything else is refused before the run starts. See [Analytics and live-store writes](#analytics-and-live-store-writes-network-guardmjs). |
+| `QA_OVERLAY` | none | Render with an overlay from `scripts/qa/overlays/`, in a throwaway worktree, on `QA_PORT` + 10 ([Render modes](#render-modes-w0-8)). Refused with `QA_FRESH_SERVER=1` and `QA_BASE_URL`. |
+| `QA_SCRATCH_DIR` | the system temp folder | Where an overlay's throwaway worktree goes |
 | `RF_TICKET` | the branch | The ticket the run's locks name, for anyone waiting on them. |
 | `QA_REFERENCE_HTML` | none | The reference page the review pages' reference screens are shot from, instead of `plan/design/reelflies-reference.html` above the checkout ("Review pages") |
-| `QA_MANIFEST` | `scripts/qa/results/manifest.json` | The screenshot manifest a run writes, for example a ticket worktree's from W0-8's overlay worktree ("Review pages") |
+| `QA_MANIFEST` | `scripts/qa/results/manifest.json` | The screenshot manifest a run writes, for example the host batch's in its `QA_RESULTS_DIR` ("Review pages") |
 | `QA_RESULTS_DIR` | none | Set by the host batch to `scripts/qa/results/host/<uuid>/`, the folder a gate files its results in. Ticket 17's Lighthouse runner reads it. |
 
 **The preview cookie** is a control-panel login, so set it only in your own shell, where it isn't shown or kept in history, and never in a file or a chat (ticket 16):
@@ -45,7 +49,7 @@ CI has no store credentials, so anything that renders the storefront runs locall
 read -rs QA_PREVIEW_COOKIE && export QA_PREVIEW_COOKIE    # paste name=value; name2=value2, then Return
 ```
 
-Without `QA_BASE_URL`, each gate uses `npx stencil start -c $QA_CHANNEL -v "$QA_VARIATION" -p $QA_PORT` (`scripts/qa/storefront.mjs`):
+Without `QA_BASE_URL`, each gate uses `npx stencil start -c $QA_CHANNEL -v "$QA_VARIATION" -p $QA_PORT` (`scripts/qa/storefront.mjs`), after `node scripts/qa/custom-layouts.mjs`, which puts the committed custom layouts into `config.stencil.json` ([Render modes](#render-modes-w0-8)):
 
 - **Ports.** Browsersync takes `QA_PORT` (3300 by default) and the stencil server the next port (3301). The gates talk to the stencil server, so Browsersync's injected script, its overlay and its websocket stay out of the results.
 - **Locks.** Before it uses a local server, a gate takes its port pair's lock, and a stencil start slot if it starts the server. See [Parallel runs](#parallel-runs).
@@ -70,6 +74,7 @@ Agents build tickets in parallel, each in its own worktree, and each worktree's 
   ```
 
   The Playwright config and `raw-html.mjs` read the same variable. The start log is named by the port: `$TMPDIR/rf-qa-stencil-start-<port>.log`. A run in a linked worktree without `QA_PORT` prints a `WARNING` line, because it would use the release's 3300.
+- **An overlay run takes the pair 10 above** (3410 and 3411 for a worktree on 3400), with its own port lock, so it never reuses or blocks the worktree's plain runs ([Render modes](#render-modes-w0-8)).
 - **Its port pair's lock.** Each gate run holds `~/reelflies/theme/.locks/port-<QA_PORT>` while it runs. A second run on the same ports, from any checkout, waits for it with a `WAIT` line naming the holder, instead of failing on a busy port or reusing a server that another checkout started.
 - **At most three `stencil start`s on the Mac.** A gate takes a slot, `~/reelflies/theme/.locks/stencil-1` to `stencil-3`, before it starts its server, and waits while all three are taken (a `WAIT` line names the holders, and a `SLOT` line says which slot it got). A gate that reuses a running server takes no slot. The release takes slots like any other run: each of its three gates takes one.
 - **The ports are checked again once a gate has its slot,** because the wait can last minutes and a server that takes no lock (a worktree from before W0-7) can come up on them meanwhile. With `QA_FRESH_SERVER=1` the run then stops, as it would have before the wait. And a gate trusts only the `stencil start` it started: if that one exits before it is ready, the gate fails, even when something else answers on its port.
@@ -167,7 +172,7 @@ Every Playwright gate opens its pages through `fixtures.mjs`, which puts a guard
 
 `scripts/qa/pages.mjs` is the one place that says which page each gate visits, per channel:
 
-- **Page keys** are the spec's template names: `home`, `fly-type`, `species`, `species-hub`, `product`, `cart`, `hook-chart`, `404` and `brand`, plus `category` for the stock category template until ticket 32.
+- **Page keys** are the spec's template names: `home`, `fly-type`, `species`, `species-hub`, `product`, `cart`, `hook-chart`, `404` and `brand`, plus `category` for the stock category template until ticket 32. A channel pins more pages of one kind as `kind@name`, such as `product@5663` or `product@sold-out` ([Render modes](#render-modes-w0-8)).
 - **Test products are pinned** by URL. Pick ones that will stay in the catalogue.
 - **Every pinned page must answer as its template:** HTTP 404 for `404`, and 200 for every other page. Otherwise axe, the screenshots and the raw-HTML check fail the page instead of checking an error page. A renamed product or a mistyped pin shows up as that failure.
 - **A 5xx or a 429 is asked again** (`retry.mjs`, W0-4). Each retry prints a `RETRY` line first, so a run that passed after one shows it.
@@ -214,6 +219,93 @@ When a page is pinned for a channel, axe, the screenshots and the raw-HTML check
 - Never mask or hide cards globally. If a card shows a new live value, add just that value's selector to `LIVE_DATA`.
 - **For channel 1's product pin,** the steadiest choice is a product whose related products are set by hand, because automatic ones change when a product with a similar name is added. Channel 1's related lists can't be told apart from the storefront: the product's `related_products` in the catalogue API is `[-1]` when they are automatic. Changing a product's related products is a catalogue write, so it isn't done for the gates.
 
+## Render modes (W0-8)
+
+`stencil start` reads only `config.json`, and a theme has at most four variations, three of them taken (CA, US and ticket 53's channel-1 variation). Tickets 27, 28, 42, 43, 52 and 54 need renders with a switch off or the menu ids empty, tickets 32, 34 and 35 need custom templates, and tickets 37–44 need more than one product or listing pin. These four modes give each of them once. Each has its own tests in `pages.test.mjs` and `playwright-config.test.mjs`, with more in `overlays.test.mjs`, `custom-layouts.test.mjs`, `storefront.test.mjs` and `raw-html/raw-html.test.mjs`.
+
+### Several pins per page kind (`pages.mjs`)
+
+A channel's `pages` keys are a kind, or `kind@name` for another pin of the same kind:
+
+```js
+pages: {
+    product: '/realistic-flying-hot-butt-hopper-brown/',
+    'product@5663': '/fat-albert/',                 // a second product pin
+    'product@sold-out': '/a-product-sold-out-in-every-size/',
+},
+```
+
+- **By kind:** the status the page must answer (`404@x` answers 404), the raw-HTML assertions (`pages: ['product']` covers every product pin), `RAW_HTML_REQUIRED` and `notPinnedYet` (a `product@x` pin counts as the product page), the axe allowlist's `templates`, and the reference screen it is shown beside.
+- **By the whole key:** its baseline (`product@sold-out-phone-375-darwin.png`), a channel's `mask` and `hold` (`mask: { category: [...] }` masks the plain `category` pin only, so a stable `category@alpha` beside it keeps its cards), and a UI state's `pages`.
+- A raw-HTML assertion may also name one pin: `pages: ['product@sold-out']`, or `notOn: ['product@sold-out']`.
+- Add pins and their `mask` or `hold` lines only, as section 6.5 of the build pipeline says, and declare them on the `Baselines:` line as `product@sold-out`.
+
+### UI states (`states.mjs`)
+
+The screenshots and axe open each state in `UI_STATES` on the pins it names, at the projects it names, and check the page with it open as well as closed. The registry is its own module, imported by `screens.spec.mjs` and `axe.spec.mjs`, because `node --test` can't import a spec.
+
+| State | Opens | At | On | Owner |
+|---|---|---|---|---|
+| `drawer-open` | the phone menu: stock Cornerstone's Menu toggle and `#menu` today | `phone-375` | `home` (ReelFlies_CA) | 28 points it at the grouped drawer |
+| `panel-open` | the desktop menu panel: stock Cornerstone's sub-menu of the first top-level category today, opened from the keyboard | `desktop-1280` | `category` (channel 1) | 28 points it at the "Shop flies" panel |
+| `sheet-open` | a slot for the quick-add sheet and popover | | | 43 adds it |
+
+- **A state shot** is the viewport as it shows with the state open, because a fixed drawer or sheet covers the viewport rather than the page. A state can ask for `fullPage: true`. It has the page's masks and stylesheet. Its baseline is `<key>~<state>-<project>-<platform>.png`, covered on the `Baselines:` line by its page kind.
+- **Each state's `open(page)`** resolves once the state is open, and leaves the pointer off the page, so no hover state shows in the shot. A ticket that rebuilds the UI points `open` at its own, and may wait for its token in `<html data-rf-open>` (build pipeline, section 6.9). A ticket adds a state in its own slot in the registry, with its pages.
+- **axe** allows a known issue in one state only through its `states` (above, "axe"). The stock sub-menu has three, which ticket 28 removes.
+- `drawer-open` and `panel-open` show live data: channel 1's sub-menu lists its live tree-1 categories, as its header already does. A change there moves the state's baseline like the page's, through a re-baseline epoch.
+
+### Overlays (`overlays/`, `overlays.mjs`)
+
+An overlay is a JSON patch of `config.json`'s settings, in `scripts/qa/overlays/<name>.json`:
+
+```json
+{
+    "description": "The rise ring switched off: the cart count as stock, with no ring markup and no rise script (ticket 27)",
+    "ticket": "27",
+    "settings": { "rf_rise": false }
+}
+```
+
+```sh
+export QA_PORT=3400                              # the worktree's own pair
+QA_OVERLAY=rf_rise-off npm run qa:screens        # renders on 3410 and 3411
+QA_OVERLAY=rf_rise-off npm run qa:axe
+QA_OVERLAY=rf_rise-off npm run qa:raw-html
+QA_OVERLAY=rf_rise-off node scripts/qa/serve.mjs # by hand
+```
+
+- **The overlays today:** `rf_rise-off` (27), `menu-ids-empty` (28's stock fallback) and `species-empty` (28: no Species group). Add one per switch as each module lands, in the same PR.
+- **Only declared settings.** An overlay is refused while `config.json` doesn't declare one of its settings, or when a value has another type than the declared one, because the render would look unchanged and pass for the overlay. So the three above run once ticket 25's scaffold declares `rf_rise` and the menu ids. A misspelt key in the file, a missing `description` or an empty `settings` is refused too.
+- **The patch** sets each value in the base settings and in every variation's, so it renders whatever `QA_VARIATION` is. It also sets `rf_qa_overlay` to the overlay's name. `?debug=context` shows it in `theme_settings`, and the gates check it: an overlay run trusts only a server that renders its overlay, and a plain run never trusts one that renders any overlay.
+- **A throwaway git worktree.** The run makes a worktree of the checkout's working tree as it is, uncommitted and untracked changes included, through a temporary index (the checkout's index, branch and files stay as they were). It goes in `QA_SCRATCH_DIR`, or the system temp folder, as `rf-qa-overlay-<port>-<overlay>-…`. Its `node_modules`, `secrets.stencil.json` and `config.stencil.json` are links to the checkout's own, never copies. Only its `stencil start` runs there: Playwright, the specs, the baselines and the manifest stay in the checkout. It is removed when the run ends, also on Ctrl-C, `SIGTERM` or `SIGHUP`. One a killed run left on the same port is removed, with a `STALE` line, by the next overlay run on that port, which holds the port lock. It is found by its name among the repo's worktrees, whatever `QA_SCRATCH_DIR` either run had, and a worktree on a branch is never removed, whatever its folder is called.
+- **Its own ports and server.** An overlay run takes `QA_PORT` + 10 and the port after it, with that pair's lock and a stencil start slot, and never reuses a running server.
+- **Never from the main clone,** whose `node_modules` the release's `npm ci` replaces mid-run. The checkout must have its own `node_modules` (a link out of the worktree is refused), and `secrets.stencil.json` and `config.stencil.json` (linked or copied; the run never reads the secrets file).
+- **Never in a release.** An overlay is refused with `QA_FRESH_SERVER=1`, which `release.sh` sets, and with `QA_BASE_URL`, whose host renders its own `config.json`.
+- **Baselines** carry the overlay's name: `home+rf_rise-off-phone-375-darwin.png`, and `home~drawer-open+rf_rise-off-phone-375-darwin.png` for a state under it. Record them with `QA_OVERLAY=<name> npx playwright test --config scripts/qa/playwright.config.mjs screens.spec --update-snapshots=missing`, which writes only the missing files and fails each test it writes one for (Playwright's "writing actual"); run it again to see them pass. Declare them as `overlay <name>`. The widget shots and the reference screens skip under an overlay, because they don't render from the server.
+
+### Custom layouts (`custom-layouts.json`, `custom-layouts.mjs`)
+
+On the store, a custom template is chosen by a template association, which belongs to the uploaded theme. `stencil start` renders `templates/pages/custom/<type>/<file>` for a URL only when `config.stencil.json`'s `customLayouts` maps the file to that URL. So the mappings the gates need are committed in `scripts/qa/custom-layouts.json`:
+
+```json
+{
+    "brand": {},
+    "category": { "rf-noindex.html": "/flies/realistic-trout-flies/realistic-nymphs/" },
+    "page": { "hook-size-chart.html": ["/fly-hook-size-chart/"] },
+    "product": {}
+}
+```
+
+- **Every `stencil start` the gates make** runs `node scripts/qa/custom-layouts.mjs` first, in the folder it starts in, the checkout or an overlay's worktree. That merges the committed mappings into that folder's `config.stencil.json`, the run's copy. So does `serve.mjs`.
+- **The committed mappings come first,** so they win: stencil-cli takes the first file that maps a URL. A mapping made by hand is kept after them, with a `WARNING` line, because no other checkout renders with it. One for a URL the committed file maps is dropped.
+- **A link is replaced by a copy before it changes,** with a `COPY` line, so the main clone's `config.stencil.json` never changes through a worktree's link. Nothing is written while the file already has the mappings, so a link stays a link until the committed file maps something.
+- **From the main clone,** the release's gates included ([docs/releasing.md](../../docs/releasing.md), step 4) and the orchestrator's checkpoint runs, `config.stencil.json` is a file, not a link. So once the committed file maps something, the step writes `master`'s mappings into the main clone's own `config.stencil.json`. That is intended: the release renders the custom-template pins. A worktree whose `config.stencil.json` links to that file then reads `master`'s mappings too. One its branch doesn't commit yet gets a `WARNING` and is kept, as a hand-made mapping is, until the branch is rebased onto `origin/master`.
+- **A problem stops the start** before anything is written: a type other than `brand`, `category`, `page` and `product` (stencil-cli's), a template that doesn't exist, a URL that isn't a path on the store, or one URL mapped to two files.
+- The page must exist on the store as that type, such as a category on channel 1 or a Web Page on 1895766. Pin it in `pages.mjs` (for example `category@noindex`), and add the mapping in the same PR as the template.
+- `stencil start` reads `config.stencil.json` once, when it starts, so stop a running server after changing `custom-layouts.json`. A plain run reuses a running server.
+- The file maps nothing today. Tickets 32, 34 and 35 add theirs.
+
 ## Bundle limits (`scripts/check-bundle.mjs`)
 
 - **main.js:** `theme-bundle.main.js` fails above 307,200 B (300 KiB) raw. It was 307,607 B in stock 6.22. Ticket 16 moved Quick view, with ProductDetails and reviews, out of main.js. It loads on the first Quick view click as `theme-bundle.chunk.quick-view.js` (1,420 B) plus three chunks it shares with the page classes (311, 668 and 354). Together they are 64,303 B raw and 20,832 B gzip (2026-10-05 build). A page that has already loaded a shared chunk fetches less.
@@ -248,12 +340,13 @@ Every pinned page, at 375 and 1280, runs with the tags WCAG 2.0–2.2 A and AA p
 - Each entry names the axe rule, the templates it's allowed on, the ticket that fixes it, and why.
 - A known issue is reported as an annotation and doesn't fail the run.
 - A listed issue that no longer occurs is reported as fixed, so the entry can be removed.
-- **The list is empty.** The stock templates had no serious or critical issues on ReelFlies_CA (home, cart, 404, brand) or on the channel-1 product and category pages on 2026-10-05.
+- An entry's `templates` are page kinds or `kind@name` pins. Its optional `states` limits it to the page with one of those UI states open; without it, it covers the page in every state.
+- **The list holds three entries, all with the stock desktop sub-menu open** (`panel-open` on channel 1's category page; W0-8, 2026-10-06): `aria-hidden-focus`, `color-contrast` and `target-size`. Ticket 28 replaces the sub-menu with its panel and removes them. The closed stock templates had no serious or critical issues on ReelFlies_CA (home, cart, 404, brand) or on the channel-1 product and category pages on 2026-10-05, and the stock phone menu open (`drawer-open`) has none.
 - The moderate issues found (no `<main>` landmark, content outside landmarks, heading order, duplicate landmarks) are ticket 25's.
 
 ## Screenshots (`screens.spec.mjs`)
 
-**Baselines:** `scripts/qa/baselines/<channel>-<variation>/<template>-<project>-<platform>.png`. For example, `baselines/1895766-reelflies-ca/home-phone-375-darwin.png`.
+**Baselines:** `scripts/qa/baselines/<channel>-<variation>/<key>[~<state>][+<overlay>]-<project>-<platform>.png` (`baselineName` in `pages.mjs`). For example, `baselines/1895766-reelflies-ca/home-phone-375-darwin.png`, `home~drawer-open-phone-375-darwin.png` for the phone menu open, and `home+rf_rise-off-phone-375-darwin.png` under an overlay.
 
 - The projects are `phone-375` and `desktop-1280`.
 - The platform suffix keeps a Mac's font rendering from being compared with Linux's. Baselines are made and checked on the Mac that runs `release.sh`.
@@ -277,7 +370,7 @@ It also tries channel 1's product-page stylesheet on a product page in miniature
 
 **Updating baselines:** run `npm run qa:screens -- --update-snapshots`. Then look at every changed PNG before committing it. A diff is the point of the gate: update a baseline only for a change you meant.
 
-**Declaring changed baselines** (W0-13). Every PR body ends with a `Baselines:` line naming the page kinds and overlays it changes on purpose, for example `Baselines: product, product@sold-out, overlay rf_rise-off`, or `Baselines: none`. The `baseline-scope` CI check, and `scripts/merge.sh` again before it merges, fail a PR that changes, adds or deletes any PNG here outside them. The check reads a baseline's name as `<set>/<kind>[@pin][~state][+overlay]-<project>-<platform>.png`, so W0-8's pins, UI states and overlays must keep that shape; a PNG in any other shape is covered only by a re-baseline epoch (`Baselines: epoch <cause>`), and an epoch PR changes nothing but baselines. [docs/guardrails.md](../../docs/guardrails.md), "Declaring changed baselines", has the rules.
+**Declaring changed baselines** (W0-13). Every PR body ends with a `Baselines:` line naming the page kinds and overlays it changes on purpose, for example `Baselines: product, product@sold-out, overlay rf_rise-off`, or `Baselines: none`. The `baseline-scope` CI check, and `scripts/merge.sh` again before it merges, fail a PR that changes, adds or deletes any PNG here outside them. The check reads a baseline's name as `<set>/<kind>[@pin][~state][+overlay]-<project>-<platform>.png`, which is the shape `baselineName` gives W0-8's pins, UI states and overlays (`pages.test.mjs` checks each against the check's parser). A UI state's baseline is covered by its page kind, and an overlay's only by `overlay <name>`. A PNG in any other shape is covered only by a re-baseline epoch (`Baselines: epoch <cause>`), and an epoch PR changes nothing but baselines. [docs/guardrails.md](../../docs/guardrails.md), "Declaring changed baselines", has the rules.
 
 **When a template ticket lands:**
 
@@ -295,7 +388,7 @@ It also tries channel 1's product-page stylesheet on a product page in miniature
 This is spec seam 2: what a crawler gets, with no JavaScript.
 
 - It fetches every page pinned for the channel in `pages.mjs`, with `Accept-Language: en-CA`; stencil start's renderer fails without it.
-- It runs every registered assertion on each page. An assertion's `pages` and `notOn` pick the page kinds it applies to.
+- It runs every registered assertion on each page. An assertion's `pages` and `notOn` pick the page kinds it applies to: a kind covers every pin of it, and a `kind@name` names one pin.
 - A page that doesn't answer as its template fails: 404 for `404`, and 200 for every other page. A 5xx or a 429 is fetched again first, as in "Pinned pages and live data".
 - **A product and a category page are required** (`RAW_HTML_REQUIRED`), because spec seam 2 checks those two. A channel without one fails, unless its `notPinnedYet` gives the reason, which is reported as a warning on every run. ReelFlies_CA has no products or tree-4 categories until refactor tickets 13 and 14. When they land, pin both and delete its `notPinnedYet`; a run warns while an entry is left over.
 - **To check a new page kind** (for example the Fly Type page for ticket 40, or the cart for ticket 52), pin it in `CHANNELS`. Then name it in the assertion's `pages`, if the assertion applies only to some kinds.
@@ -506,7 +599,7 @@ Review is per wave, through rolling checkpoints (W0-10 in `plan/build-pipeline.m
 - `screens.spec.mjs` annotates each template shot (`shotAnnotation(themeShot(…))`), and the manifest reporter (`review/manifest-reporter.mjs`, in `playwright.config.mjs`) writes the entries with each test's status when the run ends. A run that annotates nothing, such as axe, leaves the file as it was.
 - Each entry has the page, path, width, channel, variation, overlay or state (W0-8 fills these), baseline path and reference anchor, plus the status, the commit and when it ran. A failed shot keeps a copy of its render in `manifest-actual/` beside the manifest, because the next run empties Playwright's output folder, and the first line of its error.
 - Runs add up: a run replaces the entries it shot again and keeps the rest, so the ReelFlies_CA run and the `QA_CHANNEL=1` run fill one manifest. The generator leaves out shots of pages `pages.mjs` no longer pins, and says so. A checkpoint starts from an empty manifest (below).
-- **W0-8's overlay runs** happen in a throwaway worktree. Point `QA_MANIFEST` at the ticket worktree's manifest. Paths in it stay relative to the checkout that ran them, which a worktree of the same repo lays out the same way, so copy the overlay's baselines back to the same paths, as committing them needs anyway.
+- **W0-8's overlay runs** record into the same manifest, with the overlay's name in each entry. Only the overlay's `stencil start` runs in its throwaway worktree: Playwright, the baselines and the manifest stay in the ticket's checkout, so nothing needs copying back. UI state shots carry the state's name the same way.
 
 **The reference screens.** `screens-reference.spec.mjs` runs with every `npm run qa:screens`. It shoots each storefront screen of the reference design, `plan/design/reelflies-reference.html`, at 375 and 1280 into `results/reference/`:
 
@@ -620,6 +713,7 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - `widget-screens.spec.mjs` runs with `qa:screens`, because the script's `screens` filter matches its name.
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
 - `storefront.test.mjs` also covers `QA_PORT`, the start log's name, the locks a gate holds (and the ports checked again after a slot wait), trusting only the server a gate started, and stopping that server when the gate is stopped by a signal. `playwright-config.test.mjs` covers that the config reads `QA_PORT` and holds the locks only in the runner, `prepush.test.mjs` what `qa:prepush` checks before its first gate, `serve.test.mjs` the locks around a `stencil start` by hand, and `scripts/lib/lock.test.mjs` the locks themselves: the stale rules, waiting, the three slots across processes, the signals, `RF_LOCK_ROOT`, and the command line `release.sh` uses.
+- `pages.test.mjs` covers W0-8's pins, baseline names (against the baseline-scope check's parser), UI states, overlays and custom layouts; `overlays.test.mjs` the overlay files, the patch and the throwaway worktree (in git repos of its own); `custom-layouts.test.mjs` the merge into `config.stencil.json`; `playwright-config.test.mjs` the overlay's refusals, ports and folder, and the custom-layouts step before `stencil start`; `storefront.test.mjs` the overlay marker check, and that only an overlay run's own worktree moves a `stencil start` out of the checkout (an `RF_QA_THEME_DIR` left in the shell never does; `prepush.test.mjs` too).
 - `analytics-hosts.test.mjs`, `read-only-posts.test.mjs` and `network-guard.test.mjs` cover the network guard (W0-6), and `harness-selftest.spec.mjs` proves it in a browser. `prelaunch.test.mjs` covers the host batch: the cookie check, the uuid folder, the gates and their environment, the `RELEASES.md` row, Lighthouse once ticket 17 adds it, and that the cookie is never printed.
 - `npm run test:scripts` runs every `scripts/**/*.test.mjs` with `node --test`, the fixture renders included.
 - Jest runs `assets/js/test-unit/`. `jest.config.js` ignores `scripts/`, because Jest 30 would otherwise match `*.test.mjs` and `*.spec.mjs` too.

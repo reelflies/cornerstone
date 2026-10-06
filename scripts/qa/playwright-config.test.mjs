@@ -9,6 +9,11 @@
 //   the stencil server on the next port (W0-7).
 // - The runner holds the port pair's lock, and a stencil start slot when it starts a server,
 //   until it exits; a worker takes neither.
+// - W0-8's render modes: every stencil start merges the committed custom layouts into
+//   config.stencil.json first. An overlay run starts its own stencil start in its throwaway
+//   worktree, on QA_PORT + 10, and is refused with QA_FRESH_SERVER=1, on QA_BASE_URL, and for
+//   an overlay that isn't in scripts/qa/overlays/ or changes a setting config.json doesn't have.
+//   A plain run's stencil start runs in this checkout whatever RF_QA_THEME_DIR the shell has.
 //
 //   node --test scripts/qa/playwright-config.test.mjs
 
@@ -149,4 +154,74 @@ it('holds no lock after refusing to load with QA_FRESH_SERVER=1 on a busy port',
     } finally {
         holder.close();
     }
+});
+
+// W0-8's render modes.
+
+it('merges the committed custom layouts into config.stencil.json before every stencil start it makes', () => {
+    assert.match(setting({ RF_QA_PORTS_CHECKED: '1' }, 'config.webServer.command'), /^node scripts\/qa\/custom-layouts\.mjs && rm -rf assets\/dist && npx stencil start /);
+});
+
+it('runs a plain run\'s stencil start in this checkout', () => {
+    assert.equal(setting({ RF_QA_PORTS_CHECKED: '1' }, 'config.webServer.cwd'), path.resolve('.') + path.sep);
+});
+
+// RF_QA_THEME_DIR is the runner's message to its workers on an overlay run. One exported in
+// the shell must never move a plain run's stencil start, a release's included, into another
+// folder, whose server would then pass for this checkout's.
+it('runs a plain run\'s stencil start in this checkout whatever RF_QA_THEME_DIR the shell has, and passes none on to the workers', async () => {
+    const checkout = path.resolve('.') + path.sep;
+    for (const stray of [path.resolve('..'), '/tmp/rf-qa-overlay-3310-powered-by-off-x']) {
+        assert.equal(setting({ RF_QA_PORTS_CHECKED: '1', RF_QA_THEME_DIR: stray }, 'config.webServer.cwd'), checkout, `a worker, ${stray}`);
+        assert.equal(setting({
+            RF_QA_PORTS_CHECKED: '1', QA_FRESH_SERVER: '1', QA_PORT: '3300', RF_QA_THEME_DIR: stray,
+        }, 'config.webServer.cwd'), checkout, `a release's worker, ${stray}`);
+        const port = await freePort(); // eslint-disable-line no-await-in-loop
+        assert.deepEqual(
+            setting({ QA_PORT: String(port), RF_QA_THEME_DIR: stray }, '[config.webServer.cwd, process.env.RF_QA_THEME_DIR ?? null]'),
+            [checkout, null],
+            `the runner, ${stray}`,
+        );
+    }
+});
+
+// Overlays for these cases, in a folder of their own (RF_QA_OVERLAYS_DIR, read only under
+// node --test): one that changes a stock setting, and one that changes a setting config.json
+// doesn't declare.
+const overlaysDir = (() => {
+    const dir = tempRoot();
+    fs.writeFileSync(path.join(dir, 'powered-by-off.json'), JSON.stringify({ description: 'The footer without "Powered by BigCommerce"', settings: { show_powered_by: false } }));
+    fs.writeFileSync(path.join(dir, 'undeclared.json'), JSON.stringify({ description: 'A switch no module declares', settings: { rf_not_a_setting: false } }));
+    return dir;
+})();
+
+it('runs an overlay\'s stencil start in its throwaway worktree, on QA_PORT + 10, and never reuses a running server', () => {
+    // What a worker sees: the runner has made the worktree and passed its folder on.
+    const env = {
+        QA_PORT: '3400', QA_OVERLAY: 'powered-by-off', RF_QA_OVERLAYS_DIR: overlaysDir, RF_QA_PORTS_CHECKED: '1', RF_QA_THEME_DIR: '/tmp/rf-qa-overlay-3410-powered-by-off-x',
+    };
+    assert.match(setting(env, 'config.webServer.command'), / -p 3410$/);
+    assert.equal(setting(env, 'config.webServer.cwd'), '/tmp/rf-qa-overlay-3410-powered-by-off-x');
+    assert.match(setting(env, 'config.webServer.url'), /^http:\/\/localhost:3411\/stencil\//);
+    assert.equal(setting(env, 'config.use.baseURL'), 'http://localhost:3411');
+    assert.equal(setting(env, 'config.webServer.reuseExistingServer'), false);
+});
+
+const refusal = env => {
+    const { status, stderr } = load({ RF_QA_OVERLAYS_DIR: overlaysDir, RF_QA_PORTS_CHECKED: '1', ...env }, 'config.webServer.command');
+    assert.notEqual(status, 0);
+    return stderr;
+};
+
+it('refuses an overlay with QA_FRESH_SERVER=1, so a release never renders one', () => {
+    assert.match(refusal({ QA_OVERLAY: 'powered-by-off', QA_FRESH_SERVER: '1' }), /QA_FRESH_SERVER=1.*release never renders an overlay/);
+});
+
+it('refuses an overlay on QA_BASE_URL, which renders the host\'s own config.json', () => {
+    assert.match(refusal({ QA_OVERLAY: 'powered-by-off', QA_BASE_URL: 'https://prelaunch.example' }), /only a local stencil start/);
+});
+
+it('refuses an overlay that isn\'t in the overlays folder, or that changes a setting config.json doesn\'t declare', () => {
+    assert.match(refusal({ QA_OVERLAY: 'powered-by-of' }), /QA_OVERLAY "powered-by-of" isn't an overlay in .*\(powered-by-off, undeclared\)/);
+    assert.match(refusal({ QA_OVERLAY: 'undeclared' }), /config\.json declares no "rf_not_a_setting" setting/);
 });

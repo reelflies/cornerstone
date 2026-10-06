@@ -1,0 +1,7 @@
+{
+    "description": "The rise ring switched off: the cart count as stock, with no ring markup and no rise script (ticket 27)",
+    "ticket": "27",
+    "settings": {
+        "rf_rise": false
+    }
+}

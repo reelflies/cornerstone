@@ -24,9 +24,10 @@
 //              error: the first line of a failed test's error
 //   ranAt, commit, dirty      when, and from which checkout state
 //
-// QA_MANIFEST names another manifest file, such as a ticket worktree's for W0-8's overlay
-// runs in a throwaway worktree. Paths in it stay relative to the checkout that ran them,
-// which a worktree of the same repo lays out the same way.
+// QA_MANIFEST names another manifest file, such as the host batch's in its results folder
+// (prelaunch.mjs). Paths in it stay relative to the checkout that ran them. W0-8's overlay
+// runs need none: only their stencil start runs in a throwaway worktree, and they record into
+// the checkout's own manifest.
 
 import fs from 'fs';
 import path from 'path';

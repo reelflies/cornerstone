@@ -6,13 +6,18 @@
 //
 //   QA_PORT=3400 node scripts/qa/serve.mjs                                                  # ReelFlies_CA
 //   QA_PORT=3400 QA_CHANNEL=1855224 QA_VARIATION="ReelFlies US" node scripts/qa/serve.mjs   # .com's data (read-only)
+//   QA_PORT=3400 QA_OVERLAY=rf_rise-off node scripts/qa/serve.mjs                           # an overlay, on 3410 (W0-8)
+//
+// With QA_OVERLAY it serves the overlay from its throwaway worktree (overlays.mjs), on QA_PORT
+// + 10 and the port after it, and removes the worktree when it stops.
 //
 // Like the gates, it starts from an empty assets/dist and leaves its dev build there, so run
 // `rm -rf assets/dist` before you bundle by hand (scripts/qa/README.md).
 
 import { isMain } from '../lib/is-main.mjs';
 import {
-    IS_LOCAL, LOCAL_URL, QA_PORT, START_COMMAND, checkEnv, claimLocalServer, planLocalServer, startProcessGroup, stopProcessGroup,
+    IS_LOCAL, LOCAL_URL, QA_OVERLAY, QA_PORT, ROOT, START_COMMAND, checkEnv, claimLocalServer, planLocalServer, startOverlayCheckout, startProcessGroup,
+    stopProcessGroup,
 } from './storefront.mjs';
 
 // Claims the server (`claim`: the port lock and a slot), starts it (`start`), and once it has
@@ -41,9 +46,18 @@ async function main() {
         checkEnv();
         if (!IS_LOCAL) throw new Error('serve.mjs runs a local stencil start, so QA_BASE_URL must be unset');
         console.log(`Starting: ${START_COMMAND}`);
+        let overlay = null;
         process.exitCode = await serve({
             claim: () => claimLocalServer({ plan: () => planLocalServer({ fresh: true }) }),
-            start: () => startProcessGroup(START_COMMAND, { stdio: ['ignore', 'inherit', 'inherit'] }),
+            start: () => {
+                if (QA_OVERLAY) overlay = startOverlayCheckout();
+                return startProcessGroup(START_COMMAND, { cwd: overlay?.dir ?? ROOT, stdio: ['ignore', 'inherit', 'inherit'] });
+            },
+            // The overlay's worktree goes with its server, before the locks are released.
+            stop: async server => {
+                await stopProcessGroup(server);
+                overlay?.remove();
+            },
         });
     } catch (error) {
         console.error(`STOP     ${error.message}`);

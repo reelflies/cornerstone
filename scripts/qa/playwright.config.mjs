@@ -13,7 +13,7 @@
 
 import { defineConfig } from '@playwright/test';
 import {
-    BASE_URL, FRESH_SERVER, HEADERS, IS_LOCAL, READY_URL, ROOT, START_COMMAND, checkEnv, claimLocalServer, previewCookies,
+    BASE_URL, FRESH_SERVER, HEADERS, IS_LOCAL, QA_OVERLAY, READY_URL, START_COMMAND, checkEnv, claimLocalServer, previewCookies, startOverlayCheckout, themeDir,
 } from './storefront.mjs';
 
 checkEnv();
@@ -21,10 +21,15 @@ checkEnv();
 // The webServer starts before globalSetup, so the runner claims the server here, once: it
 // waits for its port pair's lock, checks the ports (QA_FRESH_SERVER=1 stops while anything
 // answers on them), and takes a stencil start slot when it will start a server. It holds
-// both until it exits (W0-7). Each worker loads this config again while the server is up,
-// and skips this through the RF_QA_PORTS_CHECKED it inherits.
+// both until it exits (W0-7). With QA_OVERLAY it then makes the overlay's throwaway worktree,
+// which the webServer starts in and which goes when the runner exits (W0-8). Each worker loads
+// this config again while the server is up, and skips this through the RF_QA_PORTS_CHECKED
+// and RF_QA_THEME_DIR it inherits. Only the runner sets RF_QA_THEME_DIR, so it drops one
+// inherited from the shell first.
 if (IS_LOCAL && !process.env.RF_QA_PORTS_CHECKED) {
+    delete process.env.RF_QA_THEME_DIR;
     await claimLocalServer();
+    if (QA_OVERLAY) process.env.RF_QA_THEME_DIR = startOverlayCheckout().dir;
     process.env.RF_QA_PORTS_CHECKED = '1';
 }
 
@@ -32,7 +37,8 @@ export default defineConfig({
     testDir: '.',
     testMatch: '*.spec.mjs',
     outputDir: 'results/output',
-    // Baselines: scripts/qa/baselines/<channel>-<variation>/<template>-<width>-<platform>.png
+    // Baselines: scripts/qa/baselines/<channel>-<variation>/<key>[~<state>][+<overlay>]-<project>-<platform>.png
+    // (baselineName in pages.mjs names the part before the project, W0-8).
     snapshotPathTemplate: '{testDir}/baselines/{arg}-{projectName}-{platform}{ext}',
     globalSetup: './global-setup.mjs',
     fullyParallel: true,
@@ -74,9 +80,11 @@ export default defineConfig({
     webServer: IS_LOCAL ? {
         command: START_COMMAND,
         url: READY_URL,
-        cwd: ROOT,
-        // Reused only when it renders QA_CHANNEL and QA_VARIATION (global-setup.mjs).
-        reuseExistingServer: !FRESH_SERVER,
+        // This checkout, or the overlay's worktree.
+        cwd: themeDir(),
+        // Reused only when it renders QA_CHANNEL, QA_VARIATION and no overlay
+        // (global-setup.mjs); never for a release or an overlay run.
+        reuseExistingServer: !FRESH_SERVER && !QA_OVERLAY,
         timeout: 180000,
         stdout: 'ignore',
         stderr: 'pipe',

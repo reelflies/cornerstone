@@ -1,0 +1,8 @@
+{
+    "description": "Both menu ids empty: the stock navigation, the grouped menu's fallback (ticket 28)",
+    "ticket": "28",
+    "settings": {
+        "rf_menu_type_ids": "",
+        "rf_menu_species_root_id": ""
+    }
+}

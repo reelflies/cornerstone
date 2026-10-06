@@ -52,6 +52,10 @@ describe('the reference screen for a theme template', () => {
 
     it('goes by the page kind of a kind@name pin (W0-8)', () => {
         assert.equal(referenceFor('product@sold-out'), 'product');
+        // A changed baseline's page, read from its file name, carries its UI state and overlay.
+        assert.equal(referenceFor('home~drawer-open'), 'home');
+        assert.equal(referenceFor('category+menu-ids-empty'), 'fly-type');
+        assert.equal(referenceFor('product@5663~drawer-open+rf_rise-off'), 'product');
     });
 });
 
