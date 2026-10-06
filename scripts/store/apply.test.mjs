@@ -563,6 +563,31 @@ test('a response that names another channel stops the run and locks the helper; 
     assert.match(lockedProblem(root), /a write's response named another channel/);
 });
 
+test('a re-read after a write that names another channel stops the run and locks the helper', async () => {
+    const { text } = await makePlan([unpublish], { [placementGet]: { body: widgets.placement_item } });
+    const { run, root } = await apply(text, {
+        // The PUT's response names 1895766; the placement read back afterwards names channel 1.
+        [placementGet]: [{ body: widgets.placement_item }, { body: widgets.placement_item_on_channel_1 }],
+        [placementPut]: { body: widgets.placement_item_inactive },
+    });
+    assert.equal((await run).outcome, 'locked');
+    const rows = readLogRows(root);
+    assert.deepEqual(rows.map(row => [row.row, row.outcome]), [['intent', undefined], ['result', 'stopped']]);
+    assert.match(rows[1].message, /its re-read stopped: .*the response names channel 1, not 1895766/);
+    assert.match(lockedProblem(root), /a re-read after a write named another channel/);
+});
+
+test('an object\'s response must name 1895766 itself: one that names no channel locks', async () => {
+    const { text } = await makePlan([template], listRoutes);
+    const unnamed = structuredClone(widgets.template_created);
+    delete unnamed.data.channel_id;
+    const { run, calls, root } = await apply(text, { ...listRoutes, 'POST /v3/content/widget-templates': { body: unnamed } });
+    assert.equal((await run).outcome, 'locked');
+    assert.equal(calls.at(-1).method, 'POST', 'nothing is read or sent after it');
+    assert.match(readLogRows(root).at(-1).message, /the response doesn't name channel 1895766 on every object it returns/);
+    assert.match(lockedProblem(root), /a write's response named another channel/);
+});
+
 const content = loadFixture('content.json');
 const SCRIPT = '5c5c5c5c-1234-4abc-8def-0123456789ab';
 const scriptCreate = {
@@ -600,6 +625,20 @@ test('a script update whose re-read shows it enabled stops the run and locks the
     assert.equal((await run).outcome, 'locked');
     assert.match(lockedProblem(root), /a script read back enabled after a write/);
     assert.equal(readLogRows(root).at(-1).outcome, 'stopped');
+});
+
+test('a script that answers enabled to its update locks, even when its re-read would say disabled', async () => {
+    const update = { method: 'PUT', path: `/v3/content/scripts/${SCRIPT}`, body: { channel_id: 1895766, html: '<script>/* vitals 2 */</script>' } };
+    const scriptGet = `GET /v3/content/scripts/${SCRIPT}`;
+    const { text } = await makePlan([update], { [scriptGet]: { body: content.script_item_disabled } });
+    const { run, calls, root } = await apply(text, {
+        [scriptGet]: { body: content.script_item_disabled },
+        [`PUT /v3/content/scripts/${SCRIPT}`]: { body: content.script_item_enabled },
+    });
+    assert.equal((await run).outcome, 'locked');
+    assert.equal(calls.at(-1).method, 'PUT', 'the response alone stops it, before any re-read');
+    assert.match(readLogRows(root).at(-1).message, /script 5c5c5c5c-1234-4abc-8def-0123456789ab is enabled on the store/);
+    assert.match(lockedProblem(root), /a script read back enabled after a write/);
 });
 
 test('a disabled script create is applied, and reads back disabled', async () => {

@@ -164,7 +164,7 @@ export function proofProblem(proof) {
 // A value as the diff shows it: short JSON, long text cut with its length and sha256, and the
 // values of credential-like keys hidden.
 export function showValue(value, key = '') {
-    if (SECRET_KEY.test(key) && value !== null && value !== '') return '[hidden]';
+    if (SECRET_KEY.test(key) && value !== undefined && value !== null && value !== '') return '[hidden]';
     if (isRef(value)) return `the uuid request ${value.$created + 1} creates`;
     const json = JSON.stringify(value === undefined ? null : value);
     if (typeof value === 'string' && json.length > 80) return `${JSON.stringify(`${value.slice(0, 60)}…`)} (${value.length} characters, sha256 ${sha256(value).slice(0, 8)})`;

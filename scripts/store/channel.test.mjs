@@ -66,6 +66,15 @@ test('a settings write names the channel in its query, and only there', () => {
     assert.match(problems(settings({ channel_id: 1895766, 'channel_id:in': '1' }))[0], /only channel_id in the query/);
 });
 
+test('a settings body that names another channel anywhere is refused, even with the right query', () => {
+    const settings = body => ({
+        method: 'PUT', path: '/v3/settings/storefront/seo', query: { channel_id: 1895766 }, body,
+    });
+    assert.match(problems(settings({ meta_keywords: 'flies', extra: { channel_id: 1 } }))[0], /PUT \/v3\/settings\/storefront\/seo names channel 1 inside the body: only 1895766 may be named/);
+    assert.match(problems(settings({ page_title: 'x', channels: [{ id: 1855224 }] }))[0], /names channel 1855224 inside the body/);
+    assert.deepEqual(problems(settings({ page_title: 'x', extra: { channel_ids: [1895766] } })), []);
+});
+
 test('channelsNamed finds channel_id, channel_ids and channels at any depth, and ignores text', () => {
     assert.deepEqual(channelsNamed({
         data: [

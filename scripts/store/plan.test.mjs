@@ -9,7 +9,7 @@ import path from 'node:path';
 import { parseCalendar, phaseOn } from '../lib/release-calendar.mjs';
 import { createClient } from './client.mjs';
 import {
-    PLAN_FORMAT, buildPlan, checkRequests, commandFetch, commandStoreHash, parseArgs, planDigest, readChanges, writePlan,
+    PLAN_FORMAT, buildPlan, checkRequests, commandFetch, commandStoreHash, parseArgs, planDigest, readChanges, showValue, writePlan,
 } from './plan.mjs';
 import { sha256 } from './snapshot.mjs';
 import {
@@ -287,6 +287,19 @@ test('long values and credential-like settings are shortened or hidden in the di
     const { plan: made } = await result;
     assert.match(made.diff[1], /body: "<p>Draft<\/p>" -> "<p>x{50,}…" \(307 characters, sha256 [0-9a-f]{8}\)/);
     assert.match(made.diff[2], /meta_title: "" -> "Shipping"/);
+});
+
+test('the values of credential-like keys are hidden in the diff, at create, update and settings alike', async () => {
+    for (const key of ['access_token', 'client_secret', 'password', 'api_key', 'API Key', 'apiKey']) {
+        assert.equal(showValue('s3cr3t-value', key), '[hidden]', key);
+    }
+    assert.equal(showValue('', 'password'), '""', 'an empty value is shown: it hides nothing');
+    assert.equal(showValue(null, 'api_key'), 'null');
+    assert.equal(showValue('shown', 'name'), '"shown"');
+    const { result } = plan([{ method: 'PUT', path: '/v3/content/pages/42', body: { channel_id: 1895766, password: 'hunter2-hunter2' } }], { 'GET /v3/content/pages/42': { body: content.page_item } });
+    const { plan: made } = await result;
+    assert.ok(made.diff.includes('     password: null -> [hidden]'), made.diff.join('\n'));
+    assert.ok(!made.diff.join('\n').includes('hunter2'));
 });
 
 test('the plan file goes to <root>/plans/, never over another, and its sha256 is the one Shaun types', async () => {
