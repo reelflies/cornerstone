@@ -1,0 +1,13 @@
+{{!-- Test partial for scripts/qa/render/render.test.mjs: a card that reads fixture data and
+      theme settings, and includes a stock partial from the theme's templates/. --}}
+<article class="rf-render-card" data-product-id="{{product.id}}">
+    {{> components/common/responsive-img
+        image=product.image
+        fallback_size=theme_settings.productgallery_size
+        lazyload=theme_settings.lazyload_mode
+        class="rf-render-card__image"
+    }}
+    <h3 class="rf-render-card__name">{{product.name}}</h3>
+    <p class="rf-render-card__price">{{product.price.without_tax.formatted}}</p>
+    <p class="rf-render-card__size">{{theme_settings.productgallery_size}}</p>
+</article>

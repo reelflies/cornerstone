@@ -1,0 +1,24 @@
+{{!--
+    Worked example for the fixture renderer (scripts/qa/README.md, "Fixture renders"). It is
+    not a theme template and never ships: it shows how a partial is tested from fixture JSON
+    before the store has the data.
+
+    The category description splits at the <!--more--> marker, as ticket 32's intro does:
+    the part before the marker sits under the H1, and the rest goes below. Without the
+    marker, the header shows the H1 alone and the whole description goes below.
+--}}
+<header class="rf-example-intro">
+    <h1 class="page-heading">{{category.name}}</h1>
+    {{#with (split category.description '<!--more-->')}}
+        {{#if this.[1]}}
+    <div class="rf-example-intro__lead">{{{trim this.[0]}}}</div>
+        {{/if}}
+    {{/with}}
+</header>
+{{#if category.description}}
+<div class="rf-example-intro__more">
+    {{#with (split category.description '<!--more-->')}}
+        {{#if this.[1]}}{{{trim this.[1]}}}{{else}}{{{trim this.[0]}}}{{/if}}
+    {{/with}}
+</div>
+{{/if}}

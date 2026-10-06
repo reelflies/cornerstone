@@ -1,0 +1,13 @@
+{{!-- Test widget for scripts/qa/render/render.test.mjs, shaped like ticket 48's product bands:
+      settings from widget_configuration, products from the storefront_api_query result in
+      _.data, and a partial shared with other widgets. --}}
+<section class="rf-render-band rf-render-band--{{_.id}}" aria-label="{{heading}}">
+    <h2>{{heading}}</h2>
+    <ul>
+        {{#each _.data.site.products.edges}}
+        {{#if node.inventory.isInStock}}
+        <li data-product-id="{{node.entityId}}">{{node.name}} {{> _shared/rf-render-price price=node.prices.price}}</li>
+        {{/if}}
+        {{/each}}
+    </ul>
+</section>

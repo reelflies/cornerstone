@@ -64,6 +64,21 @@ export const CHANNELS = {
             },
         },
     },
+    1855224: {
+        // Read-only, and for the review pages only (W0-10): `stencil start -c 1855224 -v
+        // 'ReelFlies US'` renders this repo's templates with live reelflies.com data, and
+        // review-live.spec.mjs shoots every page here for a checkpoint's .com section. .com
+        // has no baselines, so no gate runs on it. Run it once W0-6 refuses writes on live
+        // channels. Nothing here ever writes to .com.
+        name: 'reelflies.com (live, read-only)',
+        pages: {
+            home: '/',
+        },
+        notPinnedYet: {
+            product: 'pin a reelflies.com product page for the review renders, once W0-6 has landed',
+            category: 'pin a reelflies.com category page for the review renders, once W0-6 has landed',
+        },
+    },
 };
 
 // The page kinds the raw-HTML check needs on every channel: spec seam 2 fetches one

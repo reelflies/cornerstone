@@ -20,7 +20,7 @@
 //
 // Exits 1 when an assertion fails or a page doesn't render, and 2 when the
 // storefront can't be reached or, with QA_FRESH_SERVER=1, when something already answers
-// on 3300 or 3301.
+// on QA_PORT or QA_PORT + 1 (3300 and 3301 by default).
 
 import fs from 'fs';
 import path from 'path';

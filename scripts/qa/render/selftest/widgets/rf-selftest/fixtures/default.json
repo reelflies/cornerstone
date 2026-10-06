@@ -1,0 +1,20 @@
+{
+    "description": "The widget shot self-test: a heading, a product from a GraphQL fixture with its photo, and a theme button, in the home page's best-sellers region.",
+    "page": "pages/home",
+    "region": "home_below_top_products",
+    "configuration": {
+        "heading": "Widget shot self-test",
+        "background": "#f4f1ea",
+        "button_text": "Shop dry flies",
+        "link": "/dry-flies/"
+    },
+    "data": {
+        "site": {
+            "product": {
+                "name": "Parachute Adams",
+                "defaultImage": { "url": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/320w/products/5663/20001/fly.svg" },
+                "prices": { "price": { "value": 0.95, "currencyCode": "CAD" } }
+            }
+        }
+    }
+}

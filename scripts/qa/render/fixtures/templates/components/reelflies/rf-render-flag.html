@@ -1,0 +1,3 @@
+{{!-- Test partial: reads a variable another partial set in the same render, as a card reads
+      the banner flag (build-pipeline 6.9: {{assignVar 'rf_banner' 1}}). --}}
+<p class="flag">{{#if (getVar 'rf_banner')}}banner {{getVar 'rf_banner'}}{{else}}no banner{{/if}}</p>
