@@ -17,7 +17,8 @@
 //   hold          optional, template -> { selector: height in px }: live content whose
 //                 height these pins can't hold still. The screenshot takes everything
 //                 inside each box out and holds the box at that height, so the page keeps
-//                 its size, and masks the box (screenshotStyle and masksFor below).
+//                 its size, and masks the box (screenshotStyle and masksFor below). A key
+//                 may be a selector list, which holds each box it names at that height.
 
 export const CHANNELS = {
     1895766: {
@@ -116,7 +117,7 @@ export const HIDDEN = [
 ];
 
 // The boxes one pinned page holds at a fixed height, as [selector, height] pairs.
-const heldBoxes = (channel, template) => Object.entries(CHANNELS[channel]?.hold?.[template] || {});
+const heldBoxes = (channel, template, channels = CHANNELS) => Object.entries(channels[channel]?.hold?.[template] || {});
 
 // Everything the screenshot of one pinned page masks: LIVE_DATA, its channel's masks, and
 // the boxes it holds, so a reviewer sees a held box as a mask rather than an empty space.
@@ -130,11 +131,14 @@ export function masksFor(channel, template) {
 
 // The stylesheet the screenshot of one page applies (toHaveScreenshot's stylePath, written
 // by screenshotStylePath in fixtures.mjs): HIDDEN on every page, and the page's held boxes.
-export function screenshotStyle(channel, template) {
-    const held = heldBoxes(channel, template).map(([selector, height]) => [
+// `channels` is CHANNELS, or a stand-in in the tests.
+export function screenshotStyle(channel, template, channels = CHANNELS) {
+    const held = heldBoxes(channel, template, channels).map(([selector, height]) => [
+        // :is() keeps a key that lists several boxes whole: `#a, #b > *` would hide all of #a
+        // and only #b's cards.
         `/* held at ${height}px: what is inside never changes the page's size */`,
-        `${selector} { height: ${height}px !important; min-height: ${height}px !important; max-height: ${height}px !important; overflow: hidden !important; }`,
-        `${selector} > * { display: none !important; }`,
+        `:is(${selector}) { height: ${height}px !important; min-height: ${height}px !important; max-height: ${height}px !important; overflow: hidden !important; }`,
+        `:is(${selector}) > * { display: none !important; }`,
     ].join('\n'));
     const css = [
         `/* scripts/qa/pages.mjs: channel ${channel}, ${template} */`,

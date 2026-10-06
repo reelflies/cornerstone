@@ -60,8 +60,30 @@ describe('the screenshot masks', () => {
     });
 });
 
+// A selector list split at its own commas, not at those inside :is(), :not() or [...].
+function selectorList(list) {
+    const parts = [];
+    let depth = 0;
+    let start = 0;
+    [...list].forEach((char, at) => {
+        if ('(['.includes(char)) depth++;
+        else if (')]'.includes(char)) depth--;
+        else if (char === ',' && depth === 0) {
+            parts.push(list.slice(start, at));
+            start = at + 1;
+        }
+    });
+    return [...parts, list.slice(start)].map(part => part.trim()).filter(Boolean);
+}
+
+// One selector as the plain selectors it matches: `:is(A, B) > *` is `A > *` and `B > *`.
+function plain(selector) {
+    const [, inside, rest] = selector.match(/^:is\((.*)\)([^)]*)$/) || [];
+    return inside === undefined ? [selector] : selectorList(inside).flatMap(each => plain(`${each}${rest}`));
+}
+
 // A rough CSS reader for the stylesheet the screenshots apply: selector -> declarations,
-// one entry per selector in each rule's selector list.
+// one entry per plain selector in each rule's selector list.
 function rules(css) {
     const found = new Map();
     for (const [, selectors, body] of css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^}]*)\}/g)) {
@@ -69,12 +91,19 @@ function rules(css) {
             const at = part.indexOf(':');
             return [part.slice(0, at).trim(), part.slice(at + 1).trim()];
         }));
-        for (const selector of selectors.split(',').map(part => part.trim())) {
+        for (const selector of selectorList(selectors).flatMap(plain)) {
             found.set(selector, { ...found.get(selector), ...declarations });
         }
     }
     return found;
 }
+
+describe('the rough CSS reader these tests use', () => {
+    it('reads a rule for a selector list as one rule for each selector, :is() lists too', () => {
+        const css = rules('#a .x, :is(#b .x, [data-y="1,2"]) > * { display: none; }');
+        assert.deepEqual([...css.keys()], ['#a .x', '#b .x > *', '[data-y="1,2"] > *']);
+    });
+});
 
 describe('the screenshot stylesheet (W0-5)', () => {
     const pinned = Object.entries(CHANNELS).flatMap(([channel, { pages }]) => Object.keys(pages).map(template => [channel, template]));
@@ -106,6 +135,17 @@ describe('the screenshot stylesheet (W0-5)', () => {
             assert.ok(Number.isInteger(height) && height > 0, `${box} has a height`);
             for (const property of ['height', 'min-height', 'max-height']) assert.equal(css.get(box)?.[property], `${height}px !important`, `${box} ${property}`);
             assert.equal(css.get(box)?.overflow, 'hidden !important', `${box} overflow`);
+            assert.equal(css.get(`${box} > *`)?.display, 'none !important', `${box}'s cards`);
+        }
+    });
+
+    it('holds each box a hold key lists, and takes out each one\'s cards, without hiding a box', () => {
+        // Ticket 39 points `hold` at its grid, and a key may then name more than one box.
+        const channels = { 9: { pages: {}, hold: { product: { '#tab-related .grid, #tab-similar .grid': 200 } } } };
+        const css = rules(screenshotStyle('9', 'product', channels));
+        for (const box of ['#tab-related .grid', '#tab-similar .grid']) {
+            assert.equal(css.get(box)?.height, '200px !important', `${box} height`);
+            assert.equal(css.get(box)?.display, undefined, `${box} itself is hidden`);
             assert.equal(css.get(`${box} > *`)?.display, 'none !important', `${box}'s cards`);
         }
     });
