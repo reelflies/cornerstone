@@ -86,6 +86,7 @@ describe('image file names', () => {
         assert.match(name, /^1-reelflies-ca-product-phone-375-darwin-review-00-[0-9a-f]{8}\.webp$/);
         assert.notEqual(name, imageFileName({ kind: 'git', ref: 'review-00', path: 'scripts/qa/baselines/1-reelflies-ca/product-phone-375-darwin.png' }, Buffer.from('b'), 'image/webp'));
         assert.match(imageFileName({ kind: 'file', path: 'scripts/qa/results/reference/home-phone-375.png' }, Buffer.from('a'), 'image/jpeg'), /^reference-home-phone-375-[0-9a-f]{8}\.jpg$/);
+        assert.match(imageFileName({ kind: 'git', ref: 'e48d369ad75a25ff9b5b229dd27f32824cc67a43', path: 'scripts/qa/baselines/x/home-phone-375-darwin.png' }, Buffer.from('a'), 'image/webp'), /^x-home-phone-375-darwin-e48d369a-[0-9a-f]{8}\.webp$/);
     });
 });
 

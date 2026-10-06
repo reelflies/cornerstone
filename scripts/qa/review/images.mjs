@@ -96,7 +96,7 @@ const slug = text => String(text).toLowerCase().replace(/[^a-z0-9]+/g, '-').repl
 // A readable name that changes with the image's content.
 export function imageFileName(image, bytes, type) {
     const base = image.path.replace(/^scripts\/qa\/(baselines|results)\//, '').replace(/\.png$/, '');
-    const ref = image.kind === 'git' ? `-${slug(image.ref)}` : '';
+    const ref = image.kind === 'git' ? `-${slug(/^[0-9a-f]{40}$/.test(image.ref) ? image.ref.slice(0, 8) : image.ref)}` : '';
     const hash = crypto.createHash('sha256').update(bytes).digest('hex').slice(0, 8);
     return `${slug(base)}${ref}-${hash}.${EXTENSIONS[type] || 'bin'}`;
 }
