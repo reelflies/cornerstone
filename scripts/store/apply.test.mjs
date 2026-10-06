@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { acquireLock, limitMinutes } from '../lib/lock.mjs';
 import { parseCalendar, phaseOn } from '../lib/release-calendar.mjs';
 import {
-    SMOKE_TESTS, applyPlan, askApprovedToken, confirmPlanSha, lockedProblem, readPlan,
+    SMOKE_TESTS, applyPlan, approvedToken, askApprovedToken, confirmPlanSha, lockedProblem, readPlan,
 } from './apply.mjs';
 import { Refused } from './allowlist.mjs';
 import { createClient } from './client.mjs';
@@ -852,6 +852,40 @@ test('the go-ahead is the plan sha256\'s first 8 characters, and a wrong answer 
     await assert.rejects(ended, /no answer \(stdin closed\): stopped/);
 });
 
+test('approved mode prints the exact requests and checks the store tooling before it asks for a token', async () => {
+    const { plan } = await makePlan([storeWide], inventoryRoutes(), { mode: 'approved' });
+    const shown = '  1. PUT /v3/settings/inventory {"option_out_of_stock_behavior":"label_option"}';
+    const lines = [];
+    let asked = 0;
+    await assert.rejects(approvedToken({
+        plan,
+        say: line => lines.push(line),
+        toolingProblem: () => 'this checkout\'s store tooling differs from origin/master\'s (scripts/store/allowlist.mjs)',
+        ask: async () => {
+            asked += 1;
+            return FAKE_TOKEN;
+        },
+    }), error => error.name === 'Refused' && /differs from origin\/master's \(scripts\/store\/allowlist\.mjs\)/.test(error.message));
+    assert.equal(asked, 0, 'no token is asked for while the tooling isn\'t master\'s');
+    assert.deepEqual(lines, ['The exact requests:', shown]);
+
+    const events = [];
+    const token = await approvedToken({
+        plan,
+        say: line => events.push(line),
+        toolingProblem: () => {
+            events.push('tooling checked');
+            return null;
+        },
+        ask: async () => {
+            events.push('token asked');
+            return FAKE_TOKEN;
+        },
+    });
+    assert.equal(token, FAKE_TOKEN);
+    assert.deepEqual(events, ['The exact requests:', shown, 'tooling checked', 'token asked']);
+});
+
 test('approved mode applies nothing without a go-ahead', async () => {
     const { text } = await makePlan([stockStoreWide], inventoryRoutes(), { mode: 'approved' });
     const { run, calls } = await apply(text, inventoryRoutes(), { approved: true, confirm: null });
@@ -966,6 +1000,20 @@ test('apply.mjs refuses to write from a checkout whose store tooling isn\'t orig
     });
     assert.equal(result.status, 1, result.output);
     assert.match(result.stderr, /REFUSED +this checkout's store tooling differs from origin\/master's \(scripts\/store\/allowlist\.mjs\)/);
+    assert.ok(!fs.existsSync(path.join(root, 'fixture-calls.jsonl')), 'nothing was read or written');
+    assert.deepEqual(readLogRows(root), []);
+});
+
+test('apply.mjs refuses a plan made for another store, before any token is read or anything is sent', async () => {
+    const root = newRoot();
+    fs.mkdirSync(root, { recursive: true });
+    const { text } = await makePlan([unpublish], { [placementGet]: { body: widgets.placement_item } });
+    fs.writeFileSync(path.join(root, 'plan.json'), text);
+    const result = cli(CHECKOUT_APPLY, [path.join(root, 'plan.json')], {
+        root, routes: { [placementGet]: { body: widgets.placement_item } }, extraEnv: { RF_BC_STORE_HASH: 'otherstore9', RF_BC_WRITE_TOKEN: '' },
+    });
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.stderr, /REFUSED +the plan is for store abc123test, and this checkout's store is otherstore9/);
     assert.ok(!fs.existsSync(path.join(root, 'fixture-calls.jsonl')), 'nothing was read or written');
     assert.deepEqual(readLogRows(root), []);
 });

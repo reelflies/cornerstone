@@ -198,6 +198,20 @@ export async function askApprovedToken(io = {}) {
     return token.trim();
 }
 
+// Approved mode's token, at the start of Shaun's run: the exact requests are printed, then only
+// origin/master's store tooling may go on (tooling.mjs; the writer token's loader checks the same
+// for itself), and only then is he asked to paste a token. `toolingProblem` and `ask` are seams
+// for the tests.
+export async function approvedToken({
+    plan, say, toolingProblem = storeToolingProblem, ask = askApprovedToken,
+}) {
+    say('The exact requests:');
+    (Array.isArray(plan.requests) ? plan.requests : []).forEach((request, index) => say(`  ${index + 1}. ${request.method} ${request.path}${queryString(request.query)} ${JSON.stringify(request.body)}`));
+    const problem = toolingProblem();
+    if (problem) throw new Refused(problem);
+    return ask();
+}
+
 // Shaun's go-ahead, after the diff apply derived: the first 8 characters of the plan's sha256.
 // A wrong answer isn't repeated back, in case a token was pasted here by mistake.
 export async function confirmPlanSha({ planSha, ...io }) {
@@ -706,22 +720,17 @@ async function main(argv) {
         const phase = phaseOn(readCalendar());
         say(describePhase(phase));
         say(`Plan ${files[0]}, made ${plan.created} for ticket ${plan.ticket} (${plan.mode}), sha256 ${sha256(planText)}`);
-        if (approved) {
-            // What will be sent, exactly. The diff follows once the fresh read is in.
-            say('The exact requests:');
-            (Array.isArray(plan.requests) ? plan.requests : []).forEach((request, index) => say(`  ${index + 1}. ${request.method} ${request.path}${queryString(request.query)} ${JSON.stringify(request.body)}`));
-        }
-        // Only origin/master's store tooling writes. The writer token's loader checks this itself;
-        // approved mode, whose token Shaun pastes, checks it before asking for one.
-        if (approved) {
-            const problem = storeToolingProblem();
-            if (problem) throw new Refused(problem);
-        }
-        const token = approved ? await askApprovedToken() : readStoreToken('write').token;
-        secrets.push(token);
+        // The store and the fetch come first, so the store-hash lookup (stencil-cli, from
+        // node_modules, outside the tooling check) runs before any token is in this process.
         const storeHash = await commandStoreHash();
         if (storeHash !== plan.store_hash) throw new Refused(`the plan is for store ${plan.store_hash}, and this checkout's store is ${storeHash}`);
-        const client = createClient({ storeHash, token, fetch: await commandFetch(root) });
+        const fetchImpl = await commandFetch(root);
+        // Only origin/master's store tooling writes: the writer token's loader checks it, and
+        // approved mode checks it before asking Shaun for a token. The diff follows once the
+        // fresh read is in.
+        const token = approved ? await approvedToken({ plan, say }) : readStoreToken('write').token;
+        secrets.push(token);
+        const client = createClient({ storeHash, token, fetch: fetchImpl });
         const result = await applyPlan({
             planText,
             client,
