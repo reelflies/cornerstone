@@ -1,7 +1,8 @@
 // Tests scripts/release.sh as the operator runs it, offline (tickets 05 and 15, spec seam 5).
 // Refusals must come before any network call or build. The fixture runs use the test-only
 // overrides RF_RELEASE_CONFIG and RF_RELEASE_LIVE_FIXTURE, which need --dry-run and stop the
-// run after the release guard, so no test reaches npm ci, the build or the store.
+// run after the release guard, so no test reaches npm ci, the build or the store. W0-1's runs add
+// RF_RELEASE_CALENDAR_FIXTURE and RF_RELEASE_DATE, one calendar date per phase.
 
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -65,6 +66,14 @@ const refusals = [
     ['a variation not allowed for the channel', ['--channel', '1895766', '--variation', 'ReelFlies US', '--dry-run'], /"ReelFlies US" isn't released to channel 1895766/],
     ['--accept-live with --overwrite-live', [...CA, '--accept-live', '--overwrite-live', '--dry-run'], /either --accept-live or --overwrite-live/],
     ['--first-release with --accept-live', [...CA, '--first-release', '--accept-live', '--dry-run'], /--first-release can't be combined/],
+    // W0-1: --confirm-nonprod replaces the typed channel id only on a non-production target that it names.
+    ['--confirm-nonprod with no channel id', [...CA, '--confirm-nonprod', '--dry-run'], /--confirm-nonprod needs the channel id/],
+    ['--confirm-nonprod naming another channel than --channel', [...CA, '--confirm-nonprod', '1855224', '--dry-run'], /--confirm-nonprod 1855224 isn't --channel 1895766/],
+    ['--confirm-nonprod given twice', [...CA, '--confirm-nonprod', '1895766', '--confirm-nonprod', '1895766', '--dry-run'], /--confirm-nonprod was given 2 times/],
+    ['--confirm-nonprod with --overwrite-live', [...CA, '--confirm-nonprod', '1895766', '--overwrite-live', '--dry-run'], /--confirm-nonprod can't be combined with --overwrite-live/],
+    ['--confirm-nonprod with --first-release', [...CA, '--confirm-nonprod', '1895766', '--first-release', '--dry-run'], /--confirm-nonprod can't be combined with --first-release/],
+    ['--confirm-nonprod on channel 1 (live reelflies.ca: typed only)', ['--channel', '1', '--variation', 'ReelFlies CA', '--confirm-nonprod', '1', '--dry-run'], /ticket 53/],
+    ['--confirm-nonprod on channel 1855224, which isn\'t a target', ['--channel', '1855224', '--variation', 'ReelFlies US', '--confirm-nonprod', '1855224', '--dry-run'], /\.com stays on its own theme/],
 ];
 
 for (const [name, args, reason] of refusals) {
@@ -186,6 +195,9 @@ test('the test-only overrides are refused without --dry-run, so a real push alwa
     assertRefused(run(CA, { RF_RELEASE_TREE_FIXTURE: env.RF_RELEASE_LIVE_FIXTURE }), /RF_RELEASE_TREE_FIXTURE/);
     assertRefused(run(CA, { RF_RELEASE_LOG_FIXTURE: env.RF_RELEASE_LOG_FIXTURE }), /RF_RELEASE_LOG_FIXTURE/);
     assertRefused(run(CA, { RF_RELEASE_BASE_FIXTURE: env.RF_RELEASE_CONFIG }), /RF_RELEASE_BASE_FIXTURE/);
+    assertRefused(run(CA, { RF_RELEASE_CALENDAR_FIXTURE: env.RF_RELEASE_CONFIG }), /RF_RELEASE_CALENDAR_FIXTURE/);
+    assertRefused(run(CA, { RF_RELEASE_DATE: '2026-10-06' }), /RF_RELEASE_DATE/);
+    assertRefused(run([...CA, '--confirm-nonprod', '1895766'], { RF_RELEASE_DATE: '2026-10-06' }), /RF_RELEASE_DATE.*--dry-run/);
 });
 
 test('with no live differences, step 1 passes and a fixture run stops before the clean build', () => {
@@ -565,6 +577,181 @@ test('W0-2: a live theme that isn\'t the last release\'s is noted, and step 1 st
     assert.equal(result.status, 0, result.output);
     assert.match(result.stdout, /NOTE {5}the channel runs theme 00000000-0000-0000-0000-00000000aaaa, not 00000000-0000-0000-0000-0000000000ff/);
     assert.match(result.stdout, /in repo {4}body-bg/);
+});
+
+// --- W0-1: --confirm-nonprod and the release calendar ---------------------------------------
+
+const FLIP = '2027-03-01';
+
+// A release calendar (scripts/release-calendar.json's shape) for RF_RELEASE_CALENDAR_FIXTURE.
+function calendarFixture(calendar = { flip: FLIP, status: 'provisional', source: 'ticket 10 comment, test' }) {
+    const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'rf-release-test-')), 'release-calendar.json');
+    tempDirs.push(path.dirname(file));
+    fs.writeFileSync(file, `${JSON.stringify(calendar, null, 2)}\n`);
+    return file;
+}
+
+const AGENT = [...CA, '--dry-run', '--confirm-nonprod', '1895766'];
+const onDate = (date, calendar) => ({ ...fixtures().env, RF_RELEASE_CALENDAR_FIXTURE: calendarFixture(calendar), RF_RELEASE_DATE: date });
+
+// [date, phase, refused?, paired channel-1 release pending?], with the Flip on 2027-03-01.
+const CALENDAR_RUNS = [
+    ['2026-10-06', 'build', false, false],
+    ['2027-01-25', 'T-35', false, false],
+    ['2027-02-01', 'T-28', false, true],
+    ['2027-02-08', 'T-21', true, true],
+    ['2027-02-15', 'T-14', true, true],
+    ['2027-03-01', 'T-0', true, false],
+    ['2027-03-31', 'T+30', true, false],
+];
+
+for (const [date, phase, refused, paired] of CALENDAR_RUNS) {
+    test(`W0-1: on ${date} (${phase}) release.sh ${refused ? 'refuses' : 'takes'} --confirm-nonprod 1895766${paired && !refused ? ', and records a paired channel-1 release pending' : ''}`, () => {
+        const result = run(AGENT, onDate(date));
+        if (refused) {
+            assertRefused(result, /--confirm-nonprod is refused from T-21: every push needs the channel id typed at the terminal/);
+            assert.ok(result.stderr.includes(`${date} is in ${phase}`), result.stderr);
+            if (phase === 'T-0' || phase === 'T+30') assert.match(result.stderr, /ReelFlies_CA is live reelflies\.ca: agents never push to it, whatever its production flag/);
+            return;
+        }
+        assert.equal(result.status, 0, result.output);
+        assert.match(result.stdout, /^calendar Release calendar: Flip 2027-03-01 \(provisional; ticket 10 comment, test\)\./m);
+        assert.ok(result.stdout.includes(`${date} is in ${phase}`), result.stdout);
+        assert.match(result.stdout, /^confirm {2}non-interactive \(agent\): --confirm-nonprod 1895766 replaces step 5's typed channel id; step 5's gate still captures the channel again and checks everything before the push/m);
+        if (paired) assert.match(result.stdout, /^paired {3}a paired channel-1 release is pending \(ticket 56\): channel 1 runs the same build from T-28 \(2027-02-01\)/m);
+        else assert.doesNotMatch(result.stdout, /^paired /m);
+        assert.match(result.stdout, /Step 1 · Capture and diff/);
+        assert.match(result.stdout, /stopped before the clean build/);
+    });
+}
+
+test('W0-1: a calendar with no Flip date limits nothing: --confirm-nonprod is taken, and the run says the date is provisional', () => {
+    const result = run(AGENT, onDate('2027-03-10', { flip: null, status: 'provisional', source: 'ticket 10: Flip date after ticket 26' }));
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.stdout, /^calendar Release calendar: no Flip date yet \(provisional; ticket 10: Flip date after ticket 26\), so nothing is limited\./m);
+    assert.match(result.stdout, /^confirm {2}non-interactive \(agent\)/m);
+    assert.doesNotMatch(result.stdout, /^paired /m);
+});
+
+test('W0-1: a set Flip date limits exactly as a provisional one, and the run says it is set', () => {
+    const result = run(AGENT, onDate('2027-02-08', { flip: FLIP, status: 'set', source: 'ticket 10 comment, Shaun' }));
+    assertRefused(result, /Flip 2027-03-01 \(set; ticket 10 comment, Shaun\)\. 2027-02-08 is in T-21/);
+});
+
+test('W0-1: without the flag, the typed prompt stays: no calendar date refuses a release, and from T-28 a paired channel-1 release is still recorded', () => {
+    for (const date of ['2027-02-08', '2027-03-10']) {
+        const result = run([...CA, '--dry-run'], onDate(date));
+        assert.equal(result.status, 0, result.output);
+        assert.match(result.stdout, /^confirm {2}typed: step 5 asks the operator to type the channel id, and stops without a terminal/m);
+    }
+    assert.match(run([...CA, '--dry-run'], onDate('2027-02-08')).stdout, /^paired {3}a paired channel-1 release is pending/m);
+    assert.doesNotMatch(run([...CA, '--dry-run'], onDate('2027-03-10')).stdout, /^paired /m);
+});
+
+test('W0-1: a calendar that can\'t be read refuses every release, so a typo never reads as "no Flip date"', () => {
+    for (const args of [AGENT, [...CA, '--dry-run']]) {
+        assertRefused(run(args, onDate('2026-10-06', { flip: '2027-02-30', status: 'provisional', source: 'x' })), /the release calendar: the Flip date 2027-02-30 isn't a real date/);
+        assertRefused(run(args, { ...fixtures().env, RF_RELEASE_CALENDAR_FIXTURE: path.join(os.tmpdir(), 'rf-no-such-calendar.json') }), /can't read the release calendar/);
+    }
+    assertRefused(run(AGENT, { ...fixtures().env, RF_RELEASE_DATE: '6/10/2026' }), /RF_RELEASE_DATE.*YYYY-MM-DD/);
+});
+
+test('W0-1: without the fixtures, a dry run reads scripts/release-calendar.json and today\'s date in Toronto', () => {
+    const result = run(AGENT, fixtures().env);
+    assert.match(result.output, /Release calendar: /);
+    assert.doesNotMatch(result.output, /RF_RELEASE_CALENDAR_FIXTURE|RF_RELEASE_DATE/);
+});
+
+// Step 5 as release.sh runs it after a real release's build: `release.mjs pre-push`, on a state
+// file like the one prepare and bundle-info write. It runs in an empty folder, so a capture would
+// fail at once on the missing config.stencil.json: no test here reaches the store.
+const RELEASE_MJS = fileURLToPath(new URL('./release.mjs', import.meta.url));
+
+function stepFive(changes = {}) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-release-step5-'));
+    tempDirs.push(dir);
+    const statePath = path.join(dir, 'state.json');
+    fs.writeFileSync(statePath, JSON.stringify({
+        channel: 1895766,
+        variation: 'ReelFlies CA',
+        dryRun: false,
+        firstRelease: false,
+        acceptLive: false,
+        overwriteLive: false,
+        confirmNonprod: null,
+        target: {
+            id: 1895766, name: 'ReelFlies_CA', slug: 'ca', variations: ['ReelFlies CA'], liveFile: 'config.ca.live.json',
+        },
+        themeName: 'ReelFlies',
+        version: '6.22.0',
+        git: {
+            sha: RELEASED_SHA, shortSha: 'abc1234', branch: 'master', dirty: false,
+        },
+        bundle: {
+            file: 'reelflies-ca-6.22.0-abc1234.zip', bytes: 100, sha256: 'ab12', mainJsBytes: 50,
+        },
+        step1: {
+            replacing: null, overwritten: [], unpublished: [], changedInRepo: [], base: null, baseNote: 'test',
+        },
+        guard: { values: [], newSwitches: [] },
+        ...changes,
+    }));
+    const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^RF_(RELEASE|BC)_/.test(key)));
+    const result = spawnSync(process.execPath, [RELEASE_MJS, 'pre-push'], {
+        cwd: dir, encoding: 'utf8', input: '', env: { ...inherited, RF_RELEASE_STATE: statePath }, timeout: 60000,
+    });
+    return {
+        status: result.status, stdout: result.stdout, stderr: result.stderr, output: `${result.stdout}\n${result.stderr}`,
+    };
+}
+
+test('W0-1: step 5 without --confirm-nonprod asks for the typed channel id, and no terminal stops it before any capture', () => {
+    const result = stepFive();
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.stdout, /^ {2}confirm {5}channel id typed at the terminal$/m);
+    assert.match(result.stderr, /needs an operator at a terminal/);
+    assert.doesNotMatch(result.output, /Capturing channel/);
+});
+
+test('W0-1: step 5 checks --confirm-nonprod again from the code, so an edited state file can\'t slip a refused flag past it', () => {
+    const otherChannel = stepFive({ confirmNonprod: 1855224 });
+    assert.equal(otherChannel.status, 1, otherChannel.output);
+    assert.match(otherChannel.stderr, /--confirm-nonprod refused at step 5: --confirm-nonprod 1855224 isn't --channel 1895766.*Nothing was pushed/);
+    assert.doesNotMatch(otherChannel.output, /Capturing channel/);
+
+    const overwrite = stepFive({ confirmNonprod: 1895766, overwriteLive: true });
+    assert.equal(overwrite.status, 1, overwrite.output);
+    assert.match(overwrite.stderr, /--confirm-nonprod can't be combined with --overwrite-live/);
+    assert.doesNotMatch(overwrite.output, /Capturing channel/);
+
+    // The target's production flag comes from release-targets.mjs, never from the state file.
+    const production = stepFive({ confirmNonprod: 1895766, target: { id: 1895766, name: 'ReelFlies_CA', production: true } });
+    assert.match(production.stdout, /^ {2}confirm {5}non-interactive \(agent\)/m);
+    assert.doesNotMatch(production.stderr, /production target/);
+});
+
+// The start of the push summary's calendar line: describePhase without its "Release calendar: " prefix.
+function describeLine(phase) {
+    const text = phase.phase === 'unset' ? 'no Flip date yet' : `Flip ${phase.flip}`;
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+test('W0-1: step 5 with --confirm-nonprod asks nothing, reads today\'s calendar again, then the gate captures the channel', async () => {
+    const { readCalendar: read, phaseOn: on } = await import('./lib/release-calendar.mjs');
+    const today = on(read());
+    const result = stepFive({ confirmNonprod: 1895766 });
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.stdout, new RegExp(`^ {2}calendar {4}${describeLine(today)}`, 'm'));
+    assert.match(result.stdout, /^ {2}confirm {5}non-interactive \(agent\), --confirm-nonprod 1895766: no prompt/m);
+    if (today.limits.confirmNonprod) {
+        assert.match(result.stdout, new RegExp(`^confirm {2}non-interactive \\(agent\\): --confirm-nonprod 1895766, checked again with ${today.date}'s calendar`, 'm'));
+        assert.match(result.stdout, /Capturing channel 1895766 again/);
+        assert.match(result.stderr, /can't read config\.stencil\.json/, 'the capture ran, and failed here only because the folder is empty');
+        assert.doesNotMatch(result.output, /needs an operator at a terminal/);
+    } else {
+        assert.match(result.stderr, /--confirm-nonprod refused at step 5/);
+        assert.doesNotMatch(result.output, /Capturing channel/);
+    }
 });
 
 // --- Order of the build steps ---------------------------------------------------------------
