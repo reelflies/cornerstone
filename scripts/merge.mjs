@@ -9,7 +9,8 @@
 //
 //   1 the PR is open, not a draft, targets master and comes from this repo
 //   2 its branch contains master's tip
-//   3 every CI check on the head sha passed, and "checks" and "baseline-scope" succeeded
+//   3 the newest run of every CI check on the head sha passed, and "checks" and
+//     "baseline-scope" succeeded
 //   4 the sign-off statuses are "success" on the head sha: rf/gates, rf/standards, rf/spec
 //     and rf/skeptic, or rf/review alone for a docs-only PR; and no other status failed
 //   5 a PR that touches a guarded path (scripts/guarded-paths.txt, master's copy and this
@@ -59,6 +60,18 @@ export function parseArgs(argv) {
 // A CLAUDE.md or AGENTS.md steers agents, so it is never docs, wherever it is.
 const AGENT_INSTRUCTIONS = /(^|\/)(claude|claude\.local|agents)\.md$/i;
 export const isDocsOnly = files => files.length > 0 && files.every(file => !AGENT_INSTRUCTIONS.test(file) && (file.endsWith('.md') || file.startsWith('docs/')));
+
+// GitHub keeps every run of a check on a sha: the baseline-scope workflow runs again when the
+// PR body is edited, for one. Only the newest run of each name counts, as in GitHub's own checks
+// view. Check run ids grow in the order runs are created, so a newer run still queued wins too.
+export function newestRuns(checkRuns) {
+    const newest = new Map();
+    for (const check of checkRuns) {
+        const seen = newest.get(check.name);
+        if (!seen || Number(check.id) > Number(seen.id)) newest.set(check.name, check);
+    }
+    return [...newest.values()];
+}
 
 const short = sha => String(sha || '').slice(0, 7);
 const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
@@ -147,14 +160,15 @@ export function evaluate(facts) {
 
     if (facts.checkRuns) {
         const ciBefore = refusals.length;
-        if (!facts.checkRuns.length) refusals.push(`no CI check ran on ${head}`);
-        for (const check of facts.checkRuns) {
+        const checkRuns = newestRuns(facts.checkRuns);
+        if (!checkRuns.length) refusals.push(`no CI check ran on ${head}`);
+        for (const check of checkRuns) {
             if (check.status !== 'completed') refusals.push(`check "${check.name}" hasn't finished on ${head} (${check.status})`);
             else if (!PASSING_CONCLUSIONS.includes(check.conclusion)) refusals.push(`check "${check.name}" is ${check.conclusion} on ${head}: ${check.html_url}`);
         }
-        if (facts.checkRuns.length) {
+        if (checkRuns.length) {
             for (const name of REQUIRED_CHECKS) {
-                const runs = facts.checkRuns.filter(check => check.name === name);
+                const runs = checkRuns.filter(check => check.name === name);
                 if (!runs.length) refusals.push(`check "${name}" didn't run on ${head}`);
                 for (const check of runs) {
                     if (check.status === 'completed' && check.conclusion !== 'success' && PASSING_CONCLUSIONS.includes(check.conclusion)) {
@@ -163,7 +177,7 @@ export function evaluate(facts) {
                 }
             }
         }
-        if (refusals.length === ciBefore) oks.push(`CI passed on ${head} (${facts.checkRuns.map(check => check.name).join(', ')})`);
+        if (refusals.length === ciBefore) oks.push(`CI passed on ${head} (${checkRuns.map(check => check.name).join(', ')})`);
     }
 
     if (facts.files) {

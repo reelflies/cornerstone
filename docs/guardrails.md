@@ -29,7 +29,7 @@ It is the only way agents merge. Never run `gh pr merge`, `gh api …/pulls/<n>/
 
 1. The PR is open, not a draft, targets `master`, and its branch is in this repo (not a fork).
 2. The branch contains `master`'s tip. If `master` has moved, rebase onto `origin/master`, rerun the gates and get the sign-offs again on the new head (`plan/build-pipeline.md`, section 6.7).
-3. CI: at least one check ran, and both `checks` (`reelflies-checks.yml`) and `baseline-scope` finished as success. Any other check may also finish neutral or skipped; a required one that was skipped or neutral refuses.
+3. CI: at least one check ran, and both `checks` (`reelflies-checks.yml`) and `baseline-scope` finished as success. Any other check may also finish neutral or skipped; a required one that was skipped or neutral refuses. Only the newest run of each check counts, as in GitHub's checks view, so a `baseline-scope` run that failed before a body edit fixed the `Baselines:` line doesn't block the merge once the rerun passes.
 4. The statuses below are `success`. Any other status that is pending, failed or errored also refuses.
 5. No review thread is unresolved, and no reviewer has requested changes.
 6. GitHub listed every file the PR changes. Its files API stops at 3000, so merge.sh compares the list with the PR's `changedFiles` and refuses a PR of 3000 files or more: a guarded path or a baseline past the cut would go unseen.

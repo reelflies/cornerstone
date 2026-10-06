@@ -268,6 +268,24 @@ for (const [name, change, reason] of refusals) {
     });
 }
 
+const scopeRun = (id, startedAt, conclusion) => ({
+    id, name: 'baseline-scope', status: 'completed', conclusion, started_at: startedAt, html_url: `https://github.com/x/${id}`,
+});
+
+test('only the newest run of a check counts, so a Baselines line fixed by a body edit can merge', () => {
+    const result = run(['12'], mutate(fixture => {
+        fixture.checkRuns = [fixture.checkRuns[0], scopeRun(7, '2026-10-06T17:53:19Z', 'failure'), scopeRun(9, '2026-10-06T17:55:01Z', 'success')];
+    }));
+    assert.equal(result.status, 0, result.output);
+    assert.ok(merged(result.calls));
+});
+
+test('a newer failed run of a check refuses, whatever an older run said', () => {
+    assertRefused(run(['12'], mutate(fixture => {
+        fixture.checkRuns = [fixture.checkRuns[0], scopeRun(9, '2026-10-06T17:55:01Z', 'failure'), scopeRun(7, '2026-10-06T17:53:19Z', 'success')];
+    })), /check "baseline-scope" is failure on 0123456: https:\/\/github\.com\/x\/9/);
+});
+
 test('a CI check other than the two required ones may be skipped or neutral', () => {
     const result = run(['12'], mutate(fixture => {
         fixture.checkRuns.push({
