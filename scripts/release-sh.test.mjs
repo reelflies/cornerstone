@@ -10,16 +10,29 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { acquireLock, readHolder } from './lib/lock.mjs';
 
 const SCRIPT = fileURLToPath(new URL('./release.sh', import.meta.url));
 const NOTHING_RAN = /Step 1|Step 2|npm ci|Capturing/;
 const CA = ['--channel', '1895766', '--variation', 'ReelFlies CA'];
 
+const tempDirs = [];
+after(() => tempDirs.forEach(dir => fs.rmSync(dir, { recursive: true, force: true })));
+// A folder for the release lock (W0-7), so no test takes ~/reelflies/theme/.locks/release.
+const lockRoot = () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-release-locks-'));
+    tempDirs.push(dir);
+    return dir;
+};
+const LOCK_ROOT = lockRoot();
+
 function run(args, env = {}, script = SCRIPT) {
     const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^RF_(RELEASE|BC)_/.test(key)));
     const result = spawnSync('bash', [script, ...args], {
         encoding: 'utf8',
-        env: { ...inherited, PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH}`, ...env },
+        env: {
+            ...inherited, PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH}`, RF_LOCK_ROOT: LOCK_ROOT, ...env,
+        },
         timeout: 60000,
     });
     return {
@@ -66,9 +79,6 @@ const VARIATION_META = {
     desktop_screenshot: 'd.png', mobile_screenshot: 'm.png', description: 'x', demo_url: 'https://example.com', optimized_for: ['mobile'],
 };
 const BASE_SETTINGS = { 'body-bg': '#ffffff', 'color-textBase': '#545454', show_accept_amex: true };
-
-const tempDirs = [];
-after(() => tempDirs.forEach(dir => fs.rmSync(dir, { recursive: true, force: true })));
 
 test('release.sh and step 3\'s contrast check still run from a checkout whose path has # or % in it', () => {
     const root = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'rf-release-test-')), 'theme #1 %41');
@@ -384,6 +394,62 @@ test('the storefront gates (axe, raw HTML and screenshots) run on a fresh server
     assert.match(lines[gates], /QA_FRESH_SERVER=1 /);
     assert.match(lines[gates], /QA_CHANNEL="\$\(release state channel\)"/);
     assert.match(lines[gates], /QA_VARIATION="\$\(release state variation\)"/);
+    // The release keeps the default port pair; agents' worktrees get their own (W0-7).
+    assert.match(lines[gates], /QA_PORT=3300 /);
+});
+
+// --- The release lock (W0-7) -------------------------------------------------------------------
+
+// A pid no process can have, so it is never running.
+const DEAD_PID = 2 ** 22 + 12345;
+
+test('release.sh takes the release lock before anything else runs, and drops it when it exits', () => {
+    const lines = fs.readFileSync(SCRIPT, 'utf8').split('\n').filter(line => !/^\s*#/.test(line));
+    const take = lines.findIndex(line => /node scripts\/lib\/lock\.mjs take release --pid "\$\$"/.test(line));
+    const prepare = lines.findIndex(line => /^release prepare/.test(line));
+    assert.ok(take !== -1 && take < prepare, 'the lock is taken before release prepare');
+    assert.match(lines.find(line => /^trap /.test(line)), /lock\.mjs drop release --pid "\$\$"/);
+});
+
+test('a release or dry run already running stops release.sh before anything runs, naming its holder and start time', () => {
+    const root = lockRoot();
+    const other = acquireLock('release', 'scripts/release.sh --channel 1895766 --variation ReelFlies CA --dry-run', { root, ticket: 'orchestrator' });
+    const { started } = readHolder(other.dir);
+    const result = run([...CA, '--dry-run'], { RF_LOCK_ROOT: root });
+    assertRefused(result, /the release lock is held by scripts\/release\.sh --channel 1895766 --variation ReelFlies CA --dry-run \(ticket orchestrator\)/);
+    assert.ok(result.stderr.includes(`since ${started}`), result.stderr);
+    assert.match(result.stderr, /Another release or dry run is running on this Mac/);
+    assert.ok(fs.existsSync(other.dir), 'the other run keeps its lock');
+    other.release();
+});
+
+test('a release lock taken by hand under wave 0\'s rule stops it too, and says release.sh takes it itself now', () => {
+    const root = lockRoot();
+    fs.mkdirSync(path.join(root, 'release'));
+    fs.writeFileSync(path.join(root, 'release', 'owner.txt'), 'orchestrator 2026-10-06T16:00 dry run\n');
+    const result = run([...CA, '--dry-run'], { RF_LOCK_ROOT: root });
+    assertRefused(result, /held by orchestrator 2026-10-06T16:00 dry run/);
+    assert.match(result.stderr, /release\.sh takes this lock itself/);
+    assert.ok(fs.existsSync(path.join(root, 'release', 'owner.txt')));
+});
+
+test('a stale release lock (over 90 minutes old, its pid gone) is broken with a STALE line, and the release goes on', () => {
+    const root = lockRoot();
+    acquireLock('release', 'scripts/release.sh --channel 1895766 (killed)', { root, pid: DEAD_PID, now: Date.now() - 91 * 60000 });
+    const result = run([...CA, '-allc', '--dry-run'], { RF_LOCK_ROOT: root });
+    assert.match(result.stdout, /^STALE {4}broke the release lock \(91 min old.*killed/m);
+    assertRefused(result, /all channels/);
+    assert.deepEqual(fs.readdirSync(root), [], 'and dropped its own lock when it ended');
+});
+
+test('release.sh drops its lock when it ends, after a refusal or a fixture run', () => {
+    const root = lockRoot();
+    assertRefused(run([...CA, '-allc', '--dry-run'], { RF_LOCK_ROOT: root }), /all channels/);
+    assert.deepEqual(fs.readdirSync(root), []);
+    const { env } = fixtures();
+    const result = run([...CA, '--dry-run'], { ...env, RF_LOCK_ROOT: root });
+    assert.equal(result.status, 0, result.output);
+    assert.deepEqual(fs.readdirSync(root), []);
 });
 
 test('every release.mjs step that release.sh calls is one release.mjs has', () => {
