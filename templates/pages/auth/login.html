@@ -14,11 +14,11 @@
             {{inject 'enterPass' (lang 'forms.validate.common.password')}}
             <div class="form-field">
                 <label class="form-label" for="login_email">{{lang 'login.field_email'}}</label>
-                <input class="form-input" name="login_email" id="login_email" type="email">
+                <input class="form-input" name="login_email" id="login_email" type="email" autocomplete="email">{{!-- ReelFlies hook (ticket 25): autocomplete token --}}
             </div>
             <div class="form-field">
                 <label class="form-label" for="login_pass">{{lang 'login.field_password'}}</label>
-                <input class="form-input" id="login_pass" type="password" name="login_pass" autocomplete="off">
+                <input class="form-input" id="login_pass" type="password" name="login_pass" autocomplete="current-password">{{!-- ReelFlies hook (ticket 25): autocomplete token; stock "off" --}}
             </div>
             <div class="form-actions">
                 <input type="submit" class="button button--primary" value="{{lang 'login.submit_value' }}">

@@ -1,3 +1,4 @@
+import $ from 'jquery';
 import reelfliesGlobal, { GLOBAL_MODULES } from '../../../theme/reelflies/global';
 
 const settle = () => new Promise(resolve => {
@@ -53,5 +54,18 @@ describe('ReelFlies global modules', () => {
 
     it('runs the registered modules by default, without throwing', () => {
         expect(() => reelfliesGlobal(context)).not.toThrow();
+    });
+
+    it('makes jQuery animations follow prefers-reduced-motion before starting the modules (ticket 25)', () => {
+        const { matchMedia } = window;
+        window.matchMedia = query => ({ matches: query === '(prefers-reduced-motion: reduce)', addEventListener() {} });
+        try {
+            reelfliesGlobal(context, [() => started.push($.fx.off)], onError);
+            expect(started).toEqual([true]);
+            expect(errors).toEqual([]);
+        } finally {
+            window.matchMedia = matchMedia;
+            $.fx.off = false;
+        }
     });
 });
