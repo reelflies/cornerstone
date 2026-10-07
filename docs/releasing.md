@@ -1,6 +1,6 @@
 # Releasing the theme
 
-Every theme push to a storefront goes through `scripts/release.sh` (tickets 05 and 15). A release targets one channel with one named variation. It never deletes a theme and never pushes to all channels.
+Every theme push to a storefront goes through `scripts/release.sh` (tickets 05 and 15). A release targets one channel with one named variation, and never pushes to all channels. The push never deletes a theme: after it, the release prunes old ReelFlies builds from My Themes under fixed rules, logging each deletion ([Pruning My Themes](#pruning-my-themes), W0-3).
 
 Every `stencil push` creates a theme whose Theme Styles start from `config.json` (stencil-cli `lib/stencil-push.utils.js`). Live Theme Styles edits that aren't in `config.json` are lost, so the release captures and diffs them first.
 
@@ -24,6 +24,7 @@ A dry run does every step except the push, then prints:
 - the push summary
 - the exact push command
 - the `RELEASES.md` entry it would write
+- the prune's plan: which ReelFlies builds in My Themes a prune would delete now, and why each other one stays ([Pruning My Themes](#pruning-my-themes)). It reads My Themes and every channel's active theme with GETs only, and deletes nothing.
 
 A dry run writes nothing that git tracks, but it isn't read-only for the checkout:
 
@@ -37,9 +38,9 @@ So stop any `stencil start` on 3300 first, and don't run a release while another
 
 ## One release at a time
 
-Only one release or dry run runs at a time on this Mac (W0-7). Before anything else, `release.sh` takes the release lock, `~/reelflies/theme/.locks/release`, for its own pid, and drops it when it exits, however it ends.
+Only one release, dry run or [`--prune-only`](#pruning-my-themes) runs at a time on this Mac (W0-7, W0-3). Before anything else, `release.sh` takes the release lock, `~/reelflies/theme/.locks/release`, for its own pid, and drops it when it exits, however it ends.
 
-- **A second release or dry run stops at once**, before any check, naming the holder (its command line and ticket, its pid and host) and the time it started. Run it again once that one has finished.
+- **A second release, dry run or `--prune-only` stops at once**, before any check, naming the holder (its command line and ticket, its pid and host) and the time it started. Run it again once that one has finished.
 - **A stale lock is broken:** one over 90 minutes old whose pid isn't running any more. The release prints a `STALE` line naming the old holder and goes on. A lock whose holder still runs is never broken, however old.
 - **Don't take the lock by hand** around `release.sh`, as wave 0's agents did: the release would find it held and stop, naming you. A lock written by hand (an `owner.txt` with no pid) goes stale only after 90 minutes.
 - **`RF_LOCK_ROOT` is for the tests only.** A real release or dry run with it set stops before anything runs and says to unset it, so every run on the Mac shares the one lock and the gates' slots.
@@ -61,6 +62,7 @@ scripts/release.sh --channel 1895766 --variation 'ReelFlies CA'
 | 5. Push | Shows the push summary and asks you to type the channel id; with [`--confirm-nonprod`](#agent-pushes---confirm-nonprod) it asks nothing, and instead fetches `origin/master` again and checks the flag again against it, the target and today's [release calendar](#the-release-calendar). Only then does it capture the channel again and check that nothing changed since steps 1 and 4: the commit and the tree, the zip's size and sha256, the live theme and variation, and the saved and published Theme Styles. A switch toggled while the prompt waited is caught there. Then it runs `npx stencil push -f <zip> -a '<variation>' -c <channel>`, which pushes the zip that was checked. The push reads its stdin from `/dev/null`, so stencil-cli's own prompt, which asks which themes to delete when My Themes is full, fails closed instead of reading piped input or a key press. | You type anything but the channel id or close stdin (Ctrl-D), stdin isn't a terminal and there is no `--confirm-nonprod`, the calendar refuses the flag by now, `origin` can't be fetched or `origin/master` changed the release tooling or the calendar since the release started (with the flag), something listed here changed since step 1 or 4, or My Themes is full. |
 | 6. Verify | Captures again. Checks that the channel runs the new theme with the target variation, and that its saved Theme Styles equal `config.json`'s. | Never: it reports problems, and the release exits non-zero after step 7. The theme is already live, so fix forward. |
 | 7. Log | Appends an entry to `RELEASES.md`. Commit it. | — |
+| Then: prune | Prunes old ReelFlies builds from My Themes, after the entry, so the prune counts this release ([Pruning My Themes](#pruning-my-themes), W0-3). Until a `--prune-only` has deleted a theme, and whenever the pushed commit isn't judged by `origin/master`'s rules, the checkout isn't at that commit, or anything but new lines in `RELEASES.md` is uncommitted, it only shows its plan. Each deletion is logged in `RELEASES.md`'s "My Themes" section. | Reading My Themes or a channel's active theme fails, or a deletion, its log row or the read of My Themes after it fails. The push is done and logged by then: commit `RELEASES.md`, then run `--prune-only`. Verify's problems stop the release at step 7, so nothing is pruned then. |
 
 The `RELEASES.md` entry records:
 
@@ -82,6 +84,8 @@ The release refuses these before any network call or build, with a one-line reas
 
 - no `--channel`, `--channel` given twice, or a list of channels (commas or spaces)
 - `-allc`, `--all-channels`, `-a`, `-c`, `-d`, `--delete`, or any other unknown flag
+- `--upload-only`: there is no upload mode ([Pruning My Themes](#no-upload-mode))
+- `--prune-only` with any argument but `--dry-run`, or with a value ([Pruning My Themes](#pruning-my-themes))
 - no `--variation`, an empty one, or one given twice
 - a variation that isn't in `config.json`
 - a channel that isn't a release target, or a variation that the channel doesn't take
@@ -163,7 +167,7 @@ Step 5 asks a person to type the channel id, and stops when stdin isn't a termin
   - `--accept-live`, which copies the live values into the variation's `settings` in `config.json`, keeping its formatting, then stops. It takes every differing key, `rf_*` included, except the ones `config.json` changed since the last release: taking those would undo the repo's own change. Review the change with `git diff config.json`, commit it, and rerun. In a dry run it shows the values and writes nothing.
   - `--overwrite-live`, which lists the edited keys and asks you to type the channel id, then lets the push overwrite them. The overwritten keys go into the `RELEASES.md` entry. A dry run lists them and asks nothing.
 - **The channel has unpublished Theme Styles edits** (its saved configuration differs from the published one). The release names the keys and diffs against the saved settings, which a push overwrites too. The release guard checks the `rf_*` switches against both. The push summary and the `RELEASES.md` entry name the keys.
-- **My Themes holds 20 themes.** Delete one by hand in the control panel (Storefront > My Themes). The release never uses `stencil push -d`. A dry run only warns.
+- **My Themes holds 20 themes.** Run `scripts/release.sh --prune-only --dry-run`, then without `--dry-run` within the hour ([Pruning My Themes](#pruning-my-themes)), or delete a theme by hand in the control panel (Storefront > My Themes). The prune after a push can't help here, because step 1 stops before the push. The release never uses `stencil push -d`. A dry run only warns.
 
 ### The three-way diff
 
@@ -217,8 +221,9 @@ The release guard (ticket 15, `scripts/release-guard.mjs`) runs after step 1 and
 
 **The token for rule 2.** When a menu id is set, the release reads the channel's category tree with two read-only calls: `GET /v3/catalog/trees?channel_id:in=<channel>`, then every page of `GET /v3/catalog/trees/categories?tree_id:in=<tree>`.
 
-- These calls need `RF_BC_API_TOKEN`: a store API token with **Products: read-only** (`store_v2_products_read_only`), created under Settings > Store-level API accounts. The Stencil-CLI token can't read the catalogue.
-- Without the token, the release stops and names the scope it needs. Export the token in your shell for the release only, and never write it into a file in the repo.
+- These calls need the read-only store API token, with **Products: read-only** (`store_v2_products_read_only`). The Stencil-CLI token can't read the catalogue.
+- The guard reads it through W0-11's loader, `scripts/lib/store-token.mjs` ([store writes](store-writes.md)), as the store helper's plans do: `RF_BC_READ_TOKEN`, then `RF_BC_API_TOKEN`, then the Keychain item `reelflies-bc-read` (account `reelflies`), which Shaun adds at W0-12. An exported variable is never skipped for the Keychain, so a token exported for one release still wins.
+- Without the token, the release stops, naming the scope and where the loader looked. Never write a token into a file in the repo or paste it into a chat.
 
 The guard prints every `rf_*` value to be pushed and each new switch. The push summary and the `RELEASES.md` entry repeat them.
 
@@ -229,12 +234,67 @@ The guard prints every `rf_*` value to be pushed and each new switch. The push s
 - From T-14 to T+30, switch toggles and widget unpublishing are the only changes allowed, apart from P1 fixes through the release (SCOPE-3). Tickets 57 and 58 run that window.
 - After a toggle, change `config.json` to match and commit it. Otherwise the next release stops on the difference.
 
+## Pruning My Themes
+
+My Themes holds at most 20 themes, and a push to 1895766 that makes a new theme uuid adds a "ReelFlies" build to it. Themes are store-level, so that build is also the one in My Themes for the reelflies.com review. The prune deletes old ReelFlies builds under the rules in HANDOFF ("Rules for every session"), W0-3 in `plan/build-pipeline.md`. It runs after each push (above), and on its own:
+
+```sh
+scripts/release.sh --prune-only --dry-run    # the plan: what it would delete and why the rest stays; GETs only
+scripts/release.sh --prune-only              # deletes the plan's themes, logging each in RELEASES.md
+```
+
+`--prune-only` takes no other argument but `--dry-run`: My Themes is store-wide, so it names no channel or variation. It holds the release lock, so it never runs beside a release, a dry run or another prune.
+
+**What it reads, all GETs:** My Themes (`GET /v3/themes`), then the active theme (`GET /v3/channels/<id>/active-theme`) of every storefront channel, with or without a site (`GET /v3/channels?type:in=storefront`, every page), of every site's channel (stencil-cli's `getStoreChannels`), and of channels 1, 1855224 and 1895766 and every channel `RELEASES.md` names, whether or not the store lists them. Any read that fails stops the prune before anything is deleted: it never guesses that a theme is unused. It uses the Stencil-CLI token from `secrets.stencil.json`, as the release does.
+
+**What it deletes.** A theme is deleted only when every rule lets it go (`scripts/release-prune.mjs`, with the reasons it prints for each theme):
+
+- Its name in My Themes is exactly `ReelFlies`. No other theme is ever a candidate: not Hero-2024, Cavio or the Marketplace Cornerstone, whatever `RELEASES.md` says.
+- `RELEASES.md` records its uuid as a release (a "Releases" entry's `Theme:` line). An unknown ReelFlies uuid stays.
+- It is active on no channel, by those reads.
+- My Themes doesn't flag it `is_active`. That flag is the store's own "active somewhere" signal. On 2026-10-05 (`plan/reference/theme-configs-2026-10-05/themes.json`) it was `true` on exactly the three themes a channel ran: Hero-2024-2.9.5-US on 1 and 1855224, Cavio on 1895766, and the private Cavio copy on 1861300, a channel with no site that the channel reads of that day missed. Every older Hero build showed `false` (they show `true` under `is_private`, a different column). So a flagged theme stays even when no channel read shows it running. Revisitable, on evidence such as a dry run showing a flagged ReelFlies build that no channel runs: the plan shows the flag on every theme, so a dry run also shows whether a theme no channel runs any more (Cavio `25121d00` since 2026-10-06) is still flagged. The store also refuses to delete a theme that is active on a channel.
+- It isn't the rollback: the latest or the previous release on 1895766 or channel 1 by `RELEASES.md`, or the theme either ran before its latest release (an entry's `New uuid: yes; before the push the channel ran theme …`).
+- It isn't one of the newest three ReelFlies builds in My Themes, ranked by their newest entry's time in `RELEASES.md` (the file's order for two in the same minute, as for [the three-way diff](#the-three-way-diff)), never by name, version or the store's `updated_at`. Every build is "ReelFlies" 6.22.0 today, so only the uuid tells them apart (decision 9).
+
+The plan names the theme each channel runs, then lists every ReelFlies theme with "keep" or "delete" and its reasons, then the other themes, which it never touches, each with its uuid and the `is_active` flag. On 2026-10-06 it found a fourth storefront channel, 1861300, with no site, so the store's site list alone would have missed it.
+
+**Deleting.** A real prune deletes the plan's themes one at a time, oldest first, with `DELETE /v3/themes/<uuid>`, which the store refuses for a theme active on a channel. Right after each deletion it adds a row to `RELEASES.md`'s "My Themes" section: the time (UTC), the action (`deleted (--prune-only)` or `deleted (prune after a release)`), the theme's uuid, name and version, the commit and zip sha256 of its release entry, and the operator (`git config user.name`, with "(no terminal)" when stdin isn't one, as in an agent's run: in the main clone both are "Shaun Bathgate"). Then it reads My Themes again.
+
+- **The first failure stops the run,** and the rows already written stay: a deletion the store refuses, or a row that can't be written. For the latter the stop names the uuid the store deleted and the row it couldn't write, so you can add it by hand.
+- **The read after it** names any theme still listed. If that read fails, the stop says so, and the rows are still written.
+- Every stop says how many deletions are logged. Commit the rows through a `release/log-…` PR, as for a release entry, and name any stop in it.
+
+A dry run makes no deleter at all, and writes nothing to `RELEASES.md`.
+
+**Where a real prune runs from.** Deleting a theme can't be undone, so the rules that decide are always `origin/master`'s:
+
+- A real `--prune-only` runs only from `master` at `origin/master`'s tip, freshly fetched, with nothing uncommitted but new lines in `RELEASES.md` (a release's entry waiting for its PR, or the prune's own rows). A changed or removed line of `RELEASES.md` is refused (`git diff --numstat HEAD`): an entry's time moved, say, would change the ranking or the rollback. Anywhere else it is refused before the store is read. Run it from the main clone after `git pull --ff-only origin master`. A dry run warns instead, and on the test-only overrides doesn't fetch.
+- The prune after a push deletes only when the pushed commit is still judged by `origin/master`'s rules (`release-origin.mjs` `stepFiveOrigin`: in `origin/master`'s history, with no release tooling changed since), the checkout is still at that commit, and nothing but new lines in `RELEASES.md` is uncommitted. So a hand-written state file on a branch or an edited checkout can't make it delete. Otherwise it shows its plan and says to run `--prune-only` from the main clone.
+
+**Every real `--prune-only` runs dry first, and the tooling enforces it** (Shaun's answers of 2026-10-06 in `plan/build-pipeline.md`: the first theme prune runs dry before it runs for real):
+
+- A `--prune-only --dry-run` records its plan (the uuids it would delete, the commit and the time) in the checkout's git folder, as `rf-prune-dry-run.json` (`git rev-parse --git-path rf-prune-dry-run.json`), outside the tree, so the checkout stays clean.
+- A real `--prune-only` is refused before it reads the store unless that record is there, from a dry run of the store (not the test fixture), at the same commit, less than 60 minutes old. It uses the record up, so each dry run serves one real run.
+- Once it has its plan, it stops before the first deletion unless it deletes exactly what the dry run planned. A plan that deletes nothing needs no match.
+- Until `RELEASES.md`'s "My Themes" section logs a deletion, the prune after a push only shows its plan. So the first deletion is always a `--prune-only`, shown dry first. From then on, the prune after each push deletes too, without a dry run of its own.
+
+Whoever runs a real `--prune-only` puts its output and its dry run's on the next review page (the orchestrator, per the runbook). A real `--prune-only` that finds nothing to delete logs nothing, so the prune after a push stays a plan until a `--prune-only` has deleted a theme: with one ReelFlies build in My Themes today, that is a few pushes away.
+
+**Permission rules.** The drafted Claude Code rules ([permissions.md](permissions.md)) pre-approve `scripts/release.sh … --dry-run` from any checkout, so `--prune-only --dry-run` runs anywhere without a prompt; a real `--prune-only` is pre-approved only as the main clone's `release.sh`, by its full path, and asks first anywhere else.
+
+### No upload mode
+
+W0-3 adds `scripts/release.sh --upload-only` (uploading the newest 1895766 release's exact zip to My Themes for the reelflies.com review) only if that push's uuid doesn't preview on reelflies.com. Themes are store-level, so the push already puts the build in My Themes. W0-1's watched push checks it, and the orchestrator records Shaun's answer on ticket 05. Until then `--upload-only` is refused, and each 1895766 push's uuid is the .com review build, named on the review page with its commit and push time. If the upload mode is ever built, its uploads are logged in the same "My Themes" section.
+
 ## Safety notes
 
 - **Why not `stencil pull`:** it crashes when `config.json` has no variation named like the live one (Cavio's "Natural"), and it silently skips live keys that `config.json` lacks. The capture in `scripts/release-capture.mjs` has neither problem.
-- **Tokens:** when a request fails, stencil-cli 9.1.0 prints the whole request, including its `x-auth-token` header. The release pipes the push through a filter that replaces the Stencil-CLI token, `RF_BC_API_TOKEN` and any `x-auth-token` value with `[redacted]`. Values of settings named like credentials (`token`, `secret`, `password`, `api key`) are hidden in the release's output.
+- **Tokens:** when a request fails, stencil-cli 9.1.0 prints the whole request, including its `x-auth-token` header. The release pipes the push through a filter that replaces the Stencil-CLI token, `RF_BC_API_TOKEN`, `RF_BC_READ_TOKEN` and any `x-auth-token` value with `[redacted]`. Values of settings named like credentials (`token`, `secret`, `password`, `api key`) are hidden in the release's output.
+  - The prune never prints a store error whole. `release-themes.mjs` turns every store call's error into a new one naming the call, with only its message and the token taken out (axios's error carries the request, header and all). The prune's stops pass through the same filter, and any other error in it becomes a stop with its message only.
+  - The guard's catalogue errors are filtered with its read-only token, which may come from the Keychain.
+  - The prune's and the guard's `fetch` calls refuse redirects (`redirect: 'error'`), because `fetch` would send the `X-Auth-Token` header on to another origin.
 - **The capture file** `config.<slug>.live.json` is gitignored. Cavio's capture holds a non-empty `instagram-access-token`, so never commit or share it.
-- **If the push seems to hang,** stencil-cli is probably waiting at its theme-deletion prompt, which means My Themes filled up after the release checked it. Press Ctrl-C and prune My Themes by hand.
+- **If the push seems to hang,** stencil-cli is probably waiting at its theme-deletion prompt, which means My Themes filled up after the release checked it. Press Ctrl-C, then run `scripts/release.sh --prune-only --dry-run` and `--prune-only`, or delete a theme by hand.
 
 ## Tests
 
@@ -244,13 +304,16 @@ The release's tests are `scripts/release-*.test.mjs`. `npm run test:scripts` run
 - `release-checks.test.mjs` covers the stops that only a real release reaches, which a dry run can't: the Node version and dirty-tree refusals, the My Themes cap, the typed channel id (a wrong answer, a closed stdin, no terminal), and step 5's gate (a switch toggled or a draft published while the prompt waits, another theme, a new commit, a changed or missing zip). For W0-1 it covers each of `--confirm-nonprod`'s refusals with a calendar for every phase, channels 1 and 1855224 refused by id even in an entry that says `production: false`, the Flip lock on 1895766, the paired channel-1 release, and step 5 with the flag: no prompt, `origin/master` checked first and the calendar again, and the gate still run in full.
 - `release-origin.test.mjs` covers the origin check on temp clones of a local bare origin (`release-origin-fixture.mjs`): a branch, a detached `HEAD`, a `master` behind or ahead of `origin/master`, a failed fetch, and at step 5 a merge outside the release tooling (passes), a calendar or target change (stops) and a rewritten `origin/master` (stops). It also keeps `RELEASE_TOOLING` in step with `release.mjs`'s imports.
 - `release-args.test.mjs` covers what the arguments parse to, `--confirm-nonprod` included, and `release-targets.test.mjs` that every target declares `production` and its confirmation modes, a production one typed only, and that 1895766 is the only target that takes the flag.
-- `release-diff.test.mjs` covers the three-way diff's cases, and `release-log.test.mjs` reading the channel's last release back from `RELEASES.md` and the "Changed in repo" lines.
-- `release-sh.test.mjs` runs `scripts/release.sh` itself, in dry runs. It covers the release lock (a held lock, a lock taken by hand, a stale lock, and the lock dropped at the end), the argument refusals, step 1's stops (two-way and three-way), the live contrast report, the guard, and `--confirm-nonprod` on a calendar date in every phase. It also runs step 5 (`release.mjs pre-push`) in a clone of a local bare origin with no stencil config, where any capture fails at once, to show the typed prompt still stops without a terminal, that step 5 checks the flag again from the code, that it ignores the calendar overrides, and that it stops when a calendar change merged on `origin/master` while the release ran, or the fetch fails. It runs `release.mjs prepare` as a real release in such clones too, to show that `--confirm-nonprod` is refused on a branch, on a `master` behind `origin/master` and when the fetch fails, that a typed release isn't checked, and that a dry run only warns. Step 7 (`release.mjs write-log`) runs in an empty folder to show the `New uuid` line. It checks that the push reads its stdin from `/dev/null`, and that stencil-cli's theme-deletion prompt then exits without an answer. Its runs take the release lock in a folder of their own (`RF_LOCK_ROOT`, which only `node --test` may set), and use seven test-only overrides:
+- `release-diff.test.mjs` covers the three-way diff's cases, and `release-log.test.mjs` reading the channel's last release back from `RELEASES.md` and the "Changed in repo" lines. For W0-3 it covers the builds each entry records and the "My Themes" rows: their format, where they go, and that the repo's `RELEASES.md` keeps passing once it logs deletions and a section follows them.
+- `release-prune.test.mjs` covers the prune's selection on recorded Themes API shapes (W0-3): only themes named ReelFlies, the newest three kept, two builds with the same name and version told apart by uuid and ranked by `RELEASES.md` (an older entry a union merge left further down included), a uuid pushed twice, a theme active on any channel or flagged `is_active`, an unrecorded uuid, the rollback on 1895766 and channel 1, and a plan missing a channel's read. With a stubbed store it covers the deletions: oldest first, a row after each, a failure stopping the rest, a row that can't be written, a theme still listed after its deletion, and a failed read after it, with no error carrying the token out. It covers the stop's text, the `RELEASES.md` edits a real prune allows, and the dry run's record: a missing, fixture, stale or other-commit record, and a plan that differs. It also checks that neither prune module activates or uploads a theme.
+- `release-themes.test.mjs` covers the store reads with a stand-in for stencil-cli's client and for `fetch`: GETs only, every storefront channel on every page, every site's channel, each one's active theme, and any read that fails stopping the read. Every store call's error comes back naming the call, with only its message and no token, and `fetch` refuses redirects.
+- `release-sh.test.mjs` runs `scripts/release.sh` itself, in dry runs. It covers the release lock (a held lock, a lock taken by hand, a stale lock, and the lock dropped at the end), the argument refusals, step 1's stops (two-way and three-way), the live contrast report, the guard, and `--confirm-nonprod` on a calendar date in every phase. It also runs step 5 (`release.mjs pre-push`) in a clone of a local bare origin with no stencil config, where any capture fails at once, to show the typed prompt still stops without a terminal, that step 5 checks the flag again from the code, that it ignores the calendar overrides, and that it stops when a calendar change merged on `origin/master` while the release ran, or the fetch fails. It runs `release.mjs prepare` as a real release in such clones too, to show that `--confirm-nonprod` is refused on a branch, on a `master` behind `origin/master` and when the fetch fails, that a typed release isn't checked, and that a dry run only warns. Step 7 (`release.mjs write-log`) runs in an empty folder to show the `New uuid` line. For W0-3 it runs `--prune-only`'s refusals, a dry `--prune-only` on fixtures that deletes nothing and records its plan in the git folder, a real one refused on a branch, behind `origin/master`, with uncommitted changes or a changed line of `RELEASES.md`, and without a dry run of the store (the record used up once it passes), and the prune after a push: a plan only in a dry run, until a deletion is logged, off `origin/master`'s history, away from the pushed commit, and with uncommitted changes. It checks that the push reads its stdin from `/dev/null`, and that stencil-cli's theme-deletion prompt then exits without an answer. Its runs take the release lock in a folder of their own (`RF_LOCK_ROOT`, which only `node --test` may set), and use eight test-only overrides:
   - `RF_RELEASE_CONFIG=<file>` is a theme config to use instead of `config.json`. The run stops before the clean build.
   - `RF_RELEASE_LIVE_FIXTURE=<file>` is a capture to use instead of the store.
   - `RF_RELEASE_TREE_FIXTURE=<file>` is a JSON array of the channel's category ids, to use instead of the catalogue API.
-  - `RF_RELEASE_LOG_FIXTURE=<file>` is a release log to read instead of `RELEASES.md`, for the channel's last release and the themes the release pushed. Step 7 always writes `RELEASES.md`.
+  - `RF_RELEASE_LOG_FIXTURE=<file>` is a release log to read instead of `RELEASES.md`, for the channel's last release, the themes the release pushed and the prune's ranking. Step 7 and a real prune always write `RELEASES.md`.
   - `RF_RELEASE_BASE_FIXTURE=<file>` is a theme config to use as `config.json` at the last release's commit, instead of reading it with git.
   - `RF_RELEASE_CALENDAR_FIXTURE=<file>` is a release calendar to read instead of `scripts/release-calendar.json` (W0-1).
   - `RF_RELEASE_DATE=<YYYY-MM-DD>` is today's date for the calendar, instead of today in Toronto (W0-1).
-- All seven overrides need `--dry-run`, so a real push always reads the live store, `RELEASES.md`, git and the committed calendar. Step 5 never reads the calendar overrides, and a test runs it with both set to show it.
+  - `RF_RELEASE_THEMES_FIXTURE=<file>` is My Themes and every channel's active theme, `{ "themes": [...], "activeByChannel": { "<channel>": "<uuid>" } }`, for the prune, instead of the store (W0-3).
+- All eight overrides need `--dry-run`, so a real push or prune always reads the live store, `RELEASES.md`, git and the committed calendar. Step 5 never reads the calendar overrides, and a test runs it with both set to show it.

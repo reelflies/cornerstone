@@ -16,6 +16,7 @@ import { phaseOn, readCalendar } from './lib/release-calendar.mjs';
 import { originRepo } from './release-origin-fixture.mjs';
 
 const SCRIPT = fileURLToPath(new URL('./release.sh', import.meta.url));
+const RELEASE_MJS_PATH = fileURLToPath(new URL('./release.mjs', import.meta.url));
 const NOTHING_RAN = /Step 1|Step 2|npm ci|Capturing/;
 const CA = ['--channel', '1895766', '--variation', 'ReelFlies CA'];
 
@@ -100,6 +101,8 @@ test('release.sh and step 3\'s contrast check still run from a checkout whose pa
         fs.copyFileSync(path.join(scripts, name), path.join(root, 'scripts', name));
     });
     fs.cpSync(path.join(scripts, 'lib'), path.join(root, 'scripts', 'lib'), { recursive: true }); // isMain and formatBytes
+    // The guard's token loader (W0-3 points it at W0-11's) imports the store tooling check.
+    fs.cpSync(path.join(scripts, 'store'), path.join(root, 'scripts', 'store'), { recursive: true });
     assertRefused(run([...CA, '-allc', '--dry-run'], {}, path.join(root, 'scripts', 'release.sh')), /all channels/);
 
     const config = fileURLToPath(new URL('../config.json', import.meta.url));
@@ -418,11 +421,20 @@ test('--overwrite-live lists a differing menu id, and the guard still checks con
     assert.match(result.stdout, /guard: pass/);
 });
 
-test('a set menu id without RF_BC_API_TOKEN stops before any catalogue call, naming the token scope', () => {
+test('a set menu id without the read-only store token stops before any catalogue call, naming the token scope and where it comes from', () => {
     const { env } = fixtures({ caSettings: { rf_menu_species_root_id: '25' } });
     const result = run([...CA, '--dry-run'], env);
     assert.equal(result.status, 1, result.output);
-    assert.match(result.stderr, /RF_BC_API_TOKEN.*Products: read-only/);
+    assert.match(result.stderr, /a menu id is set, so the guard must read channel 1895766's category tree with the read-only store API token \(Products: read-only, store_v2_products_read_only\)/);
+    // Under node --test the loader never reads the Keychain (scripts/lib/store-token.mjs).
+    assert.match(result.stderr, /RF_BC_READ_TOKEN/);
+    assert.doesNotMatch(result.output, /Reading channel 1895766's category tree/);
+});
+
+test('the guard takes its token from W0-11\'s loader, so RF_BC_API_TOKEN, RF_BC_READ_TOKEN and the Keychain item all reach it', () => {
+    const source = fs.readFileSync(RELEASE_MJS_PATH, 'utf8');
+    assert.doesNotMatch(source, /process\.env\.RF_BC_/, 'release.mjs reads no token variable itself, bar redacting them by name');
+    assert.match(source, /readGuardToken\(\)/);
 });
 
 // --- W0-2: step 1's three-way diff, with config.json at the channel's last release ----------
@@ -1064,4 +1076,302 @@ test('every release.mjs step that release.sh calls is one release.mjs has', () =
     const steps = /\(steps: ([^)]+)\)/.exec(listed.stderr)[1].split(', ');
     assert.ok(calls.includes('prepare') && calls.includes('write-log'), `found ${calls.join(', ')}`);
     assert.deepEqual(calls.filter(call => !steps.includes(call)), [], `release.mjs steps: ${steps.join(', ')}`);
+});
+
+// --- W0-3: pruning My Themes ---------------------------------------------------------------------
+
+const PRUNE_REFUSALS = [
+    ['--prune-only with a channel', ['--prune-only', '--channel', '1895766', '--dry-run'], /--prune-only takes only --dry-run/],
+    ['--prune-only with a variation', ['--prune-only', '--variation', 'ReelFlies CA', '--dry-run'], /--prune-only takes only --dry-run/],
+    ['--prune-only with --confirm-nonprod', ['--prune-only', '--confirm-nonprod', '1895766', '--dry-run'], /--prune-only takes only --dry-run/],
+    ['--prune-only with -d', ['--prune-only', '-d', '--dry-run'], /stencil push -d/],
+    ['--prune-only given a value', ['--prune-only=all', '--dry-run'], /--prune-only takes no value/],
+    ['--prune-only with a release\'s arguments', [...CA, '--prune-only', '--dry-run'], /--prune-only takes only --dry-run: .*no channel or variation/],
+    ['--upload-only', [...CA, '--upload-only', '--dry-run'], /there is no upload mode/],
+];
+
+for (const [name, args, reason] of PRUNE_REFUSALS) {
+    test(`W0-3: release.sh refuses ${name} before anything runs`, () => {
+        const result = run(args);
+        assertRefused(result, reason);
+        assert.doesNotMatch(result.output, /My Themes holds|Reading My Themes/);
+    });
+}
+
+const uuidN = n => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
+
+// RELEASES.md with builds 1 to n of "ReelFlies" 6.22.0 on 1895766, one a day, and My Themes as
+// GET /v3/themes and the active-theme reads give it (RF_RELEASE_THEMES_FIXTURE).
+function pruneFixtures(n = 5, { deletionLogged = false } = {}) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-prune-test-'));
+    tempDirs.push(dir);
+    const entries = Array.from({ length: n }, (_, i) => `### 2026-10-0${i + 1} 09:00 UTC · channel 1895766 (ReelFlies_CA) · ReelFlies CA
+
+- Theme: ReelFlies 6.22.0, uuid \`${uuidN(i + 1)}\`
+- Commit: \`${String(i + 1).repeat(40)}\` on \`master\`
+- Bundle: \`reelflies-ca-6.22.0-${i + 1}.zip\`, 100 B, sha256 \`${String(i + 1).repeat(64)}\`
+- Operator: test
+`).join('\n');
+    const deletion = deletionLogged ? `| 2026-10-01 10:00 | deleted (--prune-only) | \`${uuidN(99)}\` | ReelFlies 6.22.0 | \`${'9'.repeat(40)}\` | \`${'9'.repeat(64)}\` | test |\n` : '';
+    const markdown = `# Release log\n\n## Releases\n\n${entries}\n## Switch toggles\n\n| Date | Channel | Switch | From | To | Who | Reason |\n|---|---|---|---|---|---|---|\n\n## My Themes\n\n| Time (UTC) | Action | Theme uuid | Name and version | Commit | Zip sha256 | Operator |\n|---|---|---|---|---|---|---|\n${deletion}`;
+    const themes = {
+        themes: [
+            { uuid: 'e3d82ce0-9bae-0133-0de7-525400970412', name: 'Cornerstone', is_active: false },
+            { uuid: '7c519850-0000-0000-0000-000000000000', name: 'Hero-2024-2.9.5-US', is_active: true },
+            ...Array.from({ length: n }, (_, i) => ({ uuid: uuidN(i + 1), name: 'ReelFlies', is_active: false })),
+        ],
+        activeByChannel: { 1: '7c519850-0000-0000-0000-000000000000', 1855224: '7c519850-0000-0000-0000-000000000000', 1895766: uuidN(n) },
+    };
+    const logPath = path.join(dir, 'RELEASES.md');
+    const themesPath = path.join(dir, 'themes.json');
+    fs.writeFileSync(logPath, markdown);
+    fs.writeFileSync(themesPath, `${JSON.stringify(themes, null, 2)}\n`);
+    return { dir, logPath, env: { RF_RELEASE_LOG_FIXTURE: logPath, RF_RELEASE_THEMES_FIXTURE: themesPath } };
+}
+
+// release.sh runs in this checkout, so its dry --prune-only records its plan in this checkout's git
+// folder. The test puts back whatever was there, so a record of a real dry run made before it (when
+// release.sh's step 3 runs these tests) is kept.
+function keepingDryRunRecord(body) {
+    const file = path.resolve(path.dirname(SCRIPT), git('rev-parse', '--git-path', 'rf-prune-dry-run.json')); // relative to scripts/
+    const saved = fs.existsSync(file) ? fs.readFileSync(file) : null;
+    try {
+        return body(file);
+    } finally {
+        if (saved) fs.writeFileSync(file, saved);
+        else fs.rmSync(file, { force: true });
+    }
+}
+
+test('W0-3: --prune-only --dry-run shows what it would delete, keeps the newest three, and deletes and logs nothing', () => {
+    const { env, logPath } = pruneFixtures(5);
+    const before = fs.readFileSync(logPath, 'utf8');
+    const releases = fs.readFileSync(fileURLToPath(new URL('../RELEASES.md', import.meta.url)), 'utf8');
+    const result = keepingDryRunRecord(file => {
+        const output = run(['--prune-only', '--dry-run'], env);
+        assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).source, 'fixture', 'a fixture\'s plan, which no real run accepts');
+        return output;
+    });
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.stdout, /== My Themes: prune \(dry run: nothing is deleted\)/);
+    assert.match(result.stdout, /My Themes holds 7 of 20 themes; 5 named ReelFlies; channels checked: 1, 1855224, 1895766/);
+    assert.match(result.stdout, new RegExp(`delete {3}${uuidN(1)} ReelFlies 6\\.22\\.0`));
+    assert.match(result.stdout, new RegExp(`delete {3}${uuidN(2)} ReelFlies 6\\.22\\.0`));
+    assert.match(result.stdout, new RegExp(`keep {5}${uuidN(3)} .*one of the newest 3`));
+    assert.match(result.stdout, /dry run {2}would delete 2 theme\(s\); nothing was deleted, and RELEASES\.md is unchanged/);
+    assert.equal(fs.readFileSync(logPath, 'utf8'), before);
+    assert.equal(fs.readFileSync(fileURLToPath(new URL('../RELEASES.md', import.meta.url)), 'utf8'), releases);
+    assert.doesNotMatch(result.output, /Step 1|Step 2|npm ci|Capturing/);
+});
+
+test('W0-3: the prune\'s store fixture is test-only, so a real --prune-only always reads the store', () => {
+    const { env } = pruneFixtures(5);
+    assertRefused(run(['--prune-only'], { RF_RELEASE_THEMES_FIXTURE: env.RF_RELEASE_THEMES_FIXTURE }), /RF_RELEASE_THEMES_FIXTURE is test-only and needs --dry-run/);
+    assertRefused(run(['--prune-only'], { RF_RELEASE_LOG_FIXTURE: env.RF_RELEASE_LOG_FIXTURE }), /RF_RELEASE_LOG_FIXTURE is test-only and needs --dry-run/);
+    assertRefused(run(CA, { RF_RELEASE_THEMES_FIXTURE: env.RF_RELEASE_THEMES_FIXTURE }), /RF_RELEASE_THEMES_FIXTURE/);
+});
+
+test('W0-3: --prune-only takes the release lock, so it never runs beside a release', () => {
+    const root = lockRoot();
+    const other = acquireLock('release', 'scripts/release.sh --channel 1895766 --variation ReelFlies CA', { root, ticket: 'orchestrator' });
+    const result = run(['--prune-only', '--dry-run'], { ...pruneFixtures(5).env, RF_LOCK_ROOT: root });
+    assertRefused(result, /the release lock is held by scripts\/release\.sh --channel 1895766/);
+    assert.doesNotMatch(result.output, /My Themes holds/);
+    other.release();
+});
+
+// A real --prune-only, in a clone of a local bare origin with no stencil config: the checkout checks
+// run, and reading the store then fails at once, so nothing can be deleted.
+const pruneRepo = () => gitRepo({ 'RELEASES.md': '# Release log\n\n## Releases\n\n## Switch toggles\n', '.nvmrc': `${process.version.slice(1)}\n` });
+
+test('W0-3: a real --prune-only runs only from master at origin/master\'s tip, so origin/master\'s rules decide what is deleted', () => {
+    const repo = pruneRepo();
+    repo.git('switch', '-q', '-c', 't99/old-ticket');
+    const branch = runReleaseMjs('prune', ['--prune-only'], { cwd: repo.clone });
+    assert.equal(branch.status, 2, branch.output);
+    assert.match(branch.stderr, /^REFUSED {2}a real prune needs this checkout on master at origin\/master's tip.*this checkout is on branch t99\/old-ticket, not master/m);
+    assert.doesNotMatch(branch.output, /Reading My Themes/);
+
+    repo.git('switch', '-q', 'master');
+    const merged = repo.mergeOnOrigin({ 'README.md': 'later\n' });
+    const behind = runReleaseMjs('prune', ['--prune-only'], { cwd: repo.clone });
+    assert.equal(behind.status, 2, behind.output);
+    assert.match(behind.stderr, new RegExp(`HEAD ${repo.head.slice(0, 7)} isn't origin/master's tip ${merged.slice(0, 7)}`));
+});
+
+test('W0-3: a real --prune-only refuses uncommitted changes besides RELEASES.md, and edits that change or remove a line of RELEASES.md', () => {
+    const repo = pruneRepo();
+    fs.writeFileSync(path.join(repo.clone, 'RELEASES.md'), '# Release log\n\n## Releases\n\n## Switch toggles\n\nedited\n');
+    fs.writeFileSync(path.join(repo.clone, 'notes.txt'), 'x\n');
+    const result = runReleaseMjs('prune', ['--prune-only'], { cwd: repo.clone });
+    assert.equal(result.status, 2, result.output);
+    assert.match(result.stderr, /uncommitted changes besides RELEASES\.md: notes\.txt/);
+    assert.doesNotMatch(result.stderr, /RELEASES\.md has uncommitted edits/, 'an added line is a release\'s new entry, or a row');
+
+    // An entry's line changed, as a time moved to rank a build newer would be.
+    const edited = pruneRepo();
+    fs.writeFileSync(path.join(edited.clone, 'RELEASES.md'), '# Release log\n\n## Releases (edited)\n\n## Switch toggles\n');
+    const changed = runReleaseMjs('prune', ['--prune-only'], { cwd: edited.clone });
+    assert.equal(changed.status, 2, changed.output);
+    assert.match(changed.stderr, /RELEASES\.md has uncommitted edits that change or remove 1 line\(s\) since HEAD: a real prune lets it only gain lines/);
+    assert.doesNotMatch(changed.output, /Reading My Themes/);
+});
+
+// The prune after a release: `release.mjs prune-after-push`, on a state file like prepare's.
+function afterPush(state, { cwd, env = {} }) {
+    return runReleaseMjs('prune-after-push', [], { cwd, env, state: { channel: 1895766, git: { sha: '0'.repeat(40) }, ...state } });
+}
+
+// Where a dry --prune-only records its plan: the checkout's own git folder, outside the tree.
+const dryRunRecordPath = repo => path.resolve(repo.clone, repo.git('rev-parse', '--git-path', 'rf-prune-dry-run.json'));
+
+test('W0-3: a dry --prune-only records its plan in the checkout\'s git folder for the real run, and leaves the checkout clean', () => {
+    const { env } = pruneFixtures(5);
+    const repo = pruneRepo();
+    const result = runReleaseMjs('prune', ['--prune-only', '--dry-run'], { cwd: repo.clone, env });
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.stdout, /^recorded this plan, for the real --prune-only: it deletes only what this dry run planned, from this commit, within 60 minutes/m);
+    const record = JSON.parse(fs.readFileSync(dryRunRecordPath(repo), 'utf8'));
+    assert.deepEqual({ ...record, plannedAt: Number.isNaN(Date.parse(record.plannedAt)) }, {
+        head: repo.head, toDelete: [uuidN(1), uuidN(2)], plannedAt: false, source: 'fixture',
+    });
+    assert.equal(repo.git('status', '--porcelain'), '');
+    // The plan a release's dry run ends with is the one before its push, so it records nothing.
+    fs.rmSync(dryRunRecordPath(repo));
+    assert.equal(afterPush({ dryRun: true }, { cwd: repo.clone, env }).status, 0);
+    assert.ok(!fs.existsSync(dryRunRecordPath(repo)));
+});
+
+test('W0-3: a real --prune-only needs a dry --prune-only of the store first, from this checkout, and uses its record up', () => {
+    const repo = pruneRepo();
+    const none = runReleaseMjs('prune', ['--prune-only'], { cwd: repo.clone });
+    assert.equal(none.status, 2, none.output);
+    assert.match(none.stderr, /^REFUSED {2}a real --prune-only deletes only what a --prune-only --dry-run in this checkout planned, from the same commit, within 60 minutes: no --prune-only --dry-run has run in this checkout since the last real one\. Run scripts\/release\.sh --prune-only --dry-run, check its plan, then run this again/m);
+    assert.doesNotMatch(none.output, /Reading My Themes/);
+
+    // A dry run on the store fixture doesn't count.
+    assert.equal(runReleaseMjs('prune', ['--prune-only', '--dry-run'], { cwd: repo.clone, env: pruneFixtures(5).env }).status, 0);
+    const fixture = runReleaseMjs('prune', ['--prune-only'], { cwd: repo.clone });
+    assert.equal(fixture.status, 2, fixture.output);
+    assert.match(fixture.stderr, /the dry run read RF_RELEASE_THEMES_FIXTURE, not the store/);
+    assert.doesNotMatch(fixture.output, /Reading My Themes/);
+
+    // The record of a dry run of the store (written here by hand: no test reads the store) lets the
+    // real run go on to read the store, which fails here before anything is deleted. It is used up.
+    fs.writeFileSync(dryRunRecordPath(repo), JSON.stringify({
+        head: repo.head, toDelete: [], plannedAt: new Date().toISOString(), source: 'store',
+    }));
+    const real = runReleaseMjs('prune', ['--prune-only'], { cwd: repo.clone });
+    assert.equal(real.status, 1, real.output);
+    assert.match(real.stdout, new RegExp(`^origin {3}master at origin/master's tip ${repo.head.slice(0, 7)}, fetched just now`, 'm'));
+    assert.match(real.stdout, /^dry run {2}this checkout's dry run at \d{4}-\d\d-\d\dT[\d:.]+Z planned to delete nothing: this run deletes only that/m);
+    assert.match(real.stdout, /Reading My Themes and every channel's active theme read-only/);
+    assert.match(real.stderr, /^STOP {5}reading My Themes failed, so nothing was deleted: can't read config\.stencil\.json/m);
+    assert.ok(!fs.existsSync(dryRunRecordPath(repo)), 'each dry run serves one real run');
+});
+
+test('W0-3: a dry --prune-only off master only warns, and still deletes nothing', () => {
+    const { env, logPath } = pruneFixtures(5);
+    const before = fs.readFileSync(logPath, 'utf8');
+    const repo = pruneRepo();
+    repo.git('switch', '-q', '-c', 't99/old-ticket');
+    const result = runReleaseMjs('prune', ['--prune-only', '--dry-run'], { cwd: repo.clone, env });
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.stdout, /^WARNING {2}a real prune needs this checkout on master at origin\/master's tip.*this checkout is on branch t99\/old-ticket, not master.*\(a dry run goes on; a real prune stops here\)/m);
+    assert.match(result.stdout, /would delete 2 theme\(s\); nothing was deleted/);
+    assert.equal(fs.readFileSync(logPath, 'utf8'), before);
+});
+
+test('W0-3: a dry run ends by showing the prune a real release would run after its push, and deletes nothing', () => {
+    const { env, logPath } = pruneFixtures(5);
+    const before = fs.readFileSync(logPath, 'utf8');
+    const result = afterPush({ dryRun: true }, { cwd: path.dirname(SCRIPT), env });
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.stdout, /== My Themes: prune after the push \(dry run: nothing is deleted\)/);
+    assert.match(result.stdout, /a real release prunes My Themes here, after its push and its RELEASES\.md entry/);
+    assert.match(result.stdout, /would delete 2 theme\(s\)/);
+    assert.equal(fs.readFileSync(logPath, 'utf8'), before);
+});
+
+test('W0-3: the prune\'s store fixture needs a dry run after a push too', () => {
+    const { env } = pruneFixtures(5);
+    const result = afterPush({ dryRun: false }, { cwd: path.dirname(SCRIPT), env });
+    assert.equal(result.status, 2, result.output);
+    assert.match(result.stderr, /RF_RELEASE_LOG_FIXTURE and RF_RELEASE_THEMES_FIXTURE are test-only and need --dry-run/);
+});
+
+test('W0-3: until a --prune-only has deleted a theme, the prune after a real push only shows its plan: the first real prune runs dry first', () => {
+    const repo = pruneRepo();
+    const result = afterPush({ dryRun: false, git: { sha: repo.head } }, { cwd: repo.clone });
+    assert.match(result.stdout, /^first {4}RELEASES\.md records no theme deleted from My Themes yet, so this prune only shows its plan: the first real prune is scripts\/release\.sh --prune-only, run with --dry-run first \(W0-3\)/m);
+    assert.doesNotMatch(result.stdout, /^prune {4}deletes/m);
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.stderr, /The release is pushed and logged in RELEASES\.md; only the prune stopped: reading My Themes failed, so nothing was deleted/);
+});
+
+test('W0-3: once a deletion is logged, the prune after a real push from origin/master\'s commit deletes', () => {
+    const { logPath } = pruneFixtures(5, { deletionLogged: true });
+    const repo = gitRepo({ 'RELEASES.md': fs.readFileSync(logPath, 'utf8'), '.nvmrc': `${process.version.slice(1)}\n` });
+    const result = afterPush({ dryRun: false, git: { sha: repo.head } }, { cwd: repo.clone });
+    assert.match(result.stdout, /^prune {4}deletes what the plan below marks "delete", and logs each in RELEASES\.md's My Themes section/m);
+    assert.equal(result.status, 1, 'and then stops, here, at the store read');
+    assert.match(result.stderr, /reading My Themes failed, so nothing was deleted/);
+});
+
+test('W0-3: the prune after a real push deletes only from the commit it pushed, with nothing uncommitted but new lines in RELEASES.md', () => {
+    const { logPath } = pruneFixtures(5, { deletionLogged: true });
+    const markdown = fs.readFileSync(logPath, 'utf8');
+    const repo = () => gitRepo({ 'RELEASES.md': markdown, '.nvmrc': `${process.version.slice(1)}\n` });
+    const planOnly = (result, why) => {
+        assert.match(result.stdout, new RegExp(`^WARNING {2}this prune only shows its plan: .*${why}`, 'm'));
+        assert.doesNotMatch(result.stdout, /^prune {4}deletes/m);
+    };
+    // The checkout moved on from the pushed commit (origin/master's tip, then pulled).
+    const moved = repo();
+    moved.mergeOnOrigin({ 'README.md': 'later\n' });
+    moved.git('pull', '-q', '--ff-only', 'origin', 'master');
+    planOnly(afterPush({ dryRun: false, git: { sha: moved.head } }, { cwd: moved.clone }), `this checkout is at ${moved.git('rev-parse', 'HEAD').slice(0, 7)}, not ${moved.head.slice(0, 7)}, the commit this release pushed`);
+    // A rule edited after the push.
+    const dirty = repo();
+    fs.writeFileSync(path.join(dirty.clone, 'notes.txt'), 'x\n');
+    planOnly(afterPush({ dryRun: false, git: { sha: dirty.head } }, { cwd: dirty.clone }), 'uncommitted changes besides RELEASES\\.md: notes\\.txt');
+    // An entry changed, not added.
+    const edited = repo();
+    fs.writeFileSync(path.join(edited.clone, 'RELEASES.md'), markdown.replace('## Releases\n', '## Releases (edited)\n'));
+    planOnly(afterPush({ dryRun: false, git: { sha: edited.head } }, { cwd: edited.clone }), 'RELEASES\\.md has uncommitted edits that change or remove 1 line');
+    // The release's own entry, added: it deletes.
+    const added = repo();
+    fs.appendFileSync(path.join(added.clone, 'RELEASES.md'), '| 2026-10-02 10:00 | deleted (--prune-only) | `x` | ReelFlies 6.22.0 | `y` | `z` | test |\n');
+    assert.match(afterPush({ dryRun: false, git: { sha: added.head } }, { cwd: added.clone }).stdout, /^prune {4}deletes/m);
+});
+
+test('W0-3: the prune after a real push only shows its plan when the release\'s commit isn\'t origin/master\'s', () => {
+    const { logPath } = pruneFixtures(5, { deletionLogged: true });
+    const repo = gitRepo({ 'RELEASES.md': fs.readFileSync(logPath, 'utf8') });
+    repo.git('switch', '-q', '-c', 't99/typed-release');
+    fs.writeFileSync(path.join(repo.clone, 'x.txt'), 'x\n');
+    repo.git('add', 'x.txt');
+    repo.git('commit', '-q', '-m', 'branch only');
+    const result = afterPush({ dryRun: false, git: { sha: repo.git('rev-parse', 'HEAD') } }, { cwd: repo.clone });
+    assert.match(result.stdout, /^WARNING {2}this prune only shows its plan: .*is no longer in origin\/master's history.*scripts\/release\.sh --prune-only/m);
+    assert.doesNotMatch(result.stdout, /^prune {4}deletes/m);
+});
+
+test('W0-3: release.sh runs --prune-only on its own after taking the lock, and prunes after a push\'s log entry and at the end of a dry run', () => {
+    const lines = fs.readFileSync(SCRIPT, 'utf8').split('\n').filter(line => !/^\s*#/.test(line));
+    const lineOf = pattern => {
+        const index = lines.findIndex(line => pattern.test(line));
+        assert.notEqual(index, -1, `release.sh has no line matching ${pattern}`);
+        return index;
+    };
+    const take = lineOf(/lock\.mjs take release/);
+    const pruneOnly = lineOf(/^\s*release prune "\$@"$/);
+    const prepare = lineOf(/^release prepare "\$@"$/);
+    assert.ok(take < pruneOnly && pruneOnly < prepare, 'the lock, then --prune-only, then a release');
+    assert.match(lines[pruneOnly + 1], /^\s*exit 0$/);
+    const dryReport = lineOf(/^\s*release dry-run-report$/);
+    assert.match(lines[dryReport + 1], /^\s*release prune-after-push$/);
+    const writeLog = lineOf(/^release write-log$/);
+    assert.match(lines[writeLog + 1], /^release prune-after-push$/);
+    assert.equal(lines.filter(line => /release prune-after-push/.test(line)).length, 2);
 });

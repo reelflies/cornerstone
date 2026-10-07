@@ -4,12 +4,26 @@
 //   GET /v3/catalog/trees?channel_id:in=<channel>
 //   GET /v3/catalog/trees/categories?tree_id:in=<tree>&limit=250&page=<n>   (every page)
 //
-// They need a store API token with Products: read-only (store_v2_products_read_only), passed as
-// RF_BC_API_TOKEN. The Stencil-CLI token can't read the catalogue. The token is sent as a header
-// and never printed.
+// They need the read-only store API token, with Products: read-only (store_v2_products_read_only).
+// The Stencil-CLI token can't read the catalogue. readGuardToken gets it through W0-11's loader
+// (scripts/lib/store-token.mjs): RF_BC_READ_TOKEN, then RF_BC_API_TOKEN, then the Keychain item
+// "reelflies-bc-read". The token is sent as a header and never printed.
+
+import { readStoreToken } from './lib/store-token.mjs';
 
 const API = 'https://api.bigcommerce.com/stores';
 const PAGE_SIZE = 250; // the endpoint's maximum
+const SCOPE = 'the read-only store API token (Products: read-only, store_v2_products_read_only)';
+
+// { token, source } for the guard's menu id rule, or an Error naming the scope and where the token
+// comes from. `options` are readStoreToken's, for the tests.
+export function readGuardToken(options) {
+    try {
+        return readStoreToken('read', options);
+    } catch (error) {
+        throw new Error(`${SCOPE}: ${error.message}`);
+    }
+}
 
 export function treeIdForChannel(response, channelId) {
     const trees = (response.data || []).filter(tree => (tree.channels || []).map(Number).includes(Number(channelId)));
@@ -26,12 +40,14 @@ export function categoryIdsFromPage(response) {
     };
 }
 
-// A GET that returns the parsed body. Errors name the status, never the token.
-export function tokenGetJson(token) {
+// A GET that returns the parsed body. Errors name the status, never the token. `request` is
+// fetch, or a stand-in in the tests. It never follows a redirect, which would send the X-Auth-Token
+// header on to another origin (fetch drops only Authorization).
+export function tokenGetJson(token, { request = fetch } = {}) {
     return async url => {
-        const response = await fetch(url, { method: 'GET', headers: { 'X-Auth-Token': token, Accept: 'application/json' } });
+        const response = await request(url, { method: 'GET', headers: { 'X-Auth-Token': token, Accept: 'application/json' }, redirect: 'error' });
         if (!response.ok) {
-            const hint = response.status === 401 || response.status === 403 ? ' (RF_BC_API_TOKEN needs Products: read-only)' : '';
+            const hint = response.status === 401 || response.status === 403 ? ' (the read-only store API token needs Products: read-only)' : '';
             throw new Error(`GET ${url} answered ${response.status} ${response.statusText}${hint}`);
         }
         return response.json();

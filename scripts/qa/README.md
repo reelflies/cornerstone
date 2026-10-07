@@ -93,7 +93,7 @@ Agents build tickets in parallel, each in its own worktree, and each worktree's 
 
 | Lock | Held by | Stale after |
 |---|---|---|
-| `release` | `scripts/release.sh`, for the whole release or dry run ([releasing](../../docs/releasing.md)) | 90 min |
+| `release` | `scripts/release.sh`, for the whole release, dry run or `--prune-only` ([releasing](../../docs/releasing.md)) | 90 min |
 | `merge` | W0-13's `scripts/merge.sh` | 15 min |
 | `stencil-1` … `stencil-3` | a gate run, while its `stencil start` runs | 30 min |
 | `port-<n>` | a gate run on the ports `n` and `n + 1` | 30 min |

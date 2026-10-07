@@ -19,7 +19,7 @@ import { describeLiveTheme } from './release-capture.mjs';
 import { changedKeys } from './release-diff.mjs';
 import { CONFIRM_NONPROD } from './release-targets.mjs';
 
-export const MAX_THEMES = 20; // My Themes holds at most 20; the release never deletes one (-d)
+export const MAX_THEMES = 20; // My Themes holds at most 20; the push never deletes one (-d), W0-3's prune does
 
 export function setupProblems({ nodeVersion, nvmrc, dirty }) {
     const problems = [];
@@ -30,7 +30,7 @@ export function setupProblems({ nodeVersion, nvmrc, dirty }) {
 
 export function themeCapProblems(count) {
     if (count < MAX_THEMES) return [];
-    return [`My Themes holds ${count} themes, the limit is ${MAX_THEMES}: delete one by hand (Storefront > My Themes). The release never deletes themes.`];
+    return [`My Themes holds ${count} themes, the limit is ${MAX_THEMES}: prune old ReelFlies builds with scripts/release.sh --prune-only, run with --dry-run first (W0-3), or delete a theme by hand (Storefront > My Themes). The push itself never deletes themes.`];
 }
 
 export function realReleaseStops(problems, dryRun) {

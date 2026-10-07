@@ -6,9 +6,10 @@
 //   const { token } = readStoreToken('write');          // RF_BC_WRITE_TOKEN, else "reelflies-bc-write"
 //
 // - read: the read-only account (Information & Settings, Marketing, Products, Content and
-//   Channel settings). The store helper's plans read with it, and the release guard will too.
-//   W0-12 makes it the release guard's RF_BC_API_TOKEN, so that name is read as well, after
-//   RF_BC_READ_TOKEN: an exported RF_BC_API_TOKEN is never skipped for the Keychain.
+//   Channel settings). The store helper's plans read with it, and so does the release guard's
+//   menu id check (scripts/release-tree-ids.mjs readGuardToken, since W0-3). W0-12 makes it the
+//   release guard's RF_BC_API_TOKEN, so that name is read as well, after RF_BC_READ_TOKEN: an
+//   exported RF_BC_API_TOKEN is never skipped for the Keychain.
 // - write: the writer account. Only the store helper, scripts/store/, may read it: the loader
 //   refuses when the script node was started with lives anywhere else. That is a tripwire, as
 //   the permission rules are; the real limits are the token scopes and the Keychain.

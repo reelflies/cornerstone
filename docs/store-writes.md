@@ -203,7 +203,7 @@ Unpublishing a widget is still allowed: a placement `PUT` with only `"status": "
 
 | Token | Environment | Keychain item (account `reelflies`) | Used by |
 |---|---|---|---|
-| Read-only | `RF_BC_READ_TOKEN`, then `RF_BC_API_TOKEN` (the name the release guard uses: W0-12 makes it the same token) | `reelflies-bc-read` | `plan.mjs`; the release guard, once the release lane points it here |
+| Read-only | `RF_BC_READ_TOKEN`, then `RF_BC_API_TOKEN` (the name the release guard uses: W0-12 makes it the same token) | `reelflies-bc-read` | `plan.mjs`; the release guard's menu id check (`scripts/release-tree-ids.mjs`, since W0-3) |
 | Writer | `RF_BC_WRITE_TOKEN` | `reelflies-bc-write` | `apply.mjs`, and `plan.mjs` for template association reads. The loader refuses it to any script outside `scripts/store/`, and to a checkout whose store tooling isn't `origin/master`'s. |
 
 - **Shaun adds each item in his own terminal.** `security add-generic-password -a reelflies -s reelflies-bc-write -w` prompts for the token. Never paste one in a chat or a file.

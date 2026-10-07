@@ -71,7 +71,7 @@ node ~/reelflies/theme/cornerstone/scripts/status.mjs --pr 12 --sha <full head s
 
 `scripts/guarded-paths.txt` lists the paths a PR may change only with an extra safety review. Shaun's answer of 2026-10-06 lets agents merge these PRs too, so a guarded path doesn't stop a merge: it adds `rf/safety` to the statuses merge.sh needs. The list covers:
 
-- the release tooling and every module it imports (bar `check-contrast.mjs`, below), and `RELEASES.md`, which it reads to tell this fork's theme uuids apart and which W0-3's prune will rank by
+- the release tooling and every module it imports (bar `check-contrast.mjs`, below), and `RELEASES.md`, which it reads to tell this fork's theme uuids apart, which W0-3's prune ranks by, and where the prune logs each deletion
 - `scripts/store/`, the store token loader and the catalogue apply step
 - the merge tooling and every module `merge.mjs` imports, `status.mjs`, the baseline-scope check and the list itself
 - the release calendar

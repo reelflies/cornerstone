@@ -81,6 +81,15 @@ export async function getStoreHash() {
     return client.getStoreHash({ storeUrl: normalStoreUrl });
 }
 
+// stencil-cli's theme API client and the store's API settings, for W0-3's My Themes reads and
+// prune (scripts/release-themes.mjs, the one caller that deletes). The token stays inside `api`.
+export async function stencilApi() {
+    const client = await loadStencilClient();
+    const { normalStoreUrl, accessToken } = readStencilCredentials();
+    const storeHash = await client.getStoreHash({ storeUrl: normalStoreUrl });
+    return { client, api: { accessToken, apiHost: API_HOST, storeHash } };
+}
+
 // GET calls only. Errors carry stencil-cli's message, never the request (which holds the token).
 export async function captureLive(channelId) {
     const client = await loadStencilClient();

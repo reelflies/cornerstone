@@ -1,9 +1,12 @@
 // Formats the push summary and the RELEASES.md entry for scripts/release.sh (ticket 05, step 7,
 // with ticket 15's rf_* values, new switches and Switch toggles section), and reads the entries back
-// (W0-2: step 1 compares with the channel's last release). Pure: no network, no files.
+// (W0-2: step 1 compares with the channel's last release). W0-3 adds the builds the entries record,
+// which the prune ranks, and the "My Themes" section it logs each deletion in. Pure: no network,
+// no files.
 //
 //   import { formatPushSummary, formatReleaseEntry, addReleaseEntry, releasedThemeUuids, releaseEntries, lastRelease } from './release-log.mjs';
 //   import { describeConfirmation, describePairedRelease } from './release-log.mjs'; // W0-1
+//   import { releaseBuilds, formatMyThemesRow, addMyThemesRow, myThemesRows } from './release-log.mjs'; // W0-3
 //
 // A release: { timestamp, channel, channelName, variation, theme: { uuid, name, version },
 //   previousThemeUuid, git: { sha, branch }, bundle: { file, bytes, sha256, mainJsBytes },
@@ -21,6 +24,18 @@ import { formatBytes } from './lib/format.mjs';
 import { describeLiveTheme } from './release-capture.mjs';
 import { displayValue } from './release-diff.mjs';
 
+// W0-3: every theme the release tooling deletes from My Themes (and uploads, if the upload mode is
+// ever built), one row each. The prune writes a row right after each deletion.
+export const MY_THEMES_HEADER = '| Time (UTC) | Action | Theme uuid | Name and version | Commit | Zip sha256 | Operator |';
+const MY_THEMES_SECTION = `
+## My Themes
+
+Every theme the release tooling deletes from My Themes, one row each, written by \`scripts/release.sh\`'s prune right after the deletion (W0-3, [docs/releasing.md](docs/releasing.md#pruning-my-themes)). The prune runs after each push, and on its own with \`--prune-only\`. It deletes only themes named ReelFlies that this file records as a release, active on no channel and not flagged \`is_active\` in My Themes, never the latest or previous release on 1895766 or channel 1, and always keeps the newest three. The commit and zip sha256 are the deleted build's, from its release entry. The operator is \`git config user.name\`, with "(no terminal)" when the prune ran without one, as an agent's does. Don't edit the rows by hand.
+
+${MY_THEMES_HEADER}
+|---|---|---|---|---|---|---|
+`;
+
 export const RELEASES_TEMPLATE = `# Release log
 
 Every theme push to a storefront goes through \`scripts/release.sh\` ([docs/releasing.md](docs/releasing.md)), which appends an entry under "Releases" after the push. Don't edit the entries by hand.
@@ -35,7 +50,7 @@ After a toggle, change \`config.json\` to match and commit it. Otherwise the nex
 
 | Date | Channel | Switch | From | To | Who | Reason |
 |---|---|---|---|---|---|---|
-`;
+${MY_THEMES_SECTION}`;
 
 const utc = iso => `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
 const codeList = keys => keys.map(key => `\`${key}\``).join(', ');
@@ -137,29 +152,107 @@ export function releasedThemeUuids(markdown) {
 }
 
 const ENTRY_HEADING = /^### (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) UTC · channel (\d+) \((.*)\) · (.+)$/;
+const THEME_LINE = /^- Theme: (.+) (\S+), uuid `([0-9a-f-]{36})`$/m;
 const firstMatch = (text, pattern) => (pattern.exec(text) || [])[1] || null;
+
+// The text of a "## <title>" section, from its heading to the next one, or null.
+function section(markdown, title) {
+    const text = markdown || '';
+    const start = text.indexOf(`\n## ${title}\n`);
+    if (start === -1) return null;
+    const next = text.indexOf('\n## ', start + 1);
+    return { start, end: next === -1 ? text.length : next + 1, text: text.slice(start, next === -1 ? text.length : next + 1) };
+}
+
+// Each entry block of the "## Releases" section, in file order, with its heading read.
+function entryBlocks(markdown) {
+    const releases = section(markdown, 'Releases');
+    if (!releases) return [];
+    return releases.text.split(/\n(?=### )/).slice(1).flatMap(block => {
+        const heading = ENTRY_HEADING.exec(block.split('\n', 1)[0]);
+        return heading ? [{ block, heading }] : [];
+    });
+}
 
 // The entries of the "## Releases" section, in file order: { timestamp ('YYYY-MM-DD HH:MM', UTC),
 // channel, channelName, variation, sha, themeUuid }. sha and themeUuid are null when their line is
 // missing or unreadable.
 export function releaseEntries(markdown) {
-    const text = markdown || '';
-    const start = text.indexOf('\n## Releases\n');
-    if (start === -1) return [];
-    const next = text.indexOf('\n## ', start + 1);
-    const section = text.slice(start, next === -1 ? text.length : next + 1);
-    return section.split(/\n(?=### )/).slice(1).flatMap(block => {
-        const heading = ENTRY_HEADING.exec(block.split('\n', 1)[0]);
-        if (!heading) return [];
-        return [{
+    return entryBlocks(markdown).map(({ block, heading }) => ({
+        timestamp: heading[1],
+        channel: Number(heading[2]),
+        channelName: heading[3],
+        variation: heading[4],
+        sha: firstMatch(block, /^- Commit: `([0-9a-f]{7,40})`/m),
+        themeUuid: firstMatch(block, /^- Theme: .*, uuid `([0-9a-f-]{36})`$/m),
+    }));
+}
+
+// W0-3: the build each entry records, in file order, for the prune: { timestamp, order (its place
+// among the entries), channel, sha, themeUuid, themeName, version, zipSha256, ranBefore }.
+// ranBefore is the theme the channel ran before that push when it was another one (W0-1's "New
+// uuid: yes" line), else null. A line that can't be read gives nulls, never a guess.
+export function releaseBuilds(markdown) {
+    return entryBlocks(markdown).map(({ block, heading }, order) => {
+        const theme = THEME_LINE.exec(block);
+        return {
             timestamp: heading[1],
+            order,
             channel: Number(heading[2]),
-            channelName: heading[3],
-            variation: heading[4],
             sha: firstMatch(block, /^- Commit: `([0-9a-f]{7,40})`/m),
-            themeUuid: firstMatch(block, /^- Theme: .*, uuid `([0-9a-f-]{36})`$/m),
-        }];
+            themeUuid: theme ? theme[3] : null,
+            themeName: theme ? theme[1] : null,
+            version: theme ? theme[2] : null,
+            zipSha256: firstMatch(block, /^- Bundle: `[^`]+`, .*, sha256 `([0-9a-f]+)`$/m),
+            ranBefore: firstMatch(block, /^- New uuid: yes; before the push the channel ran theme `([0-9a-f-]{36})`$/m),
+        };
     });
+}
+
+// --- W0-3: the "My Themes" section ----------------------------------------------------------
+
+const cell = text => String(text).replace(/\|/g, '\\|').replace(/\n/g, ' ');
+const codeCell = text => (text ? `\`${text}\`` : 'unknown');
+
+// One row: { timestamp (ISO), action, uuid, name, version, sha, zipSha256, operator, terminal }.
+// terminal false (stdin wasn't one, as for an agent's run) adds "(no terminal)" to the operator,
+// whose git user.name is the same for Shaun and an agent in the main clone.
+export function formatMyThemesRow({
+    timestamp, action, uuid, name, version, sha, zipSha256, operator, terminal = true,
+}) {
+    const who = terminal ? operator : `${operator} (no terminal)`;
+    return `| ${timestamp.slice(0, 10)} ${timestamp.slice(11, 16)} | ${cell(action)} | ${codeCell(uuid)} | ${cell(`${name} ${version}`)} | ${codeCell(sha)} | ${codeCell(zipSha256)} | ${cell(who)} |`;
+}
+
+// Adds a row at the end of the My Themes table, adding the section at the end of the file when a
+// RELEASES.md from before W0-3 has none.
+export function addMyThemesRow(markdown, row) {
+    const text = markdown ?? RELEASES_TEMPLATE;
+    const found = section(text, 'My Themes');
+    if (!found) return addMyThemesRow(`${text.replace(/\n*$/, '\n')}${MY_THEMES_SECTION}`, row);
+    const lines = found.text.split('\n');
+    const last = lines.reduce((index, line, i) => (line.startsWith('|') ? i : index), -1);
+    if (last === -1 || !lines.includes(MY_THEMES_HEADER)) throw new Error('RELEASES.md\'s My Themes section has no table to add a row to');
+    lines.splice(last + 1, 0, row);
+    return `${text.slice(0, found.start)}${lines.join('\n')}${text.slice(found.end)}`;
+}
+
+const unquote = text => text.replace(/^`(.*)`$/, '$1');
+
+// The rows of the My Themes table, in file order: { time, action, uuid, nameAndVersion, sha,
+// zipSha256, operator }.
+export function myThemesRows(markdown) {
+    const found = section(markdown, 'My Themes');
+    if (!found) return [];
+    return found.text.split('\n')
+        .filter(line => line.startsWith('|') && line !== MY_THEMES_HEADER && !/^\|[-|]+\|$/.test(line))
+        .map(line => {
+            const cells = line.slice(1, -1).split(/(?<!\\)\|/).map(text => text.trim().replace(/\\\|/g, '|'));
+            const [time, action, uuid, nameAndVersion, sha, zipSha256, operator] = cells;
+            return {
+                time, action, uuid: unquote(uuid), nameAndVersion, sha: unquote(sha), zipSha256: unquote(zipSha256), operator,
+            };
+        });
 }
 
 // W0-2: the channel's newest entry, or null when RELEASES.md records no release on it. Newest by
