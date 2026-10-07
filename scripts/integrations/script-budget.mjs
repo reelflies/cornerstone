@@ -190,21 +190,26 @@ export function report(result) {
     return lines;
 }
 
-async function main(argv) {
+// The command, with what it touches passed in (the tests give stand-ins). Every line it prints
+// goes through redact, with the cookie and each of its values, the STOP line included.
+// Resolves to the exit code: 0 within the budget, 1 over it, 2 stopped.
+export async function run(argv, {
+    env = process.env, fetch: fetchImpl = fetch, log = console.log, error = console.error,
+} = {}) {
     if (argv.length !== 1) {
-        console.error('usage: node scripts/integrations/script-budget.mjs <https page URL> (QA_PREVIEW_COOKIE is sent to the prelaunch host only)');
+        error('usage: node scripts/integrations/script-budget.mjs <https page URL> (QA_PREVIEW_COOKIE is sent to the prelaunch host only)');
         return 2;
     }
-    const cookie = isPrelaunchHost(argv[0]) ? process.env.QA_PREVIEW_COOKIE : undefined;
+    const cookie = isPrelaunchHost(argv[0]) ? env.QA_PREVIEW_COOKIE : undefined;
     const secrets = cookie ? [cookie, ...cookie.split(';').map(part => part.split('=').slice(1).join('=').trim())] : [];
     try {
-        const result = await measure(argv[0], { cookie });
-        report(result).forEach(line => console.log(redact(line, secrets)));
+        const result = await measure(argv[0], { fetch: fetchImpl, cookie });
+        report(result).forEach(line => log(redact(line, secrets)));
         return result.withinBudget ? 0 : 1;
-    } catch (error) {
-        console.error(redact(`STOP     ${error.message}`, secrets));
+    } catch (problem) {
+        error(redact(`STOP     ${problem.message}`, secrets));
         return 2;
     }
 }
 
-if (isMain(import.meta.url)) main(process.argv.slice(2)).then(code => { process.exitCode = code; });
+if (isMain(import.meta.url)) run(process.argv.slice(2)).then(code => { process.exitCode = code; });

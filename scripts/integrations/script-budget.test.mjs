@@ -3,14 +3,17 @@
 //
 //   node --test scripts/integrations/script-budget.test.mjs
 
+import crypto from 'crypto';
 import zlib from 'zlib';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    BUDGET_GZIP, measure, parseScripts, report, scriptOwner,
+    BUDGET_GZIP, measure, parseScripts, report, run, scriptOwner,
 } from './script-budget.mjs';
 
 const PAGE = 'https://reelflies.ca/';
+const PRELAUNCH = 'https://reelflies_ca-1895766.mybigcommerce.com/';
+const COOKIE = 'STORESUITE_CP_TOKEN=rf-secret-cp-token; SHOP_SESSION_TOKEN=rf-secret-session';
 const HTML = `<!doctype html><html><head>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-TEST12345"></script>
 <script>window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('config', 'G-TEST12345');</script>
@@ -146,5 +149,91 @@ describe('measure and report', () => {
         const gtag = result.scripts.find(script => script.src && script.src.includes('gtag'));
         assert.equal(gtag.error, 'answered 403');
         assert.match(report(result).join('\n'), /not measured: answered 403/);
+    });
+});
+
+describe('the preview cookie never goes through a redirect', () => {
+    it('is sent with redirect "manual", so a 302 stops the run after that one request instead of being followed', async () => {
+        const calls = [];
+        const redirecting = async (url, options = {}) => {
+            calls.push({ url, redirect: options.redirect, cookie: options.headers && options.headers.Cookie });
+            return { ok: false, status: 302, text: async () => '' };
+        };
+        await assert.rejects(measure(PRELAUNCH, { fetch: redirecting, cookie: COOKIE }), /answered 302/);
+        assert.deepEqual(calls, [{ url: PRELAUNCH, redirect: 'manual', cookie: COOKIE }]);
+    });
+});
+
+// The command as Shaun runs it, with stand-ins for the network, the shell and the output.
+async function command(argv, { env = {}, fetch: fetchImpl } = {}) {
+    const out = [];
+    const err = [];
+    const code = await run(argv, {
+        env, fetch: fetchImpl, log: line => out.push(line), error: line => err.push(line),
+    });
+    return {
+        code, out, err, printed: [...out, ...err].join('\n'),
+    };
+}
+
+describe('script-budget.mjs, the command', () => {
+    const answering = (pages, calls = []) => async (url, options = {}) => {
+        calls.push({ url, cookie: options.headers && options.headers.Cookie });
+        if (pages[url] !== undefined) return { ok: true, status: 200, text: async () => pages[url] };
+        return { ok: false, status: 404, text: async () => '' };
+    };
+
+    it('never prints the preview cookie, even when the page names its values in a script URL', async () => {
+        const calls = [];
+        const echoing = '<html><head><script async src="https://cdn.example.net/t.js?a=rf-secret-cp-token&b=rf-secret-session"></script></head><body></body></html>';
+        const run1 = await command([PRELAUNCH], { env: { QA_PREVIEW_COOKIE: COOKIE }, fetch: answering({ [PRELAUNCH]: echoing }, calls) });
+        assert.equal(calls[0].cookie, COOKIE, 'the cookie went to the prelaunch page');
+        assert.ok(calls.slice(1).every(call => call.cookie === undefined), 'and to nothing else');
+        assert.match(run1.printed, /cdn\.example\.net\/t\.js\?a=\[redacted\]&b=\[redacted\]/, 'the row is printed, redacted');
+        assert.doesNotMatch(run1.printed, /rf-secret/);
+    });
+
+    it('never prints it on the STOP path, when the error names the cookie', async () => {
+        const throwing = async () => {
+            throw new Error(`request failed, headers { Cookie: ${COOKIE} }`);
+        };
+        const stopped = await command([PRELAUNCH], { env: { QA_PREVIEW_COOKIE: COOKIE }, fetch: throwing });
+        assert.equal(stopped.code, 2);
+        assert.match(stopped.err.join('\n'), /^STOP {5}request failed/);
+        assert.doesNotMatch(stopped.printed, /rf-secret/);
+    });
+
+    it('stops with "answered 302" when the prelaunch page redirects, without following it or printing the cookie', async () => {
+        const calls = [];
+        const redirecting = async (url, options = {}) => {
+            calls.push({ url, redirect: options.redirect });
+            return { ok: false, status: 302, text: async () => '' };
+        };
+        const stopped = await command([PRELAUNCH], { env: { QA_PREVIEW_COOKIE: COOKIE }, fetch: redirecting });
+        assert.equal(stopped.code, 2);
+        assert.match(stopped.err.join('\n'), /^STOP {5}https:\/\/reelflies_ca-1895766\.mybigcommerce\.com\/ answered 302$/);
+        assert.deepEqual(calls, [{ url: PRELAUNCH, redirect: 'manual' }]);
+        assert.doesNotMatch(stopped.printed, /rf-secret/);
+    });
+
+    it('sends the cookie for the prelaunch host only, never for another page, even when QA_PREVIEW_COOKIE is set', async () => {
+        const calls = [];
+        const done = await command([PAGE], { env: { QA_PREVIEW_COOKIE: COOKIE }, fetch: answering({ [PAGE]: '<html><head></head><body></body></html>' }, calls) });
+        assert.equal(done.code, 0);
+        assert.deepEqual(calls, [{ url: PAGE, cookie: undefined }]);
+    });
+
+    it('exits 0 within the budget, 1 over it, and 2 on a usage error', async () => {
+        const page = src => `<html><head><script async src="${src}"></script></head><body></body></html>`;
+        const small = await command([PAGE], { fetch: answering({ [PAGE]: page('https://cdn.example.net/small.js'), 'https://cdn.example.net/small.js': 'var a = 1;' }) });
+        assert.equal(small.code, 0);
+        assert.match(small.out.join('\n'), /: within\./);
+        const heavy = crypto.randomBytes(BUDGET_GZIP).toString('base64');
+        const over = await command([PAGE], { fetch: answering({ [PAGE]: page('https://cdn.example.net/heavy.js'), 'https://cdn.example.net/heavy.js': heavy }) });
+        assert.equal(over.code, 1);
+        assert.match(over.out.join('\n'), /: over\./);
+        const usage = await command([]);
+        assert.equal(usage.code, 2);
+        assert.match(usage.err.join('\n'), /^usage: node scripts\/integrations\/script-budget\.mjs/);
     });
 });
