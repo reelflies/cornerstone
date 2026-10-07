@@ -111,6 +111,25 @@ test('the command\'s own client is read-only: it refuses a PUT, a POST or a DELE
     assert.deepEqual(calls.map(call => call.method), ['GET']);
 });
 
+test('the command\'s own client never follows a redirect, which would carry X-Auth-Token to another origin', async () => {
+    // fetch drops standard credential headers on a cross-origin redirect, but not a custom one, so
+    // the client refuses every redirect, as scripts/probes/run.mjs does.
+    const inits = [];
+    const fetch = fixtureFetch({ 'GET /v3/settings/inventory': { body: { data: {}, meta: {} } } });
+    const own = readOnlyClient({
+        storeHash: STORE_HASH,
+        token: FAKE_TOKEN,
+        fetch: (url, init) => {
+            inits.push(init);
+            return fetch(url, init);
+        },
+    });
+    await own.get('/v3/settings/inventory');
+    assert.equal(inits.length, 1);
+    assert.equal(inits[0].redirect, 'error');
+    assert.equal(inits[0].method, 'GET');
+});
+
 test('a key that 1895766 shows as null or overridden passes parts 1 and 2: a lifted write once part 3 holds', async () => {
     const { reads } = await takeReads(client(allRoutes()), readList());
     const rows = settingsRows(reads, 'inventory');
@@ -220,7 +239,7 @@ test('a run where every read fails stops non-zero, naming the first failure, and
     assert.ok(!fs.existsSync(path.join(root, 'store-wide')));
 });
 
-test('outside node --test the fixture routes and a moved store root are refused', () => {
+test('outside node --test a moved store root is refused', () => {
     const run = spawnSync(process.execPath, [READ], {
         encoding: 'utf8',
         env: {

@@ -53,17 +53,20 @@ const CHANNELS = SCOPES.filter(item => item.channel);
 const TARGET = '1895766';
 
 // The channel-scoped settings the checklist depends on: inventory (label_option), search
-// (semantic search, Product Filtering's switch), product and category display (recorded; the
-// category settings are refactor 07's), and the security headers.
+// (Product Filtering's switch, the sort and suggestions; semantic search isn't in the API),
+// product and category display (recorded; the category settings are refactor 07's), and the
+// security headers.
 export const SCOPED_SETTINGS = ['inventory', 'storefront/search', 'storefront/product', 'storefront/category', 'storefront/security'];
 
 const PAGE_LIMIT = 50;
 const MAX_PAGES = 20;
 
-// The only client the command reads with: GETs only, refused before sending anything else.
-export function readOnlyClient({ storeHash, token, fetch }) {
+// The only client the command reads with: GETs only, refused before sending anything else. It
+// never follows a redirect: fetch would carry the custom X-Auth-Token header to another origin
+// (scripts/probes/run.mjs does the same).
+export function readOnlyClient({ storeHash, token, fetch: fetchImpl = fetch }) {
     return createClient({
-        storeHash, token, fetch, readOnly: true,
+        storeHash, token, fetch: (url, init) => fetchImpl(url, { ...init, redirect: 'error' }), readOnly: true,
     });
 }
 
