@@ -123,15 +123,31 @@ test('the calendar: the 1895766 settings writes are allowed through the content 
     }
 });
 
+// Ticket 21 sets label_option on 1895766 itself, and decision 1's do_nothing with it: both are
+// the global values today, which 1895766 only inherits, so a later store-wide change would reach
+// the size pills (37) and quick add's sold-out rows (43). Writing them on 1895766 pins them there.
+const INVENTORY = {
+    product_out_of_stock_behavior: 'do_nothing',
+    option_out_of_stock_behavior: 'label_option',
+    stock_level_display: 'show_when_low',
+};
+
+test('inventory pins sold-out products listed and sold-out sizes labelled on 1895766, and shows stock only when low', () => {
+    const [request] = requestsOf('1895766', 'inventory.json');
+    assert.deepEqual(request.body, INVENTORY);
+});
+
 test('inventory plans with parts 1 and 2 proved on the store\'s own reads, at all four scopes', async () => {
     const { plan: made } = await plan(requestsOf('1895766', 'inventory.json'), settingsRoutes('inventory'));
     assert.equal(made.channel, 1895766);
     assert.deepEqual(made.snapshot.reads.map(read => read.scope), ['1895766', 'global', '1', '1855224']);
     assert.equal(made.proofs.length, 1);
     assert.equal(made.proofs[0].proved, true);
-    assert.deepEqual(made.proofs[0].part2.map(item => item.key), ['stock_level_display']);
+    assert.deepEqual(made.proofs[0].part2.map(item => item.key), Object.keys(INVENTORY));
     assert.deepEqual(made.diff, [
         '1. PUT /v3/settings/inventory?channel_id=1895766 (settings/inventory settings)',
+        '     product_out_of_stock_behavior: 1895766 null (inherits the global "do_nothing") -> "do_nothing"',
+        '     option_out_of_stock_behavior: 1895766 null (inherits the global "label_option") -> "label_option"',
         '     stock_level_display: 1895766 null (inherits the global "dont_show") -> "show_when_low"',
     ]);
 });
@@ -140,12 +156,12 @@ test('inventory applies on 1895766 alone: part 3 reads the global value and both
     const { text } = await plan(requestsOf('1895766', 'inventory.json'), settingsRoutes('inventory'));
     const before = recorded.inventory['1895766'];
     const { result, calls, root } = await apply(text, {
-        ...settingsRoutes('inventory', { 1895766: [{ body: before }, { body: withData(before, { stock_level_display: 'show_when_low' }) }] }),
-        'PUT /v3/settings/inventory?channel_id=1895766': { body: { data: { stock_level_display: 'show_when_low' }, meta: {} } },
+        ...settingsRoutes('inventory', { 1895766: [{ body: before }, { body: withData(before, INVENTORY) }] }),
+        'PUT /v3/settings/inventory?channel_id=1895766': { body: { data: INVENTORY, meta: {} } },
     });
     assert.equal(result.outcome, 'applied');
     const puts = calls.filter(call => call.method === 'PUT');
-    assert.deepEqual(puts.map(call => [call.path, call.body]), [['/v3/settings/inventory?channel_id=1895766', { stock_level_display: 'show_when_low' }]]);
+    assert.deepEqual(puts.map(call => [call.path, call.body]), [['/v3/settings/inventory?channel_id=1895766', INVENTORY]]);
     const rows = readLogRows(root);
     assert.deepEqual(rows.map(row => [row.row, row.ticket, row.channel, row.outcome]), [['intent', '21', 1895766, undefined], ['result', '21', 1895766, 'ok']]);
     assert.equal(lockedProblem(root), null);
@@ -157,16 +173,16 @@ test('inventory that leaks to the global value is put back at once, and the help
     const global = recorded.inventory.global;
     const { result, calls, root } = await apply(text, {
         ...settingsRoutes('inventory', {
-            1895766: [{ body: before }, { body: withData(before, { stock_level_display: 'show_when_low' }) }, { body: before }],
+            1895766: [{ body: before }, { body: withData(before, INVENTORY) }, { body: before }],
             global: [{ body: global }, { body: withData(global, { stock_level_display: 'show_when_low' }) }, { body: global }],
         }),
-        'PUT /v3/settings/inventory?channel_id=1895766': { body: { data: { stock_level_display: 'show_when_low' }, meta: {} } },
+        'PUT /v3/settings/inventory?channel_id=1895766': { body: { data: INVENTORY, meta: {} } },
         'PUT /v3/settings/inventory': { body: global },
     });
     assert.equal(result.outcome, 'locked');
     const puts = calls.filter(call => call.method === 'PUT').map(call => [call.path, call.body]);
     assert.deepEqual(puts, [
-        ['/v3/settings/inventory?channel_id=1895766', { stock_level_display: 'show_when_low' }],
+        ['/v3/settings/inventory?channel_id=1895766', INVENTORY],
         ['/v3/settings/inventory?channel_id=1895766', before.data],
         ['/v3/settings/inventory', { stock_level_display: 'dont_show' }],
     ]);
