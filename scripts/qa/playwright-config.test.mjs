@@ -75,6 +75,13 @@ it('never writes a missing baseline on a plain run', () => {
     assert.equal(setting({}, 'config.updateSnapshots'), 'none');
 });
 
+it('adds a JSON report only where RF_QA_JSON_REPORT names, for the switch matrix, and keeps its own reporters', () => {
+    assert.deepEqual(setting({}, 'config.reporter.map(([name]) => name)'), ['list', 'html', './review/manifest-reporter.mjs']);
+    const file = path.join(os.tmpdir(), 'rf-matrix-plain.json');
+    assert.deepEqual(setting({ RF_QA_JSON_REPORT: file }, 'config.reporter.slice(3)'), [['json', { outputFile: file }]]);
+    assert.deepEqual(setting({ RF_QA_JSON_REPORT: file }, 'config.reporter.slice(0, 3).map(([name]) => name)'), ['list', 'html', './review/manifest-reporter.mjs']);
+});
+
 it('reuses a running stencil start by default', () => {
     assert.equal(setting({}, 'config.webServer.reuseExistingServer'), true);
 });
