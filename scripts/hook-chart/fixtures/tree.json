@@ -1,0 +1,18 @@
+{
+    "data": [
+        { "category_id": 101, "parent_id": 0, "tree_id": 4, "name": "Dry Flies", "url": { "path": "/dry-flies/", "is_customized": false }, "is_visible": true },
+        { "category_id": 111, "parent_id": 101, "tree_id": 4, "name": "Parachute Dry Flies", "url": { "path": "/dry-flies/parachute-dry-flies/", "is_customized": false }, "is_visible": true },
+        { "category_id": 112, "parent_id": 101, "tree_id": 4, "name": "Caddis Dry Flies", "url": { "path": "/dry-flies/caddis-dry-flies/", "is_customized": false }, "is_visible": true },
+        { "category_id": 113, "parent_id": 112, "tree_id": 4, "name": "Elk Hair Caddis", "url": { "path": "/dry-flies/caddis-dry-flies/elk-hair-caddis/", "is_customized": false }, "is_visible": true },
+        { "category_id": 102, "parent_id": 0, "tree_id": 4, "name": "Nymphs", "url": { "path": "/nymphs/", "is_customized": false }, "is_visible": true },
+        { "category_id": 121, "parent_id": 102, "tree_id": 4, "name": "Bead Head Nymphs", "url": { "path": "/nymphs/bead-head-nymphs/", "is_customized": false }, "is_visible": true },
+        { "category_id": 122, "parent_id": 102, "tree_id": 4, "name": "Euro Nymphs", "url": { "path": "/nymphs/euro-nymphs/", "is_customized": false }, "is_visible": false },
+        { "category_id": 103, "parent_id": 0, "tree_id": 4, "name": "Streamers", "url": { "path": "/streamers/", "is_customized": false }, "is_visible": true },
+        { "category_id": 104, "parent_id": 0, "tree_id": 4, "name": "Eggs & Worms", "url": { "path": "/eggs-worms/", "is_customized": false }, "is_visible": true },
+        { "category_id": 105, "parent_id": 0, "tree_id": 4, "name": "Warmwater Flies", "url": { "path": "/warmwater-flies/", "is_customized": false }, "is_visible": true },
+        { "category_id": 106, "parent_id": 0, "tree_id": 4, "name": "Saltwater Flies", "url": { "path": "/saltwater-flies/", "is_customized": false }, "is_visible": true },
+        { "category_id": 200, "parent_id": 0, "tree_id": 4, "name": "Flies by Species", "url": { "path": "/flies-by-species/", "is_customized": false }, "is_visible": true },
+        { "category_id": 201, "parent_id": 200, "tree_id": 4, "name": "Trout Flies", "url": { "path": "/flies-by-species/trout-flies/", "is_customized": false }, "is_visible": true }
+    ],
+    "meta": { "pagination": { "total": 13, "count": 13, "per_page": 250, "current_page": 1, "total_pages": 1 } }
+}
