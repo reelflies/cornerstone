@@ -38,6 +38,7 @@ import fs from 'fs';
 import path from 'path';
 import { isMain } from '../lib/is-main.mjs';
 import { captureLive } from '../release-capture.mjs';
+import { LIGHTHOUSE_PENDING_LINE } from '../release-lighthouse.mjs';
 import { RELEASES_TEMPLATE } from '../release-log.mjs';
 import { PRELAUNCH_URL, analyticsRecord, isPrelaunchHost } from './analytics-hosts.mjs';
 import { lighthouseReleaseLines } from './lighthouse-rules.mjs';
@@ -45,9 +46,10 @@ import { GATES } from './prepush.mjs';
 import { ROOT, slug } from './storefront.mjs';
 
 export const HOST_CHANNEL = '1895766';
-// The line ticket 17's release.sh hook writes in a release entry when it pushed without the
-// cookie, so its Lighthouse runs wait for the next host batch of that uuid.
-export const LIGHTHOUSE_PENDING_LINE = '- Lighthouse: pending host batch';
+// The line ticket 17's release.sh hook (step 6b) writes in a release entry when it pushed without
+// the cookie, so its Lighthouse runs wait for the next host batch of that uuid. It is the release
+// tooling's own (release-lighthouse.mjs), so the line the batch fills in is exactly the one written.
+export { LIGHTHOUSE_PENDING_LINE };
 // The date ticket 08 records Shaun's GA4 hostname filter (its point b). Set it then: each host
 // batch adds one Lighthouse run with the tags loaded, which the filter keeps out of the reports.
 export const GA4_HOSTNAME_FILTER_SINCE = null;

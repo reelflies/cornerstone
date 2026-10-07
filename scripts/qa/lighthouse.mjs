@@ -20,7 +20,10 @@
 //   host. Another host needs QA_CHANNEL to say which channel it serves.
 // - Results: on a host, filed by the theme uuid it reads from the store before and after the runs
 //   (results/host/<uuid>/lighthouse/, or the host batch's QA_RESULTS_DIR); locally, by commit
-//   (results/local/<sha>/lighthouse/). Each run's JSON and HTML report, and summary.json.
+//   (results/local/<sha>/lighthouse/). Each run's JSON and HTML report, and summary.json, which
+//   carries the lines a RELEASES.md entry records (releaseLines, for release.sh's step 6b).
+// - The build's commit: the theme uuid's newest entry in RELEASES.md, or QA_RELEASE_COMMIT, which
+//   release.sh's step 6b sets because it runs before step 7 writes the push's entry.
 // - History: a run on a host with the tags blocked is compared with each URL's last accepted run
 //   in scripts/qa/lighthouse-history.json, and when it passes it is accepted: its medians become
 //   the new comparison points. --baseline <source> records them whatever the budgets say.
@@ -40,7 +43,7 @@ import {
     PRELAUNCH_URL, analyticsMode, analyticsRecord, isPrelaunchHost, lighthouseBlockedUrlPatterns,
 } from './analytics-hosts.mjs';
 import {
-    RUNS_PER_URL, addToHistory, analyticsRequests, channelUrls, comparisonPoint, formatMetrics, historyProblems, judgeUrl, medianMetrics,
+    RUNS_PER_URL, addToHistory, analyticsRequests, channelUrls, comparisonPoint, formatMetrics, historyProblems, judgeUrl, lighthouseReleaseLines, medianMetrics,
     metricsOf, urlListProblems,
 } from './lighthouse-rules.mjs';
 import {
@@ -138,8 +141,10 @@ export async function runLighthouseGate({
     if (target === 'host') {
         try {
             const { capture: active } = await capture(channel);
+            // release.sh's step 6b runs before step 7 writes the push's entry, so it names the commit.
+            const pushed = /^[0-9a-f]{40}$/.test(env.QA_RELEASE_COMMIT || '') ? env.QA_RELEASE_COMMIT : null;
             theme = {
-                uuid: active.themeUuid, name: active.themeName, variation: active.variationName, commit: releaseCommitFor(readReleases(), active.themeUuid),
+                uuid: active.themeUuid, name: active.themeName, variation: active.variationName, commit: pushed || releaseCommitFor(readReleases(), active.themeUuid),
             };
         } catch (problem) {
             return stop(`couldn't read the theme active on ${channel} (${problem.message}), so the results couldn't be filed under its uuid: nothing ran`);
@@ -276,6 +281,9 @@ export async function runLighthouseGate({
         waiting: listed.waiting,
         problems,
     };
+    // The lines a RELEASES.md entry records under its Lighthouse line: the host batch's, and
+    // release.sh's step 6b, which reads them here rather than import this QA code.
+    summary.releaseLines = lighthouseReleaseLines(summary);
     writeJson(path.join(out, 'summary.json'), summary);
 
     log('');
