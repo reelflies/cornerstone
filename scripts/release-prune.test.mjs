@@ -210,13 +210,51 @@ test('W0-3b: every other rule still keeps a "ReelFlies (n)" build: recorded by u
     assert.deepEqual(deleted(plan), [uuid(1), uuid(2), uuid(5), uuid(6)], 'only builds no rule keeps, "ReelFlies" and "ReelFlies (n)" alike, oldest first');
 });
 
+// The repo's first two RELEASES.md entries, verbatim: 58abad50 pushed as "ReelFlies" on 2026-10-06,
+// then 174ad580, which the store named "ReelFlies (1)", on 2026-10-07 (the first agent push). They
+// are frozen here, not read from RELEASES.md, because the next 1895766 entry changes the rollback.
+const FIRST_AGENT_PUSH_ENTRIES = [
+    [
+        '### 2026-10-06 14:30 UTC · channel 1895766 (ReelFlies_CA) · ReelFlies CA',
+        '',
+        '- Theme: ReelFlies 6.22.0, uuid `58abad50-a3c0-013f-e2b6-2ec98cc9ce73`',
+        '- Commit: `5d0d0cb8ca42405d8555de6a84f20843060d7cde` on `master`',
+        '- Bundle: `reelflies-ca-6.22.0-5d0d0cb.zip`, 10,940,174 B, sha256 `367071ace794697e59a36129ba4f958a2d27daf85aa9bf73411d42c6cfc763dc`',
+        '- main.js: 245,069 B',
+        '- Step 1: first release, replacing Cavio · variation "Natural" (theme 25121d00-dd0c-013d-4919-76cf528056e2)',
+        '- rf_* values pushed: none',
+        '- New switches: none',
+        '- Verify: the live saved settings match config.json',
+        '- Operator: Shaun Bathgate',
+        '',
+    ].join('\n'),
+    [
+        '### 2026-10-07 03:07 UTC · channel 1895766 (ReelFlies_CA) · ReelFlies CA',
+        '',
+        '- Theme: ReelFlies 6.22.0, uuid `174ad580-a42a-013f-3c01-06627e5707c7`',
+        '- New uuid: yes; before the push the channel ran theme `58abad50-a3c0-013f-e2b6-2ec98cc9ce73`',
+        '- Commit: `a30586f5913f2ae391729c9fe0c05885e8712326` on `master`',
+        '- Bundle: `reelflies-ca-6.22.0-a30586f.zip`, 10,938,401 B, sha256 `5ae0f7917aa83549954f5f1c9a58bfe548820e9c6a4df4dd0bac77757c6ed1f2`',
+        '- main.js: 245,069 B',
+        '- Step 1: no differences from the live saved settings',
+        '- Changed in repo: none since `5d0d0cb`, the channel\'s last release',
+        '- rf_* values pushed: none',
+        '- New switches: none',
+        '- Verify: 1 problem(s): the live theme is "ReelFlies (1)", not "ReelFlies"',
+        '- Operator: Shaun Bathgate',
+        '- Confirmation: non-interactive (agent), `--confirm-nonprod 1895766`',
+        '',
+    ].join('\n'),
+];
+
 test('W0-3b: the store as the first agent push left it: "ReelFlies" and "ReelFlies (1)" are both ReelFlies builds, and both stay', () => {
-    // The repo's own RELEASES.md: 58abad50 pushed as "ReelFlies" on 2026-10-06, then 174ad580, which
-    // the store named "ReelFlies (1)", on 2026-10-07; 1895766 runs 174ad580.
+    // The fixture is still the repo's own record: RELEASES.md only gains entries, so both stay in it.
     const repo = fs.readFileSync(new URL('../RELEASES.md', import.meta.url), 'utf8');
+    for (const text of FIRST_AGENT_PUSH_ENTRIES) assert.ok(repo.includes(text), `RELEASES.md no longer holds, verbatim:\n${text}`);
     const first = '58abad50-a3c0-013f-e2b6-2ec98cc9ce73';
     const second = '174ad580-a42a-013f-3c01-06627e5707c7';
-    const plan = planPrune({ themes: [...OTHERS, theme(first), theme(second, 'ReelFlies (1)')], activeByChannel: active(second), markdown: repo });
+    // 1895766 runs 174ad580.
+    const plan = planPrune({ themes: [...OTHERS, theme(first), theme(second, 'ReelFlies (1)')], activeByChannel: active(second), markdown: log(...FIRST_AGENT_PUSH_ENTRIES) });
     assert.deepEqual(plan.builds.map(build => [build.uuid, build.name, build.action]), [[second, 'ReelFlies (1)', 'keep'], [first, 'ReelFlies', 'keep']]);
     assert.match(plan.builds[1].reasons.join('; '), /the theme channel 1895766 ran before its latest release \(the rollback\)/);
     assert.deepEqual(deleted(plan), []);
