@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 // Applies an approved catalogue plan (ticket 18), or restores what one changed. Catalogue writes
 // reach every channel (reelflies.ca, reelflies.com and ReelFlies_CA), so they are Shaun's alone
-// (HANDOFF, "Rules for every session"; build pipeline decision 11): this runs only at his
-// terminal, with a token he pastes at a hidden prompt, and only after he types the start of the
-// plan's sha256. An agent's shell isn't a terminal, so no agent can run it.
+// (HANDOFF, "Rules for every session"; build pipeline decision 11): this runs only at a terminal,
+// with a token pasted at a hidden prompt, and only after the start of the plan's sha256 is typed.
+// The terminal check is a tripwire, not the limit: a pseudo-terminal can answer both prompts.
+// What keeps agents from writing the catalogue is that no token they can reach has Products:
+// modify (decision 11: neither Keychain account carries it). Shaun makes one for a run and
+// revokes it when the run ends (docs/catalogue-jobs.md).
 //
 //   node scripts/catalogue/apply.mjs <plan file>                      Shaun: the plan's writes
 //   node scripts/catalogue/apply.mjs <plan file> --product <id>       Shaun: one product's writes only (the restore trial)
@@ -11,28 +14,32 @@
 //   node scripts/catalogue/apply.mjs --check <plan file> [--product <id>]    anyone: GETs only, with the read-only token
 //
 // Plans are made by the dry run (dry-run.mjs --api) in ~/reelflies/catalog/plans/, and only
-// there. In order, a write:
+// there. In order, a write (prepareWrite for steps 1 to 4, then runWrites):
 //
-// 1. refuses without a terminal, and while ~/reelflies/store-snapshots/LOCKED exists
+// 1. refuses without a terminal, and while ~/reelflies/store-snapshots/LOCKED exists. Prints the
+//    release calendar, with a warning from T-14 (the jobs were meant to run before the freeze)
 // 2. reads the plan and checks its digest and every request (apply-rules.mjs: four PUTs, each
-//    with its own fields; no creates, no deletes), and writes the exact requests to a file
+//    with its own fields; no creates, no deletes), and writes the exact requests to a file. A
+//    restore reads only a before-snapshot whose sha256 log.jsonl ties to that apply's writes
 // 3. refuses unless this checkout's store and catalogue tooling are origin/master's
 //    (apply-tooling.mjs), and unless the plan was made for this store
 // 4. asks for the token at a hidden prompt (used for this run, never stored), and takes the
 //    store-write lock (one store or catalogue write at a time on this Mac)
 // 5. reads every object the plan writes, fresh, and refuses the whole plan if any of them changed
-//    since the dry run. A request the store already reads as planned (an earlier, interrupted run
-//    of the same plan) is skipped
+//    since the dry run, or if the plan is planned on another job's plan that isn't applied yet.
+//    A request the store already reads as planned (an earlier, interrupted run of the same plan)
+//    is skipped
 // 6. prints the diff it derived from that read (never the plan's own copy), and asks Shaun to
-//    type the first 8 characters of the plan's sha256
+//    type the first 8 characters of the plan's sha256 (confirmSourceSha)
 // 7. writes the before-snapshot (~/reelflies/catalog/snapshots/), then sends the requests in
 //    batches of 50: an intent row in ~/reelflies/store-snapshots/log.jsonl before each, then a
 //    re-read of the batch and a result row for each. Nothing more is sent after an answer that
 //    isn't a success; a request that doesn't read back as planned stops the run after its batch
 // 8. writes the after-snapshot, and prints the restore command and the same-day smoke tests.
 //
-// A restore runs the same steps, from a before-snapshot: each object goes back to what that
-// snapshot read, unless someone changed it again since the apply (it is then listed, not sent).
+// A restore runs the same steps, from a before-snapshot: each object the apply sent goes back to
+// what that snapshot read. If someone changed any of them again since, the whole restore is
+// refused and nothing is sent; the other products are then restored one at a time with --product.
 
 import fs from 'fs';
 import os from 'os';
@@ -40,17 +47,20 @@ import path from 'path';
 import { setTimeout as pause } from 'timers/promises';
 import { isMain } from '../lib/is-main.mjs';
 import { acquireLock } from '../lib/lock.mjs';
+import { describePhase, phaseOn, readCalendar } from '../lib/release-calendar.mjs';
 import { readStoreToken } from '../lib/store-token.mjs';
 import { redact } from '../release-redact.mjs';
 import { askApprovedToken, askAtTerminal, lockedProblem } from '../store/apply.mjs';
 import { createClient, describeFailure, queryString } from '../store/client.mjs';
-import { appendLogRow, logRow, unfinishedWarnings } from '../store/log.mjs';
+import {
+    appendLogRow, logRow, readLogRows, unfinishedWarnings,
+} from '../store/log.mjs';
 import { commandFetch, commandStoreHash, operatorName } from '../store/plan.mjs';
 import {
     canonicalJson, sha256, storeRoot, timeStamp,
 } from '../store/snapshot.mjs';
 import {
-    Refused, SNAPSHOT_FORMAT, TICKET, checkRequests, diffLine, judge, readBackProblem, readPlan, readsFor, restoreRequests,
+    Refused, SNAPSHOT_FORMAT, TICKET, checkRequests, classify, diffLine, judge, readBackProblem, readPlan, readsFor, restoreRequests,
 } from './apply-rules.mjs';
 import { catalogueToolingProblem } from './apply-tooling.mjs';
 
@@ -63,10 +73,10 @@ export const SMOKE_TESTS = [
     '  - reelflies.com (1855224): a product page this run changed renders its sizes (and its thumbnail and brand where they changed), and adds to the cart',
     '  - reelflies.ca (channel 1): the same product page, and a Fly Type listing with the product on it',
     '  - ReelFlies_CA (1895766): the same, through the preview cookie',
-    'Record each result, dated, in ticket 18 (research/18-catalogue-jobs/). Then an agent confirms every request reads back as planned:',
+    'Record each result, dated, in a ticket 18 comment, beside Shaun\'s approval of the plan. Then an agent confirms every request reads back as planned:',
 ];
 
-const NO_TERMINAL = 'catalogue writes run only at Shaun\'s terminal: they ask him to paste a token at a hidden prompt and to type the start of the plan\'s sha256, which no agent can answer (as with release.sh). Agents use --check, which sends GETs only';
+const NO_TERMINAL = 'catalogue writes run only at Shaun\'s terminal: they ask him to paste a token at a hidden prompt and to type the start of the plan\'s sha256 (as with release.sh). Agents use --check, which sends GETs only';
 const USAGE = `Usage:
   node scripts/catalogue/apply.mjs <plan file> [--product <id>]
   node scripts/catalogue/apply.mjs --restore <snapshot file> [--product <id>]
@@ -192,13 +202,17 @@ export async function runWrites({
     const action = mode === 'restore' ? 'restore' : 'update';
     const store = await readStore(client, tap, items, { wait });
     const judged = judge(items, store);
+    const reasons = list => [...list.slice(0, SHOWN).map(item => `  ${item.reason}`), ...(list.length > SHOWN ? [`  … and ${list.length - SHOWN} more`] : [])];
     const stale = judged.filter(item => item.status === 'stale');
     if (stale.length) {
-        const shown = stale.slice(0, SHOWN).map(item => `  ${item.reason}`);
-        if (stale.length > SHOWN) shown.push(`  … and ${stale.length - SHOWN} more`);
         throw new Refused([mode === 'restore'
-            ? `${stale.length} of ${items.length} objects no longer read as the apply left them: someone changed them since. Restore the rest with --product, or check these by hand:`
-            : `${stale.length} of ${items.length} objects changed since the dry run, so the plan is stale and nothing was written. Run the dry run again, and approve its new diff:`, ...shown].join('\n'));
+            ? `${stale.length} of ${items.length} objects no longer read as the apply left them: someone changed them since, so the whole restore is refused and nothing was sent. Restore the other products one at a time with --product, and check these by hand:`
+            : `${stale.length} of ${items.length} objects changed since the dry run, so the plan is stale and nothing was written. Run the dry run again, and approve its new diff:`, ...reasons(stale)].join('\n'));
+    }
+    const waiting = judged.filter(item => item.status === 'waiting');
+    if (waiting.length) {
+        const jobs = [...new Set(waiting.map(item => item.request.prior.job))].join(' and ');
+        throw new Refused([`${waiting.length} of ${items.length} requests are planned on the ${jobs} plan's result, which isn't applied yet, so nothing was written. Apply that plan first; this one stays valid as approved:`, ...reasons(waiting)].join('\n'));
     }
     const pending = judged.filter(item => item.status === 'pending');
     const done = judged.length - pending.length;
@@ -299,9 +313,21 @@ export async function runWrites({
     };
 }
 
-// The requests a run sends, from a plan or a before-snapshot. Returns { items, job, sourceSha, storeHash }.
+// The writes log.jsonl holds for a before-snapshot: "METHOD path" of each ticket-18 intent row
+// whose snapshot_sha256 is the snapshot's.
+function loggedWrites(logRoot, snapshotSha) {
+    const rows = readLogRows(logRoot).filter(row => row.row === 'intent' && row.ticket === TICKET && row.action === 'update' && row.snapshot_sha256 === snapshotSha);
+    return new Set(rows.map(row => `${row.method} ${row.path}`));
+}
+
+const writeKey = request => `${request?.method} ${request?.path}`;
+
+// The requests a run sends, from a plan or a before-snapshot. Returns { items, job, sourceSha,
+// storeHash }. A restore is tied to a real apply: the snapshot's sha256 must be the one log.jsonl
+// recorded for that apply's writes, it must hold every write logged under it, and only what was
+// sent is put back.
 export function loadSource({
-    mode, file, product, root,
+    mode, file, product, root, logRoot,
 }) {
     if (mode === 'restore') {
         const real = fileInside(file, path.join(root, 'snapshots'), 'a snapshot');
@@ -313,13 +339,24 @@ export function loadSource({
             throw new Refused('this file isn\'t a catalogue snapshot: it isn\'t JSON');
         }
         if (snapshot?.format !== SNAPSHOT_FORMAT || !Array.isArray(snapshot.items) || snapshot.mode !== 'apply') throw new Refused(`this file isn't a catalogue before-snapshot of an apply (format ${SNAPSHOT_FORMAT})`);
-        const { requests, skipped } = restoreRequests(snapshot, { productId: product });
+        const sourceSha = sha256(textContent);
+        const sent = loggedWrites(logRoot, sourceSha);
+        if (!sent.size) throw new Refused(`log.jsonl has no ticket ${TICKET} write from this snapshot (sha256 ${sourceSha.slice(0, 8)}…): a restore puts back only what an apply wrote, and an apply logs each write before it sends it`);
+        const held = new Set(snapshot.items.map(entry => writeKey(entry.request)));
+        const missing = [...sent].filter(key => !held.has(key));
+        if (missing.length) throw new Refused(`log.jsonl names a write this snapshot doesn't hold (${missing.join(', ')}), so it isn't the snapshot that apply wrote`);
+        const restored = restoreRequests({ ...snapshot, items: snapshot.items.filter(entry => sent.has(writeKey(entry.request))) }, { productId: product });
+        const neverSent = snapshot.items.filter(entry => !sent.has(writeKey(entry.request))).map(entry => classify(entry.request))
+            .filter(what => product === null || what.productId === product)
+            .map(what => `${what.key}: the apply never sent it (no intent row in log.jsonl), so there is nothing to put back`);
+        const { requests } = restored;
+        const skipped = [...restored.skipped, ...neverSent];
         if (!requests.length) {
             const why = product ? ` for product ${product}` : '';
             throw new Refused(`nothing to restore${skipped.length ? `: ${skipped.join('; ')}` : why}`);
         }
         return {
-            items: checkRequests(requests, { mode: 'restore' }), job: `restore-${snapshot.job}`, sourceSha: sha256(textContent), file: real, skipped, storeHash: null,
+            items: checkRequests(requests, { mode: 'restore' }), job: `restore-${snapshot.job}`, sourceSha, file: real, skipped, storeHash: null,
         };
     }
     const real = fileInside(file, path.join(root, 'plans'), 'a plan');
@@ -332,18 +369,19 @@ export function loadSource({
     };
 }
 
-// --check: GETs only, with the read-only token. Exits 1 if any request is stale.
+// --check: GETs only, with the read-only token. Exits 1 if any request is stale. A request that
+// waits for the plan it is planned on isn't stale: that plan applies first, and this one as it is.
 async function check({
     file, product, root, say, secrets,
 }) {
     const source = loadSource({
         mode: 'apply', file, product, root,
     });
+    const storeHash = await commandStoreHash();
+    if (source.storeHash && source.storeHash !== storeHash) throw new Refused(`the plan was made for store ${source.storeHash}, and this is ${storeHash}`);
     const { token, source: from } = readStoreToken('read');
     secrets.push(token);
     say(`Reading with ${from} (GET only)…`);
-    const storeHash = await commandStoreHash();
-    if (source.storeHash && source.storeHash !== storeHash) throw new Refused(`the plan was made for store ${source.storeHash}, and this is ${storeHash}`);
     const { fetch, tap } = tapped(await commandFetch(storeRoot()));
     const client = createClient({
         storeHash, token, fetch, readOnly: true,
@@ -351,9 +389,63 @@ async function check({
     const store = await readStore(client, tap, source.items);
     const judged = judge(source.items, store);
     const count = status => judged.filter(item => item.status === status).length;
-    say(`${source.job}: ${judged.length} requests: ${count('done')} read as planned, ${count('pending')} not written yet, ${count('stale')} changed since the plan`);
+    const waitingFor = [...new Set(judged.filter(item => item.status === 'waiting').map(item => item.request.prior.job))].join(' and ');
+    const waiting = count('waiting') ? `${count('waiting')} waiting for the ${waitingFor} plan to be applied, ` : '';
+    say(`${source.job}: ${judged.length} requests: ${count('done')} read as planned, ${count('pending')} not written yet, ${waiting}${count('stale')} changed since the plan`);
     judged.filter(item => item.status === 'stale').slice(0, SHOWN).forEach(item => say(`  stale: ${item.reason}`));
     return count('stale') ? 1 : 0;
+}
+
+// Steps 1 to 4 of a write, before the store is read: the terminal, LOCKED, the calendar, the plan
+// or snapshot, the exact requests, the tooling, the store, then the token and the lock. Every
+// refusal comes before the token is asked for. Each outside call is a seam for the tests.
+export async function prepareWrite({
+    options,
+    root,
+    logRoot,
+    say,
+    secrets,
+    now = new Date(),
+    terminal = () => Boolean(process.stdin.isTTY && process.stdout.isTTY),
+    calendar = () => phaseOn(readCalendar()),
+    toolingProblem = catalogueToolingProblem,
+    storeHash: lookUpStoreHash = commandStoreHash,
+    askToken = askApprovedToken,
+    takeLock = label => acquireLock('store-write', label, { releaseOnExit: true, ticket: TICKET }),
+}) {
+    if (!terminal()) throw new Refused(NO_TERMINAL);
+    const locked = lockedProblem(logRoot);
+    if (locked) throw new Refused(locked);
+    unfinishedWarnings(logRoot).forEach(say);
+    // The jobs were meant to run before the T-14 freeze (ticket 18). Shaun may still run one
+    // later: a warning, not a refusal, because the run is his and he types the go-ahead.
+    const phase = calendar();
+    say(describePhase(phase));
+    const freeze = phase.milestones?.['T-14'];
+    if (freeze && phase.date >= freeze) say(`WARN     the content and catalogue freeze began on ${freeze} (T-14), and ticket ${TICKET}'s jobs were meant to run before it. This run goes on only if Shaun types the sha256 below.`);
+    const source = loadSource({ ...options, root, logRoot });
+    source.skipped.forEach(line => say(`skipped  ${line}`));
+    showRequests({
+        items: source.items, root, label: source.job, now, say,
+    });
+    const problem = toolingProblem();
+    if (problem) throw new Refused(problem);
+    const storeHash = await lookUpStoreHash();
+    if (source.storeHash && source.storeHash !== storeHash) throw new Refused(`the plan was made for store ${source.storeHash}, and this is ${storeHash}`);
+    const token = await askToken();
+    secrets.push(token);
+    const lock = takeLock(`scripts/catalogue/apply.mjs ${path.basename(source.file)}`);
+    return {
+        source, token, storeHash, lock,
+    };
+}
+
+// Shaun's go-ahead, once the diff is shown: the first 8 characters of the plan's sha256 (or, for a
+// restore, the snapshot's). A wrong answer isn't repeated back, in case a token was pasted here.
+export async function confirmSourceSha({ sha, what, ...io }) {
+    const typed = await askAtTerminal({ ...io, question: `To send the writes above, type the first 8 characters of the ${what}'s sha256 (${what === 'plan' ? 'as the approval page shows it' : 'as the apply printed it'}): ` });
+    if (typed === null) throw new Refused('no answer (stdin closed): stopped');
+    if (typed.trim().toLowerCase() !== sha.slice(0, 8)) throw new Refused(`what was typed isn't the start of this ${what}'s sha256: stopped, nothing written`);
 }
 
 async function main(argv) {
@@ -374,27 +466,14 @@ async function main(argv) {
                 ...options, root, say, secrets,
             });
         }
-        if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Refused(NO_TERMINAL);
         const logRoot = storeRoot();
-        const locked = lockedProblem(logRoot);
-        if (locked) throw new Refused(locked);
-        unfinishedWarnings(logRoot).forEach(say);
-        const source = loadSource({ ...options, root });
-        source.skipped.forEach(line => say(`skipped  ${line}`));
-        const now = new Date();
-        showRequests({
-            items: source.items, root, label: source.job, now, say,
+        const prepared = await prepareWrite({
+            options, root, logRoot, say, secrets,
         });
-        const problem = catalogueToolingProblem();
-        if (problem) throw new Refused(problem);
-        const storeHash = await commandStoreHash();
-        if (source.storeHash && source.storeHash !== storeHash) throw new Refused(`the plan was made for store ${source.storeHash}, and this is ${storeHash}`);
-        const token = await askApprovedToken();
-        secrets.push(token);
-        lock = acquireLock('store-write', `scripts/catalogue/apply.mjs ${path.basename(source.file)}`, { releaseOnExit: true, ticket: TICKET });
+        ({ lock } = prepared);
+        const { source } = prepared;
         const { fetch, tap } = tapped(await commandFetch(logRoot));
-        const client = createClient({ storeHash, token, fetch });
-        const what = options.mode === 'restore' ? 'snapshot' : 'plan';
+        const client = createClient({ storeHash: prepared.storeHash, token: prepared.token, fetch });
         const result = await runWrites({
             items: source.items,
             client,
@@ -407,17 +486,12 @@ async function main(argv) {
             logRoot,
             operator: operatorName(),
             say,
-            now,
             product: options.product,
-            confirm: async () => {
-                const typed = await askAtTerminal({ question: `To send the writes above, type the first 8 characters of the ${what}'s sha256 (${what === 'plan' ? 'as the approval page shows it' : 'as the apply printed it'}): ` });
-                if (typed === null) throw new Refused('no answer (stdin closed): stopped');
-                if (typed.trim().toLowerCase() !== source.sourceSha.slice(0, 8)) throw new Refused(`what was typed isn't the start of this ${what}'s sha256: stopped, nothing written`);
-            },
+            confirm: () => confirmSourceSha({ sha: source.sourceSha, what: options.mode === 'restore' ? 'snapshot' : 'plan' }),
         });
         return result.failed || result.halted ? 1 : 0;
     } catch (error) {
-        const tag = error.name === 'Refused' ? 'REFUSED' : 'STOP';
+        const tag = ['Refused', 'LockHeldError'].includes(error.name) ? 'REFUSED' : 'STOP';
         error.message.split('\n').forEach(line => console.error(redact(`${tag.padEnd(8)} ${line}`, secrets)));
         return 1;
     } finally {
