@@ -50,7 +50,7 @@ test('the catalogue is read page by page with GETs only, and becomes the jobs\' 
         }], 2, 2),
         'GET /v3/catalog/products/channel-assignments?limit=250&page=1': page([{ product_id: 101, channel_id: 1855224 }, { product_id: 101, channel_id: 1 }, { product_id: 102, channel_id: 1 }], 1, 1),
         'GET /v3/catalog/brands?limit=250&page=1': page([{
-            id: 411, name: 'ReelFlies', page_title: '', meta_description: '',
+            id: 411, name: 'ReelFlies', page_title: '', meta_description: '', custom_url: { url: '/reelflies-2/', is_customized: false },
         }], 1, 1),
         'GET /v3/catalog/trees/categories?limit=250&page=1&tree_id:in=1': page([{
             category_id: 10, parent_id: 0, name: 'Flies', tree_id: 1,
@@ -93,8 +93,8 @@ test('the catalogue is read page by page with GETs only, and becomes the jobs\' 
     });
     assert.deepEqual(model.products[1].channels, [1]);
     assert.deepEqual(model.brands, [{
-        id: 411, name: 'ReelFlies', page_title: '', meta_description: '',
-    }]);
+        id: 411, name: 'ReelFlies', page_title: '', meta_description: '', url: '/reelflies-2/', urlCustomized: false,
+    }], 'the brand keeps the store\'s URL for its listing');
     assert.deepEqual(model.categories, [{
         id: 10, parentId: 0, name: 'Flies', treeId: 1,
     }]);

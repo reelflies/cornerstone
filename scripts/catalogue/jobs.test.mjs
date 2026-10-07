@@ -9,13 +9,13 @@ import { checkRequests, judge } from './apply-rules.mjs';
 import { modelFromExport } from './csv.mjs';
 import { runJobs } from './jobs.mjs';
 
-const FIXTURE = fileURLToPath(new URL('./fixtures/export.csv', import.meta.url));
+const FIXTURE = fileURLToPath(new URL('./dry-run-fixtures/export.csv', import.meta.url));
 const csvModel = () => modelFromExport(fs.readFileSync(FIXTURE, 'utf8'));
 
 /* eslint-disable no-param-reassign -- apiModel fills ids into a fresh copy of the export's model */
 // The same catalogue as the API reads it: ids on every option and value, default flags, brand
 // names and tree 1. Product 101's size 12 is its default.
-export function apiModel() {
+function apiModel() {
     const model = csvModel();
     model.source = 'api';
     for (const product of model.products) {
@@ -29,9 +29,9 @@ export function apiModel() {
         for (const image of product.images) image.urlTiny = `https://cdn.example/${image.id}.44.58.jpg`;
     }
     model.brands = [{
-        id: 411, name: 'ReelFlies', page_title: '', meta_description: '',
+        id: 411, name: 'ReelFlies', page_title: '', meta_description: '', url: '/reelflies-2/', urlCustomized: false,
     }, {
-        id: 361, name: 'Mustad', page_title: '', meta_description: null,
+        id: 361, name: 'Mustad', page_title: '', meta_description: null, url: '/mustad-1/', urlCustomized: false,
     }];
     model.categories = [[1, 0, 'Flies'], [10, 1, 'Dry Flies'], [30, 1, 'Streamers & Buggers'], [434, 30, 'ReelFlies Signature Flies'], [342, 434, 'Signature Articulated Flies'], [20, 0, 'Fly Tying']]
         .map(([id, parentId, name]) => ({
@@ -135,7 +135,11 @@ test('a Selection with suspect sizes gets a proposal from what the other Selecti
         ...model.products[0], id: 120, name: 'Dry Fly Selection - 12 Flies', options: [], images: [],
     });
     const notes = job(runJobs(model), 'fly-sizes').notes.join('\n');
-    assert.match(notes, /Proposal for 103 "Cray Fish Selection - 8 Flies" \(values 32, 33\): 1 of the other 1 Live "Selection" products have no option at all/);
+    assert.match(notes, /Proposal for 103 "Cray Fish Selection - 8 Flies" \(values 32, 33\): none of the other 1 Live "Selection" products has an option: each sells as one item/);
+    model.products.push({
+        ...model.products[0], id: 121, name: 'Wet Fly Selection - 6 Flies', images: [],
+    });
+    assert.match(job(runJobs(model), 'fly-sizes').notes.join('\n'), /1 of the other 2 Live "Selection" products have no option at all and sell as one item/);
     assert.match(notes, /Recommended: Shaun removes this option in the control panel/);
 });
 
@@ -271,17 +275,49 @@ test('the brand job assigns ReelFlies to the Signature set, reports who carries 
     assert.match(result.decision, /no agent default/);
     assert.match(notes, /spec module 12/i);
     assert.match(notes, /tree 4 on 1895766 has no Signature category/);
-    assert.match(notes, /A\. No more brand writes\. \/brands\/ReelFlies\.html stays a listing of every ReelFlies product \(5 Live today\), not a Signature page/);
+    assert.match(notes, /A\. No more brand writes\. The ReelFlies listing \(\/reelflies-2\/\) stays a listing of every ReelFlies product \(5 Live today\), not a Signature page/);
     assert.match(notes, /B\. The agent's recommendation: a new brand/);
-    assert.match(notes, /a new brand URL/);
+    assert.match(notes, /the new brand's own URL, which the store makes from its name in the same short form as \/reelflies-2\//);
+    assert.match(notes, /ticket 18's criteria 3 and 4 are read against the new brand/);
     assert.match(notes, /2 products' brand changes in the Google and Meta feeds/);
     assert.doesNotMatch(notes, /gather the Signature patterns from the Signature categories/);
+    assert.doesNotMatch(notes, /as it made \/brands\/ReelFlies\.html/);
+});
+
+test('the brand page says the listing\'s URL is the store\'s, and that ticket 36 needs no URL change approved', () => {
+    const result = job(runJobs(apiModel()), 'brand');
+    const notes = result.notes.join('\n');
+    assert.match(notes, /The URL: the "ReelFlies" brand's listing is at \/reelflies-2\/, the URL the store made from its name \(custom_url, not customized\), not the \/brands\/ReelFlies\.html that spec module 12, tickets 36 and 48 and ticket 03's amendment name\./);
+    assert.match(notes, /No URL change is proposed, so ticket 36 needs none approved/);
+    assert.match(notes, /refactor 09's Signature rows are dynamic Brand rows, which follow the brand's URL/);
+    assert.match(notes, /Setting custom_url to \/brands\/ReelFlies\.html instead would be a store-wide catalogue write/);
+    assert.match(notes, /So its listing \(\/reelflies-2\/\) lists every ReelFlies-branded product today/);
+    assert.deepEqual(result.extra.url, {
+        id: 411, name: 'ReelFlies', url: '/reelflies-2/', customized: false,
+    });
+    const set = apiModel();
+    set.brands[0].url = '/brands/ReelFlies.html';
+    set.brands[0].urlCustomized = true;
+    assert.match(job(runJobs(set), 'brand').notes.join('\n'), /The URL: the "ReelFlies" brand's listing is at \/brands\/ReelFlies\.html \(custom_url, set by hand\), the URL spec module 12, tickets 36 and 48 and ticket 03's amendment name\./);
+});
+
+test('Shaun\'s other in-house products, named with --brand-products, join the brand set; unknown or hidden ones are listed', () => {
+    const result = job(runJobs(apiModel(), { brandProducts: [101, 106, 999] }), 'brand');
+    assert.deepEqual(result.requests.map(request => [request.path, request.body]), [['/v3/catalog/products/102', { brand_id: 411 }]], '101 carries it already');
+    assert.equal(result.counts.named, 1);
+    assert.match(result.notes.join('\n'), /Named by Shaun and not in the set: 106 \(not Live\), 999 \(not in this read\)\./);
+    const model = apiModel();
+    model.products.find(product => product.id === 101).brandId = 361;
+    const named = job(runJobs(model, { brandProducts: [101] }), 'brand');
+    assert.deepEqual(after(named, 101), [['Mustad', 'ReelFlies']]);
+    assert.match(named.rows.find(row => row.product_id === 101).note, /named by Shaun/);
+    assert.match(named.rule.join('\n'), /and the products Shaun names \(--brand-products\): 101/);
 });
 
 test('option B: once Shaun has made the Signature brand, the dry run plans it on the Signature set', () => {
     const model = apiModel();
     model.brands.push({
-        id: 500, name: 'ReelFlies Signature', page_title: '', meta_description: '',
+        id: 500, name: 'ReelFlies Signature', page_title: '', meta_description: '', url: '/reelflies-signature/', urlCustomized: false,
     });
     const result = job(runJobs(model, { signatureBrand: 'ReelFlies Signature' }), 'brand');
     assert.deepEqual(result.requests.map(request => [request.path, request.body, request.before]), [
@@ -290,6 +326,15 @@ test('option B: once Shaun has made the Signature brand, the dry run plans it on
     ]);
     assert.deepEqual(after(result, 107), [['ReelFlies', 'ReelFlies Signature']]);
     assert.match(result.decision, /option B/);
+    assert.match(result.notes.join('\n'), /The "ReelFlies Signature" brand's listing is at \/reelflies-signature\//);
+    assert.equal(result.extra.url.url, '/reelflies-signature/');
+    const copy = { page_title: 'ReelFlies Signature flies', meta_description: 'Our own patterns.' };
+    const fields = job(runJobs(model, { signatureBrand: 'ReelFlies Signature', brandCopy: copy }), 'brand-fields');
+    assert.deepEqual(fields.requests.map(request => request.path), ['/v3/catalog/brands/500'], 'under B the page title and meta description go on the new brand, not 411');
+    assert.match(fields.rule.join('\n'), /written to the "ReelFlies Signature" brand record, for its listing at \/reelflies-signature\//);
+    const none = job(runJobs(apiModel(), { signatureBrand: 'ReelFlies Signature', brandCopy: copy }), 'brand-fields');
+    assert.deepEqual(none.requests, []);
+    assert.match(none.notes.join('\n'), /No brand named "ReelFlies Signature" in this read/);
     const missing = job(runJobs(apiModel(), { signatureBrand: 'ReelFlies Signature' }), 'brand');
     assert.deepEqual(missing.requests, []);
     assert.match(missing.notes.join('\n'), /No brand named "ReelFlies Signature" in this read: Shaun creates it in the control panel first/);
@@ -300,6 +345,12 @@ test('from the export, which names no brand, the brand job only counts the Signa
     assert.deepEqual(result.rows, []);
     assert.equal(result.counts.signature, 2);
     assert.match(result.notes[0], /the export has brand ids only/);
+    assert.equal(result.measured, false, 'the batch page says "not in the export", not 0');
+    assert.equal(job(runJobs(csvModel()), 'brand-fields').measured, false);
+    assert.equal(job(runJobs(csvModel()), 'single-size-defaults').measured, false);
+    assert.equal(job(runJobs(csvModel()), 'default-sizes').measured, false);
+    assert.notEqual(job(runJobs(csvModel()), 'fly-sizes').measured, false);
+    assert.notEqual(job(runJobs(apiModel()), 'brand').measured, false);
 });
 
 test('the brand listing\'s fields wait for ticket 14\'s copy, and the dry run says there is no intro field', () => {
@@ -308,6 +359,7 @@ test('the brand listing\'s fields wait for ticket 14\'s copy, and the dry run sa
     assert.deepEqual(waiting.requests, []);
     assert.deepEqual(waiting.rows.map(row => [row.what, row.before, row.after]), [['page_title', '(empty)', '(ticket 14\'s copy)'], ['meta_description', '(empty)', '(ticket 14\'s copy)']]);
     assert.match(waiting.notes[0], /no field for an intro/);
+    assert.match(waiting.rule[0], /written to the "ReelFlies" brand record, for its listing at \/reelflies-2\/ \(ticket 36\)/);
     const ready = job(runJobs(apiModel(), { brandCopy: { page_title: 'ReelFlies flies', meta_description: 'Flies tied for ReelFlies.' } }), 'brand-fields');
     assert.deepEqual(ready.requests.map(request => [request.path, request.body, request.before]), [['/v3/catalog/brands/411', { page_title: 'ReelFlies flies', meta_description: 'Flies tied for ReelFlies.' }, { page_title: '', meta_description: '' }]]);
 });

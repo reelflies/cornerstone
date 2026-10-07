@@ -6,7 +6,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { modelFromExport, parseCsv, parseOptions } from './csv.mjs';
 
-const FIXTURE = fileURLToPath(new URL('./fixtures/export.csv', import.meta.url));
+const FIXTURE = fileURLToPath(new URL('./dry-run-fixtures/export.csv', import.meta.url));
 
 test('parseCsv reads quoted fields with commas, doubled quotes, line breaks and a byte-order mark', () => {
     assert.deepEqual(parseCsv('﻿a,"b, c","say ""hi""","two\nlines"\r\n1,,3,4\n'), [

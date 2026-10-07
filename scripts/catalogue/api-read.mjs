@@ -81,8 +81,10 @@ export function modelFromReads(reads) {
                 urlTiny: image.url_tiny || null,
             })),
         })),
+        // custom_url is the brand listing's URL on every channel (the store makes it from the name
+        // unless it is set by hand), so the brand jobs say which URL tickets 36 and 48 link to.
         brands: reads.brands.map(brand => ({
-            id: brand.id, name: brand.name, page_title: brand.page_title ?? '', meta_description: brand.meta_description ?? '',
+            id: brand.id, name: brand.name, page_title: brand.page_title ?? '', meta_description: brand.meta_description ?? '', url: brand.custom_url?.url ?? null, urlCustomized: brand.custom_url?.is_customized ?? null,
         })),
         categories: reads.categories.map(category => ({
             id: category.category_id, parentId: category.parent_id, name: category.name, treeId: category.tree_id,

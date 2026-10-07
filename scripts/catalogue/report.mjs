@@ -4,6 +4,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { BRAND_NAME, PLANNED_BRAND_URL } from './jobs.mjs';
 
 const SAMPLE = 40;
 const ROW_COLUMNS = ['product_id', 'product', 'live', 'what', 'before', 'after', 'note'];
@@ -18,6 +19,8 @@ export const toCsv = (rows, columns) => `${[columns.join(','), ...rows.map(row =
 const mdCell = value => (value === null || value === undefined ? '' : String(value)).replace(/\|/g, '\\|').replace(/\n/g, ' ');
 const table = (header, rows) => [`| ${header.join(' | ')} |`, `|${header.map(() => '---').join('|')}|`, ...rows.map(cells => `| ${cells.map(mdCell).join(' | ')} |`)];
 const short = sha => (sha ? sha.slice(0, 8) : '');
+// A sentence ends with one full stop, whether or not the text already has one.
+const sentence = textContent => (/[.!?]$/.test(textContent) ? textContent : `${textContent}.`);
 
 function sourceLines(meta) {
     const lines = [];
@@ -43,7 +46,7 @@ export function jobMarkdown(result, { plan = null, csvResult = null, meta }) {
         '',
         `Made by \`scripts/catalogue/dry-run.mjs\` on ${meta.date}. Nothing has been written to the store.`,
         '',
-        `- **Decision:** ${result.decision}.`,
+        `- **Decision:** ${sentence(result.decision)}`,
         ...sourceLines(meta),
         plan
             ? `- **Plan:** \`${plan.file}\`, ${result.requests.length} requests, sha256 \`${plan.sha256}\`. To apply it Shaun types \`${short(plan.sha256)}\` at his terminal (see [the batch](18-catalogue-batch.md)).${priorLine(result)}`
@@ -77,6 +80,21 @@ export function jobMarkdown(result, { plan = null, csvResult = null, meta }) {
 
 const ORDER = 'Each plan is applied as approved, with the sha256 in the table: no fresh dry run between jobs. Fly Sizes goes first. The single-size and multi-size default jobs are planned on its result for the options both write, so apply refuses them, writing nothing, until it is applied, and they stay valid. The other jobs write other objects or other fields (option-names only the name, uncategorised only the categories, brand only the brand, thumbnails and alt-text different fields of an image), so their order doesn\'t matter; brand-fields comes once ticket 14\'s copy is in.';
 
+// The brand listing's URL, from the store's read, for tickets 36, 48 and 03.
+function brandLine(results) {
+    const url = results.find(result => result.id === 'brand')?.extra?.url;
+    const pick = 'Shaun picks A, B or C in [18-brand.md](18-brand.md); no agent default is taken. Until he does, 36\'s page, 48\'s button and refactor 09\'s Signature Redirect rows (ticket 03) have no settled target.';
+    const intro = 'The brand record has no intro field (see [18-brand-fields.md](18-brand-fields.md)).';
+    if (!url?.url) return `- **Tickets 36, 48 and 03:** the brand listing's URL comes from the API read (each brand's custom_url), and this run has none. The ReelFlies brand is on almost every Live product, so its listing can't gather only the Signature patterns as spec module 12 says. ${pick} ${intro}`;
+    const made = url.customized ? 'set by hand (custom_url)' : 'the URL the store made from its name (custom_url, not customized)';
+    const planned = url.url === PLANNED_BRAND_URL ? '' : `, not the ${PLANNED_BRAND_URL} they name`;
+    const change = url.url === PLANNED_BRAND_URL ? '' : ` No URL change is proposed, so ticket 36 needs none approved: 36's criteria, 48's button and ticket 18's criterion 3 are read against ${url.url}, and refactor 09's Signature rows are dynamic Brand rows, which follow the brand's URL. Setting custom_url to ${PLANNED_BRAND_URL} would be a store-wide catalogue write (the page moves on reelflies.com and live reelflies.ca too), and isn't proposed.`;
+    const which = url.name === BRAND_NAME
+        ? ` The ReelFlies brand is on almost every Live product, so its listing can't gather only the Signature patterns as spec module 12 says. ${pick}`
+        : ` Option B: the "${url.name}" brand's listing is ticket 36's page.`;
+    return `- **Tickets 36, 48 and 03:** the ${url.name} brand's listing is at **${url.url}**, ${made}${planned}.${change}${which} ${intro}`;
+}
+
 function reexportCount(results) {
     const thumbnails = results.find(result => result.id === 'thumbnails');
     if (!thumbnails) return 'not run';
@@ -99,7 +117,7 @@ export function indexMarkdown(results, { plans, csvResults, meta }) {
             result.title,
             result.decision,
             result.rows.length,
-            ...(csvResults ? [csvFor(result.id)?.rows.length ?? ''] : []),
+            ...(csvResults ? [csvFor(result.id)?.measured === false ? 'not in the export' : csvFor(result.id)?.rows.length ?? ''] : []),
             result.requests.length,
             plans[result.id] ? `\`${short(plans[result.id].sha256)}\`` : '',
             `[18-${result.id}.md](18-${result.id}.md)`,
@@ -132,13 +150,15 @@ export function indexMarkdown(results, { plans, csvResults, meta }) {
         '- A product page this run changed, on reelflies.com and on live reelflies.ca: its sizes render and it adds to the cart (and its thumbnail or brand shows, for those jobs). Recorded, dated, in a ticket 18 comment, beside Shaun\'s approval of the plan.',
         '- Shaun revokes the Products: modify token.',
         '- An agent runs `node ~/reelflies/theme/cornerstone/scripts/catalogue/apply.mjs --check <plan file>` (GETs only, the read-only token): every request reads as planned.',
+        '- After the Fly Sizes and multi-size default applies, an agent also reruns the dry run over the whole catalogue, because `--check` reads only the plan\'s own objects: `node scripts/catalogue/dry-run.mjs --api --jobs fly-sizes,default-sizes --images skip --out <a scratch folder>` (GETs only). It records "renamed 0, reordered 0, multi-size defaults 0" in ticket 18 for criterion 1, with 4506 the only exception until criterion 2 is settled.',
         '- The orchestrator opens a re-baseline epoch for the page kinds the job moved (build pipeline section 6.6: "18\'s apply").',
         '',
         '## Waiting, and notes for other tickets',
         '',
         '- **Merchant Center diagnostics** (SEO-16) need Shaun\'s Google login: he reads them with an agent once before the freeze, and the result goes in ticket 18\'s comments.',
         `- **Ticket 14:** the re-export list (${reexportCount(results)}), best sellers first, is [18-reexport-for-14.csv](18-reexport-for-14.csv).`,
-        '- **Tickets 36, 48 and 03:** the ReelFlies brand is on almost every Live product, so /brands/ReelFlies.html can\'t gather only the Signature patterns as spec module 12 says. Shaun picks A, B or C in [18-brand.md](18-brand.md); no agent default is taken. Until he does, 36\'s page, 48\'s button and refactor 09\'s Signature Redirect rows (ticket 03) have no settled target. The brand record has no intro field (see [18-brand-fields.md](18-brand-fields.md)).',
+        '- **Ticket 14\'s re-exported photos** aren\'t uploaded yet: an upload creates an image (a POST), which apply\'s allowlist doesn\'t hold. When ticket 14\'s files arrive, that one write is added to the guarded allowlist in its own PR, with `rf/safety`, and the new thumbnails are planned from a fresh dry run for Shaun\'s approval. Until then the thumbnail plan covers only the swaps to a photo already on white.',
+        brandLine(results),
         '- **Ticket 37:** the Fly Sizes option shown as a Radio list is in [18-fly-sizes.md](18-fly-sizes.md).',
         '- **Tickets 33 and 37** keep accepting both size spellings until the Fly Sizes job is applied.',
     ];

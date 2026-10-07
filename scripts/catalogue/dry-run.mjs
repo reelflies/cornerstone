@@ -16,6 +16,7 @@
 //   --brand-copy <file>  {"page_title", "meta_description"} for the ReelFlies brand (ticket 14's copy)
 //   --size-fixes <file>  {"<product id>": {"<old label>": "<new label>"}} for sizes the job can't place
 //   --signature-brand <name>  option B of the brand job: the brand Shaun made for the Signature set
+//   --brand-products <ids>    other in-house products Shaun names for the brand, as 101,102
 //   --jobs a,b           only these jobs
 //
 // Every line it prints goes through release-redact.mjs once the read token is in hand, its STOP
@@ -40,14 +41,14 @@ import { JOBS, isLive, runJobs } from './jobs.mjs';
 import { makePlan, writePlanFile } from './plans.mjs';
 import { writeReports } from './report.mjs';
 
-const USAGE = 'Usage: node scripts/catalogue/dry-run.mjs [--csv <export>] [--api] [--out <dir>] [--images fetch|skip] [--sales <file>] [--brand-copy <file>] [--size-fixes <file>] [--signature-brand <name>] [--jobs a,b]';
+const USAGE = 'Usage: node scripts/catalogue/dry-run.mjs [--csv <export>] [--api] [--out <dir>] [--images fetch|skip] [--sales <file>] [--brand-copy <file>] [--size-fixes <file>] [--signature-brand <name>] [--brand-products <ids>] [--jobs a,b]';
 
 export function parseArgs(argv) {
     const options = {
-        csv: null, api: false, out: null, images: 'fetch', sales: null, brandCopy: null, sizeFixes: null, signatureBrand: null, jobs: null,
+        csv: null, api: false, out: null, images: 'fetch', sales: null, brandCopy: null, sizeFixes: null, signatureBrand: null, brandProducts: null, jobs: null,
     };
     const valued = {
-        '--csv': 'csv', '--out': 'out', '--images': 'images', '--sales': 'sales', '--brand-copy': 'brandCopy', '--size-fixes': 'sizeFixes', '--signature-brand': 'signatureBrand', '--jobs': 'jobs',
+        '--csv': 'csv', '--out': 'out', '--images': 'images', '--sales': 'sales', '--brand-copy': 'brandCopy', '--size-fixes': 'sizeFixes', '--signature-brand': 'signatureBrand', '--brand-products': 'brandProducts', '--jobs': 'jobs',
     };
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i];
@@ -60,6 +61,10 @@ export function parseArgs(argv) {
     }
     if (!options.csv && !options.api) throw new Error('give --csv <export>, --api, or both');
     if (!['fetch', 'skip'].includes(options.images)) throw new Error('--images is fetch or skip');
+    if (options.brandProducts) {
+        options.brandProducts = options.brandProducts.split(',').map(Number);
+        if (!options.brandProducts.every(id => Number.isInteger(id) && id > 0)) throw new Error('--brand-products takes product ids, as 101,102');
+    }
     if (options.jobs) {
         options.jobs = options.jobs.split(',');
         const known = JOBS.map(([id]) => id);
@@ -88,8 +93,9 @@ const readJson = (file, what) => {
 };
 
 // `secrets` collects the read token as soon as it is read, so the caller can redact its own lines.
+// `decoder` says why the photo read can't run (jpeg-js missing), or null; a seam for the tests.
 export async function dryRun(options, {
-    say: print = console.log, env = process.env, now = new Date(), fetchImages = fetch, secrets = [],
+    say: print = console.log, env = process.env, now = new Date(), fetchImages = fetch, secrets = [], decoder = decoderProblem,
 } = {}) {
     const say = line => print(redact(line, secrets));
     const root = catalogueRoot(env);
@@ -122,7 +128,7 @@ export async function dryRun(options, {
     const primary = apiModel || csvModel;
     const context = {};
     if (options.images === 'fetch') {
-        const problem = await decoderProblem();
+        const problem = await decoder();
         if (problem) throw new Error(problem);
         const images = primary.products.filter(isLive).flatMap(product => product.images);
         say(`Reading the grounds of ${images.length} Live product photos from the CDN…`);
@@ -138,6 +144,7 @@ export async function dryRun(options, {
     if (options.brandCopy) context.brandCopy = readJson(options.brandCopy, 'the brand copy');
     if (options.sizeFixes) context.sizeFixes = readJson(options.sizeFixes, 'the size fixes');
     if (options.signatureBrand) context.signatureBrand = options.signatureBrand;
+    if (options.brandProducts) context.brandProducts = options.brandProducts;
     const results = runJobs(primary, context, options.jobs);
     const csvResults = apiModel && csvModel ? runJobs(csvModel, context, options.jobs) : null;
     const plans = {};

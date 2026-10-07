@@ -14,16 +14,18 @@ import { loadSource } from './apply.mjs';
 import { PRODUCT_FIELDS } from './api-read.mjs';
 import { dryRun, parseArgs, readSales } from './dry-run.mjs';
 
-const FIXTURE = fileURLToPath(new URL('./fixtures/export.csv', import.meta.url));
+const FIXTURE = fileURLToPath(new URL('./dry-run-fixtures/export.csv', import.meta.url));
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-catalogue-dry-run-'));
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 let count = 0;
 
 test('the arguments', () => {
     assert.deepEqual(parseArgs(['--csv', 'x.csv', '--images', 'skip']), {
-        csv: 'x.csv', api: false, out: null, images: 'skip', sales: null, brandCopy: null, sizeFixes: null, signatureBrand: null, jobs: null,
+        csv: 'x.csv', api: false, out: null, images: 'skip', sales: null, brandCopy: null, sizeFixes: null, signatureBrand: null, brandProducts: null, jobs: null,
     });
     assert.equal(parseArgs(['--api', '--signature-brand', 'ReelFlies Signature']).signatureBrand, 'ReelFlies Signature');
+    assert.deepEqual(parseArgs(['--api', '--brand-products', '101,4506']).brandProducts, [101, 4506]);
+    assert.throws(() => parseArgs(['--api', '--brand-products', '101,x']), /--brand-products takes product ids, as 101,102/);
     assert.deepEqual(parseArgs(['--api', '--jobs', 'brand,alt-text']).jobs, ['brand', 'alt-text']);
     assert.throws(() => parseArgs([]), /give --csv/);
     assert.throws(() => parseArgs(['--api', '--jobs', 'everything']), /unknown jobs everything/);
@@ -152,7 +154,7 @@ function apiFixtures(root) {
         [`GET /v3/catalog/products?include=options%2Cimages&include_fields=${encodeURIComponent(PRODUCT_FIELDS)}&limit=250&page=1`]: page(API_PRODUCTS),
         'GET /v3/catalog/products/channel-assignments?limit=250&page=1': page([{ product_id: 101, channel_id: 1 }, { product_id: 102, channel_id: 1 }]),
         'GET /v3/catalog/brands?limit=250&page=1': page([{
-            id: 411, name: 'ReelFlies', page_title: '', meta_description: '',
+            id: 411, name: 'ReelFlies', page_title: '', meta_description: '', custom_url: { url: '/reelflies-2/', is_customized: false },
         }]),
         'GET /v3/catalog/trees/categories?limit=250&page=1&tree_id:in=1': page([]),
     }));
@@ -186,4 +188,49 @@ test('--signature-brand reaches the brand job (option B)', async () => {
     const env = apiFixtures(root);
     const { results } = await dryRun(parseArgs(['--api', '--images', 'skip', '--jobs', 'brand', '--signature-brand', 'ReelFlies Signature', '--out', path.join(root, 'out')]), { say: () => {}, env });
     assert.match(results[0].notes.join('\n'), /No brand named "ReelFlies Signature" in this read/);
+});
+
+test('--brand-products reaches the brand job', async () => {
+    const root = path.join(tmp, `root-${++count}`);
+    const env = apiFixtures(root);
+    const { results } = await dryRun(parseArgs(['--api', '--images', 'skip', '--jobs', 'brand', '--brand-products', '101', '--out', path.join(root, 'out')]), { say: () => {}, env });
+    assert.equal(results[0].counts.named, 1);
+    assert.match(results[0].rule[0], /the products Shaun names \(--brand-products\): 101/);
+});
+
+test('without jpeg-js the dry run stops before it reads a single photo', async () => {
+    const root = path.join(tmp, `root-${++count}`);
+    let fetched = 0;
+    await assert.rejects(dryRun(parseArgs(['--csv', FIXTURE, '--out', path.join(root, 'out')]), {
+        say: () => {},
+        env: { ...process.env, RF_CATALOGUE_ROOT: root },
+        decoder: async () => 'the photo read needs jpeg-js, which this repo has only through lighthouse',
+        fetchImages: async () => {
+            fetched++;
+            return new Response('');
+        },
+    }), /the photo read needs jpeg-js/);
+    assert.equal(fetched, 0);
+});
+
+test('the pages: one full stop after a decision, "not in the export" where the export can\'t measure, and the brand\'s URL from the store', async () => {
+    const root = path.join(tmp, `root-${++count}`);
+    const env = apiFixtures(root);
+    const out = path.join(root, 'out');
+    await dryRun(parseArgs(['--api', '--csv', FIXTURE, '--images', 'skip', '--out', out]), { say: () => {}, env });
+    for (const name of fs.readdirSync(out).filter(file => file.endsWith('.md'))) {
+        assert.doesNotMatch(fs.readFileSync(path.join(out, name), 'utf8'), /\.\.(\s|$)/, `${name} has a doubled full stop`);
+    }
+    const index = fs.readFileSync(path.join(out, '18-catalogue-batch.md'), 'utf8');
+    const rowOf = title => index.split('\n').find(line => line.startsWith(`| ${title} |`));
+    assert.match(rowOf('Preselect the only size on single-size products'), /\| not in the export \|/);
+    assert.match(rowOf('Drop "default sizes" on multi-size products'), /\| not in the export \|/);
+    assert.match(rowOf('The ReelFlies brand on in-house Live products'), /\| not in the export \|/);
+    assert.doesNotMatch(rowOf('Fly Sizes: 1/0 to 6/0, and hook order'), /not in the export/);
+    assert.match(index, /\*\*Tickets 36, 48 and 03:\*\* the ReelFlies brand's listing is at \*\*\/reelflies-2\/\*\*, the URL the store made from its name \(custom_url, not customized\), not the \/brands\/ReelFlies\.html they name\. No URL change is proposed, so ticket 36 needs none approved/);
+    assert.match(index, /\*\*Ticket 14's re-exported photos\*\* aren't uploaded yet/);
+    assert.match(index, /--api --jobs fly-sizes,default-sizes/);
+    assert.match(index, /renamed 0, reordered 0, multi-size defaults 0/);
+    const brandPage = fs.readFileSync(path.join(out, '18-brand.md'), 'utf8');
+    assert.match(brandPage, /The URL: the "ReelFlies" brand's listing is at \/reelflies-2\//);
 });

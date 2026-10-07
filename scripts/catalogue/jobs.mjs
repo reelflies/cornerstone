@@ -4,9 +4,11 @@
 // scripts/catalogue/apply.mjs, at Shaun's terminal.
 //
 //   import { JOBS, runJobs } from './jobs.mjs';
-//   const results = runJobs(model, { grounds, sales, brandCopy, sizeFixes, signatureBrand });
+//   const results = runJobs(model, { grounds, sales, brandCopy, sizeFixes, signatureBrand, brandProducts });
 //
-// A result is { id, title, decision, rule, counts, rows, requests, notes, extra }:
+// A result is { id, title, decision, rule, counts, rows, requests, notes, extra, measured? }:
+// - measured: false when this model can't measure the job (the export has no default flags and
+//   no brand names), so the batch page says "not in the export" rather than 0
 // - rows: { product_id, product, live, what, before, after, note }, one per change or finding
 // - requests: { method, path, body, before, product_id }. `before` is the read the request was
 //   planned against; apply refuses the plan if the store no longer reads that way. A request for
@@ -28,6 +30,9 @@ export const FLY_SIZES = 'Fly Sizes';
 // (refactor data/current-tree-1.md).
 export const SIGNATURE_CATEGORIES = [434, 342, 277, 262, 357];
 export const BRAND_NAME = 'ReelFlies';
+// The brand listing's URL as spec module 12, tickets 36 and 48 and ticket 03's amendment name it.
+// The store's URL for the brand is its custom_url, which the API read gives.
+export const PLANNED_BRAND_URL = '/brands/ReelFlies.html';
 // The re-export list's first tier, and a Fly Type listing's first page (24 per page, ticket 32).
 const TOP_SELLERS = 200;
 const PAGE_ONE = 24;
@@ -103,7 +108,10 @@ function selectionProposals(model, rows) {
     if (!flagged.length) return [];
     const others = model.products.filter(product => isLive(product) && /selection/i.test(product.name) && !flagged.some(item => item.product_id === product.id));
     const plain = others.filter(product => !product.options.length).length;
-    return flagged.map(item => `Proposal for ${item.product_id} "${item.product}" (values ${item.before}): ${plain} of the other ${others.length} Live "Selection" products have no option at all and sell as one item. Recommended: Shaun removes this option in the control panel so it sells like them (deleting an option or its variants is outside this job's writes), after checking which variant holds the stock. If he keeps two variants, he names their labels and the dry run plans the rename (\`--size-fixes\`).`);
+    const howOthersSell = plain === others.length
+        ? `none of the other ${others.length} Live "Selection" products has an option: each sells as one item`
+        : `${plain} of the other ${others.length} Live "Selection" products have no option at all and sell as one item`;
+    return flagged.map(item => `Proposal for ${item.product_id} "${item.product}" (values ${item.before}): ${howOthersSell}. Recommended: Shaun removes this option in the control panel so it sells like them (deleting an option or its variants is outside this job's writes), after checking which variant holds the stock. If he keeps two variants, he names their labels and the dry run plans the rename (\`--size-fixes\`).`);
 }
 
 // --- Fly Sizes: the aught rename and hook order ------------------------------------------------
@@ -224,6 +232,7 @@ function defaultSizes(model, { sizeFixes = {} } = {}) {
         counts: { products: rows.length, unknown },
         rows,
         requests,
+        measured: !unknown,
         notes: [
             ...(unknown ? ['The export has no default flags, so this job can only be measured from the API read.'] : []),
             ...(!unknown && !rows.length ? ['No multi-size product has a default size today, so the criterion already holds and there is nothing to write. A later dry run plans it again if a default appears.'] : []),
@@ -257,6 +266,7 @@ function singleSizeDefaults(model, { sizeFixes = {} } = {}) {
         },
         rows,
         requests,
+        measured: !unknown,
         notes: [
             ...(unknown ? ['The export has no default flags: this count is every single-size Live product.'] : []),
             'Ticket 18\'s criterion "No Fly Sizes value carries the default flag" is read as story 37 states it: a multi-size product opens with no size selected. A single size preselected doesn\'t break it. Revisitable: if Shaun reads it literally, this job doesn\'t run.',
@@ -327,42 +337,77 @@ function uncategorised(model) {
 
 const findBrand = (model, name) => model.brands.find(candidate => candidate.name.toLowerCase() === name.toLowerCase());
 
+// A brand's listing URL, as the store gives it (custom_url), for the brand page and the batch.
+const urlOf = record => ({
+    id: record.id, name: record.name, url: record.url ?? null, customized: record.urlCustomized ?? null,
+});
+const howMade = record => (record.urlCustomized ? 'custom_url, set by hand' : 'custom_url, not customized');
+const urlText = record => (record.url ? `${record.url}` : '(not in this read)');
+
+// The URL every option shares: the store's, which the plans don't name. No change is proposed.
+function urlNote(record) {
+    const subject = `The URL: the "${record.name}" brand's listing is at ${urlText(record)}`;
+    if (record.url === PLANNED_BRAND_URL) return `${subject} (${howMade(record)}), the URL spec module 12, tickets 36 and 48 and ticket 03's amendment name.`;
+    if (!record.url) return `${subject}: the export has no brand URLs, so the API read says which URL the listing has.`;
+    return [
+        `${subject}, the URL the store made from its name (${howMade(record)}), not the ${PLANNED_BRAND_URL} that spec module 12, tickets 36 and 48 and ticket 03's amendment name.`,
+        `Under every option below that listing keeps ${record.url} (under B, the new brand's listing has its own store-made URL), and tickets 36 and 48 and this ticket's criterion 3 are read against it.`,
+        'No URL change is proposed, so ticket 36 needs none approved: refactor 09\'s Signature rows are dynamic Brand rows, which follow the brand\'s URL, and only their text naming the old URL needs correcting.',
+        `Setting custom_url to ${PLANNED_BRAND_URL} instead would be a store-wide catalogue write (the brand page moves on reelflies.com and live reelflies.ca too), outside this job's writes: it is Shaun's to ask for, and not recommended.`,
+    ].join(' ');
+}
+
 // Options A to C, with what each costs. No agent default: A changes an owner decision (spec module
 // 12, HANDOFF's "Signature patterns are also gathered on the ReelFlies brand page"), and B and C
 // change the feeds. The agent's recommendation is B, as the one that keeps module 12.
 function brandOptions(counts) {
     return [
-        `That breaks what four plans count on. Spec module 12 says "The brand page at /brands/ReelFlies.html gathers the Signature patterns", and that "the home Signature band and the Signature redirect both point here". Ticket 36 builds that page, ticket 48's Signature band links to it, and ticket 03's amendment maps refactor 09's Signature Redirect rows (categories 434 and 357) to brand ${counts.brandId}. A brand listing lists the brand's products: the theme can't make it list a category's, and tree 4 on 1895766 has no Signature category (ticket 03 item 10; ticket 48 never links to one).`,
+        `That breaks what four plans count on. Spec module 12 says "The brand page at ${PLANNED_BRAND_URL} gathers the Signature patterns", and that "the home Signature band and the Signature redirect both point here". Ticket 36 builds that page, ticket 48's Signature band links to it, and ticket 03's amendment maps refactor 09's Signature Redirect rows (categories 434 and 357) to brand ${counts.brandId}. A brand listing lists the brand's products: the theme can't make it list a category's, and tree 4 on 1895766 has no Signature category (ticket 03 item 10; ticket 48 never links to one).`,
         'Shaun picks A, B or C. No agent default is taken, because each option changes an owner decision or the feeds; until he picks, the dry run plans only the job as written (the rows below).',
-        `A. No more brand writes. /brands/ReelFlies.html stays a listing of every ReelFlies product (${counts.branded} Live today), not a Signature page. Spec module 12 then changes: ticket 36's page, ticket 48's "See all ReelFlies originals" button and refactor 09's Signature Redirects (staged by refactor 15) all land on almost the whole catalogue, so 48 needs another target or label, and refactor 09 another target for the old Signature URLs. The feeds and the structured data don't change.`,
-        `B. The agent's recommendation: a new brand (for example "ReelFlies Signature") on the ${counts.signature} Signature products, so its listing gathers exactly the Signature patterns, as module 12 intends. The costs: a new brand URL (BigCommerce makes it from the name, as it made /brands/ReelFlies.html), so ticket 36's page, ticket 48's button and ticket 03's Signature Redirect rows (refactor 09, staged by refactor 15) move to it, and ticket 18's criterion 3 is read against the new brand; and the ${counts.signature} products' brand changes in the Google and Meta feeds and in their structured data, so the feed notice before the brand job says so. Creating a brand is outside this job's writes: Shaun creates it in the control panel, then the dry run with \`--signature-brand "<its name>"\` plans the ${counts.signature} assignments for his approval.`,
-        `C. Not recommended: keep /brands/ReelFlies.html for the Signature set by clearing or moving the brand on the ${counts.brandedOutside} other products. Their feed entries would lose or change the brand Google expects: ${counts.brandedOutside} products, against B's ${counts.signature}.`,
+        `A. No more brand writes. The ${BRAND_NAME} listing (${counts.url}) stays a listing of every ReelFlies product (${counts.branded} Live today), not a Signature page. Spec module 12 then changes: ticket 36's page, ticket 48's "See all ReelFlies originals" button and refactor 09's Signature Redirects (staged by refactor 15) all land on almost the whole catalogue, so 48 needs another target or label, and refactor 09 another target for the old Signature URLs. The feeds and the structured data don't change.`,
+        `B. The agent's recommendation: a new brand (for example "ReelFlies Signature") on the ${counts.signature} Signature products, so its listing gathers exactly the Signature patterns, as module 12 intends. The costs: the new brand's own URL, which the store makes from its name in the same short form as ${counts.url} (for example /reelflies-signature/, with a number if that is taken), so ticket 36's page, ticket 48's button and ticket 03's Signature Redirect rows (refactor 09, staged by refactor 15) move to it, and ticket 18's criteria 3 and 4 are read against the new brand (its page title and meta description go on it); and the ${counts.signature} products' brand changes in the Google and Meta feeds and in their structured data, so the feed notice before the brand job says so. Creating a brand is outside this job's writes: Shaun creates it in the control panel, then the dry run with \`--signature-brand "<its name>"\` reads its URL and plans the ${counts.signature} assignments and its page title and meta description for his approval.`,
+        `C. Not recommended: keep the ${BRAND_NAME} listing (${counts.url}) for the Signature set by clearing or moving the brand on the ${counts.brandedOutside} other products. Their feed entries would lose or change the brand Google expects: ${counts.brandedOutside} products, against B's ${counts.signature}.`,
     ];
 }
 
-function brand(model, { signatureCategories = SIGNATURE_CATEGORIES, signatureBrand = null } = {}) {
+function brand(model, {
+    signatureCategories = SIGNATURE_CATEGORIES, signatureBrand = null, brandProducts = [],
+} = {}) {
     const record = findBrand(model, BRAND_NAME);
     const target = signatureBrand ? findBrand(model, signatureBrand) : record;
     const live = model.products.filter(isLive);
     const inSet = product => product.categories.some(id => signatureCategories.includes(id));
     const signature = live.filter(inSet);
+    // Other in-house products Shaun names (--brand-products): Live ones join the set.
+    const named = brandProducts.map(id => ({ id, product: model.products.find(product => product.id === id) }));
+    const namedLive = named.filter(({ product }) => product && isLive(product) && !inSet(product)).map(({ product }) => product);
+    const notNamed = named.filter(({ product }) => !product || !isLive(product)).map(({ id, product }) => `${id} (${product ? 'not Live' : 'not in this read'})`);
+    const set = [...signature, ...namedLive];
     const brandName = id => model.brands.find(candidate => candidate.id === id)?.name || (id ? `brand ${id}` : '(no brand)');
     const byBrand = {};
     for (const product of live) byBrand[brandName(product.brandId)] = (byBrand[brandName(product.brandId)] || 0) + 1;
-    const toAssign = target ? signature.filter(product => product.brandId !== target.id) : [];
+    const toAssign = target ? set.filter(product => product.brandId !== target.id) : [];
     const counts = {
-        live: live.length, signature: signature.length, alreadyBranded: target ? signature.length - toAssign.length : 0, toAssign: toAssign.length, brandedOutside: record ? live.filter(product => !inSet(product) && product.brandId === record.id).length : 0,
+        live: live.length,
+        signature: signature.length,
+        alreadyBranded: target ? signature.length - toAssign.filter(inSet).length : 0,
+        toAssign: toAssign.length,
+        brandedOutside: record ? live.filter(product => !inSet(product) && product.brandId === record.id).length : 0,
+        ...(brandProducts.length ? { named: namedLive.length } : {}),
     };
-    const rows = toAssign.map(product => row(product, 'brand', brandName(product.brandId), target.name));
+    const rows = toAssign.map(product => row(product, 'brand', brandName(product.brandId), target.name, namedLive.includes(product) ? 'named by Shaun (--brand-products)' : ''));
     const requests = plannable(model) ? toAssign.map(product => productRequest(product, { brand_id: target.id })) : [];
     const notes = [];
     if (signatureBrand && !target) notes.push(`No brand named "${signatureBrand}" in this read: Shaun creates it in the control panel first (option B), then the dry run plans it.`);
+    if (signatureBrand && target) notes.push(`The "${target.name}" brand's listing is at ${urlText(target)} (${howMade(target)}): ticket 36's page, ticket 48's button, refactor 09's Signature rows and this ticket's criteria 3 and 4 are read against it.`);
+    if (notNamed.length) notes.push(`Named by Shaun and not in the set: ${notNamed.join(', ')}.`);
     if (record) {
         notes.push(
             `Found: the "${BRAND_NAME}" brand (id ${record.id}) is already on ${byBrand[BRAND_NAME] || 0} of ${live.length} Live products, not only the Signature set. Live products by brand: ${Object.entries(byBrand).map(([name, count]) => `${name} ${count}`).join(', ')}.`,
-            `So /brands/ReelFlies.html lists every ReelFlies-branded product today: the ${signature.filter(product => product.brandId === record.id).length} Signature products that carry it and ${counts.brandedOutside} others.${signatureBrand ? '' : ` The job as written (assign the brand to the Signature set) changes only the ${counts.toAssign} listed below.`}`,
+            urlNote(record),
+            `So its listing (${urlText(record)}) lists every ReelFlies-branded product today: the ${signature.filter(product => product.brandId === record.id).length} Signature products that carry it and ${counts.brandedOutside} others.${signatureBrand ? '' : ` The job as written (assign the brand to the Signature set) changes only the ${counts.toAssign} listed below.`}`,
             ...(signatureBrand ? [] : brandOptions({
-                brandId: record.id, branded: byBrand[BRAND_NAME] || 0, signature: signature.length, brandedOutside: counts.brandedOutside,
+                brandId: record.id, branded: byBrand[BRAND_NAME] || 0, signature: signature.length, brandedOutside: counts.brandedOutside, url: urlText(record),
             })),
         );
     } else notes.push(`No brand named "${BRAND_NAME}" in this read${model.source === 'csv' ? ' (the export has brand ids only: the API read names them)' : ''}.`);
@@ -371,23 +416,27 @@ function brand(model, { signatureCategories = SIGNATURE_CATEGORIES, signatureBra
         title: 'The ReelFlies brand on in-house Live products',
         decision: signatureBrand
             ? `option B, which Shaun picked: "${signatureBrand}" on the Signature set; Shaun approves this diff`
-            : 'approved in principle (ticket 13, decision 15), but Shaun first picks A, B or C (the notes on the brand page): no agent default is taken. He also names any other in-house products',
+            : 'approved in principle (ticket 13, decision 15), but Shaun first picks A, B or C (the notes on the brand page): no agent default is taken. He also names any other in-house products (`--brand-products`)',
         rule: [
-            `Every Live product placed in tree-1 ReelFlies Signature Flies: categories ${signatureCategories.join(', ')}. Each gets the ${signatureBrand ? `"${signatureBrand}" brand (option B)` : `existing "${BRAND_NAME}" brand`} where it has another or none.`,
+            `Every Live product placed in tree-1 ReelFlies Signature Flies: categories ${signatureCategories.join(', ')}${brandProducts.length ? `, and the products Shaun names (--brand-products): ${brandProducts.join(', ')}` : ''}. Each gets the ${signatureBrand ? `"${signatureBrand}" brand (option B)` : `existing "${BRAND_NAME}" brand`} where it has another or none.`,
             'A PUT of the product\'s brand_id only.',
         ],
         counts,
         rows,
         requests,
         notes,
-        extra: {},
+        measured: model.source !== 'csv',
+        extra: { url: target ? urlOf(target) : null },
     };
 }
 
-// --- The ReelFlies brand listing's fields (ticket 36) -------------------------------------------
+// --- The brand listing's fields (ticket 36) -----------------------------------------------------
 
-function brandFields(model, { brandCopy = null } = {}) {
-    const record = model.brands.find(candidate => candidate.name.toLowerCase() === BRAND_NAME.toLowerCase());
+// On the ReelFlies brand, or under option B on the brand Shaun made for the Signature set, whose
+// listing is then ticket 36's page.
+function brandFields(model, { brandCopy = null, signatureBrand = null } = {}) {
+    const name = signatureBrand || BRAND_NAME;
+    const record = findBrand(model, name);
     const rows = [];
     const requests = [];
     const fields = ['page_title', 'meta_description'];
@@ -409,13 +458,18 @@ function brandFields(model, { brandCopy = null } = {}) {
         id: 'brand-fields',
         title: 'The ReelFlies brand listing\'s page title and meta description',
         decision: brandCopy ? 'approved in principle (ticket 13, decision 15); Shaun approves the copy' : 'waiting: the copy is ticket 14\'s, not yet supplied',
-        rule: ['Ticket 14\'s page title and meta description, written to the ReelFlies brand record, for /brands/ReelFlies.html (ticket 36).', 'Run with `--brand-copy <file>`, a JSON object {"page_title": …, "meta_description": …}.'],
+        rule: [
+            `Ticket 14's page title and meta description, written to the "${name}" brand record, for its listing at ${record ? urlText(record) : '(the brand isn\'t in this read)'} (ticket 36).${signatureBrand ? ' Option B: the new brand\'s listing is ticket 36\'s page, so the copy goes on it, not on the ReelFlies brand.' : ''}`,
+            'Run with `--brand-copy <file>`, a JSON object {"page_title": …, "meta_description": …}.',
+        ],
         counts: { fields: rows.length },
         rows,
         requests,
+        measured: model.source !== 'csv',
         notes: [
             'The brand record has no field for an intro. BigCommerce\'s v3 brand holds name, page_title, meta_keywords, meta_description, image_url, search_keywords and custom_url, with no description. So ticket 36 renders the intro another way: a Page Builder text widget in the brand page\'s region on 1895766, as its own text says.',
             ...(record ? [`Today: page_title ${JSON.stringify(record.page_title || '')}, meta_description ${JSON.stringify(record.meta_description || '')}.`] : []),
+            ...(!record && model.source !== 'csv' ? [`No brand named "${name}" in this read${signatureBrand ? ': Shaun creates it in the control panel first (option B)' : ''}.`] : []),
         ],
         extra: {},
     };
