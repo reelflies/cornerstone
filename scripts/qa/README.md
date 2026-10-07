@@ -12,7 +12,7 @@ The checks every theme change is held to (ticket 16; spec "Testing Decisions", s
 | Quick view | `npm run qa:quick-view` | no | no |
 | Fixture renders of partials and widgets | `npm run test:scripts` | yes | yes (release.sh) |
 | Widget element shots | `npm run qa:screens`, with the page shots | no | yes (release.sh, through `qa:prepush`) |
-| Lighthouse budgets (ticket 17) | `npm run qa:lighthouse` | no | not yet: the host batch runs it, and the `release.sh` hook is ticket 17's held second PR ([Lighthouse](#lighthouse-lighthousemjs)) |
+| Lighthouse budgets (ticket 17) | `npm run qa:lighthouse` | no | after each push to prelaunch, with the operator's preview cookie (`release.sh` step 6b); without it the entry records "pending host batch", and the host batch runs it ([Lighthouse](#lighthouse-lighthousemjs)) |
 | Host batch on the prelaunch host | `npm run qa:prelaunch` | no | no: once per checkpoint, in the operator's shell with the preview cookie ([Host batch](#host-batch-qaprelaunch)) |
 | UI states (drawer, panel) and kind@name pins | with `qa:axe` and `qa:screens` | no | yes (release.sh, through `qa:prepush`) |
 | Overlays | `QA_OVERLAY=<name> npm run qa:screens` (and `qa:axe`, `qa:raw-html`) | no | no: refused with `QA_FRESH_SERVER=1` ([Render modes](#render-modes-w0-8)) |
@@ -42,7 +42,8 @@ CI has no store credentials, so anything that renders the storefront runs locall
 | `RF_TICKET` | the branch | The ticket the run's locks name, for anyone waiting on them. |
 | `QA_REFERENCE_HTML` | none | The reference page the review pages' reference screens are shot from, instead of `plan/design/reelflies-reference.html` above the checkout ("Review pages") |
 | `QA_MANIFEST` | `scripts/qa/results/manifest.json` | The screenshot manifest a run writes, for example the host batch's in its `QA_RESULTS_DIR` ("Review pages") |
-| `QA_RESULTS_DIR` | none | Set by the host batch to `scripts/qa/results/host/<uuid>/`, the folder a gate files its results in. Ticket 17's Lighthouse runner files its own in `lighthouse/` inside it. |
+| `QA_RESULTS_DIR` | none | Set by the host batch to `scripts/qa/results/host/<uuid>/`, the folder a gate files its results in. Ticket 17's Lighthouse runner files its own in `lighthouse/` inside it. `release.sh`'s step 6b sets it too, to the pushed theme's folder. |
+| `QA_RELEASE_COMMIT` | none | The pushed commit's full sha, set by `release.sh`'s step 6b, which runs Lighthouse before step 7 writes the push's `RELEASES.md` entry. The Lighthouse runner names the build by it instead of by the uuid's entry. Anything but a full sha is ignored. |
 
 **The preview cookie** is a control-panel login, so set it only in your own shell, where it isn't shown or kept in history, and never in a file or a chat (ticket 16):
 
@@ -738,11 +739,11 @@ Stock Cornerstone fails these today on a local stencil start: `heading-order` on
 
 - On a host, under the theme uuid the run reads from the store (GET only, `release-capture.mjs`) before and after the runs: `results/host/<uuid>/lighthouse/`, or `lighthouse/` in the host batch's `QA_RESULTS_DIR`. If the active theme changed meanwhile, the run fails, because its results would mix two builds. Locally, under the commit: `results/local/<sha>[-dirty]/lighthouse/`.
 - Each run's JSON and HTML report (`cart-2.report.html`), and `summary.json`: each run's metrics and Lighthouse's CPU benchmark, the medians, the comparison point, the problems and notes, "analytics blocked", the Lighthouse and Chromium versions, and whether the run was accepted.
-- `lighthouseReleaseLines(summary)` gives the lines a `RELEASES.md` entry records under its Lighthouse line: each URL's five metrics with its JS and CSS bytes (as ticket 11 records them), the kinds not measured yet, and each problem. The host batch writes them ([Host batch](#host-batch-qaprelaunch)), and so will the `release.sh` hook.
+- `lighthouseReleaseLines(summary)` gives the lines a `RELEASES.md` entry records under its Lighthouse line: each URL's five metrics with its JS and CSS bytes (as ticket 11 records them), the kinds not measured yet, and each problem. The runner writes them into `summary.json` as `releaseLines`. The host batch writes them into the entry ([Host batch](#host-batch-qaprelaunch)), and so does `release.sh`'s step 6b, which reads them from `summary.json`, because release tooling never imports this QA code.
 
 It exits 0 when every judged budget and the drop rule passed, 1 when one failed or a URL couldn't be measured, and 2 when it stopped before measuring.
 
-**Not here yet: the `release.sh` hook.** Running the gate after each push to prelaunch, and writing its lines into the release entry, edits the release tooling, so it is ticket 17's second PR, held for Shaun's merge. The runner doesn't decide what a push without the cookie, or a P1 fix after the Flip, records; the hook does.
+**The `release.sh` hook (step 6b).** After each push to prelaunch, between verify and the log entry, the release runs this gate on the prelaunch host when `QA_PREVIEW_COOKIE` is in the operator's shell, and the entry records pass or fail with these lines. Without the cookie, as on every agent's push, the entry records `- Lighthouse: pending host batch`, which the next host batch of that uuid fills in. From the Flip it records "skipped": whether a P1 fix runs the gate is Shaun's open question, and until he answers no run after the Flip is accepted. The hook decides all of this, not the runner; its rules are in [releasing](../../docs/releasing.md#lighthouse-after-the-push-step-6b).
 
 ## Host batch (`qa:prelaunch`)
 
@@ -764,7 +765,7 @@ npm run qa:prelaunch
    - Once ticket 08 records Shaun's GA4 hostname filter, set `GA4_HOSTNAME_FILTER_SINCE` in `prelaunch.mjs` to its date. Each batch then adds one Lighthouse run with the tags loaded (`QA_ANALYTICS=allow`). It is information only: it never fails the batch, and the budgets stay on the blocked runs. Its results go in `tags-loaded/` inside the uuid's folder (its `QA_RESULTS_DIR`), so they never overwrite the blocked run's.
 4. **The same build throughout.** It reads the active theme again after the gates, and fails if it changed, because the results would then mix two builds.
 5. **The log.** It appends a row to the "Host runs" section of `RELEASES.md`, which it creates before "Switch toggles" the first time: the date, the theme uuid, the build's commit (from the uuid's newest release entry, or "not in RELEASES.md"), the gates, pass or fail, "analytics blocked", and the commit the gates ran from. "Analytics blocked" is "yes", or, once the tags-loaded run runs, "yes, in the gates it counts; tags loaded in Lighthouse with the tags loaded (information)". `summary.json` records the same. The release's own gates run on a local `stencil start`; these rows are the record that the build ReelFlies_CA actually runs passed on the host.
-   - Once Lighthouse ran, it also fills in that release entry's `- Lighthouse: pending host batch` with pass or fail, and under it each URL's medians, the kinds not measured yet and every problem, from the run's `summary.json` (`lighthouseReleaseLines`). That is the line a push made without the cookie records (ticket 17's `release.sh` hook). So ticket 56 can see that the exact build it pushes passed on prelaunch.
+   - Once Lighthouse ran, it also fills in that release entry's `- Lighthouse: pending host batch` with pass or fail, and under it each URL's medians, the kinds not measured yet and every problem, from the run's `summary.json` (`lighthouseReleaseLines`). That is the line a push made without the cookie records (`release.sh`'s step 6b, ticket 17), and the batch fills in exactly that line, which it takes from the release tooling (`release-lighthouse.mjs`). So ticket 56 can see that the exact build it pushes passed on prelaunch.
    - An accepted Lighthouse run also adds to `scripts/qa/lighthouse-history.json`. Commit it with the `RELEASES.md` change.
    - The orchestrator commits the change through the next release-log PR (build pipeline, section 6.5).
 
