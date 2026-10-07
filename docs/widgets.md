@@ -8,18 +8,25 @@ The sync never writes to the store itself. It reads the channel with GETs only a
 
 | Path | What |
 |---|---|
-| `widgets/<name>/template.html` | The template, uploaded as the widget template `rf-<name>`. It reads its `widget_configuration` at the top level and its query's result as `_.data`. It may include `widgets/_shared/` partials, which the sync inlines (a store template can't include partials). The store gets each Handlebars comment emptied to `{{!}}`, keeping its `~` flags (`emptyComments` in `scripts/widgets/source.mjs`).
-
-- Handlebars' own parser finds the comments, and only their text changes, so the store renders exactly what the fixture renderer does.
-- The sync checks this by parsing the result again. It refuses a template whose comments Handlebars places wrongly; a U+2028 or U+2029 character can cause that.
-- The store refused the hero's first upload, whose comment named `<width>`, `<path>` and `<channel>`, as "not valid HTML". Most likely it reads comment text when it checks a template's HTML.
-- Because the sync empties every comment, notes go in comments freely, even ones that name tags or partials.
-
-Close void elements (`<img … />`), as BigCommerce's own examples do, because the store doesn't document its check. The tests check every widget for both. |
+| `widgets/<name>/template.html` | The template, uploaded as the widget template `rf-<name>`. It reads its `widget_configuration` at the top level and its query's result as `_.data`. It may include `widgets/_shared/` partials, which the sync inlines (a store template can't include partials). What the store gets is below. |
 | `widgets/<name>/schema.json` | Its Page Builder schema: an array with one `tab`, holding sections of settings. |
 | `widgets/<name>/query.graphql` | Optional: its `storefront_api_query`. |
 | `widgets/<name>/channels/<channel>.json` | The widget on one channel: `channel_id`, its `configuration` (every schema setting's value there, and nothing else), its `placement` (`template_file`, `region`, `sort_order`, `status`) and the `uuids` the store gave its template, widget and placement (`null` until it makes them). |
 | `widgets/<name>/fixtures/` | Its fixture renders and element shots (W0-9, [scripts/qa/README.md](../scripts/qa/README.md#widgets)). Never synced. Each shot fixture's baselines are made for every variation the gates render, ReelFlies CA and ReelFlies CA channel 1 (`QA_VARIATION="<variation>" npx playwright test --config scripts/qa/playwright.config.mjs widget-screens -g 'widget <name>' --update-snapshots` for each), because a `QA_CHANNEL=1` run shoots every widget too; `scripts/qa/widget-baselines.test.mjs` fails CI when one is missing. |
+
+### What the store gets
+
+- **Comments are emptied.** Each Handlebars comment reaches the store as `{{!}}`, keeping its `~` flags (`emptyComments` in `scripts/widgets/source.mjs`).
+  - Handlebars' own parser finds the comments and only their text changes, so the store renders exactly what the fixture renderer does. The sync checks this by parsing the result again.
+  - It refuses a template whose comments Handlebars places wrongly; a U+2028 or U+2029 character can cause that.
+  - The store refused the hero's first upload, whose comment named `<width>`, `<path>` and `<channel>`, as "not valid HTML". Most likely it reads comment text when it checks a template's HTML.
+  - Because every comment is emptied before anything else reads the template, a note may name tags or partials, in a template or a `_shared` partial.
+- **Void elements close.** Write `<img … />`, `<br />` and the like, as BigCommerce's own examples do, because the store doesn't document its check.
+- **The tests check it.** `scripts/widgets/source.test.mjs` checks every widget. Each needs at least one fixture. Its store copy keeps no comment text, closes every void element, and renders as its files do with each fixture.
+- **The store adds `"_": { "id": <the widget's uuid> }`** to each widget's `widget_configuration`, which a template reads as `{{_.id}}`. The sync leaves it out when it compares.
+- **The store saves each template with `"template_engine": "handlebars_v3"`.** The API doesn't document a way to ask for v4. The fixture renderer renders with v4 (`config.json`'s `handlebars_v4`).
+  - Plain mustaches, `{{#if}}` and `{{#each}}` render the same in both.
+  - The `{{#*inline}}` partials the sync makes from `_shared` partials are a Handlebars 4 feature. The first widget that calls a `_shared` partial (ticket 48) must check on 1895766 that it renders before relying on it.
 
 Styles go in the theme's ReelFlies layer, `assets/scss/reelflies/_<name>.scss`, with `rf-` classes and no inline CSS (build pipeline, decision 6), so every channel's copy looks the same. The partial is imported from your ticket's own slot line in `assets/scss/reelflies/_index.scss` (ticket 25's scaffold): uncomment it and point it at `_<name>.scss`, as 46's line, `@import "home-lead"; // 46 home hero`, does.
 

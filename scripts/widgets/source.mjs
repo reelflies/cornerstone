@@ -63,33 +63,6 @@ function readJson(file, what) {
 
 const relative = (root, file) => path.join('widgets', path.relative(root, file));
 
-// The template with each {{> _shared/<partial>}} it calls defined at its end as an inline
-// partial, {{#*inline "_shared/<partial>"}}…{{/inline}}, because a store widget template can't
-// include partials. The calls stay as they are, hash arguments and all, so the store renders
-// what the fixture renderer renders (it registers widgets/_shared/ as partials). A call to any
-// other partial is refused: the store has no theme partials for a widget.
-export function inlineShared(source, root = WIDGETS_DIR) {
-    const names = [];
-    for (const [, name] of source.matchAll(SHARED_CALL)) {
-        const partial = name.replace(/^["']|["']$/g, '');
-        if (!partial.startsWith('_shared/')) throw new Error(`a store widget can't include the theme partial ${partial}: only widgets/_shared/ partials are inlined`);
-        if (!names.includes(partial)) names.push(partial);
-    }
-    const definitions = names.map(partial => {
-        const file = path.join(root, `${partial}.html`);
-        if (!/^_shared\/[a-z0-9][a-z0-9-]*$/.test(partial) || !fs.existsSync(file)) throw new Error(`${relative(root, file)} doesn't exist (called as {{> ${partial}}})`);
-        const body = fs.readFileSync(file, 'utf8');
-        if (/\{\{>/.test(body)) throw new Error(`${relative(root, file)} includes another partial: shared partials are inlined one level deep`);
-        return `{{#*inline "${partial}"}}\n${body}${body.endsWith('\n') ? '' : '\n'}{{/inline}}\n`;
-    });
-    // Appended, so the template's own lines don't move: Handlebars sets up a block's inline
-    // partials before it renders the block, wherever they stand in it. Each {{#*inline}} and
-    // {{/inline}} stands alone on its line, so Handlebars drops those lines' newlines, and the
-    // partial's body keeps its own (a comment line in it is dropped as in a partial file).
-    if (!definitions.length) return source;
-    return `${source}${source.endsWith('\n') ? '' : '\n'}${definitions.join('')}`;
-}
-
 // Handlebars' lexer breaks lines at \r\n, \r and \n, and counts its columns from there.
 const LINE_BREAK = /\r\n?|\n/g;
 // A comment token's text, as Handlebars' parser takes it from {{!-- … --}} or {{! … }}.
@@ -144,6 +117,34 @@ export function emptyComments(source) {
         .reduce((text, { start, end, strip }) => `${text.slice(0, start)}{{${strip.open ? '~' : ''}!${strip.close ? '~' : ''}}}${text.slice(end)}`, source);
     if (parsedShape(emptied) !== parsedShape(source)) throw new Error('emptying its comments would change more than their text, so it isn\'t uploaded');
     return emptied;
+}
+
+// The template with each {{> _shared/<partial>}} it calls defined at its end as an inline
+// partial, {{#*inline "_shared/<partial>"}}…{{/inline}}, because a store widget template can't
+// include partials. The calls stay as they are, hash arguments and all, so the store renders
+// what the fixture renderer renders (it registers widgets/_shared/ as partials). A call to any
+// other partial is refused: the store has no theme partials for a widget.
+export function inlineShared(source, root = WIDGETS_DIR) {
+    const names = [];
+    for (const [, name] of source.matchAll(SHARED_CALL)) {
+        const partial = name.replace(/^["']|["']$/g, '');
+        if (!partial.startsWith('_shared/')) throw new Error(`a store widget can't include the theme partial ${partial}: only widgets/_shared/ partials are inlined`);
+        if (!names.includes(partial)) names.push(partial);
+    }
+    const definitions = names.map(partial => {
+        const file = path.join(root, `${partial}.html`);
+        if (!/^_shared\/[a-z0-9][a-z0-9-]*$/.test(partial) || !fs.existsSync(file)) throw new Error(`${relative(root, file)} doesn't exist (called as {{> ${partial}}})`);
+        const body = fs.readFileSync(file, 'utf8');
+        // A note may name a partial: only a call outside the comments counts.
+        if (/\{\{>/.test(emptyComments(body))) throw new Error(`${relative(root, file)} includes another partial: shared partials are inlined one level deep`);
+        return `{{#*inline "${partial}"}}\n${body}${body.endsWith('\n') ? '' : '\n'}{{/inline}}\n`;
+    });
+    // Appended, so the template's own lines don't move: Handlebars sets up a block's inline
+    // partials before it renders the block, wherever they stand in it. Each {{#*inline}} and
+    // {{/inline}} stands alone on its line, so Handlebars drops those lines' newlines, and the
+    // partial's body keeps its own (a comment line in it is dropped as in a partial file).
+    if (!definitions.length) return source;
+    return `${source}${source.endsWith('\n') ? '' : '\n'}${definitions.join('')}`;
 }
 
 // make(), with any error it throws prefixed by `where`.

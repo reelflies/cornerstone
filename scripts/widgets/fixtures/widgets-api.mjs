@@ -5,9 +5,12 @@
 //   ~/reelflies/store-snapshots/1895766/<object>/2026-10-07T03-52-39.208Z-widgets-sync.json):
 //   no widget template, widget or placement on 1895766. The snapshot keeps each list's data,
 //   not its meta, so the pagination here is BigCommerce's documented shape.
+// - `placed` has the shape of the first `--record` after an apply (2026-10-07, snapshot sha256
+//   562d7d4f…, ~/reelflies/store-snapshots/1895766/<object>/2026-10-07T20-30-58.455Z-widgets-sync.json).
+//   The store adds "_": { "id": <the widget's uuid> } to each widget_configuration, saves each
+//   template with "template_engine": "handlebars_v3", and gives each placement an empty entity_id.
 // - The rest are shaped on BigCommerce's documented responses and the store helper's fixtures
-//   (scripts/store/fixtures/widgets.json). Replace `placed` with the snapshot of the first
-//   `--record` after an apply.
+//   (scripts/store/fixtures/widgets.json).
 
 const CH = 1895766;
 export const T = 'c0ffee00-1234-4abc-8def-0123456789ab';
@@ -46,12 +49,15 @@ export function placed(widget, configuration, placement) {
             date_modified: '2026-10-06T20:00:00.000Z',
             current_version_uuid: '0a1b2c3d-2222-4222-8333-444455556666',
             icon_name: 'default',
+            template_engine: 'handlebars_v3',
+            client_rerender: false,
+            schema_translations: {},
         }]),
         widgets: page([{
             uuid: W,
             name: widget.widgetName,
             description: '',
-            widget_configuration: configuration,
+            widget_configuration: { ...configuration, _: { id: W } },
             widget_template: {
                 uuid: T, name: widget.templateName, kind: 'custom', channel_id: CH,
             },
@@ -63,6 +69,7 @@ export function placed(widget, configuration, placement) {
         placements: page([{
             uuid: P,
             ...placement,
+            entity_id: '',
             channel_id: CH,
             widget: { uuid: W, name: widget.widgetName, channel_id: CH },
             date_created: '2026-10-06T20:00:02.000Z',

@@ -39,10 +39,14 @@ const routesFor = ({ templates, widgets, placements }) => ({
     [listKey('placements')]: { body: placements },
 });
 
-// A scratch widgets folder holding a copy of the hero, so a test can edit its channel file.
+// A scratch widgets folder holding a copy of the hero as it was before its first apply (no uuids
+// recorded; the real file records the store's since 2026-10-07), so a test can edit its channel file.
 function copyHero() {
     const root = fs.mkdtempSync(path.join(tmp, 'widgets-'));
     fs.cpSync(path.resolve('widgets/home-lead'), path.join(root, 'home-lead'), { recursive: true });
+    const file = path.join(root, 'home-lead', 'channels', '1895766.json');
+    const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+    fs.writeFileSync(file, `${JSON.stringify({ ...data, uuids: { template: null, widget: null, placement: null } }, null, 4)}\n`);
     return root;
 }
 

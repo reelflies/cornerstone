@@ -33,14 +33,17 @@ const hero = (uuids = { template: null, widget: null, placement: null }, placeme
 const recorded = { template: T, widget: W, placement: P };
 
 // The store's objects, as the Widgets API lists them for the channel.
+// The store's objects, in the shape the first --record after an apply read (2026-10-07): the store
+// adds "_": { "id": <the widget's uuid> } to a widget_configuration, a template_engine to a
+// template and an empty entity_id to a placement.
 const storeTemplate = ({ widget }, over = {}) => ({
-    uuid: T, name: widget.templateName, schema: widget.schema, template: widget.template, storefront_api_query: widget.query, kind: 'custom', channel_id: CH, current_version_uuid: OTHER, icon_name: 'default', ...over,
+    uuid: T, name: widget.templateName, schema: widget.schema, template: widget.template, storefront_api_query: widget.query, kind: 'custom', channel_id: CH, current_version_uuid: OTHER, icon_name: 'default', template_engine: 'handlebars_v3', client_rerender: false, schema_translations: {}, ...over,
 });
 const storeWidget = ({ widget, channelFile }, over = {}) => ({
     uuid: W,
     name: widget.widgetName,
     description: '',
-    widget_configuration: channelFile.configuration,
+    widget_configuration: { ...channelFile.configuration, _: { id: W } },
     widget_template: {
         uuid: T, name: widget.templateName, kind: 'custom', channel_id: CH,
     },
@@ -51,6 +54,7 @@ const storeWidget = ({ widget, channelFile }, over = {}) => ({
 const storePlacement = ({ widget, channelFile }, over = {}) => ({
     uuid: P,
     ...channelFile.placement,
+    entity_id: '',
     channel_id: CH,
     widget: { uuid: W, name: widget.widgetName, channel_id: CH },
     ...over,
@@ -149,6 +153,15 @@ test('a channel in step with the repo needs no request', () => {
     assert.deepEqual(problems, []);
     assert.deepEqual(requests, []);
     assert.equal(lines.filter(line => /no change/.test(line)).length, 3, lines.join('\n'));
+});
+
+test('the "_" the store adds to a widget_configuration isn\'t drift; any other "_" is', () => {
+    const entry = hero(recorded);
+    const other = planSync({
+        channel: CH, entries: [entry], store: { ...synced(entry), widgets: [storeWidget(entry, { widget_configuration: { ...entry.channelFile.configuration, _: { id: 'someone-else' } } })] },
+    });
+    assert.equal(other.requests.length, 1);
+    assert.match(other.lines.join('\n'), /widget_configuration\._: \{"id":"someone-else"\} -> \(none\)|widget_configuration\._: \{"id":"someone-else"\} -> null/);
 });
 
 test('an update sends only the fields that changed, with the channel', () => {
