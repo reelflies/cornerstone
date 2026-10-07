@@ -13,6 +13,8 @@ This repo is Cornerstone (`upstream`, bigcommerce/cornerstone) plus ReelFlies co
 | Styles | `assets/scss/reelflies/`: `_settings.scss` is imported after the settings in `theme.scss`, and `_index.scss` at the end of it |
 | Icons | SVG partials in `templates/components/reelflies/icons/`. Don't add to `assets/icons/`, because that regenerates `assets/img/icon-sprite.svg`. |
 | Hero widget template and schema (stored in BigCommerce) | `widgets/` |
+| Store settings changes files, which the store-write helper plans and applies: lifted writes on ReelFlies_CA, and Shaun's store-wide batch (ticket 21) | `store-settings/1895766/`, `store-settings/store-wide/` |
+| Research notes and checklists, such as [the store settings checklist](research/21-store-settings.md) (never bundled) | `research/` |
 | Release, check and generator tooling (never bundled) | `scripts/` |
 | Research notes and their evidence, such as ticket 07's prelaunch probes (never bundled) | `research/` |
 | Decisions | `docs/adr/` |
