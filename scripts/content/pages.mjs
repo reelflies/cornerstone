@@ -8,10 +8,13 @@
 //   node scripts/content/pages.mjs --changes <out.json> --existing <read.json>
 //                                                                      # PUT the pages the channel already has
 //
-// `--existing` takes the channel's own pages as GET /v3/content/pages?channel_id=1895766 answers
-// them (`{ "data": [...] }` or the bare array), for example from plan.mjs's snapshot. A page
-// whose url matches one there is updated by its id; the rest are created in one POST. A read
-// that names any other channel is refused, so a page is never matched across channels.
+// `--existing` takes the channel's own pages, read with GET /v3/content/pages?channel_id=1895766,
+// in one of three shapes: the API's answer (`{ "data": [...] }`), the bare array, or the snapshot
+// file plan.mjs writes before a create (~/reelflies/store-snapshots/1895766/pages/<time>-plan.json,
+// whose `reads` hold that GET). A page whose url matches one there is updated by its id; the
+// rest are created in one POST. Anything else is refused, never read as a channel with no
+// pages, and so is a read or a snapshot that names any other channel, so a page is never matched
+// across channels. Without `--existing` every page is a create, and the command warns.
 //
 // The source format (content/pages/1895766/README.md):
 //
@@ -30,7 +33,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { findTags } from '../qa/raw-html/html.mjs';
 import { unbalancedTags } from '../qa/render/html-checks.mjs';
+import { ENTITIES } from '../store/allowlist.mjs';
 import { CHANNEL } from '../store/channel.mjs';
+import { readSpec } from '../store/snapshot.mjs';
 import { isMain } from '../lib/is-main.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -225,14 +230,53 @@ export function readPages(dir = PAGES_DIR) {
 // A url as a path: its host and query gone, with one trailing slash.
 const pathOf = url => `${String(url).replace(/^https?:\/\/[^/]+/i, '').replace(/[?#].*$/, '').replace(/\/+$/, '')}/`;
 
-// The requests for scripts/store/plan.mjs: a PUT for each page the channel already has at the
-// same url (from `existing`, the channel's GET /v3/content/pages read), then one POST that
-// creates the rest. Every body carries channel_id 1895766.
-export function pagesToRequests(site, existing = []) {
-    const read = Array.isArray(existing) ? existing : existing?.data ?? [];
-    for (const item of read) {
-        if (item.channel_id !== CHANNEL) throw new Error(`the pages read names channel ${item.channel_id}, not ${CHANNEL}: read them with channel_id=${CHANNEL}`);
+// The read of the channel's pages, keyed as the store-write helper keys it in a snapshot.
+const PAGES = ENTITIES.pages;
+export const PAGES_READ = readSpec({ path: PAGES.base, query: { [PAGES.listChannelQuery]: CHANNEL } }).key;
+
+const describeShape = value => {
+    if (Array.isArray(value)) return 'a list';
+    if (isObject(value)) return `an object with ${Object.keys(value).join(', ') || 'no keys'}`;
+    return JSON.stringify(value) ?? String(value);
+};
+
+// The channel's pages from an --existing read: the API's `{ data: [...] }`, the bare array, or
+// plan.mjs's snapshot file holding PAGES_READ. Any other shape, a snapshot of another channel
+// or object, or a page without its id, url or channel 1895766 throws.
+export function existingPages(existing) {
+    let pages;
+    if (Array.isArray(existing)) {
+        pages = existing;
+    } else if (isObject(existing) && Array.isArray(existing.data)) {
+        pages = existing.data;
+    } else if (isObject(existing) && Array.isArray(existing.reads) && 'channel' in existing) {
+        if (existing.channel !== CHANNEL) throw new Error(`--existing is a snapshot of channel ${existing.channel}, not ${CHANNEL}: use 1895766's pages snapshot`);
+        if (existing.object !== 'pages') throw new Error(`--existing is a snapshot of ${existing.object}, not pages`);
+        const record = existing.reads.find(item => isObject(item) && item.key === PAGES_READ);
+        if (!record) {
+            const keys = existing.reads.map(item => item?.key).filter(Boolean);
+            throw new Error(`--existing has no "${PAGES_READ}" read (it holds ${keys.join(', ') || 'none'}): use the snapshot of a plan that creates pages, which reads the channel's whole list`);
+        }
+        if (!Array.isArray(record.data)) throw new Error(`--existing's "${PAGES_READ}" read isn't a list of pages`);
+        pages = record.data;
+    } else {
+        throw new Error(`--existing isn't a pages read (${describeShape(existing)}): give the channel's GET ${PAGES.base}?channel_id=${CHANNEL} answer, its data array, or plan.mjs's snapshot file of it`);
     }
+    pages.forEach((item, index) => {
+        if (!isObject(item)) throw new Error(`page ${index + 1} in the read isn't an object`);
+        if (item.channel_id !== CHANNEL) throw new Error(`the pages read names channel ${item.channel_id}, not ${CHANNEL}: read them with channel_id=${CHANNEL}`);
+        if (!Number.isInteger(item.id)) throw new Error(`page ${index + 1} in the read has no id`);
+        if (typeof item.url !== 'string' || !item.url) throw new Error(`page ${index + 1} in the read has no url`);
+    });
+    return pages;
+}
+
+// The requests for scripts/store/plan.mjs: a PUT for each page the channel already has at the
+// same url (from `existing`, the channel's pages read, as existingPages takes it), then one POST
+// that creates the rest. With no read, every page is a create. Every body carries channel_id
+// 1895766.
+export function pagesToRequests(site, existing) {
+    const read = existing === undefined ? [] : existingPages(existing);
     const byPath = new Map(read.map(item => [pathOf(item.url), item]));
     const bodyOf = item => Object.fromEntries([...SENT.filter(key => key in item).map(key => [key, item[key]]), ['channel_id', CHANNEL]]);
     const updates = [];
@@ -258,12 +302,14 @@ function main(argv) {
     }
     const site = readPages(args.dir);
     const problems = pageProblems(site);
+    // The listing shows what is there, however broken: pageProblems names what is wrong below.
+    const questions = entries => (Array.isArray(entries) ? entries : []).filter(isObject);
     for (const item of site.pages) {
-        console.log(`${item.status.toUpperCase().padEnd(8)} ${item.url.padEnd(20)} ${item.name} (${item.type})`);
-        for (const entry of item.forShaun || []) console.log(`         for Shaun${entry.key ? ` [${entry.key}]` : ''}: ${entry.question}`);
+        console.log(`${String(item.status).toUpperCase().padEnd(8)} ${String(item.url).padEnd(20)} ${item.name} (${item.type})`);
+        for (const entry of questions(item.forShaun)) console.log(`         for Shaun${entry.key ? ` [${entry.key}]` : ''}: ${entry.question}`);
     }
-    console.log(`${String(site.newsletter.status).toUpperCase().padEnd(8)} newsletter.json      the CASL newsletter wording (tickets 24 and 50)`);
-    for (const entry of site.newsletter.forShaun || []) console.log(`         for Shaun: ${entry.question}`);
+    console.log(`${String(site.newsletter?.status).toUpperCase().padEnd(8)} newsletter.json      the CASL newsletter wording, the source of record for tickets 24 and 50`);
+    for (const entry of questions(site.newsletter?.forShaun)) console.log(`         for Shaun: ${entry.question}`);
     if (problems.length) {
         problems.forEach(problem => console.log(`PROBLEM  ${problem}`));
         process.exitCode = 1;
@@ -271,8 +317,9 @@ function main(argv) {
     }
     console.log(`ok       ${site.pages.length} pages for channel ${CHANNEL}, no problems`);
     if (args.changes) {
-        const existing = args.existing ? JSON.parse(fs.readFileSync(args.existing, 'utf8')) : [];
+        const existing = args.existing ? JSON.parse(fs.readFileSync(args.existing, 'utf8')) : undefined;
         const requests = pagesToRequests(site, existing);
+        if (!args.existing) console.log(`WARN     no --existing read: every page is a create, so a page 1895766 already has at the same url would be made twice. Read the channel's pages first (${PAGES_READ}, README "Writing them to the store").`);
         fs.writeFileSync(args.changes, `${JSON.stringify(requests, null, 2)}\n`);
         console.log(`wrote    ${args.changes}: ${requests.map(request => `${request.method} ${request.path}`).join(', ')}`);
         // plan.mjs reads a changes file only from the main clone, a worktree or ~/reelflies/store-snapshots/.

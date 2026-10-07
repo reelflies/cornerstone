@@ -11,8 +11,13 @@
 //
 //   node --test scripts/content/pages.test.mjs
 
-import { describe, it } from 'node:test';
+import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { classify } from '../store/allowlist.mjs';
 import { CHANNEL, requestChannelProblems } from '../store/channel.mjs';
 import {
@@ -327,10 +332,141 @@ describe('pagesToRequests: the store-write helper\'s changes file', () => {
         assert.throws(() => pagesToRequests(site, [{ id: 2, url: '/shipping-returns/', channel_id: 1 }]), /channel 1, not 1895766/);
     });
 
+    // A snapshot file as scripts/store/snapshot.mjs writeSnapshotFiles writes it, holding the
+    // read plan.mjs takes before a create: every page of the channel.
+    const snapshotFile = (data, overrides = {}) => ({
+        taken: '2026-10-06T20:00:00.000Z',
+        channel: CHANNEL,
+        object: 'pages',
+        label: 'plan',
+        snapshot_sha256: 'f'.repeat(64),
+        reads: [{
+            key: `GET /v3/content/pages?channel_id=${CHANNEL}`, object: 'pages', scope: 'channel', data, sha256: 'e'.repeat(64),
+        }],
+        ...overrides,
+    });
+
+    it('reads plan.mjs\'s snapshot file of the channel\'s pages, and updates what it lists', () => {
+        const read = snapshotFile([
+            {
+                id: 41, url: '/shipping-returns/', channel_id: CHANNEL, name: 'Shipping & Returns',
+            },
+            {
+                id: 42, url: '/contact-us/', channel_id: CHANNEL, name: 'Contact',
+            },
+        ]);
+        const requests = pagesToRequests(site, read);
+        assert.deepEqual(requests.map(request => `${request.method} ${request.path}`), ['PUT /v3/content/pages/41', 'PUT /v3/content/pages/42', 'POST /v3/content/pages']);
+        assert.equal(requests[2].body.length, site.pages.length - 2);
+        allLifted(requests);
+    });
+
+    it('takes an empty snapshot read as a channel with no pages yet', () => {
+        assert.deepEqual(pagesToRequests(site, snapshotFile([])).map(request => request.method), ['POST']);
+    });
+
+    it('refuses a snapshot of another channel, or one whose pages name another channel', () => {
+        assert.throws(() => pagesToRequests(site, snapshotFile([], { channel: 1 })), /snapshot of channel 1, not 1895766/);
+        const stray = snapshotFile([{ id: 2, url: '/shipping-returns/', channel_id: 1 }]);
+        assert.throws(() => pagesToRequests(site, stray), /channel 1, not 1895766/);
+    });
+
+    it('refuses a snapshot without the channel\'s pages read, naming the read it needs', () => {
+        const itemOnly = snapshotFile(null, {
+            reads: [{
+                key: 'GET /v3/content/pages/41', object: 'pages', scope: 'item', data: { id: 41, url: '/shipping-returns/', channel_id: CHANNEL },
+            }],
+        });
+        assert.throws(() => pagesToRequests(site, itemOnly), /no "GET \/v3\/content\/pages\?channel_id=1895766" read/);
+        assert.throws(() => pagesToRequests(site, snapshotFile([], { object: 'scripts' })), /snapshot of scripts, not pages/);
+        assert.throws(() => pagesToRequests(site, snapshotFile({ id: 41 })), /isn't a list of pages/);
+    });
+
+    it('refuses any other shape, rather than read it as a channel with no pages', () => {
+        const shapes = [
+            {},
+            null,
+            'pages',
+            41,
+            { pages: [] },
+            { data: { id: 41, url: '/shipping-returns/', channel_id: CHANNEL } },
+            { reads: [] },
+        ];
+        for (const shape of shapes) {
+            assert.throws(() => pagesToRequests(site, shape), /isn't a pages read/, JSON.stringify(shape));
+        }
+    });
+
+    it('refuses a page in the read without its id or url, so it can\'t be matched wrongly', () => {
+        assert.throws(() => pagesToRequests(site, [{ url: '/help/', channel_id: CHANNEL }]), /page 1 in the read has no id/);
+        assert.throws(() => pagesToRequests(site, { data: [{ id: 7, channel_id: CHANNEL }] }), /page 1 in the read has no url/);
+        assert.throws(() => pagesToRequests(site, ['/help/']), /page 1 in the read isn't an object/);
+    });
+
     it('sends only PUTs when every page exists', () => {
         const existing = site.pages.map((item, index) => ({ id: 100 + index, url: item.url, channel_id: CHANNEL }));
         const requests = pagesToRequests(site, existing);
         assert.ok(requests.every(request => request.method === 'PUT'));
         allLifted(requests);
+    });
+});
+
+describe('the command (node scripts/content/pages.mjs)', () => {
+    const SCRIPT = fileURLToPath(new URL('./pages.mjs', import.meta.url));
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-content-pages-'));
+    after(() => fs.rmSync(tmp, { recursive: true, force: true }));
+
+    // A copy of the real sources in <tmp>/<name>/1895766/, with pages.json changed by `edit`.
+    const copySources = (name, edit = manifest => manifest) => {
+        const dir = path.join(tmp, name, String(CHANNEL));
+        fs.cpSync(path.resolve(fileURLToPath(new URL('../..', import.meta.url)), PAGES_DIR), dir, { recursive: true });
+        const file = path.join(dir, 'pages.json');
+        fs.writeFileSync(file, JSON.stringify(edit(JSON.parse(fs.readFileSync(file, 'utf8')))));
+        return dir;
+    };
+    const run = (...args) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8', timeout: 30000 });
+
+    it('names an entry with no status or url as a problem, rather than stopping on it', () => {
+        const dir = copySources('broken', manifest => {
+            const [first, second, ...rest] = manifest.pages;
+            const { status: _status, ...noStatus } = first;
+            const { url: _url, ...noUrl } = second;
+            return { ...manifest, pages: [noStatus, noUrl, ...rest] };
+        });
+        const { status, stdout, stderr } = run('--dir', dir);
+        assert.equal(status, 1);
+        assert.doesNotMatch(`${stdout}${stderr}`, /Cannot read properties|TypeError/);
+        assert.match(stdout, /PROBLEM {2}about-us\.html: status undefined isn't draft or approved/);
+        assert.match(stdout, /PROBLEM {2}shipping-returns\.html: url undefined isn't a lower-case path/);
+    });
+
+    it('warns when it writes the changes without the channel\'s pages read', () => {
+        const out = path.join(tmp, 'changes-no-read.json');
+        const { status, stdout } = run('--dir', copySources('no-read'), '--changes', out);
+        assert.equal(status, 0);
+        assert.match(stdout, /WARN {5}no --existing read: every page is a create/);
+        assert.deepEqual(JSON.parse(fs.readFileSync(out, 'utf8')).map(request => request.method), ['POST']);
+    });
+
+    it('takes plan.mjs\'s snapshot file as --existing, and stops on a shape it doesn\'t know', () => {
+        const dir = copySources('read');
+        const snapshot = path.join(tmp, 'snapshot.json');
+        fs.writeFileSync(snapshot, JSON.stringify({
+            channel: CHANNEL,
+            object: 'pages',
+            reads: [{ key: `GET /v3/content/pages?channel_id=${CHANNEL}`, data: [{ id: 41, url: '/shipping-returns/', channel_id: CHANNEL }] }],
+        }));
+        const out = path.join(tmp, 'changes-read.json');
+        const ok = run('--dir', dir, '--changes', out, '--existing', snapshot);
+        assert.equal(ok.status, 0, ok.stdout + ok.stderr);
+        assert.doesNotMatch(ok.stdout, /WARN/);
+        assert.deepEqual(JSON.parse(fs.readFileSync(out, 'utf8')).map(request => `${request.method} ${request.path}`), ['PUT /v3/content/pages/41', 'POST /v3/content/pages']);
+
+        const unknown = path.join(tmp, 'unknown.json');
+        fs.writeFileSync(unknown, JSON.stringify({ pages: [] }));
+        const refused = run('--dir', dir, '--changes', path.join(tmp, 'changes-unknown.json'), '--existing', unknown);
+        assert.equal(refused.status, 1);
+        assert.match(refused.stderr, /ERROR {4}.*isn't a pages read/);
+        assert.ok(!fs.existsSync(path.join(tmp, 'changes-unknown.json')), 'no changes file is written');
     });
 });
