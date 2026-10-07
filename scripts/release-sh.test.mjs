@@ -1117,7 +1117,9 @@ for (const [name, args, reason] of PRUNE_REFUSALS) {
 const uuidN = n => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
 
 // RELEASES.md with builds 1 to n of "ReelFlies" 6.22.0 on 1895766, one a day, and My Themes as
-// GET /v3/themes and the active-theme reads give it (RF_RELEASE_THEMES_FIXTURE).
+// GET /v3/themes and the active-theme reads give it (RF_RELEASE_THEMES_FIXTURE). My Themes names
+// build 1 "ReelFlies" and each later upload "ReelFlies (1)", "ReelFlies (2)" and so on: the store
+// named the first agent push "ReelFlies (1)", and is expected to number later uploads on (W0-3b).
 function pruneFixtures(n = 5, { deletionLogged = false } = {}) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-prune-test-'));
     tempDirs.push(dir);
@@ -1134,7 +1136,7 @@ function pruneFixtures(n = 5, { deletionLogged = false } = {}) {
         themes: [
             { uuid: 'e3d82ce0-9bae-0133-0de7-525400970412', name: 'Cornerstone', is_active: false },
             { uuid: '7c519850-0000-0000-0000-000000000000', name: 'Hero-2024-2.9.5-US', is_active: true },
-            ...Array.from({ length: n }, (_, i) => ({ uuid: uuidN(i + 1), name: 'ReelFlies', is_active: false })),
+            ...Array.from({ length: n }, (_, i) => ({ uuid: uuidN(i + 1), name: i ? `ReelFlies (${i})` : 'ReelFlies', is_active: false })),
         ],
         activeByChannel: { 1: '7c519850-0000-0000-0000-000000000000', 1855224: '7c519850-0000-0000-0000-000000000000', 1895766: uuidN(n) },
     };
@@ -1170,10 +1172,10 @@ test('W0-3: --prune-only --dry-run shows what it would delete, keeps the newest 
     });
     assert.equal(result.status, 0, result.output);
     assert.match(result.stdout, /== My Themes: prune \(dry run: nothing is deleted\)/);
-    assert.match(result.stdout, /My Themes holds 7 of 20 themes; 5 named ReelFlies; channels checked: 1, 1855224, 1895766/);
+    assert.match(result.stdout, /My Themes holds 7 of 20 themes; 5 named ReelFlies or "ReelFlies \(n\)"; channels checked: 1, 1855224, 1895766/);
     assert.match(result.stdout, new RegExp(`delete {3}${uuidN(1)} ReelFlies 6\\.22\\.0`));
-    assert.match(result.stdout, new RegExp(`delete {3}${uuidN(2)} ReelFlies 6\\.22\\.0`));
-    assert.match(result.stdout, new RegExp(`keep {5}${uuidN(3)} .*one of the newest 3`));
+    assert.match(result.stdout, new RegExp(`delete {3}${uuidN(2)} ReelFlies \\(1\\) 6\\.22\\.0`));
+    assert.match(result.stdout, new RegExp(`keep {5}${uuidN(3)} ReelFlies \\(2\\) .*one of the newest 3`));
     assert.match(result.stdout, /dry run {2}would delete 2 theme\(s\); nothing was deleted, and RELEASES\.md is unchanged/);
     assert.equal(fs.readFileSync(logPath, 'utf8'), before);
     assert.equal(fs.readFileSync(fileURLToPath(new URL('../RELEASES.md', import.meta.url)), 'utf8'), releases);
