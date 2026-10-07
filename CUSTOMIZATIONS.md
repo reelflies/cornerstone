@@ -13,14 +13,16 @@ This repo is Cornerstone (`upstream`, bigcommerce/cornerstone) plus ReelFlies co
 | Styles | `assets/scss/reelflies/`: `_settings.scss` is imported after the settings in `theme.scss`, and `_index.scss` at the end of it |
 | Fonts and images | `assets/fonts/` (Onest, self-hosted, with its licence `OFL.txt`) and `assets/img/reelflies/` (the default product, brand and share images) |
 | Icons | SVG partials in `templates/components/reelflies/icons/`. Don't add to `assets/icons/`, because that regenerates `assets/img/icon-sprite.svg`. |
-| Hero widget template and schema (stored in BigCommerce) | `widgets/` |
+| Widgets API templates, schemas and per-channel files (stored in BigCommerce), synced by `scripts/widgets-sync.mjs` ([widgets](docs/widgets.md)) | `widgets/` |
 | Web Page sources: the Policy, Help and Brand pages of one channel (stored in BigCommerce, written through `scripts/store/`; never bundled), and `newsletter.json`, the source of record for the CASL newsletter wording that tickets 24 and 50 copy and pin with a test | `content/pages/<channel>/` ([ticket 22](content/pages/1895766/README.md)) |
 | Store settings changes files, which the store-write helper plans and applies: lifted writes on ReelFlies_CA, and Shaun's store-wide batch (ticket 21; never bundled) | `store-settings/1895766/`, `store-settings/store-wide/` |
+| Store content kept as changes files for the store-write helper, such as a channel's SEO settings (ticket 46) | `content/settings/<channel>/` |
+| Copy that waits for Shaun's approval, which is never a changes file, so the store-write routine can't publish it (ticket 46) | `content/drafts/<channel>/` |
 | Release, check and generator tooling (never bundled) | `scripts/` |
 | Script Manager scripts (stored in BigCommerce, never bundled): each script's source, and the changes file `scripts/store-scripts/build.mjs` makes from it for the store-write helper (ticket 23) | `store-scripts/` |
 | Research notes, checklists and their evidence, such as ticket 07's prelaunch probes, [the store settings checklist](research/21-store-settings.md) and [the analytics, email and integrations checklist](research/23-analytics-and-integrations.md) (never bundled) | `research/` |
 | Decisions | `docs/adr/` |
-| Operator guides, such as [releasing](docs/releasing.md), [guardrails](docs/guardrails.md), [store writes](docs/store-writes.md) and [catalogue jobs](docs/catalogue-jobs.md) | `docs/` |
+| Operator guides, such as [releasing](docs/releasing.md), [guardrails](docs/guardrails.md), [store writes](docs/store-writes.md), [catalogue jobs](docs/catalogue-jobs.md) and [widgets](docs/widgets.md) | `docs/` |
 | Claude Code permission rules: a draft until Shaun turns them on ([permissions](docs/permissions.md)) | `.claude/` |
 
 - **New theme settings** go in the ReelFlies block of `schema.json`, `schemaTranslations.json` and the `settings` object in `config.json`, in your module's group (below).
@@ -96,6 +98,8 @@ The release guard's rule 1 covers every `rf_*` key except the two menu ids, valu
 | `package.json`, `package-lock.json` | `@playwright/test` 1.59.1 and `@axe-core/playwright` 4.10.2 as exact devDependencies; `qa:axe`, `qa:screens`, `qa:quick-view`, `qa:raw-html` and `qa:prepush` scripts | The storefront gates in `scripts/qa/`. Playwright 1.59.1 uses Chromium build 1217; `@axe-core/playwright` 4.10.2 uses the axe-core 4.10.3 already in the lockfile, the same engine as Lighthouse's audit | 16 |
 | `package.json` | `qa:prelaunch` script: runs `scripts/qa/prelaunch.mjs` | The host batch: the storefront gates against the prelaunch host once per checkpoint, with the analytics tags blocked and the results filed by theme uuid (W0-6) | 16 |
 | `package.json` | `qa:lighthouse` script: runs `scripts/qa/lighthouse.mjs` | Ticket 17's Lighthouse budgets on six URLs (median of 3, mobile, the drop rule), which the host batch and `release.sh`'s step 6b run. It uses upstream's own `lighthouse` devDependency (12.8.1 in the lockfile) and `lighthouse-config.js`, both unchanged, so no dependency is added | 17 |
+| `package.json` | `widgets:sync` script: runs `scripts/widgets-sync.mjs` | The widget sync: home content as code, synced to one channel at a time through the store-write helper ([widgets](docs/widgets.md)) | 46 |
+| `config.json` | `homepage_show_carousel`: `true` becomes `false` in the base settings | The hero widget (`widgets/home-lead`) is the home page's lead, so the stock carousel never renders under it (O21); every variation inherits it, and the `home-no-carousel` raw-HTML check holds it | 46 |
 | `package.json` | `qa:matrix`, `qa:reflow`, `qa:motion`, `qa:focus` and `qa:links` scripts | Ticket 54a's runners in `scripts/qa/`: the switch matrix on W0-8's overlays, reflow at 320, reduced motion, the focus tab-through and the home widget link check ([scripts/qa/README.md](scripts/qa/README.md), "Switch matrix and the extra checks"). None runs in CI or in `qa:prepush` | 54 |
 | `assets/js/app.js` | Line 4 imports `theme/reelflies/page-modules`; line 56's `customClasses` is spread from it (was `{}`) | ReelFlies modules load per page template, each its own chunk, never in main.js; several on one template through one composite importer (build pipeline 6.1) | 25 |
 | `assets/js/theme/global.js` | Line 16 imports `reelflies/global`; line 31, the end of `onReady`, calls it with the page context | One place where the every-page ReelFlies modules (27, 28, 30, 52) start, after the stock globals | 25 |

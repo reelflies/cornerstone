@@ -75,7 +75,7 @@
     "homepage_new_products_count": 5,
     "homepage_featured_products_count": 4,
     "homepage_top_products_count": 4,
-    "homepage_show_carousel": true,
+    "homepage_show_carousel": false,
     "homepage_show_carousel_arrows": true,
     "homepage_show_carousel_play_pause_button": true,
     "homepage_stretch_carousel_images": false,

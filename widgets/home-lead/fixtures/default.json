@@ -1,0 +1,19 @@
+{
+    "description": "The hero as ReelFlies_CA (1895766) gets it: the mirrored Bass & Pan Fish stone banner, the H1, the subline and both buttons. Its configuration is channels/1895766.json's, which home-lead.test.mjs checks.",
+    "page": "pages/home",
+    "region": "home_below_menu",
+    "configuration": {
+        "heading": "Hand-tied fly fishing flies, sold one at a time.",
+        "subline": "Nearly 2,000 patterns from $0.75 a fly, tied by hand and shipped across Canada from our family shop in Tillsonburg, Ontario, since 2003.",
+        "primary_label": "Shop dry flies",
+        "primary_url": "/dry-flies/",
+        "secondary_label": "Shop by fish",
+        "secondary_url": "/species/",
+        "image_base": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil",
+        "image_path": "s/bass-panfish__24775.original.jpg",
+        "image_width": "1600",
+        "image_height": "700",
+        "image_alt": "",
+        "image_mirror": true
+    }
+}

@@ -1,0 +1,190 @@
+// =============================================================================
+// HOME LEAD: the photo hero (ticket 46; spec module 6, O21)
+// =============================================================================
+//
+// Styles for the Widgets API template widgets/home-lead/template.html, which the store renders
+// in home_below_menu. Widget styles live in the theme, not in the widget (build pipeline,
+// decision 6), so the 1895766 and channel-1 copies stay identical.
+//
+// - Phones (below 801px): the photo, cropped to 16:10, with the text below it.
+// - From 801px: the text sits on a neutral scrim over the photo (CD-6), and the hero is 300px
+//   tall (CD-1). It grows only if the text needs more, such as under text-only zoom, so no
+//   text is ever cut off.
+// - The photo is a real <img> (SEO-8). Its box is reserved by CSS before it loads (16:10 on
+//   phones, the hero's own height above), so nothing moves when it arrives (story 70).
+//
+// -----------------------------------------------------------------------------
+
+$rf-hero-height:            300px;
+$rf-hero-scrim:             #1c1d1f;    // the neutral scrim, rgb(28, 29, 31) (CD-6)
+$rf-hero-stone:             #2f382f;    // shown behind the photo until it loads
+$rf-hero-text-on-photo:     #ffffff;
+$rf-hero-subline-on-photo:  #e6e9ec;
+
+.rf-home-lead {
+    padding-top: 12px;
+
+    @include breakpoint("medium") {
+        padding-top: 20px;
+    }
+}
+
+.rf-hero {
+    position: relative;
+
+    @include breakpoint("medium") {
+        background: $rf-hero-stone;
+        border-radius: 20px;
+        display: grid;
+        min-height: $rf-hero-height;
+        overflow: hidden;
+    }
+}
+
+.rf-hero__media {
+    background: $rf-hero-stone;
+    border-radius: 16px;
+    overflow: hidden;
+
+    @include breakpoint("medium") {
+        border-radius: 0;
+        inset: 0;
+        position: absolute;
+    }
+}
+
+.rf-hero__img {
+    aspect-ratio: 16 / 10;
+    display: block;
+    height: auto;
+    object-fit: cover;
+    width: 100%;
+
+    @include breakpoint("medium") {
+        aspect-ratio: auto;
+        height: 100%;
+    }
+}
+
+.rf-hero__img--mirror {
+    transform: scaleX(-1);
+}
+
+.rf-hero__copy {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px 0 0;
+
+    @include breakpoint("medium") {
+        // Strong under the text, which ends by 65% of the hero's width from 801px up, then
+        // clearing towards the right, where the photo shows (home-lead-screens.spec.mjs reads
+        // the lightest pixel behind every line of text at 801px and 1280px).
+        background: linear-gradient(90deg, rgba($rf-hero-scrim, 0.9) 0, rgba($rf-hero-scrim, 0.85) 50%, rgba($rf-hero-scrim, 0.75) 65%, rgba($rf-hero-scrim, 0.3) 82%, rgba($rf-hero-scrim, 0) 95%);
+        color: $rf-hero-text-on-photo;
+        justify-content: center;
+        padding: 24px clamp(28px, 4.5vw, 56px);
+        position: relative;
+    }
+}
+
+.rf-hero__heading {
+    color: stencilColor("color-textHeading");
+    font-size: clamp(28px, calc(2.4vw + 18px), 34px);
+    letter-spacing: -0.02em;
+    line-height: 1.08;
+    margin: 0;
+
+    @include breakpoint("medium") {
+        color: $rf-hero-text-on-photo;
+        font-size: clamp(30px, calc(2.4vw + 10px), 42px);
+        max-width: 14em;
+    }
+}
+
+.rf-hero__text {
+    color: stencilColor("color-textBase");
+    font-size: 16px;
+    line-height: 1.5;
+    margin: 0;
+    max-width: 34em;
+
+    @include breakpoint("medium") {
+        color: $rf-hero-subline-on-photo;
+        max-width: 28em;
+    }
+}
+
+.rf-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.rf-hero__button {
+    align-items: center;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    display: inline-flex;
+    font-family: $header-font-family;
+    font-size: 16px;
+    font-weight: $header-font-weight;
+    justify-content: center;
+    line-height: 1.2;
+    min-height: 48px;
+    padding: 0 22px;
+    text-decoration: none;
+
+    // The focus ring is ticket 25's (_foundation.scss). On phones the buttons sit on the white
+    // page and keep its #23272B ring. From 801px they sit on the scrim, so they take its
+    // dark-ground ring, the gold bead: this rule has the foundation's [href]:focus-visible
+    // specificity and comes after it, so it wins (home-lead-screens.spec.mjs checks both).
+    @include breakpoint("medium") {
+        &:focus-visible {
+            @include rf-focus-ring(var(--rf-focus-dark));
+        }
+    }
+}
+
+.rf-hero__button--primary {
+    background: stencilColor("color-textHeading");
+    color: $rf-hero-text-on-photo;
+
+    &:hover {
+        background: stencilColor("color-textBase");
+        color: $rf-hero-text-on-photo;
+    }
+
+    @include breakpoint("medium") {
+        background: $rf-hero-text-on-photo;
+        color: stencilColor("color-textHeading");
+
+        &:hover {
+            background: $rf-hero-subline-on-photo;
+            color: stencilColor("color-textHeading");
+        }
+    }
+}
+
+.rf-hero__button--secondary {
+    background: transparent;
+    border-color: stencilColor("button--default-borderColor");
+    color: stencilColor("color-textHeading");
+
+    &:hover {
+        border-color: stencilColor("color-textHeading");
+        color: stencilColor("color-textHeading");
+    }
+
+    @include breakpoint("medium") {
+        border-color: $rf-hero-text-on-photo;
+        color: $rf-hero-text-on-photo;
+
+        &:hover {
+            background: rgba($rf-hero-text-on-photo, 0.12);
+            border-color: $rf-hero-text-on-photo;
+            color: $rf-hero-text-on-photo;
+        }
+    }
+}
