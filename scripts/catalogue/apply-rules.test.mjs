@@ -199,3 +199,62 @@ test('a restore puts back what the snapshot read, and expects the state the plan
     }]);
     assert.equal(checkRequests(alt.requests, { mode: 'restore' }).length, 1);
 });
+
+test('the diff lists the values in the order the write leaves them, so a reorder is never "no change"', () => {
+    const now = [value(1, '6/0', 0), value(2, '2', 1), value(3, '4', 2)];
+    // The same array order, with the sort_order numbers turned: the store then shows 4, 6/0, 2.
+    const turned = [value(1, '6/0', 1), value(2, '2', 2), value(3, '4', 0)];
+    const request = { ...optionRequest(turned), before: { display_name: 'Fly Sizes', option_values: now } };
+    const [item] = judge(checkRequests([request]), store({ values: now }));
+    assert.equal(item.status, 'pending');
+    assert.equal(diffLine(item, item.now), 'product 101, option 50: values 6/0, 2, 4 -> 4, 6/0, 2');
+});
+
+test('a plan may not give two values the same sort_order; a restore may put back what it read', () => {
+    const tied = optionRequest([value(2, '2/0', 0), value(1, '12', 0, true)]);
+    assert.throws(() => classify(tied), error => error.name === 'Refused' && /option_values gives two values the same sort_order \(0\), so their order is unclear/.test(error.message));
+    assert.equal(classify(tied, { mode: 'restore' }).key, 'option 101/50');
+});
+
+test('a plan may only add categories, never drop one; a restore may put back any list', () => {
+    assert.equal(classify({ ...brandRequest, body: { categories: [434, 999] } }).key, 'product 102');
+    assert.throws(() => classify({ ...brandRequest, body: { categories: [999] } }), error => error.name === 'Refused' && /a plan may only add categories, and this drops 434/.test(error.message));
+    assert.throws(() => classify({ ...brandRequest, body: { categories: [999] }, before: { brand_id: 0 } }), /the "before" read has no categories list/);
+    assert.equal(classify({ ...brandRequest, body: { categories: [999] } }, { mode: 'restore' }).key, 'product 102');
+});
+
+// A single-size default planned on the Fly Sizes job's result: 2-0 is renamed to 2/0 there, and
+// this request then sets it as the default. It waits until the Fly Sizes plan is applied.
+const ONE_BEFORE = { display_name: 'Fly Sizes', option_values: [value(2, '2-0', 0)] };
+const ONE_RENAMED = { display_name: 'Fly Sizes', option_values: [value(2, '2/0', 0)] };
+const onTop = {
+    method: 'PUT', path: '/v3/catalog/products/101/options/50', body: { option_values: [value(2, '2/0', 0, true)] }, before: ONE_RENAMED, prior: { job: 'fly-sizes', before: ONE_BEFORE }, product_id: 101,
+};
+
+test('a request planned on another plan\'s result waits until that plan is applied, then is pending', () => {
+    assert.equal(classify(onTop).key, 'option 101/50');
+    const [waiting] = judge(checkRequests([onTop]), store({ values: ONE_BEFORE.option_values }));
+    assert.equal(waiting.status, 'waiting');
+    assert.equal(waiting.reason, 'option 101/50 is planned on the fly-sizes plan\'s result, and that plan isn\'t applied yet');
+    assert.equal(judge(checkRequests([onTop]), store({ values: ONE_RENAMED.option_values }))[0].status, 'pending');
+    assert.equal(judge(checkRequests([onTop]), store({ values: [value(2, '2/0', 0, true)] }))[0].status, 'done');
+    assert.equal(judge(checkRequests([onTop]), store({ values: [value(2, '3-0', 0)] }))[0].status, 'stale');
+    const refused = (prior, pattern) => assert.throws(() => classify({ ...onTop, prior }), error => error.name === 'Refused' && pattern.test(error.message));
+    refused({ job: 'Fly Sizes', before: ONE_BEFORE }, /prior must be \{ job, before \}/);
+    refused({ job: 'fly-sizes' }, /prior must be \{ job, before \}/);
+    refused({ job: 'fly-sizes', before: ONE_BEFORE, body: {} }, /prior must be \{ job, before \}/);
+    const { requests } = restoreRequests({ items: [{ request: onTop, before: ONE_RENAMED }] });
+    assert.deepEqual(requests, [{
+        method: 'PUT', path: '/v3/catalog/products/101/options/50', body: { option_values: ONE_RENAMED.option_values }, before: { ...ONE_RENAMED, option_values: onTop.body.option_values }, product_id: 101,
+    }], 'a restore puts back the state the request was planned on, and carries no prior');
+});
+
+test('a request is done once what it changes reads as planned, even if a later plan changed a field it leaves alone', () => {
+    // The Fly Sizes request renames 2-0 and reorders; a later plan cleared 12's default.
+    const later = store({ values: [value(2, '2/0', 0), value(1, '12', 1, false)] });
+    assert.equal(judge(checkRequests([optionRequest()]), later)[0].status, 'done');
+    // Only half of its own change in place: not done, and not pending either.
+    const half = store({ values: [value(2, '2/0', 1), value(1, '12', 0, true)] });
+    assert.equal(judge(checkRequests([optionRequest()]), half)[0].status, 'stale');
+    assert.match(readBackProblem(checkRequests([optionRequest()])[0], later), /reads back .*not as planned/, 'the re-read after a write still wants every field');
+});

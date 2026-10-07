@@ -16,7 +16,13 @@
 //
 // Never: a POST or a DELETE, variants, prices, inventory, categories, channels, or any other
 // field of these objects. A restore may write the empty values the snapshot read (an empty
-// description, no brand, no category); a plan may not.
+// description, no brand, no category); a plan may not. A plan may only add categories (it never
+// drops a product from a category), and gives each option value its own sort_order.
+//
+// A request may carry `prior: { job, before }`: it is planned on the result of that job's plan
+// (two jobs that write the same option, such as Fly Sizes and the single-size defaults), and the
+// object reads as `prior.before` until that plan is applied. apply then waits for it, instead of
+// calling the request stale, so each approved plan applies as approved, in order.
 
 import { isDeepStrictEqual } from 'util';
 import { Refused } from '../store/allowlist.mjs';
@@ -35,7 +41,7 @@ const KINDS = [
     { kind: 'product', pattern: /^\/v3\/catalog\/products\/([1-9]\d{0,9})$/, fields: ['brand_id', 'categories'] },
     { kind: 'brand', pattern: /^\/v3\/catalog\/brands\/([1-9]\d{0,9})$/, fields: ['meta_description', 'page_title'] },
 ];
-const REQUEST_KEYS = ['before', 'body', 'method', 'path', 'product_id'];
+const REQUEST_KEYS = ['before', 'body', 'method', 'path', 'prior', 'product_id'];
 const VALUE_KEYS = ['id', 'is_default', 'label', 'sort_order'];
 
 const isObject = value => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -43,7 +49,7 @@ const isId = value => Number.isInteger(value) && value > 0;
 const sameKeys = (object, keys) => isDeepStrictEqual(Object.keys(object).sort(), [...keys].sort());
 const text = (value, max, { empty }) => typeof value === 'string' && value.length <= max && (empty || value.trim() !== '');
 
-function optionValuesProblems(values) {
+function optionValuesProblems(values, mode) {
     if (!Array.isArray(values) || !values.length) return ['option_values must be the whole, non-empty list of the option\'s values'];
     const problems = [];
     values.forEach((value, index) => {
@@ -59,6 +65,11 @@ function optionValuesProblems(values) {
     const ids = values.map(value => value && value.id);
     if (new Set(ids).size !== ids.length) problems.push('option_values names a value id twice');
     if (values.filter(value => value && value.is_default === true).length > 1) problems.push('option_values sets more than one default');
+    // The store lists values by sort_order, so two the same would leave the order to the store, and
+    // the diff Shaun approves couldn't say it. A restore puts back whatever the snapshot read.
+    const orders = values.map(value => value && value.sort_order);
+    const tied = orders.find((order, index) => orders.indexOf(order) !== index);
+    if (mode === 'apply' && tied !== undefined) problems.push(`option_values gives two values the same sort_order (${tied}), so their order is unclear`);
     return problems;
 }
 
@@ -69,7 +80,7 @@ function bodyProblems(body, mode) {
         if (!ok) problems.push(message);
     };
     if ('display_name' in body) check(text(body.display_name, 255, { empty: false }), 'display_name must be 1 to 255 characters');
-    if ('option_values' in body) problems.push(...optionValuesProblems(body.option_values));
+    if ('option_values' in body) problems.push(...optionValuesProblems(body.option_values, mode));
     if ('description' in body) check(text(body.description, 1000, { empty }), `description must be ${empty ? 'up to' : '1 to'} 1000 characters`);
     if ('is_thumbnail' in body) check(body.is_thumbnail === true, 'is_thumbnail may only be set to true (making another image the thumbnail clears this one)');
     if ('brand_id' in body) check(empty ? Number.isInteger(body.brand_id) && body.brand_id >= 0 : isId(body.brand_id), `brand_id must be a brand id${empty ? ', or 0 for none' : ''}`);
@@ -97,6 +108,14 @@ export function classify(request, { mode = 'apply' } = {}) {
     const problems = bodyProblems(request.body, mode);
     if (problems.length) throw new Refused(`PUT ${request.path}: ${problems.join('; ')}`);
     if (!isObject(request.before)) throw new Refused(`PUT ${request.path}: the request has no "before" read to check the store against`);
+    if ('prior' in request && !(isObject(request.prior) && sameKeys(request.prior, ['before', 'job']) && JOB.test(request.prior.job) && isObject(request.prior.before))) {
+        throw new Refused(`PUT ${request.path}: prior must be { job, before }: the job whose plan this one is planned on, and the object as it reads before that plan`);
+    }
+    if (mode === 'apply' && 'categories' in request.body) {
+        if (!Array.isArray(request.before.categories)) throw new Refused(`PUT ${request.path}: the "before" read has no categories list, so the plan can't show it only adds`);
+        const dropped = request.before.categories.filter(id => !request.body.categories.includes(id));
+        if (dropped.length) throw new Refused(`PUT ${request.path}: a plan may only add categories, and this drops ${dropped.join(', ')}`);
+    }
     const ids = match.slice(1).map(Number);
     const what = { kind: spec.kind, path: request.path };
     if (spec.kind === 'brand') {
@@ -236,11 +255,35 @@ export function written({ request }, state) {
     return out;
 }
 
+// The part of `state` a request changes: each written field whose planned value differs from its
+// `before`, and for option values, each value's label, sort_order or is_default that does.
+function changedPart(item, state) {
+    const before = written(item, item.request.before);
+    const after = written(item, stateAfter(item));
+    const now = written(item, state);
+    const part = {};
+    for (const key of Object.keys(after)) {
+        if (key === 'option_values') {
+            const was = new Map((before.option_values || []).map(entry => [entry.id, entry]));
+            const is = new Map((now.option_values || []).map(entry => [entry.id, entry]));
+            part.option_values = after.option_values.map(entry => Object.fromEntries([
+                ['id', entry.id],
+                ...Object.keys(entry).filter(field => field !== 'id' && !isDeepStrictEqual(entry[field], was.get(entry.id)?.[field])).map(field => [field, is.get(entry.id)?.[field]]),
+            ]));
+        } else if (!isDeepStrictEqual(after[key], before[key])) part[key] = now[key];
+    }
+    return part;
+}
+
 // For each item, against the store as read now:
 // - "pending": the store reads as the plan's `before`, so the write goes ahead
-// - "done": it already reads as the plan leaves it (an earlier run of the same plan), so it's skipped
-// - "stale": neither, or the object is gone, or (for an option) its value ids differ from the
-//   request's. apply refuses the plan.
+// - "done": what the request changes already reads as planned (an earlier run of the same plan),
+//   so it's skipped. A field it leaves alone may differ: a later plan built on this one (the
+//   single-size defaults on Fly Sizes) changes those, and skipping a write can't undo anything
+// - "waiting": it reads as `prior.before`: the plan it is planned on isn't applied yet. apply
+//   refuses the plan until it is, and the plan stays valid
+// - "stale": none of these, or the object is gone, or (for an option) its value ids differ from
+//   the request's. apply refuses the plan.
 export function judge(items, store) {
     return items.map(item => {
         const now = stateOf(item.what, store);
@@ -259,8 +302,14 @@ export function judge(items, store) {
             }
         }
         const current = written(item, now);
-        if (isDeepStrictEqual(current, written(item, stateAfter(item)))) return { ...item, status: 'done', now };
+        if (isDeepStrictEqual(changedPart(item, now), changedPart(item, stateAfter(item)))) return { ...item, status: 'done', now };
         if (isDeepStrictEqual(current, written(item, item.request.before))) return { ...item, status: 'pending', now };
+        const { prior } = item.request;
+        if (prior && isDeepStrictEqual(current, written(item, prior.before))) {
+            return {
+                ...item, status: 'waiting', now, reason: `${item.what.key} is planned on the ${prior.job} plan's result, and that plan isn't applied yet`,
+            };
+        }
         return {
             ...item, status: 'stale', now, reason: `${item.what.key} changed since the plan was made`,
         };
@@ -269,8 +318,10 @@ export function judge(items, store) {
 
 // One line per change, derived from the store as read now (never from the plan's own copy).
 const quote = value => JSON.stringify(value ?? '');
-const labels = state => state.option_values.map(value => value.label).join(', ');
-const defaults = state => state.option_values.filter(value => value.is_default).map(value => value.label).join(', ') || 'none';
+// In the store's order (sort_order, then id), as stateOf reads it: a request lists its values in
+// any order, and only their sort_order says where the store shows them.
+const labels = state => [...state.option_values].sort(byOrder).map(value => value.label).join(', ');
+const defaults = state => [...state.option_values].sort(byOrder).filter(value => value.is_default).map(value => value.label).join(', ') || 'none';
 
 export function diffLine({ what, request }, now, productName = '') {
     const after = stateAfter({ what, request });
@@ -303,41 +354,50 @@ export function readBackProblem(item, store) {
 
 // --- Restoring ----------------------------------------------------------------------------------
 
-// The requests that put back what a before-snapshot read, for each object its plan wrote. Each
-// restore request's `before` is the state the plan left, so a restore refuses (as stale) an
-// object someone changed again since. A thumbnail is restored by making the old thumbnail the
-// thumbnail again; with no old thumbnail it can't be, and is listed.
-export function restoreRequests(snapshot, { productId = null } = {}) {
+// The requests that put one object back to what the snapshot read. A thumbnail is restored by
+// making the old thumbnail the thumbnail again; with no old thumbnail it can't be, and is listed.
+function restoreOne(item, before) {
     const requests = [];
     const skipped = [];
-    for (const entry of snapshot.items) {
-        const item = { request: entry.request, what: classify(entry.request) };
-        if (productId !== null && item.what.productId !== productId) continue; // eslint-disable-line no-continue
-        const before = entry.before;
-        if (!before) {
-            skipped.push(`${item.what.key}: the snapshot has no read of it`);
-            continue; // eslint-disable-line no-continue
-        }
-        const after = stateAfter(item);
-        const body = {};
-        for (const key of Object.keys(item.request.body)) if (key !== 'is_thumbnail') body[key] = before[key];
-        const owner = item.what.productId ? { product_id: item.what.productId } : {};
-        if (item.request.body.is_thumbnail) {
-            if (!before.thumbnail_id) skipped.push(`${item.what.key}: the product had no thumbnail before, so there is none to put back`);
-            else if (before.thumbnail_id !== item.what.imageId) {
-                requests.push({
-                    method: 'PUT',
-                    path: `/v3/catalog/products/${item.what.productId}/images/${before.thumbnail_id}`,
-                    body: { is_thumbnail: true },
-                    before: { is_thumbnail: false, thumbnail_id: item.what.imageId },
-                    ...owner,
-                });
-            }
-        }
-        if (Object.keys(body).length) {
+    const after = stateAfter(item);
+    const body = Object.fromEntries(Object.keys(item.request.body).filter(key => key !== 'is_thumbnail').map(key => [key, before[key]]));
+    const owner = item.what.productId ? { product_id: item.what.productId } : {};
+    if (item.request.body.is_thumbnail) {
+        if (!before.thumbnail_id) skipped.push(`${item.what.key}: the product had no thumbnail before, so there is none to put back`);
+        else if (before.thumbnail_id !== item.what.imageId) {
             requests.push({
-                method: 'PUT', path: item.request.path, body, before: after, ...owner,
+                method: 'PUT',
+                path: `/v3/catalog/products/${item.what.productId}/images/${before.thumbnail_id}`,
+                body: { is_thumbnail: true },
+                before: { is_thumbnail: false, thumbnail_id: item.what.imageId },
+                ...owner,
             });
+        }
+    }
+    if (Object.keys(body).length) {
+        requests.push({
+            method: 'PUT', path: item.request.path, body, before: after, ...owner,
+        });
+    }
+    return { requests, skipped };
+}
+
+// The requests that put back what a before-snapshot read, for each object its plan wrote. Each
+// restore request's `before` is the state the plan left, so a restore refuses (as stale) an
+// object someone changed again since: the whole restore is refused, and the other products are
+// restored one at a time with --product.
+export function restoreRequests(snapshot, { productId = null } = {}) {
+    const entries = snapshot.items
+        .map(entry => ({ before: entry.before, item: { request: entry.request, what: classify(entry.request) } }))
+        .filter(({ item }) => productId === null || item.what.productId === productId);
+    const requests = [];
+    const skipped = [];
+    for (const { before, item } of entries) {
+        if (!before) skipped.push(`${item.what.key}: the snapshot has no read of it`);
+        else {
+            const one = restoreOne(item, before);
+            requests.push(...one.requests);
+            skipped.push(...one.skipped);
         }
     }
     return { requests, skipped };
