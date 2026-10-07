@@ -102,3 +102,47 @@ describe('a failing pair', () => {
         }
     });
 });
+
+describe('the checkout pairs (ticket 24)', () => {
+    // The text and controls the checkout's settings colour, each on the ground it is drawn on
+    // (assets/scss/optimized-checkout.scss). The checkout redesign is out of scope, so these
+    // settings are all the checkout's colour there is.
+    const CHECKOUT_PAIRS = [
+        ['checkout-heading', 'optimizedCheckout-headingPrimary-color', 'optimizedCheckout-body-backgroundColor', 4.5],
+        ['checkout-heading-secondary', 'optimizedCheckout-headingSecondary-color', 'optimizedCheckout-body-backgroundColor', 4.5],
+        ['checkout-header-text', 'optimizedCheckout-header-textColor', 'optimizedCheckout-header-backgroundColor', 4.5],
+        ['checkout-button-hover', 'optimizedCheckout-buttonPrimary-colorHover', 'optimizedCheckout-buttonPrimary-backgroundColorHover', 4.5],
+        ['checkout-button-active', 'optimizedCheckout-buttonPrimary-colorActive', 'optimizedCheckout-buttonPrimary-backgroundColorActive', 4.5],
+        ['checkout-button-secondary', 'optimizedCheckout-buttonSecondary-color', 'optimizedCheckout-buttonSecondary-backgroundColor', 4.5],
+        ['checkout-button-secondary-hover', 'optimizedCheckout-buttonSecondary-colorHover', 'optimizedCheckout-buttonSecondary-backgroundColorHover', 4.5],
+        ['checkout-label', 'optimizedCheckout-form-textColor', 'optimizedCheckout-body-backgroundColor', 4.5],
+        ['checkout-checklist', 'optimizedCheckout-formChecklist-color', 'optimizedCheckout-formChecklist-backgroundColor', 4.5],
+        ['checkout-checklist-selected', 'optimizedCheckout-formChecklist-color', 'optimizedCheckout-formChecklist-backgroundColorSelected', 4.5],
+        ['checkout-step', 'optimizedCheckout-step-textColor', 'optimizedCheckout-step-backgroundColor', 4.5],
+        ['checkout-discount', 'optimizedCheckout-discountBanner-textColor', 'optimizedCheckout-discountBanner-backgroundColor', 4.5],
+        ['checkout-toaster', 'optimizedCheckout-loadingToaster-textColor', 'optimizedCheckout-loadingToaster-backgroundColor', 4.5],
+        ['checkout-link-hover', 'optimizedCheckout-link-hoverColor', 'optimizedCheckout-body-backgroundColor', 4.5],
+        ['checkout-input-border', 'optimizedCheckout-formField-borderColor', 'optimizedCheckout-formField-backgroundColor', 3],
+        ['checkout-control', 'optimizedCheckout-formField-inputControlColor', 'optimizedCheckout-formField-backgroundColor', 3],
+    ];
+
+    it('checks every checkout colour pair, text at 4.5:1 and controls at 3:1', () => {
+        for (const pair of CHECKOUT_PAIRS) {
+            assert.deepEqual(PAIRS.find(([id]) => id === pair[0]), pair, `${pair[0]} is checked`);
+        }
+    });
+
+    it('fails stock Cornerstone\'s pale #CCCCCC field border, which the edge border replaces', () => {
+        const file = configWith({ 'optimizedCheckout-formField-borderColor': '#cccccc' });
+        const result = run(file);
+        assert.equal(result.status, 1);
+        assert.match(result.stdout, /FAIL {5}checkout-input-border: #cccccc on #ffffff is 1\.61:1, needs 3:1/);
+    });
+
+    it('fails a checkout button whose hover state drops its white label below AA', () => {
+        const file = configWith({ 'optimizedCheckout-buttonPrimary-backgroundColorHover': '#7b8e7a' });
+        const result = run(file);
+        assert.equal(result.status, 1);
+        assert.match(result.stdout, /FAIL {5}checkout-button-hover: #ffffff on #7b8e7a is 3\.50:1/);
+    });
+});
