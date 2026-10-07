@@ -85,6 +85,11 @@
     "qa:prelaunch": "node scripts/qa/prelaunch.mjs",
     "qa:lighthouse": "node scripts/qa/lighthouse.mjs",
     "widgets:sync": "node scripts/widgets-sync.mjs",
+    "qa:matrix": "node scripts/qa/switch-matrix.mjs",
+    "qa:reflow": "npx playwright test --config scripts/qa/playwright.config.mjs reflow.spec harness-selftest",
+    "qa:motion": "npx playwright test --config scripts/qa/playwright.config.mjs reduced-motion.spec harness-selftest",
+    "qa:focus": "npx playwright test --config scripts/qa/playwright.config.mjs focus.spec harness-selftest --project phone-375",
+    "qa:links": "node scripts/qa/widget-links.mjs",
     "stylelint": "npx stylelint **/*.scss",
     "stylelint:fix": "npx stylelint --fix **/*.scss"
   }

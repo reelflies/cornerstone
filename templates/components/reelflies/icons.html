@@ -1,0 +1,21 @@
+{{!--
+    The ReelFlies icon sheet (ticket 25; O22): one inline SVG of 24px line icons, included once
+    per page right after <body> (body-start.html). Draw an icon with the icon partial:
+
+        {{> components/reelflies/icon name='search'}}
+
+    Put each icon beside a visible label, or inside a control that has an accessible name: the
+    icon itself is hidden from screen readers. Social and payment icons stay Cornerstone's own.
+
+    To add an icon: one file in icons/, named after it, holding one <symbol id="rf-icon-<name>"
+    viewBox="0 0 24 24"> with the shapes only (the icon partial sets the stroke), and one line
+    below, in alphabetical order. Don't add to assets/icons/, which regenerates the stock sprite.
+--}}
+<svg class="rf-icons u-hiddenVisually" data-rf-icons xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+    {{> components/reelflies/icons/account}}
+    {{> components/reelflies/icons/bag}}
+    {{> components/reelflies/icons/check}}
+    {{> components/reelflies/icons/phone}}
+    {{> components/reelflies/icons/search}}
+    {{> components/reelflies/icons/truck}}
+</svg>
