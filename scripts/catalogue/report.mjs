@@ -28,6 +28,14 @@ function sourceLines(meta) {
     return lines;
 }
 
+// For a plan whose requests are planned on another job's plan: which, and how many.
+function priorLine(result) {
+    const prior = result.requests.filter(request => request.prior);
+    if (!prior.length) return '';
+    const jobs = [...new Set(prior.map(request => request.prior.job))].join(' and ');
+    return ` It is planned on the ${jobs} plan's result for ${prior.length} ${prior.length === 1 ? 'option' : 'options'}: apply it after that plan. Until then apply refuses it, writing nothing, and the sha256 stays valid.`;
+}
+
 export function jobMarkdown(result, { plan = null, csvResult = null, meta }) {
     const counts = Object.keys({ ...result.counts, ...(csvResult ? csvResult.counts : {}) });
     const lines = [
@@ -38,7 +46,7 @@ export function jobMarkdown(result, { plan = null, csvResult = null, meta }) {
         `- **Decision:** ${result.decision}.`,
         ...sourceLines(meta),
         plan
-            ? `- **Plan:** \`${plan.file}\`, ${result.requests.length} requests, sha256 \`${plan.sha256}\`. To apply it Shaun types \`${short(plan.sha256)}\` at his terminal (see [the batch](18-catalogue-batch.md)).`
+            ? `- **Plan:** \`${plan.file}\`, ${result.requests.length} requests, sha256 \`${plan.sha256}\`. To apply it Shaun types \`${short(plan.sha256)}\` at his terminal (see [the batch](18-catalogue-batch.md)).${priorLine(result)}`
             : `- **Plan:** none${result.requests.length ? '' : ' (no request to send)'}.`,
         '',
         '## Rule',
@@ -50,8 +58,8 @@ export function jobMarkdown(result, { plan = null, csvResult = null, meta }) {
         ...table(['', meta.api ? 'API read' : 'Export', ...(csvResult ? ['Export'] : [])], counts.map(key => [key, result.counts[key] ?? '', ...(csvResult ? [csvResult.counts[key] ?? ''] : [])])),
     ];
     if (result.notes.length) lines.push('', '## Notes', '', ...result.notes.map(note => `- ${note}`));
-    for (const [key, extra] of Object.entries(result.extra)) {
-        if (!Array.isArray(extra) || !extra.length || key === 'reexport') continue; // eslint-disable-line no-continue
+    const listed = Object.entries(result.extra).filter(([key, extra]) => Array.isArray(extra) && extra.length && key !== 'reexport');
+    for (const [key, extra] of listed) {
         lines.push('', `## ${{ radio: 'For ticket 37: Fly Sizes as a Radio list', sizeOptions: 'Size options not named Fly Sizes' }[key] || key}`, '', ...table(['Product', 'Live', 'What', 'Values', 'Note'], extra.map(item => [`${item.product_id} ${item.product}`, item.live ? 'yes' : 'no', item.what, item.before, item.note])));
     }
     if (result.extra.reexport) {
@@ -67,7 +75,14 @@ export function jobMarkdown(result, { plan = null, csvResult = null, meta }) {
     return `${lines.join('\n')}\n`;
 }
 
-const ORDER = 'Apply in this order, each from a fresh dry run once the one before it is applied: fly-sizes, then default-sizes and single-size-defaults (they write the same options, so a plan made before another was applied is refused as stale), then option-names and uncategorised if chosen, then brand, then thumbnails and alt-text (they write the same images), then brand-fields when ticket 14\'s copy is in.';
+const ORDER = 'Each plan is applied as approved, with the sha256 in the table: no fresh dry run between jobs. Fly Sizes goes first. The single-size and multi-size default jobs are planned on its result for the options both write, so apply refuses them, writing nothing, until it is applied, and they stay valid. The other jobs write other objects or other fields (option-names only the name, uncategorised only the categories, brand only the brand, thumbnails and alt-text different fields of an image), so their order doesn\'t matter; brand-fields comes once ticket 14\'s copy is in.';
+
+function reexportCount(results) {
+    const thumbnails = results.find(result => result.id === 'thumbnails');
+    if (!thumbnails) return 'not run';
+    const none = thumbnails.counts.noImages || 0;
+    return `${thumbnails.extra.reexport.length} Live products with no white-ground photo${none ? `, ${none} of them with no photo at all` : ''}`;
+}
 
 export function indexMarkdown(results, { plans, csvResults, meta }) {
     const csvFor = id => csvResults?.find(result => result.id === id);
@@ -93,11 +108,11 @@ export function indexMarkdown(results, { plans, csvResults, meta }) {
         '## Before any apply',
         '',
         '- **Ticket 03, item 7** (the scope amendment for store-wide writes) is approved first (ticket 18\'s "Blocked by").',
-        '- **The feeds.** Before the Fly Sizes and brand jobs, Shaun tells whoever runs the Google and Meta channels: the size labels change from 2-0 to 2/0, and any report matching "Fly Sizes: 2-0" stops matching.',
-        '- **A token** with Products: modify, made when he applies and revoked after if he likes (decision 11). He pastes it at the hidden prompt; it is never stored.',
+        '- **The feeds.** Before the Fly Sizes and brand jobs, Shaun tells whoever runs the Google and Meta channels: the size labels change from 2-0 to 2/0, and any report matching "Fly Sizes: 2-0" stops matching; and if he picks option B for the brand, the Signature products\' brand changes to the new one.',
+        '- **A token** with Products: modify, made when he applies (decision 11). He pastes it at the hidden prompt, it is never stored, and he revokes it when the run ends: it can write the whole catalogue, and no token an agent can reach has that scope, which is what keeps agents from this write (the terminal check is only a tripwire).',
         `- **Order.** ${ORDER}`,
         '- **The restore trial,** once, before the first batch: apply the first plan to one product, restore it from the snapshot that run printed, and check the product reads as it began. Then apply the whole plan. The plan stays valid, because the restore puts the product back where the plan expects it.',
-        '- **Stale plans.** apply reads every object again and refuses the whole plan if any changed since the dry run. Then an agent reruns the dry run, and the new diff comes back for approval.',
+        '- **Stale plans.** Before each apply an agent runs `--check` on the plan. apply itself reads every object again and refuses the whole plan if any changed since the dry run. Only a plan that --check reports stale is planned again, and its new diff and sha256 come back to Shaun for approval.',
         '',
         '## How Shaun applies a plan',
         '',
@@ -110,19 +125,20 @@ export function indexMarkdown(results, { plans, csvResults, meta }) {
         'node scripts/catalogue/apply.mjs <plan file>                    # the whole plan',
         '```',
         '',
-        'Each run prints the exact requests, refuses unless the tooling is origin/master\'s, asks for the token at a hidden prompt, reads the store fresh, shows the diff it derived, and asks him to type the first 8 characters of the plan\'s sha256 (the table above). Then it writes a snapshot of every object it will touch, sends the requests in batches of 50, re-reads each batch, and logs every request in `~/reelflies/store-snapshots/log.jsonl`. It prints the restore command for that run.',
+        'Each run prints the release calendar\'s phase (with a warning from T-14) and the exact requests, refuses unless the tooling is origin/master\'s, asks for the token at a hidden prompt, reads the store fresh, shows the diff it derived, and asks him to type the first 8 characters of the plan\'s sha256 (the table above). Then it writes a snapshot of every object it will touch, sends the requests in batches of 50, re-reads each batch, and logs every request in `~/reelflies/store-snapshots/log.jsonl`. It prints the restore command for that run.',
         '',
         '## After each apply, the same day',
         '',
-        '- A product page this run changed, on reelflies.com and on live reelflies.ca: its sizes render and it adds to the cart (and its thumbnail or brand shows, for those jobs). Recorded, dated, in ticket 18.',
+        '- A product page this run changed, on reelflies.com and on live reelflies.ca: its sizes render and it adds to the cart (and its thumbnail or brand shows, for those jobs). Recorded, dated, in a ticket 18 comment, beside Shaun\'s approval of the plan.',
+        '- Shaun revokes the Products: modify token.',
         '- An agent runs `node ~/reelflies/theme/cornerstone/scripts/catalogue/apply.mjs --check <plan file>` (GETs only, the read-only token): every request reads as planned.',
         '- The orchestrator opens a re-baseline epoch for the page kinds the job moved (build pipeline section 6.6: "18\'s apply").',
         '',
         '## Waiting, and notes for other tickets',
         '',
         '- **Merchant Center diagnostics** (SEO-16) need Shaun\'s Google login: he reads them with an agent once before the freeze, and the result goes in ticket 18\'s comments.',
-        `- **Ticket 14:** the re-export list (${results.find(result => result.id === 'thumbnails')?.extra.reexport?.length ?? 'no'} Live products with no white-ground photo), best sellers first, is [18-reexport-for-14.csv](18-reexport-for-14.csv).`,
-        '- **Ticket 36:** the brand record has no intro field (see [18-brand-fields.md](18-brand-fields.md)), and the brand job\'s finding about which products carry the ReelFlies brand is in [18-brand.md](18-brand.md).',
+        `- **Ticket 14:** the re-export list (${reexportCount(results)}), best sellers first, is [18-reexport-for-14.csv](18-reexport-for-14.csv).`,
+        '- **Tickets 36, 48 and 03:** the ReelFlies brand is on almost every Live product, so /brands/ReelFlies.html can\'t gather only the Signature patterns as spec module 12 says. Shaun picks A, B or C in [18-brand.md](18-brand.md); no agent default is taken. Until he does, 36\'s page, 48\'s button and refactor 09\'s Signature Redirect rows (ticket 03) have no settled target. The brand record has no intro field (see [18-brand-fields.md](18-brand-fields.md)).',
         '- **Ticket 37:** the Fly Sizes option shown as a Radio list is in [18-fly-sizes.md](18-fly-sizes.md).',
         '- **Tickets 33 and 37** keep accepting both size spellings until the Fly Sizes job is applied.',
     ];

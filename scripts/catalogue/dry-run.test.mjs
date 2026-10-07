@@ -3,6 +3,7 @@
 
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -20,8 +21,9 @@ let count = 0;
 
 test('the arguments', () => {
     assert.deepEqual(parseArgs(['--csv', 'x.csv', '--images', 'skip']), {
-        csv: 'x.csv', api: false, out: null, images: 'skip', sales: null, brandCopy: null, sizeFixes: null, jobs: null,
+        csv: 'x.csv', api: false, out: null, images: 'skip', sales: null, brandCopy: null, sizeFixes: null, signatureBrand: null, jobs: null,
     });
+    assert.equal(parseArgs(['--api', '--signature-brand', 'ReelFlies Signature']).signatureBrand, 'ReelFlies Signature');
     assert.deepEqual(parseArgs(['--api', '--jobs', 'brand,alt-text']).jobs, ['brand', 'alt-text']);
     assert.throws(() => parseArgs([]), /give --csv/);
     assert.throws(() => parseArgs(['--api', '--jobs', 'everything']), /unknown jobs everything/);
@@ -132,4 +134,56 @@ test('from the API: GETs only, the read kept as a snapshot, and plans that apply
     assert.deepEqual(flySizes.requests[0].body.option_values.map(value => [value.label, value.sort_order, value.is_default]), [['2/0', 0, false], ['12', 1, true]]);
     const index = fs.readFileSync(path.join(root, 'out', '18-catalogue-batch.md'), 'utf8');
     assert.match(index, new RegExp(`\`${plans['fly-sizes'].sha256.slice(0, 8)}\``));
+    assert.match(index, /Each plan is applied as approved, with the sha256 in the table: no fresh dry run between jobs/);
+    assert.match(index, /Only a plan that --check reports stale is planned again, and its new diff and sha256 come back to Shaun for approval/);
+    assert.match(index, /revokes it when the run ends/);
+    assert.doesNotMatch(index, /each from a fresh dry run/);
+    const defaults = fs.readFileSync(path.join(root, 'out', '18-default-sizes.md'), 'utf8');
+    assert.match(defaults, /It is planned on the fly-sizes plan's result for 1 option: apply it after that plan\. Until then apply refuses it, writing nothing, and the sha256 stays valid\./);
+});
+
+const DRY_RUN = fileURLToPath(new URL('./dry-run.mjs', import.meta.url));
+
+// An API read of the two products above, as route fixtures, with the read token in the env.
+function apiFixtures(root) {
+    fs.mkdirSync(root, { recursive: true });
+    const routes = path.join(root, 'routes.json');
+    fs.writeFileSync(routes, JSON.stringify({
+        [`GET /v3/catalog/products?include=options%2Cimages&include_fields=${encodeURIComponent(PRODUCT_FIELDS)}&limit=250&page=1`]: page(API_PRODUCTS),
+        'GET /v3/catalog/products/channel-assignments?limit=250&page=1': page([{ product_id: 101, channel_id: 1 }, { product_id: 102, channel_id: 1 }]),
+        'GET /v3/catalog/brands?limit=250&page=1': page([{
+            id: 411, name: 'ReelFlies', page_title: '', meta_description: '',
+        }]),
+        'GET /v3/catalog/trees/categories?limit=250&page=1&tree_id:in=1': page([]),
+    }));
+    return {
+        ...process.env, RF_CATALOGUE_ROOT: root, RF_STORE_ROOT: root, RF_STORE_FIXTURES: routes, RF_BC_READ_TOKEN: FAKE_TOKEN, RF_BC_STORE_HASH: STORE_HASH,
+    };
+}
+
+test('every line the dry run prints goes through the redactor once the token is read', async () => {
+    const root = path.join(tmp, `root-${++count}`);
+    const env = apiFixtures(root);
+    // The reports folder's name carries the token, so the "Reports:" line would print it.
+    const out = path.join(root, `out-${FAKE_TOKEN}`);
+    const lines = [];
+    await dryRun(parseArgs(['--api', '--images', 'skip', '--out', out]), { say: line => lines.push(line), env });
+    assert.ok(lines.some(line => line.startsWith('Reports: ') && line.includes('[redacted]')), lines.join('\n'));
+    assert.ok(lines.every(line => !line.includes(FAKE_TOKEN)));
+});
+
+test('the STOP line is redacted too', () => {
+    const root = path.join(tmp, `root-${++count}`);
+    const env = apiFixtures(root);
+    const { status, stdout, stderr } = spawnSync(process.execPath, [DRY_RUN, '--api', '--images', 'skip', '--out', path.join(root, 'out'), '--brand-copy', path.join(root, `copy-${FAKE_TOKEN}.json`)], { encoding: 'utf8', env });
+    assert.equal(status, 1);
+    assert.match(stderr, /^STOP {5}the brand copy .*copy-\[redacted\]\.json can't be read as JSON \(ENOENT\)/m);
+    assert.ok(!`${stdout}${stderr}`.includes(FAKE_TOKEN));
+});
+
+test('--signature-brand reaches the brand job (option B)', async () => {
+    const root = path.join(tmp, `root-${++count}`);
+    const env = apiFixtures(root);
+    const { results } = await dryRun(parseArgs(['--api', '--images', 'skip', '--jobs', 'brand', '--signature-brand', 'ReelFlies Signature', '--out', path.join(root, 'out')]), { say: () => {}, env });
+    assert.match(results[0].notes.join('\n'), /No brand named "ReelFlies Signature" in this read/);
 });

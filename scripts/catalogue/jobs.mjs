@@ -4,12 +4,15 @@
 // scripts/catalogue/apply.mjs, at Shaun's terminal.
 //
 //   import { JOBS, runJobs } from './jobs.mjs';
-//   const results = runJobs(model, { grounds, sales, brandCopy, sizeFixes });
+//   const results = runJobs(model, { grounds, sales, brandCopy, sizeFixes, signatureBrand });
 //
 // A result is { id, title, decision, rule, counts, rows, requests, notes, extra }:
 // - rows: { product_id, product, live, what, before, after, note }, one per change or finding
 // - requests: { method, path, body, before, product_id }. `before` is the read the request was
-//   planned against; apply refuses the plan if the store no longer reads that way.
+//   planned against; apply refuses the plan if the store no longer reads that way. A request for
+//   an option the Fly Sizes job also writes is planned on that job's result, and carries
+//   `prior: { job: 'fly-sizes', before }` (the option as it reads now), so each approved plan
+//   applies as approved, Fly Sizes first.
 //
 // Scope (the defaults taken, each revisitable): the Fly Sizes and option-name jobs and alt text
 // cover every product, Live or not, so a hidden product shown again later doesn't bring back the
@@ -28,9 +31,14 @@ export const BRAND_NAME = 'ReelFlies';
 // The re-export list's first tier, and a Fly Type listing's first page (24 per page, ticket 32).
 const TOP_SELLERS = 200;
 const PAGE_ONE = 24;
-const SAMPLE_COLOUR = 'Colour';
+const COLOUR = 'Colour';
 
 export const isLive = product => product.isVisible && product.channels.includes(1);
+// A Fly Sizes option: one named so, or a "Size" whose every value is a hook size (the option-names
+// job renames those, and the Fly Sizes jobs take them as they are: the two write different fields).
+const hookSizes = option => option.values.length > 0 && option.values.every(value => parseHookSize(value.label));
+export const isFlySizes = option => option.displayName === FLY_SIZES || (option.displayName === 'Size' && hookSizes(option));
+const optionsOf = (products, keep) => products.flatMap(product => product.options.filter(keep).map(option => ({ product, option })));
 const byOrder = (a, b) => a.sortOrder - b.sortOrder || (a.id ?? 0) - (b.id ?? 0);
 const list = values => values.join(', ');
 const row = (product, what, before, after, note = '') => ({
@@ -44,15 +52,19 @@ const optionValue = value => ({
 });
 
 // The whole option_values array, every value by id: a value left out of it may be deleted.
-function optionRequest(product, option, values, { displayName } = {}) {
+// `base` is the values another job's plan leaves (`priorJob`'s): the request is planned on them.
+const currentValues = option => [...option.values].sort(byOrder).map(optionValue);
+function optionRequest(product, option, values, { displayName, base = null, priorJob = null } = {}) {
     const body = {};
     if (displayName !== undefined) body.display_name = displayName;
     if (values) body.option_values = values.map(optionValue);
+    const now = { display_name: option.displayName, option_values: currentValues(option) };
     return {
         method: 'PUT',
         path: `/v3/catalog/products/${product.id}/options/${option.id}`,
         body,
-        before: { display_name: option.displayName, option_values: [...option.values].sort(byOrder).map(optionValue) },
+        before: base ? { display_name: option.displayName, option_values: base.map(optionValue) } : now,
+        ...(base ? { prior: { job: priorJob, before: now } } : {}),
         product_id: product.id,
     };
 }
@@ -96,6 +108,36 @@ function selectionProposals(model, rows) {
 
 // --- Fly Sizes: the aught rename and hook order ------------------------------------------------
 
+// What the Fly Sizes job does to one option: { problems } for values it can't place, or
+// { target, renamed, reordered }, with target null when the option is already right.
+function flySizesChange(product, option, sizeFixes = {}) {
+    const current = [...option.values].sort(byOrder);
+    const fix = sizeFixes[product.id] || {};
+    const entries = current.map(value => ({ value, label: fix[value.label] ?? value.label }));
+    const problems = entries.filter(entry => !parseHookSize(entry.label) || isSuspectSize(entry.label));
+    if (problems.length) {
+        return {
+            current, fix, problems, target: null,
+        };
+    }
+    const sorted = [...entries].sort((a, b) => compareHook(a.label, b.label));
+    const renamed = sorted.some(entry => hookLabel(entry.label) !== entry.value.label);
+    const reordered = sorted.some((entry, index) => entry !== entries[index]);
+    const target = renamed || reordered ? sorted.map((entry, index) => ({ ...entry.value, label: hookLabel(entry.label), sortOrder: index })) : null;
+    return {
+        current, fix, problems, target, renamed, reordered,
+    };
+}
+
+// The option's values once the Fly Sizes plan is applied, or null if that plan doesn't write it.
+const afterFlySizes = (product, option, sizeFixes) => (isFlySizes(option) ? flySizesChange(product, option, sizeFixes).target : null);
+
+// A request for a Fly Sizes option, planned on the Fly Sizes job's result where that job writes it.
+function onFlySizes(product, option, sizeFixes, values) {
+    const base = afterFlySizes(product, option, sizeFixes);
+    return optionRequest(product, option, values(base || [...option.values].sort(byOrder)), { base, priorJob: base ? 'fly-sizes' : null });
+}
+
 function flySizes(model, { sizeFixes = {} } = {}) {
     const rows = [];
     const requests = [];
@@ -103,56 +145,52 @@ function flySizes(model, { sizeFixes = {} } = {}) {
         options: 0, live: 0, renamed: 0, reordered: 0, unchanged: 0, attention: 0,
     };
     const radio = [];
-    const sizeOptions = [];
-    for (const product of model.products) {
-        for (const option of product.options) {
-            if (option.displayName !== FLY_SIZES) {
-                if (/size/i.test(option.displayName)) sizeOptions.push(row(product, `option "${option.displayName}"`, list(option.values.map(value => value.label)), '', 'not named Fly Sizes: see the option-names job'));
-                continue; // eslint-disable-line no-continue
-            }
-            counts.options++;
-            if (isLive(product)) counts.live++;
-            if (option.type === 'radio_buttons') radio.push(row(product, 'Fly Sizes is a Radio list', option.type, '', 'for ticket 37: every other product uses a Rectangle list'));
-            const current = [...option.values].sort(byOrder);
-            const fix = sizeFixes[product.id] || {};
-            const entries = current.map(value => ({ value, label: fix[value.label] ?? value.label }));
-            const problems = entries.filter(entry => !parseHookSize(entry.label) || isSuspectSize(entry.label));
-            if (problems.length) {
-                counts.attention++;
-                rows.push(row(product, 'Fly Sizes values', list(current.map(value => value.label)), '(unchanged)', `needs a person: ${list(problems.map(entry => entry.label))} ${problems.length === 1 ? 'isn\'t' : 'aren\'t'} a hook size this job can place`));
-                continue; // eslint-disable-line no-continue
-            }
-            const sorted = [...entries].sort((a, b) => compareHook(a.label, b.label));
-            const target = sorted.map((entry, index) => ({ ...entry.value, label: hookLabel(entry.label), sortOrder: index }));
-            const renamed = sorted.some(entry => hookLabel(entry.label) !== entry.value.label);
-            const reordered = sorted.some((entry, index) => entry !== entries[index]);
-            if (!renamed && !reordered) {
-                counts.unchanged++;
-                continue; // eslint-disable-line no-continue
-            }
-            if (renamed) counts.renamed++;
-            if (reordered) counts.reordered++;
-            const note = [renamed && 'renamed', reordered && 'reordered', Object.keys(fix).length && 'with Shaun\'s fix'].filter(Boolean).join(', ');
-            rows.push(row(product, 'Fly Sizes values', list(current.map(value => value.label)), list(target.map(value => value.label)), note));
-            if (plannable(model)) requests.push(optionRequest(product, option, target));
+    const sizeOptions = optionsOf(model.products, option => option.displayName !== FLY_SIZES && /size/i.test(option.displayName)).map(({ product, option }) => row(
+        product,
+        `option "${option.displayName}"`,
+        list(option.values.map(value => value.label)),
+        '',
+        isFlySizes(option) ? 'hook sizes under another name: this job orders them, and the option-names job renames the option (they write different fields, so either may run first)' : 'not named Fly Sizes, and not all hook sizes: see the option-names job',
+    ));
+    for (const { product, option } of optionsOf(model.products, isFlySizes)) {
+        counts.options++;
+        if (isLive(product)) counts.live++;
+        if (option.type === 'radio_buttons') radio.push(row(product, 'Fly Sizes is a Radio list', option.type, '', 'for ticket 37: every other product uses a Rectangle list'));
+        const change = flySizesChange(product, option, sizeFixes);
+        const labels = values => list(values.map(value => value.label));
+        if (change.problems.length) {
+            counts.attention++;
+            rows.push(row(product, 'Fly Sizes values', labels(change.current), '(unchanged)', `needs a person: ${list(change.problems.map(entry => entry.label))} ${change.problems.length === 1 ? 'isn\'t' : 'aren\'t'} a hook size this job can place`));
+        } else if (!change.target) counts.unchanged++;
+        else {
+            if (change.renamed) counts.renamed++;
+            if (change.reordered) counts.reordered++;
+            const note = [change.renamed && 'renamed', change.reordered && 'reordered', Object.keys(change.fix).length && 'with Shaun\'s fix'].filter(Boolean).join(', ');
+            rows.push(row(product, 'Fly Sizes values', labels(change.current), labels(change.target), note));
+            if (plannable(model)) requests.push(optionRequest(product, option, change.target));
         }
     }
+    const reorderedNote = plannable(model)
+        ? `The API read counts ${counts.reordered} options out of hook order by sort_order, the order the storefront shows: that is the real figure. An export (its counts are shown beside these when the dry run is given one) lists values in variant-row order instead, so its "reordered" count is larger, and measures the same thing as the ticket's "357 of 1,937 Live products out of order" (content-manifest), which came from an export. The two don't conflict.`
+        : 'The export lists values in variant-row order, not by sort_order, so its "reordered" count measures the same thing as the ticket\'s "357 of 1,937 Live products out of order" figure (content-manifest); the API read measures sort_order itself, the order the storefront shows, and is the real figure.';
     return {
         id: 'fly-sizes',
         title: 'Fly Sizes: 1/0 to 6/0, and hook order',
         decision: 'approved in principle (ticket 13, decision 15); Shaun approves this diff',
         rule: [
-            'Every product with a "Fly Sizes" option, Live or not, Gear (hook packs) included.',
+            'Every product with a "Fly Sizes" option, Live or not, Gear (hook packs) included, and every "Size" option whose values are all hook sizes (the option-names job renames those to "Fly Sizes").',
             'Rename the aught values 1-0 … 6-0 to 1/0 … 6/0.',
             'Order the values largest hook first: 6/0 … 1/0, then 1, 2, 4 … 24. Each value\'s sort_order becomes its place in that order.',
             'A product with a value that isn\'t a hook size, or a suspect one (an odd number above 1, or above 28), is left alone and listed for a person.',
             'Each write is one PUT of the option with its whole option_values array (every value by id; labels, order and default flags as they are, bar the change), because a value left out of the array may be deleted.',
+            'Apply this plan first: the default-size jobs are planned on its result for the options both write.',
         ],
         counts,
         rows,
         requests,
         notes: [
-            ...(plannable(model) ? [] : [NO_PLAN, 'The export lists values in variant-row order, not by sort_order, so its "reordered" count measures the same thing as the earlier "357 of 1,937 out of order" figure; the API read measures sort_order itself.']),
+            ...(plannable(model) ? [] : [NO_PLAN]),
+            reorderedNote,
             ...(counts.attention ? ['The products "needing a person" are written only after Shaun names their values: rerun the dry run with `--size-fixes <file>`, a JSON object of product id to {"old label": "new label"}.'] : []),
             ...selectionProposals(model, rows),
         ],
@@ -162,30 +200,26 @@ function flySizes(model, { sizeFixes = {} } = {}) {
 
 // --- Default sizes: none preselected on a multi-size product (UX-10) ----------------------------
 
-function defaultSizes(model) {
+const ON_FLY_SIZES = 'Planned on the Fly Sizes job\'s result for every option that job also writes (the request carries it as `prior`): apply this plan after the Fly Sizes plan, as approved. Until then apply refuses it, writing nothing, and it stays valid.';
+
+function defaultSizes(model, { sizeFixes = {} } = {}) {
     const rows = [];
     const requests = [];
-    let unknown = 0;
-    for (const product of model.products) {
-        for (const option of product.options.filter(candidate => candidate.displayName === FLY_SIZES && candidate.values.length > 1)) {
-            if (option.values.some(value => value.isDefault === null)) {
-                unknown++;
-                continue; // eslint-disable-line no-continue
-            }
-            const defaults = option.values.filter(value => value.isDefault);
-            if (!defaults.length) continue; // eslint-disable-line no-continue
-            rows.push(row(product, 'Fly Sizes default', `default: ${list(defaults.map(value => value.label))}`, 'no default'));
-            if (plannable(model)) requests.push(optionRequest(product, option, [...option.values].sort(byOrder).map(value => ({ ...value, isDefault: false }))));
-        }
+    const multi = optionsOf(model.products, option => isFlySizes(option) && option.values.length > 1);
+    const unknown = multi.filter(({ option }) => option.values.some(value => value.isDefault === null)).length;
+    const flagged = multi.filter(({ option }) => option.values.every(value => value.isDefault !== null) && option.values.some(value => value.isDefault));
+    for (const { product, option } of flagged) {
+        rows.push(row(product, 'Fly Sizes default', `default: ${list(option.values.filter(value => value.isDefault).map(value => value.label))}`, 'no default', afterFlySizes(product, option, sizeFixes) ? 'planned on the Fly Sizes job\'s result: apply it after that job' : ''));
+        if (plannable(model)) requests.push(onFlySizes(product, option, sizeFixes, values => values.map(value => ({ ...value, isDefault: false }))));
     }
     return {
         id: 'default-sizes',
         title: 'Drop "default sizes" on multi-size products',
         decision: 'approved in principle (ticket 13, decision 15); Shaun approves this diff',
         rule: [
-            'Every product whose "Fly Sizes" option has more than one value: clear the default flag, so no size is preselected (UX-10).',
-            'One PUT of the option per product, with its whole option_values array: labels and order as they read when the plan is made.',
-            'Apply it after the Fly Sizes job, from a fresh dry run: both write the same options, so a plan made before the other was applied is refused as stale.',
+            'Every product whose Fly Sizes option has more than one value: clear the default flag, so no size is preselected (UX-10).',
+            'One PUT of the option per product, with its whole option_values array: labels and order as the Fly Sizes job leaves them.',
+            ON_FLY_SIZES,
         ],
         counts: { products: rows.length, unknown },
         rows,
@@ -200,29 +234,26 @@ function defaultSizes(model) {
 
 // --- Single-size products: preselect the only size (Shaun decides) -----------------------------
 
-function singleSizeDefaults(model) {
+function singleSizeDefaults(model, { sizeFixes = {} } = {}) {
     const rows = [];
     const requests = [];
-    let alreadyDefault = 0;
-    let unknown = 0;
-    for (const product of model.products.filter(isLive)) {
-        for (const option of product.options.filter(candidate => candidate.displayName === FLY_SIZES && candidate.values.length === 1)) {
-            const [value] = option.values;
-            if (value.isDefault === null) unknown++;
-            else if (value.isDefault) alreadyDefault++;
-            else {
-                rows.push(row(product, 'Fly Sizes default', `${value.label}, not preselected`, `${value.label}, preselected`));
-                if (plannable(model)) requests.push(optionRequest(product, option, [{ ...value, isDefault: true }]));
-            }
-        }
+    const single = optionsOf(model.products.filter(isLive), option => isFlySizes(option) && option.values.length === 1);
+    const unknown = single.filter(({ option }) => option.values[0].isDefault === null).length;
+    const alreadyDefault = single.filter(({ option }) => option.values[0].isDefault === true).length;
+    for (const { product, option } of single.filter(({ option: candidate }) => candidate.values[0].isDefault === false)) {
+        const [value] = option.values;
+        const base = afterFlySizes(product, option, sizeFixes);
+        const label = base ? base[0].label : value.label;
+        rows.push(row(product, 'Fly Sizes default', `${label}, not preselected`, `${label}, preselected`, base ? `planned on the Fly Sizes job's result (${value.label} is renamed there): apply it after that job` : ''));
+        if (plannable(model)) requests.push(onFlySizes(product, option, sizeFixes, values => values.map(entry => ({ ...entry, isDefault: true }))));
     }
     return {
         id: 'single-size-defaults',
         title: 'Preselect the only size on single-size products',
         decision: 'Shaun decides (not in decision 15). Recommended: yes. It is the roadmap\'s quick win: the old theme on .com and channel 1 then opens with the size chosen. Ticket 37 checks the only size in the template either way.',
-        rule: ['Every Live product whose "Fly Sizes" option has exactly one value: set that value as the default.'],
+        rule: ['Every Live product whose Fly Sizes option has exactly one value: set that value as the default.', ON_FLY_SIZES],
         counts: {
-            products: rows.length + alreadyDefault + unknown, toSet: rows.length, alreadyDefault, unknown,
+            products: rows.length + alreadyDefault + unknown, toSet: rows.length, alreadyDefault, unknown, onFlySizes: requests.filter(request => request.prior).length,
         },
         rows,
         requests,
@@ -237,20 +268,15 @@ function singleSizeDefaults(model) {
 // --- Option names: Color and Colour, Size and Fly Sizes (Shaun decides) -------------------------
 
 function optionNames(model) {
-    const rows = [];
-    const requests = [];
     const names = {};
-    for (const product of model.products) {
-        for (const option of product.options) {
-            names[option.displayName] = (names[option.displayName] || 0) + 1;
-            let target = null;
-            if (option.displayName === 'Color') target = SAMPLE_COLOUR;
-            else if (option.displayName === 'Size' && option.values.length && option.values.every(value => parseHookSize(value.label))) target = FLY_SIZES;
-            if (!target) continue; // eslint-disable-line no-continue
-            rows.push(row(product, 'option name', option.displayName, target, `values ${list(option.values.map(value => value.label))}`));
-            if (plannable(model)) requests.push(optionRequest(product, option, null, { displayName: target }));
-        }
-    }
+    for (const { option } of optionsOf(model.products, () => true)) names[option.displayName] = (names[option.displayName] || 0) + 1;
+    const targetOf = option => {
+        if (option.displayName === 'Color') return COLOUR;
+        return option.displayName === 'Size' && hookSizes(option) ? FLY_SIZES : null;
+    };
+    const renamed = optionsOf(model.products, option => targetOf(option) !== null);
+    const rows = renamed.map(({ product, option }) => row(product, 'option name', option.displayName, targetOf(option), `values ${list(option.values.map(value => value.label))}`));
+    const requests = plannable(model) ? renamed.map(({ product, option }) => optionRequest(product, option, null, { displayName: targetOf(option) })) : [];
     return {
         id: 'option-names',
         title: 'One name per option: Colour, and Fly Sizes',
@@ -258,7 +284,7 @@ function optionNames(model) {
         rule: [
             '"Color" becomes "Colour", the store\'s Canadian spelling and the name the newer products use.',
             '"Size" becomes "Fly Sizes" only where every value is a hook size. A "Size" or "Choose Size" holding box or sticker sizes keeps its name.',
-            'A PUT of the option\'s display name only: its values aren\'t sent, so they don\'t change.',
+            'A PUT of the option\'s display name only: its values aren\'t sent, so they don\'t change. The Fly Sizes jobs already take a "Size" of hook sizes, and write only its values, so this plan may run before or after them.',
         ],
         counts: { products: rows.length },
         rows,
@@ -299,42 +325,57 @@ function uncategorised(model) {
 
 // --- The ReelFlies brand on in-house Live products ----------------------------------------------
 
-function brand(model, { signatureCategories = SIGNATURE_CATEGORIES } = {}) {
-    const rows = [];
-    const requests = [];
-    const record = model.brands.find(candidate => candidate.name.toLowerCase() === BRAND_NAME.toLowerCase());
+const findBrand = (model, name) => model.brands.find(candidate => candidate.name.toLowerCase() === name.toLowerCase());
+
+// Options A to C, with what each costs. No agent default: A changes an owner decision (spec module
+// 12, HANDOFF's "Signature patterns are also gathered on the ReelFlies brand page"), and B and C
+// change the feeds. The agent's recommendation is B, as the one that keeps module 12.
+function brandOptions(counts) {
+    return [
+        `That breaks what four plans count on. Spec module 12 says "The brand page at /brands/ReelFlies.html gathers the Signature patterns", and that "the home Signature band and the Signature redirect both point here". Ticket 36 builds that page, ticket 48's Signature band links to it, and ticket 03's amendment maps refactor 09's Signature Redirect rows (categories 434 and 357) to brand ${counts.brandId}. A brand listing lists the brand's products: the theme can't make it list a category's, and tree 4 on 1895766 has no Signature category (ticket 03 item 10; ticket 48 never links to one).`,
+        'Shaun picks A, B or C. No agent default is taken, because each option changes an owner decision or the feeds; until he picks, the dry run plans only the job as written (the rows below).',
+        `A. No more brand writes. /brands/ReelFlies.html stays a listing of every ReelFlies product (${counts.branded} Live today), not a Signature page. Spec module 12 then changes: ticket 36's page, ticket 48's "See all ReelFlies originals" button and refactor 09's Signature Redirects (staged by refactor 15) all land on almost the whole catalogue, so 48 needs another target or label, and refactor 09 another target for the old Signature URLs. The feeds and the structured data don't change.`,
+        `B. The agent's recommendation: a new brand (for example "ReelFlies Signature") on the ${counts.signature} Signature products, so its listing gathers exactly the Signature patterns, as module 12 intends. The costs: a new brand URL (BigCommerce makes it from the name, as it made /brands/ReelFlies.html), so ticket 36's page, ticket 48's button and ticket 03's Signature Redirect rows (refactor 09, staged by refactor 15) move to it, and ticket 18's criterion 3 is read against the new brand; and the ${counts.signature} products' brand changes in the Google and Meta feeds and in their structured data, so the feed notice before the brand job says so. Creating a brand is outside this job's writes: Shaun creates it in the control panel, then the dry run with \`--signature-brand "<its name>"\` plans the ${counts.signature} assignments for his approval.`,
+        `C. Not recommended: keep /brands/ReelFlies.html for the Signature set by clearing or moving the brand on the ${counts.brandedOutside} other products. Their feed entries would lose or change the brand Google expects: ${counts.brandedOutside} products, against B's ${counts.signature}.`,
+    ];
+}
+
+function brand(model, { signatureCategories = SIGNATURE_CATEGORIES, signatureBrand = null } = {}) {
+    const record = findBrand(model, BRAND_NAME);
+    const target = signatureBrand ? findBrand(model, signatureBrand) : record;
     const live = model.products.filter(isLive);
     const inSet = product => product.categories.some(id => signatureCategories.includes(id));
     const signature = live.filter(inSet);
     const brandName = id => model.brands.find(candidate => candidate.id === id)?.name || (id ? `brand ${id}` : '(no brand)');
     const byBrand = {};
     for (const product of live) byBrand[brandName(product.brandId)] = (byBrand[brandName(product.brandId)] || 0) + 1;
+    const toAssign = target ? signature.filter(product => product.brandId !== target.id) : [];
     const counts = {
-        live: live.length, signature: signature.length, alreadyBranded: 0, toAssign: 0, brandedOutside: 0,
+        live: live.length, signature: signature.length, alreadyBranded: target ? signature.length - toAssign.length : 0, toAssign: toAssign.length, brandedOutside: record ? live.filter(product => !inSet(product) && product.brandId === record.id).length : 0,
     };
-    for (const product of record ? signature : []) {
-        if (product.brandId === record.id) {
-            counts.alreadyBranded++;
-            continue; // eslint-disable-line no-continue
-        }
-        counts.toAssign++;
-        rows.push(row(product, 'brand', brandName(product.brandId), BRAND_NAME));
-        if (plannable(model)) requests.push(productRequest(product, { brand_id: record.id }));
-    }
-    if (record) counts.brandedOutside = live.filter(product => !inSet(product) && product.brandId === record.id).length;
-    const notes = record ? [
-        `Found: the "${BRAND_NAME}" brand (id ${record.id}) is already on ${byBrand[BRAND_NAME] || 0} of ${live.length} Live products, not only the Signature set. Live products by brand: ${Object.entries(byBrand).map(([name, count]) => `${name} ${count}`).join(', ')}.`,
-        `So /brands/ReelFlies.html lists every ReelFlies-branded product today: the ${counts.alreadyBranded} Signature products that carry it and ${counts.brandedOutside} others. The job as written (assign the brand to the Signature set) changes only the ${counts.toAssign} listed below.`,
-        'Options for Shaun (default A, revisitable):',
-        `A. Recommended: write only the rows below. Every ReelFlies fly keeps its brand, so the Google and Meta feeds and the product structured data keep "ReelFlies". The brand listing shows all of them; ticket 36 and ticket 48's Signature band gather the Signature patterns from the Signature categories (${signatureCategories.join(', ')}) instead of the brand.`,
-        `B. A new "ReelFlies Signature" brand for the ${signature.length} Signature products. It changes their brand in both feeds, and creating a brand is outside this job's writes (Shaun creates it in the control panel; the dry run then plans the assignment).`,
-        `C. Not recommended: clear the brand on the ${counts.brandedOutside} other products. Their feed entries would lose the brand Google expects.`,
-    ] : [`No brand named "${BRAND_NAME}" in this read${model.source === 'csv' ? ' (the export has brand ids only: the API read names them)' : ''}.`];
+    const rows = toAssign.map(product => row(product, 'brand', brandName(product.brandId), target.name));
+    const requests = plannable(model) ? toAssign.map(product => productRequest(product, { brand_id: target.id })) : [];
+    const notes = [];
+    if (signatureBrand && !target) notes.push(`No brand named "${signatureBrand}" in this read: Shaun creates it in the control panel first (option B), then the dry run plans it.`);
+    if (record) {
+        notes.push(
+            `Found: the "${BRAND_NAME}" brand (id ${record.id}) is already on ${byBrand[BRAND_NAME] || 0} of ${live.length} Live products, not only the Signature set. Live products by brand: ${Object.entries(byBrand).map(([name, count]) => `${name} ${count}`).join(', ')}.`,
+            `So /brands/ReelFlies.html lists every ReelFlies-branded product today: the ${signature.filter(product => product.brandId === record.id).length} Signature products that carry it and ${counts.brandedOutside} others.${signatureBrand ? '' : ` The job as written (assign the brand to the Signature set) changes only the ${counts.toAssign} listed below.`}`,
+            ...(signatureBrand ? [] : brandOptions({
+                brandId: record.id, branded: byBrand[BRAND_NAME] || 0, signature: signature.length, brandedOutside: counts.brandedOutside,
+            })),
+        );
+    } else notes.push(`No brand named "${BRAND_NAME}" in this read${model.source === 'csv' ? ' (the export has brand ids only: the API read names them)' : ''}.`);
     return {
         id: 'brand',
         title: 'The ReelFlies brand on in-house Live products',
-        decision: 'approved in principle (ticket 13, decision 15); Shaun confirms the rule (options A to C below) and names any other in-house products',
-        rule: [`Every Live product placed in tree-1 ReelFlies Signature Flies: categories ${signatureCategories.join(', ')}. Each gets the existing "${BRAND_NAME}" brand where it has another or none.`, 'A PUT of the product\'s brand_id only.'],
+        decision: signatureBrand
+            ? `option B, which Shaun picked: "${signatureBrand}" on the Signature set; Shaun approves this diff`
+            : 'approved in principle (ticket 13, decision 15), but Shaun first picks A, B or C (the notes on the brand page): no agent default is taken. He also names any other in-house products',
+        rule: [
+            `Every Live product placed in tree-1 ReelFlies Signature Flies: categories ${signatureCategories.join(', ')}. Each gets the ${signatureBrand ? `"${signatureBrand}" brand (option B)` : `existing "${BRAND_NAME}" brand`} where it has another or none.`,
+            'A PUT of the product\'s brand_id only.',
+        ],
         counts,
         rows,
         requests,
@@ -400,38 +441,53 @@ function flyTypes(model) {
     return new Map(roots.map(root => [root.id, { name: root.name, rootOf }]));
 }
 
+// A Live product's thumbnail, judged: 'none' (no photo at all), 'unset' (photos, none the
+// thumbnail), 'white', 'swap' (another photo is on white), 'unknown' (unread), or 'reexport'.
+function thumbnailCase(product, ground) {
+    const thumb = product.images.find(image => image.isThumbnail);
+    if (!product.images.length) return { kind: 'none', thumb: null, ground: 'none' };
+    if (!thumb) return { kind: 'unset', thumb };
+    const own = ground(thumb);
+    if (own === 'white') return { kind: 'white', thumb };
+    const alternative = product.images.filter(image => image !== thumb && ground(image) === 'white').sort(byOrder)[0];
+    if (alternative) {
+        return {
+            kind: 'swap', thumb, ground: own, alternative,
+        };
+    }
+    return { kind: own === 'unknown' ? 'unknown' : 'reexport', thumb, ground: own };
+}
+
 function thumbnails(model, { grounds = null, sales = null } = {}) {
     const rows = [];
     const requests = [];
     const reexport = [];
     const counts = {
-        live: 0, white: 0, swapped: 0, reexport: 0, unknown: 0, noThumbnail: 0,
+        live: 0, white: 0, swapped: 0, reexport: 0, unknown: 0, noThumbnail: 0, noImages: 0,
     };
     const ground = image => (grounds && grounds.get(image.id)?.ground) || 'unknown';
     for (const product of model.products.filter(isLive)) {
         counts.live++;
-        const thumb = product.images.find(image => image.isThumbnail);
-        if (!thumb) {
+        const found = thumbnailCase(product, ground);
+        if (found.kind === 'none') {
+            counts.noImages++;
+            counts.reexport++;
+            rows.push(row(product, 'thumbnail', '(none)', '', 'no images: on the re-export list for ticket 14 (ground "none")'));
+            reexport.push({ product, thumb: null, ground: 'none' });
+        } else if (found.kind === 'unset') {
             counts.noThumbnail++;
-            rows.push(row(product, 'thumbnail', '(none)', '', product.images.length ? 'no image is the thumbnail' : 'no images'));
-            continue; // eslint-disable-line no-continue
-        }
-        const own = ground(thumb);
-        if (own === 'white') {
-            counts.white++;
-            continue; // eslint-disable-line no-continue
-        }
-        const alternative = product.images.filter(image => image !== thumb && ground(image) === 'white').sort(byOrder)[0];
-        if (alternative) {
+            rows.push(row(product, 'thumbnail', '(none)', '', 'no image is the thumbnail'));
+        } else if (found.kind === 'white') counts.white++;
+        else if (found.kind === 'swap') {
             counts.swapped++;
-            rows.push(row(product, 'thumbnail', `image ${thumb.id} (${own})`, `image ${alternative.id} (white)`));
-            if (plannable(model)) requests.push(imageRequest(product, alternative, { is_thumbnail: true }));
-        } else if (own === 'unknown') {
+            rows.push(row(product, 'thumbnail', `image ${found.thumb.id} (${found.ground})`, `image ${found.alternative.id} (white)`));
+            if (plannable(model)) requests.push(imageRequest(product, found.alternative, { is_thumbnail: true }));
+        } else if (found.kind === 'unknown') {
             counts.unknown++;
-            rows.push(row(product, 'thumbnail', `image ${thumb.id} (unread)`, '', grounds ? `check by eye: ${grounds.get(thumb.id)?.reason || 'unread'}` : 'photos not read in this run'));
+            rows.push(row(product, 'thumbnail', `image ${found.thumb.id} (unread)`, '', grounds ? `check by eye: ${grounds.get(found.thumb.id)?.reason || 'unread'}` : 'photos not read in this run'));
         } else {
             counts.reexport++;
-            reexport.push({ product, thumb, ground: own });
+            reexport.push({ product, thumb: found.thumb, ground: found.ground });
         }
     }
     const units = product => (sales && sales.get(product.id)) || 0;
@@ -456,9 +512,9 @@ function thumbnails(model, { grounds = null, sales = null } = {}) {
         product_id: product.id,
         product: product.name,
         sku: product.sku,
-        thumbnail_image_id: thumb.id,
+        thumbnail_image_id: thumb ? thumb.id : '',
         thumbnail_ground: own,
-        thumbnail_url: thumb.url,
+        thumbnail_url: thumb ? thumb.url : '',
     }));
     return {
         id: 'thumbnails',
@@ -466,7 +522,7 @@ function thumbnails(model, { grounds = null, sales = null } = {}) {
         decision: 'approved in principle (ticket 13, decision 15); Shaun approves this diff',
         rule: [
             'Every Live product whose thumbnail isn\'t on white, judged from the border of its 44 x 58 rendition (images.mjs), and that has another image on white: that image becomes the thumbnail (its lowest sort order first). Setting one image as the thumbnail clears the old one.',
-            `Every other Live product whose thumbnail is on black or another colour goes on the re-export list for ticket 14, ranked: the top ${TOP_SELLERS} sellers by units in the last 365 days, then page 1 (${PAGE_ONE} products, best sellers first) of each tree-1 Fly Type, then the rest.`,
+            `Every other Live product whose thumbnail is on black or another colour, and every Live product with no photo at all (ground "none"), goes on the re-export list for ticket 14, ranked: the top ${TOP_SELLERS} sellers by units in the last 365 days, then page 1 (${PAGE_ONE} products, best sellers first) of each tree-1 Fly Type, then the rest.`,
             'A thumbnail that couldn\'t be read is listed for a person to check by eye.',
         ],
         counts,
@@ -476,6 +532,7 @@ function thumbnails(model, { grounds = null, sales = null } = {}) {
             ...(grounds ? [] : ['The photos weren\'t read in this run (`--images skip`), so every thumbnail counts as unread.']),
             ...(sales ? [] : ['No sales file was given, so the re-export list isn\'t ranked by sales.']),
             ...(types.size ? [] : ['No tree-1 Fly Types in this read, so the list has no "page 1" tier.']),
+            ...(counts.noImages ? [`${counts.noImages} Live ${counts.noImages === 1 ? 'product has' : 'products have'} no photo at all, so ${counts.noImages === 1 ? 'it is' : 'they are'} on the re-export list with ground "none": ${list(reexport.filter(item => !item.thumb).map(item => `${item.product.id} ${item.product.name}`))}.`] : []),
             ...(ranked.length ? [`The re-export list by tier: ${[`top ${TOP_SELLERS} seller`, 'page 1 of', 'the rest'].map(prefix => `${prefix.replace(' of', '')} ${ranked.filter(item => item.tier.startsWith(prefix)).length}`).join(', ')}.`] : []),
         ],
         extra: { reexport: ranked },
@@ -485,23 +542,16 @@ function thumbnails(model, { grounds = null, sales = null } = {}) {
 // --- Alt text: no empty image descriptions (story 68) -------------------------------------------
 
 function altText(model) {
-    const rows = [];
-    const requests = [];
-    let images = 0;
-    for (const product of model.products) {
-        for (const image of [...product.images].sort(byOrder)) {
-            images++;
-            if (image.description.trim()) continue; // eslint-disable-line no-continue
-            rows.push(row(product, `image ${image.id} description`, '(empty)', product.name));
-            if (plannable(model)) requests.push(imageRequest(product, image, { description: product.name }));
-        }
-    }
+    const images = model.products.flatMap(product => [...product.images].sort(byOrder).map(image => ({ product, image })));
+    const empty = images.filter(({ image }) => !image.description.trim());
+    const rows = empty.map(({ product, image }) => row(product, `image ${image.id} description`, '(empty)', product.name));
+    const requests = plannable(model) ? empty.map(({ product, image }) => imageRequest(product, image, { description: product.name })) : [];
     return {
         id: 'alt-text',
         title: 'Alt text: a description on every product image',
         decision: 'approved in principle (ticket 13, decision 15); Shaun approves this diff (and may give better text for any row)',
         rule: ['Every product image, Live or not, whose description is empty gets the product\'s name, which Cornerstone uses as the image\'s alt text.', 'A PUT of the image\'s description only.'],
-        counts: { images, empty: rows.length, live: rows.filter(item => item.live).length },
+        counts: { images: images.length, empty: rows.length, live: rows.filter(item => item.live).length },
         rows,
         requests,
         notes: [],

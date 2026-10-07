@@ -7,7 +7,7 @@ import os from 'os';
 import path from 'path';
 import jpeg from 'jpeg-js'; // eslint-disable-line import/no-extraneous-dependencies -- installed through lighthouse
 import {
-    classifyGround, classifyImages, tinyUrl,
+    classifyGround, classifyImages, decoderProblem, tinyUrl,
 } from './images.mjs';
 
 // A width x height RGBA image: `ground` everywhere, and `subject` inside a margin of `margin` pixels.
@@ -72,4 +72,10 @@ test('images are fetched once, decoded and classified, and the answers are cache
     const again = await classifyImages(images.slice(0, 2), { fetch, cacheDir });
     assert.equal(again.get(1).ground, 'white');
     assert.equal(fetched.length, 3, 'the second run answers from the cache');
+});
+
+test('the photo read stops with a clear reason when jpeg-js is missing, and passes when it is there', async () => {
+    assert.equal(await decoderProblem(), null);
+    const missing = await decoderProblem({ load: async () => { throw new Error('Cannot find package \'jpeg-js\''); } });
+    assert.match(missing, /^the photo read needs jpeg-js, which this repo has only through lighthouse \(an upstream devDependency\): run npm ci, or pass --images skip/);
 });

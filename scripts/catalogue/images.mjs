@@ -10,8 +10,8 @@
 // fetches only new photos.
 //
 // JPEGs are decoded with jpeg-js, which the repo already installs through lighthouse (an
-// upstream devDependency). Revisitable: if it ever goes, every photo reads "unknown" and the job
-// says so; it never guesses.
+// upstream devDependency), so the PR adds no package.json hook. Revisitable: if it ever goes, the
+// dry run stops before it reads a photo (decoderProblem), and it never guesses a ground.
 
 import fs from 'fs';
 import path from 'path';
@@ -53,11 +53,24 @@ export function tinyUrl({ urlTiny, url }) {
     return swapped && swapped !== url ? swapped : null;
 }
 
+const loadJpeg = () => import('jpeg-js'); // eslint-disable-line import/no-extraneous-dependencies
+
+// null when jpeg-js loads, or why the photo read can't run. The dry run asks before it reads any
+// photo, so a missing decoder stops it with this, instead of reading every photo as "unknown".
+export async function decoderProblem({ load = loadJpeg } = {}) {
+    try {
+        await load();
+        return null;
+    } catch (error) {
+        return `the photo read needs jpeg-js, which this repo has only through lighthouse (an upstream devDependency): run npm ci, or pass --images skip (${error.message})`;
+    }
+}
+
 let decoder;
 async function decodeJpeg(buffer) {
     if (decoder === undefined) {
         try {
-            decoder = (await import('jpeg-js')).default; // eslint-disable-line import/no-extraneous-dependencies
+            decoder = (await loadJpeg()).default;
         } catch {
             decoder = null;
         }
