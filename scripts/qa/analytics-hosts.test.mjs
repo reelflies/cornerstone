@@ -257,8 +257,17 @@ describe('the gates, as they load (checkEnv in storefront.mjs)', () => {
         assert.match(stderr, /QA_ANALYTICS=allow is refused on https:\/\/reelflies\.ca/);
     });
 
-    it('load with QA_ANALYTICS=allow on the prelaunch host', () => {
+    it('load with QA_ANALYTICS=allow on the prelaunch host before the Flip, and refuse it from the Flip on', () => {
+        // The config reads the repo's calendar (scripts/release-calendar.json) and today's date in
+        // Toronto, with no seam for either, so the expectation is judged against the same calendar:
+        // the test holds on any day and with any Flip date, or none. Both sides are pinned on fixed
+        // dates above ("turns QA_ANALYTICS=allow away from the Toronto date of the Flip on").
         const { status, stderr } = load({ QA_ANALYTICS: 'allow', QA_BASE_URL: PRELAUNCH_URL });
-        assert.equal(status, 0, stderr);
+        if (isAfterFlip({ flip: readFlip() })) {
+            assert.notEqual(status, 0);
+            assert.match(stderr, /QA_ANALYTICS=allow is refused from the Flip \(\d{4}-\d{2}-\d{2}\) on/);
+        } else {
+            assert.equal(status, 0, stderr);
+        }
     });
 });

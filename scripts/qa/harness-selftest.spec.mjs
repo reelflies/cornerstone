@@ -165,7 +165,9 @@ const SELFTEST_PRODUCT = '9999901';
 // A context of the test's own, with the guard on top as fixtures.mjs installs it, and under it
 // a route that answers the fixture page (`body`) and every request the guard passes on to the
 // selftest origin itself (recorded in `reached`). Anything else that got past the guard is
-// recorded in `leaked` and aborted, so nothing leaves the Mac.
+// recorded in `leaked` and aborted, so nothing leaves the Mac. These cases are before the Flip,
+// told so (flipped: false) rather than read from the calendar on today's date, so ReelFlies_CA
+// still takes writes here on any day; network-guard.test.mjs covers the guard from the Flip.
 async function guardedPage(browser, { channel, body = '<h1>guard</h1>' }) {
     const context = await browser.newContext();
     const reached = [];
@@ -184,7 +186,7 @@ async function guardedPage(browser, { channel, body = '<h1>guard</h1>' }) {
         return route.abort('internetdisconnected');
     });
     const guard = await installNetworkGuard(context, {
-        channel, storefront: SELFTEST_ORIGIN, local: true, blockAnalytics: true,
+        channel, storefront: SELFTEST_ORIGIN, local: true, blockAnalytics: true, flipped: false,
     });
     const page = await context.newPage();
     const failures = [];

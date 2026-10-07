@@ -251,19 +251,21 @@ describe('the guard on a context', () => {
         });
     });
 
-    it('names the host when a run on another host refused a write', async () => {
+    // The runs on channel 1895766 below are before the Flip, told so (flipped: false) rather than
+    // read from the calendar on today's date; the runs from the Flip are tested beside them.
+    it('names the host when a run on another host refused a write before the Flip', async () => {
         const context = fakeContext();
         const guard = await installNetworkGuard(context, {
-            channel: '1895766', storefront: 'https://reelflies.ca', local: false, blockAnalytics: true,
+            channel: '1895766', storefront: 'https://reelflies.ca', local: false, blockAnalytics: true, flipped: false,
         });
         await context.send('POST', 'https://reelflies.ca/remote/v1/cart/add', 'action=add');
         assert.throws(() => guard.assertNoRefusedWrites(), { message: /^The gates refused 1 write on https:\/\/reelflies\.ca, which isn't the prelaunch host, so none reached the store: POST https:\/\/reelflies\.ca\/remote\/v1\/cart\/add\./ });
     });
 
-    it('lets everything through but analytics on ReelFlies_CA, and fails nothing', async () => {
+    it('lets everything through but analytics on ReelFlies_CA before the Flip, and fails nothing', async () => {
         const context = fakeContext();
         const guard = await installNetworkGuard(context, {
-            channel: '1895766', storefront: LOCAL, local: true, blockAnalytics: true,
+            channel: '1895766', storefront: LOCAL, local: true, blockAnalytics: true, flipped: false,
         });
         assert.deepEqual(await context.send('POST', `${LOCAL}/remote/v1/cart/add`, 'action=add'), [['fallback']]);
         assert.deepEqual(await context.send('GET', 'https://www.googletagmanager.com/gtag/js?id=G-BQ4RFFK3KW'), [['abort', 'blockedbyclient']]);
@@ -275,7 +277,7 @@ describe('the guard on a context', () => {
     it('fails a test in which a request to an analytics host completed although the run blocks them', async () => {
         const context = fakeContext();
         const guard = await installNetworkGuard(context, {
-            channel: '1895766', storefront: LOCAL, local: true, blockAnalytics: true,
+            channel: '1895766', storefront: LOCAL, local: true, blockAnalytics: true, flipped: false,
         });
         context.finish('GET', `${LOCAL}/`);
         guard.assertNoAnalyticsCompleted();
@@ -290,7 +292,7 @@ describe('the guard on a context', () => {
     it('records completed analytics requests without failing when QA_ANALYTICS=allow lets them load', async () => {
         const context = fakeContext();
         const guard = await installNetworkGuard(context, {
-            channel: '1895766', storefront: PRELAUNCH_URL, local: false, blockAnalytics: false,
+            channel: '1895766', storefront: PRELAUNCH_URL, local: false, blockAnalytics: false, flipped: false,
         });
         context.finish('GET', 'https://connect.facebook.net/en_US/fbevents.js');
         assert.deepEqual(guard.completed, []);
