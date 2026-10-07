@@ -1,0 +1,293 @@
+{
+    "_fixture": "Trimmed from a real Lighthouse 12.8.1 run (mobile, lighthouse-config.js) on a local stencil start of 1895766, 2026-10-06, to the fields scripts/qa/lighthouse-rules.mjs reads.",
+    "lighthouseVersion": "12.8.1",
+    "requestedUrl": "http://localhost:3301/",
+    "finalDisplayedUrl": "http://localhost:3301/",
+    "fetchTime": "2026-10-07T03:31:22.036Z",
+    "runWarnings": [],
+    "environment": {
+        "benchmarkIndex": 2844
+    },
+    "configSettings": {
+        "formFactor": "mobile",
+        "throttlingMethod": "simulate"
+    },
+    "categories": {
+        "performance": {
+            "id": "performance",
+            "score": 0.89
+        },
+        "accessibility": {
+            "id": "accessibility",
+            "score": 1,
+            "auditRefs": [
+                {
+                    "id": "aria-allowed-attr",
+                    "weight": 10
+                },
+                {
+                    "id": "aria-allowed-role",
+                    "weight": 1
+                },
+                {
+                    "id": "aria-conditional-attr",
+                    "weight": 7
+                },
+                {
+                    "id": "aria-deprecated-role",
+                    "weight": 1
+                },
+                {
+                    "id": "aria-hidden-body",
+                    "weight": 10
+                },
+                {
+                    "id": "aria-hidden-focus",
+                    "weight": 7
+                },
+                {
+                    "id": "aria-prohibited-attr",
+                    "weight": 7
+                },
+                {
+                    "id": "aria-required-attr",
+                    "weight": 10
+                },
+                {
+                    "id": "aria-roles",
+                    "weight": 7
+                },
+                {
+                    "id": "aria-valid-attr-value",
+                    "weight": 10
+                },
+                {
+                    "id": "aria-valid-attr",
+                    "weight": 10
+                },
+                {
+                    "id": "button-name",
+                    "weight": 10
+                },
+                {
+                    "id": "color-contrast",
+                    "weight": 7
+                },
+                {
+                    "id": "document-title",
+                    "weight": 7
+                },
+                {
+                    "id": "heading-order",
+                    "weight": 3
+                },
+                {
+                    "id": "html-has-lang",
+                    "weight": 7
+                },
+                {
+                    "id": "html-lang-valid",
+                    "weight": 7
+                },
+                {
+                    "id": "image-alt",
+                    "weight": 10
+                },
+                {
+                    "id": "image-redundant-alt",
+                    "weight": 1
+                },
+                {
+                    "id": "input-button-name",
+                    "weight": 10
+                },
+                {
+                    "id": "label",
+                    "weight": 7
+                },
+                {
+                    "id": "link-in-text-block",
+                    "weight": 7
+                },
+                {
+                    "id": "link-name",
+                    "weight": 7
+                },
+                {
+                    "id": "list",
+                    "weight": 7
+                },
+                {
+                    "id": "listitem",
+                    "weight": 7
+                },
+                {
+                    "id": "meta-viewport",
+                    "weight": 10
+                },
+                {
+                    "id": "target-size",
+                    "weight": 7
+                }
+            ]
+        }
+    },
+    "audits": {
+        "largest-contentful-paint": {
+            "id": "largest-contentful-paint",
+            "numericValue": 3077.4868500000002,
+            "numericUnit": "millisecond"
+        },
+        "cumulative-layout-shift": {
+            "id": "cumulative-layout-shift",
+            "numericValue": 0,
+            "numericUnit": "unitless"
+        },
+        "total-blocking-time": {
+            "id": "total-blocking-time",
+            "numericValue": 88,
+            "numericUnit": "millisecond"
+        },
+        "resource-summary": {
+            "id": "resource-summary",
+            "details": {
+                "type": "table",
+                "items": [
+                    {
+                        "resourceType": "total",
+                        "requestCount": 16,
+                        "transferSize": 651990
+                    },
+                    {
+                        "resourceType": "script",
+                        "requestCount": 8,
+                        "transferSize": 474688
+                    },
+                    {
+                        "resourceType": "stylesheet",
+                        "requestCount": 2,
+                        "transferSize": 93760
+                    },
+                    {
+                        "resourceType": "font",
+                        "requestCount": 2,
+                        "transferSize": 48719
+                    },
+                    {
+                        "resourceType": "other",
+                        "requestCount": 2,
+                        "transferSize": 19630
+                    },
+                    {
+                        "resourceType": "document",
+                        "requestCount": 1,
+                        "transferSize": 9042
+                    },
+                    {
+                        "resourceType": "image",
+                        "requestCount": 1,
+                        "transferSize": 6151
+                    },
+                    {
+                        "resourceType": "media",
+                        "requestCount": 0,
+                        "transferSize": 0
+                    },
+                    {
+                        "resourceType": "third-party",
+                        "requestCount": 10,
+                        "transferSize": 155629
+                    }
+                ]
+            }
+        },
+        "network-requests": {
+            "id": "network-requests",
+            "details": {
+                "type": "table",
+                "items": [
+                    {
+                        "url": "http://localhost:3301/",
+                        "statusCode": 200,
+                        "resourceType": "Document"
+                    },
+                    {
+                        "url": "http://localhost:3301/stencil/00000000-0000-0000-0000-000000000001/dist/theme-bundle.head_async.js",
+                        "statusCode": 200,
+                        "resourceType": "Script"
+                    },
+                    {
+                        "url": "https://fonts.googleapis.com/css?family=Karla:400%7CMontserrat:400,700,500&display=block",
+                        "statusCode": 200,
+                        "resourceType": "Stylesheet"
+                    },
+                    {
+                        "url": "http://localhost:3301/stencil/00000000-0000-0000-0000-000000000001/dist/theme-bundle.font.js",
+                        "statusCode": 200,
+                        "resourceType": "Script"
+                    },
+                    {
+                        "url": "http://localhost:3301/stencil/00000000-0000-0000-0000-000000000001/css/theme-00000000-0000-0000-0000-000000000001.css",
+                        "statusCode": 200,
+                        "resourceType": "Stylesheet"
+                    },
+                    {
+                        "url": "https://checkout-sdk.bigcommerce.com/v1/loader.js",
+                        "statusCode": 200,
+                        "resourceType": "Script"
+                    },
+                    {
+                        "url": "https://cdn11.bigcommerce.com/shared/js/bodl-consent-32a446f5a681a22e8af09a4ab8f4e4b6deda6487.js",
+                        "statusCode": 200,
+                        "resourceType": "Script"
+                    },
+                    {
+                        "url": "https://cdn11.bigcommerce.com/shared/js/storefront/consent-manager-config-e6023f97d2c6bea528c6d529ee9cc8e813299d17.js",
+                        "statusCode": 200,
+                        "resourceType": "Script"
+                    },
+                    {
+                        "url": "https://cdn11.bigcommerce.com/shared/js/storefront/consent-manager-08633fe15aba542118c03f6d45457262fa9fac88.js",
+                        "statusCode": 200,
+                        "resourceType": "Script"
+                    },
+                    {
+                        "url": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/250x100/new_logo_for_usa_site_white_background_1000dpi_1535389636__63856.original.png",
+                        "statusCode": 200,
+                        "resourceType": "Image"
+                    },
+                    {
+                        "url": "http://localhost:3301/stencil/00000000-0000-0000-0000-000000000001/dist/theme-bundle.main.js",
+                        "statusCode": 200,
+                        "resourceType": "Script"
+                    },
+                    {
+                        "url": "https://cdn11.bigcommerce.com/shared/js/csrf-protection-header-5eeddd5de78d98d146ef4fd71b2aedce4161903e.js",
+                        "statusCode": 200,
+                        "resourceType": "Script"
+                    },
+                    {
+                        "url": "https://fonts.gstatic.com/s/karla/v33/qkBIXvYC6trAT55ZBi1ueQVIjQTD-JqaE0lKZbTXGg.woff2",
+                        "statusCode": 200,
+                        "resourceType": "Font"
+                    },
+                    {
+                        "url": "https://fonts.gstatic.com/s/montserrat/v31/JTUSjIg1_i6t8kCHKm459WlhyyTh89Y.woff2",
+                        "statusCode": 200,
+                        "resourceType": "Font"
+                    },
+                    {
+                        "url": "http://localhost:3301/stencil/00000000-0000-0000-0000-000000000001/img/icon-sprite.svg",
+                        "statusCode": 200,
+                        "resourceType": "XHR"
+                    },
+                    {
+                        "url": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/product_images/favicon.png?t=1539803760",
+                        "statusCode": 200,
+                        "resourceType": "Other"
+                    }
+                ]
+            }
+        }
+    }
+}

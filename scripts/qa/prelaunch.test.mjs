@@ -53,6 +53,7 @@ async function batch({
     ga4FilterSince = null,
     log = releases(entry(UUID, SHA)),
     captureError = null,
+    lighthouse = null,
 } = {}) {
     const calls = [];
     const lines = [];
@@ -77,6 +78,10 @@ async function batch({
             return failing.includes(gate.script) || failing.includes(gate.slug) ? [`npm run ${gate.script} exited 1`] : [];
         },
         readReleases: () => log,
+        readLighthouse: dir => {
+            calls.push(['read lighthouse', dir]);
+            return lighthouse;
+        },
         writeReleases: text => { files['RELEASES.md'] = text; },
         writeJson: (file, data) => { files[file] = JSON.stringify(data, null, 2); },
         mkdir: dir => calls.push(['mkdir', dir]),
@@ -303,6 +308,28 @@ describe('Lighthouse (ticket 17)', () => {
 
         const without = await batch({ log: pending });
         assert.ok(without.files['RELEASES.md'].includes(LIGHTHOUSE_PENDING_LINE), 'no Lighthouse ran, so it stays pending');
+    });
+
+    it('records each URL\'s medians under the filled line, from the run\'s own summary', async () => {
+        const pending = releases(entry(UUID, SHA, [LIGHTHOUSE_PENDING_LINE]));
+        const medians = {
+            performance: 93, accessibility: 100, lcpMs: 2140, cls: 0.012, tbtMs: 120, jsBytes: 210000, cssBytes: 40000, accessibilityFailures: [],
+        };
+        const summary = {
+            startedAt: '2026-10-07T15:10:00.000Z',
+            urls: [{
+                key: 'cart', path: '/cart.php', budget: 'full', medians, comparison: null, problems: [],
+            }],
+            waiting: [{ kind: 'product', reason: 'no products until refactor 14' }],
+            problems: [],
+        };
+        const run = await batch({ scripts: withLighthouse, log: pending, lighthouse: summary });
+        assert.ok(run.calls.some(([kind, dir]) => kind === 'read lighthouse' && dir === resultsDir(UUID, ROOT)));
+        assert.match(run.files['RELEASES.md'], /- Lighthouse: pass, host batch of 2026-10-07 15:04 UTC \(analytics blocked: yes; results in scripts\/qa\/results\/host\/58abad50-a3c0-013f-e2b6-2ec98cc9ce73\/\)\n {2}- cart `\/cart\.php`: performance 93, LCP 2\.14 s, CLS 0\.012, TBT 120 ms, accessibility 100; JS 210,000 B, CSS 40,000 B\n {2}- not measured yet: product \(no products until refactor 14\)\n/);
+        assert.deepEqual(releaseCommitFor(run.files['RELEASES.md'], UUID), SHA, 'the release log still reads the entry');
+
+        const stale = await batch({ scripts: withLighthouse, log: pending, lighthouse: { ...summary, startedAt: '2026-10-07T14:00:00.000Z' } });
+        assert.doesNotMatch(stale.files['RELEASES.md'], /- cart `\/cart\.php`/, 'a summary from before this batch is an older run\'s');
     });
 
     it('fills in only the newest entry of that uuid', () => {
