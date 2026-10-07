@@ -1,0 +1,173 @@
+{
+  "_about": "Responses for ticket 21's read-only reads (scripts/settings/read.mjs), shaped on BigCommerce's documented responses: a global read, and reads with channel_id where null means the channel inherits the global value. Not a capture of this store. The promotions are made up.",
+  "inventory": {
+    "global": {
+      "data": {
+        "product_out_of_stock_behavior": "do_nothing",
+        "option_out_of_stock_behavior": "do_nothing",
+        "stock_level_display": "dont_show",
+        "default_out_of_stock_message": "Sold Out",
+        "hide_in_product_filtering": false,
+        "update_stock_behavior": "order_placed"
+      },
+      "meta": {}
+    },
+    "1": {
+      "data": {
+        "product_out_of_stock_behavior": null,
+        "option_out_of_stock_behavior": null,
+        "stock_level_display": null,
+        "default_out_of_stock_message": null,
+        "hide_in_product_filtering": null,
+        "update_stock_behavior": null
+      },
+      "meta": {}
+    },
+    "1855224": {
+      "data": {
+        "product_out_of_stock_behavior": null,
+        "option_out_of_stock_behavior": null,
+        "stock_level_display": null,
+        "default_out_of_stock_message": "Out of stock",
+        "hide_in_product_filtering": null,
+        "update_stock_behavior": null
+      },
+      "meta": {}
+    },
+    "1895766": {
+      "data": {
+        "product_out_of_stock_behavior": null,
+        "option_out_of_stock_behavior": null,
+        "stock_level_display": null,
+        "default_out_of_stock_message": null,
+        "hide_in_product_filtering": null,
+        "update_stock_behavior": null
+      },
+      "meta": {}
+    }
+  },
+  "storefront/search": {
+    "global": {
+      "data": {
+        "content_product_sort": "relevance",
+        "default_product_sort": "featured",
+        "product_filtering_enabled": true,
+        "search_suggest": true
+      },
+      "meta": {}
+    },
+    "1": {
+      "data": {
+        "content_product_sort": null,
+        "default_product_sort": null,
+        "product_filtering_enabled": null,
+        "search_suggest": null
+      },
+      "meta": {}
+    },
+    "1855224": {
+      "data": {
+        "content_product_sort": null,
+        "default_product_sort": "bestselling",
+        "product_filtering_enabled": null,
+        "search_suggest": null
+      },
+      "meta": {}
+    },
+    "1895766": {
+      "data": {
+        "content_product_sort": null,
+        "default_product_sort": null,
+        "product_filtering_enabled": null,
+        "search_suggest": null
+      },
+      "meta": {}
+    }
+  },
+  "storefront/security": {
+    "global": {
+      "data": {
+        "csp_header": { "enabled": false, "header_value": "" },
+        "hsts": { "enabled": false, "max_age": "zero_seconds", "include_subdomains": false, "include_preload": false },
+        "sitewide_https_enabled": true,
+        "x_frame_options_header": { "enabled": true, "setting": "same_origin", "allowed_url": "" }
+      },
+      "meta": {}
+    },
+    "1": {
+      "data": { "csp_header": null, "hsts": null, "sitewide_https_enabled": null, "x_frame_options_header": null },
+      "meta": {}
+    },
+    "1855224": {
+      "data": { "csp_header": null, "hsts": null, "sitewide_https_enabled": null, "x_frame_options_header": null },
+      "meta": {}
+    },
+    "1895766": {
+      "data": { "csp_header": null, "hsts": null, "sitewide_https_enabled": null, "x_frame_options_header": null },
+      "meta": {}
+    }
+  },
+  "storefront/product_ignores_channel": {
+    "_about": "An endpoint that answers every scope with the global read: part 1 isn't proved.",
+    "data": { "show_product_price": true, "show_product_weight": false },
+    "meta": {}
+  },
+  "storefront/category_empty_channel": {
+    "_about": "A channel read of {} (inherits everything): part 1 is proved, but no key is.",
+    "global": { "data": { "listing_mode": "default", "menu_display_depth": 2 }, "meta": {} },
+    "channel": { "data": {}, "meta": {} }
+  },
+  "search/filters": {
+    "data": [
+      { "id": "cHJpY2U=", "type": "price", "display_name": "Price", "is_enabled": true, "collapsed_by_default": false },
+      { "id": "Rmx5IFNpemVz", "type": "product", "display_name": "Fly Sizes", "is_enabled": true, "collapsed_by_default": true, "display_product_count": true, "items_to_show": "10", "sort_by": "alpha" },
+      { "id": "YnJhbmQ=", "type": "brand", "display_name": "Brand", "is_enabled": true, "collapsed_by_default": true, "display_product_count": true, "items_to_show": "10", "sort_by": "alpha" }
+    ],
+    "meta": {}
+  },
+  "search/filters/contexts": {
+    "global": { "data": [], "meta": {} },
+    "1": {
+      "data": [
+        { "context": { "channel_id": 1, "category_id": 298 }, "data": [{ "id": "Rmx5IFNpemVz", "type": "product", "display_name": "Fly Sizes", "is_enabled": true }] }
+      ],
+      "meta": {}
+    },
+    "1895766": { "status": 422, "body": { "status": 422, "title": "Contextual filters are only supported on channel 1" } }
+  },
+  "search/filters/available": {
+    "data": [
+      { "id": "cHJpY2U=", "type": "price", "name": "Price" },
+      { "id": "Rmx5IFNpemVz", "type": "product", "name": "Fly Sizes" },
+      { "id": "YnJhbmQ=", "type": "brand", "name": "Brand" },
+      { "id": "Y2F0ZWdvcnk=", "type": "category", "name": "Category" }
+    ],
+    "meta": {}
+  },
+  "currency-assignments": {
+    "1": { "data": { "channel_id": 1, "enabled_currencies": ["CAD"], "default_currency": "CAD" }, "meta": {} },
+    "1855224": { "data": { "channel_id": 1855224, "enabled_currencies": ["USD"], "default_currency": "USD" }, "meta": {} },
+    "1895766": { "data": { "channel_id": 1895766, "enabled_currencies": ["CAD"], "default_currency": "CAD" }, "meta": {} }
+  },
+  "promotions": {
+    "page1": {
+      "data": [
+        {
+          "id": 11, "name": "Test free shipping", "redemption_type": "AUTOMATIC", "status": "DISABLED", "currency_code": "*", "channels": [],
+          "rules": [{ "action": { "shipping": { "free_shipping": true, "zone_ids": "*" } }, "condition": { "cart": { "minimum_spend": 99 } } }]
+        }
+      ],
+      "meta": { "pagination": { "total": 2, "count": 1, "per_page": 1, "current_page": 1, "total_pages": 2 } }
+    },
+    "page2": {
+      "data": [
+        {
+          "id": 12, "name": "Spring coupon", "redemption_type": "COUPON", "status": "ENABLED", "currency_code": "CAD", "channels": [{ "id": 1 }],
+          "codes": ["SECRETCODE10"],
+          "rules": [{ "action": { "cart_value": { "discount": { "percentage_amount": 10 } } } }]
+        }
+      ],
+      "meta": { "pagination": { "total": 2, "count": 1, "per_page": 1, "current_page": 2, "total_pages": 2 } }
+    }
+  }
+}
