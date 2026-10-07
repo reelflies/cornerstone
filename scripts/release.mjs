@@ -65,7 +65,7 @@ import {
 } from './release-diff.mjs';
 import { checkRelease, menuIdsSet } from './release-guard.mjs';
 import {
-    describeLighthouse, lighthouseEnv, lighthouseOutcome, lighthousePlan, resultsDirFor, runCommand, stopReason,
+    cookieSecrets, describeLighthouse, lighthouseEnv, lighthouseOutcome, lighthousePlan, resultsDirFor, runCommand, stopReason,
 } from './release-lighthouse.mjs';
 import {
     addMyThemesRow, addReleaseEntry, describePairedRelease, formatMyThemesRow, formatPushSummary, formatReleaseEntry, lastRelease, myThemesRows,
@@ -757,8 +757,7 @@ const LIGHTHOUSE_HISTORY = 'scripts/qa/lighthouse-history.json';
 // The values the runner's output must never show: the tokens, and the preview cookie whole and
 // each of its values.
 function lighthouseSecrets(cookie) {
-    const values = (cookie || '').split(';').map(part => part.slice(part.indexOf('=') + 1).trim());
-    return [cookie, ...values, ...knownSecrets()];
+    return [...cookieSecrets(cookie), ...knownSecrets()];
 }
 
 function readLighthouseSummary(file) {

@@ -38,7 +38,7 @@ import fs from 'fs';
 import path from 'path';
 import { isMain } from '../lib/is-main.mjs';
 import { captureLive } from '../release-capture.mjs';
-import { LIGHTHOUSE_PENDING_LINE } from '../release-lighthouse.mjs';
+import { LIGHTHOUSE_PENDING_LINE, cookieSecrets, safeLines } from '../release-lighthouse.mjs';
 import { RELEASES_TEMPLATE } from '../release-log.mjs';
 import { PRELAUNCH_URL, analyticsRecord, isPrelaunchHost } from './analytics-hosts.mjs';
 import { lighthouseReleaseLines } from './lighthouse-rules.mjs';
@@ -102,11 +102,12 @@ export function batchGates({ scripts = {}, ga4FilterSince = GA4_HOSTNAME_FILTER_
 const gateDir = (gate, dir) => (gate.analytics === 'allow' ? path.join(dir, 'tags-loaded') : dir);
 
 // The environment one gate runs in: the shell's (the cookie with it), on the prelaunch host as
-// the variation it runs, with its results in its folder. QA_ANALYTICS is the gate's own.
+// the variation it runs, with its results in its folder. QA_ANALYTICS is the gate's own, and
+// QA_RELEASE_COMMIT is release.sh's step 6b's: the batch names the build by RELEASES.md.
 function hostGateEnv({
     env, gate, variation, dir,
 }) {
-    const inherited = Object.fromEntries(Object.entries(env).filter(([name]) => !['RF_QA_PORTS_CHECKED', 'QA_ANALYTICS'].includes(name)));
+    const inherited = Object.fromEntries(Object.entries(env).filter(([name]) => !['RF_QA_PORTS_CHECKED', 'QA_ANALYTICS', 'QA_RELEASE_COMMIT'].includes(name)));
     const results = gateDir(gate, dir);
     return {
         ...inherited,
@@ -135,7 +136,9 @@ const short = sha => `\`${sha.slice(0, 8)}\``;
 
 // The release entries of RELEASES.md, oldest first, each as its text.
 const releaseEntries = markdown => (markdown || '').split(/\n(?=### )/).filter(block => block.startsWith('### '));
-const isEntryOf = (block, uuid) => block.includes(`, uuid \`${uuid}\``);
+// An entry is the uuid's when its own "- Theme:" line names it: the first one, as release-log.mjs
+// reads it. A uuid in any other line, such as a Lighthouse line under it, doesn't count.
+const isEntryOf = (block, uuid) => (block.split('\n').find(line => line.startsWith('- Theme: ')) || '').endsWith(`, uuid \`${uuid}\``);
 
 // The commit of the newest release entry that pushed `uuid`, or null.
 export function releaseCommitFor(markdown, uuid) {
@@ -299,12 +302,20 @@ export async function runHostBatch({
     if (lighthouse) {
         // Each URL's medians go under the line, from the summary this batch's run wrote: one from
         // before the batch started is an older run's, left there when this one stopped early.
+        // A run that measured no URL (none could be loaded, as with a stale cookie, which gets the
+        // 503 maintenance page) says nothing about the build, and a "fail" filled in for it could
+        // never be corrected, so the line stays pending for the next batch. Each line goes in as
+        // release.sh's step 6b writes them: one line, indented, with the cookie taken out.
         const summary = readLighthouse(dir);
-        const lines = summary && summary.startedAt >= started.toISOString() ? lighthouseReleaseLines(summary) : [];
-        text = fillPendingLighthouse(text, uuid, [
-            `${lighthouse.problems.length ? 'fail' : 'pass'}, host batch of ${utc(started)} (analytics blocked: yes; results in scripts/qa/results/host/${uuid}/)`,
-            ...lines,
-        ].join('\n'));
+        const fresh = summary && summary.startedAt >= started.toISOString() ? summary : null;
+        if (fresh && Array.isArray(fresh.urls) && fresh.urls.some(url => url && url.medians)) {
+            text = fillPendingLighthouse(text, uuid, [
+                `${lighthouse.problems.length ? 'fail' : 'pass'}, host batch of ${utc(started)} (analytics blocked: yes; results in scripts/qa/results/host/${uuid}/)`,
+                ...safeLines(lighthouseReleaseLines(fresh), cookieSecrets(env.QA_PREVIEW_COOKIE)),
+            ].join('\n'));
+        } else {
+            log(`WARNING  Lighthouse measured no URL of ${uuid} in this batch, so its release entry's Lighthouse line stays "pending host batch" for the next batch. A stale or expired preview cookie gets the 503 maintenance page on every page: read it again.`);
+        }
     }
     text = addHostRun(text, hostRunRow({
         date: started,

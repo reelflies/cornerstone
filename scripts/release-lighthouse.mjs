@@ -66,6 +66,13 @@ const pending = reason => ({
     result: 'pending', at: null, uuid: null, accepted: false, lines: [], reason,
 });
 
+// The preview cookie whole and each of its values, for redact(): what no output and no line in
+// RELEASES.md may show.
+export function cookieSecrets(cookie) {
+    if (!cookie) return [];
+    return [cookie, ...cookie.split(';').map(part => part.slice(part.indexOf('=') + 1).trim())];
+}
+
 // Why a cookie can't be used, or null. Never quotes it. (The same test as the host batch's
 // cookieProblem in scripts/qa/prelaunch.mjs, which this module doesn't import.)
 function cookieProblem(cookie) {
