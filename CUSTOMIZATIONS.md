@@ -30,7 +30,7 @@ Ticket 25's scaffold gives each module its own lines in every shared file (`plan
 | File | What each module gets | How a ticket fills it |
 |---|---|---|
 | `config.json` `settings` | One group per module in ticket order, a blank line between groups, in the ReelFlies block just before the last stock key (`paymentbuttons-provider-sorting`), so every ReelFlies line ends with a comma | Set your group's values (once the block is live, see [Changing a pre-declared value](#changing-a-pre-declared-value)); add a key that section 6.3 doesn't name at the end of your own group |
-| `config.json` `variations` | Both variations declare `rf_menu_type_ids` and `rf_menu_species_root_id`, empty | Set a variation's own value only where it differs from the base |
+| `config.json` `variations` | Both variations declare `rf_menu_type_ids` and `rf_menu_species_root_id`, empty. ReelFlies US also sets `rf_ship_free_threshold` to `""` (ticket 39) | Set a variation's own value only where it differs from the base |
 | `schema.json` | The ReelFlies group (`i18n.RfReelFlies`), just before the last stock group (`i18n.PaymentButtons`): one heading per settings module, in ticket order, and the two menu-id text settings under the menu heading | Add your settings right after your heading |
 | `schemaTranslations.json` | The `i18n.Rf…` strings (`default` only), just before the last stock key, grouped by module | Add your strings at the end of your module's group |
 | `lang/en.json` | The `reelflies` key, just before the last stock key (`consent_manager`): one sub-object per module, each opening with `"_slot": ""` | Add your strings inside your sub-object, after the placeholder |
@@ -47,7 +47,7 @@ The settings groups and their documented defaults (section 6.3). A pre-declared 
 | 27 | `rf_rise` (true) |
 | 28 | `rf_menu_type_ids`, `rf_menu_species_root_id`, `rf_menu_exclude_ids` (all empty; the menu ids in both variations too) |
 | 31 | `rf_price_unit_exclude` (empty) |
-| 39 | `rf_ship_free_threshold` ("60", decision 2), `rf_ship_standard_rate` and `rf_ship_expedited_from` (empty until Shaun gives the rates, decision 12) |
+| 39 | `rf_ship_free_threshold` ("60" in base for Canada, decision 2; `""` in ReelFlies US, because .com stays on its flat rate with no threshold, 39's owner decision), `rf_ship_standard_rate` and `rf_ship_expedited_from` (empty until Shaun gives the rates, decision 12) |
 | 40 | `rf_store_same_as` (empty); 40 adds its other `rf_store_*` keys after it |
 | 42 | `rf_cart_state` (true) |
 | 43 | `rf_quick_add` (true) |
@@ -97,7 +97,7 @@ The release guard's rule 1 covers every `rf_*` key except the two menu ids, valu
 | `templates/layout/base.html` | Line 51 includes `components/reelflies/js-settings` at the end of the inject block; line 54 includes `components/reelflies/body-start` right after `<body>` | js-settings: the `rf_*` values the theme's JavaScript reads, one slot per switch ticket. body-start: the ReelFlies icon sheet and the shared polite live region, once per page (O22, O24) | 25 |
 | `templates/components/common/body.html` | A comment line, then the wrapper's first and last lines pick `<main>` on `pages/home`, `pages/product` and `pages/cart` (`inArray` on `template`), and keep the stock `<div>` on every other template | Those three templates have no `<main>`, and many others carry their own, so an unconditional one would duplicate it (O24; axe `landmark-one-main`, `landmark-no-duplicate-main`). The id and the `.container` inside stay, for the skip link and `product-details.js:582` | 25 |
 | `assets/scss/theme.scss` | `@import "reelflies/settings"` after `settings/layouts/layouts` (line 48), and `@import "reelflies/index"` at the end | The ReelFlies style layer (ADR 0001) | 25 |
-| `config.json` | `settings`: the ReelFlies block (above), inserted before the last stock key; both variations' `settings` declare the two menu ids, empty. No stock line changed | Every switch and value section 6.3 names, pre-declared at its owner's default, so parallel tickets each change their own group | 25 |
+| `config.json` | `settings`: the ReelFlies block (above), inserted before the last stock key; both variations' `settings` declare the two menu ids, empty, and ReelFlies US sets `rf_ship_free_threshold` to `""`. No stock line changed | Every switch and value section 6.3 names, pre-declared at its owner's default, so parallel tickets each change their own group | 25 |
 | `schema.json` | The ReelFlies group (above), inserted before the last stock group. No stock line changed | The menu ids in Theme Styles, and one heading per settings module for its owner to fill | 25 |
 | `schemaTranslations.json` | The ReelFlies group's strings, inserted before the last stock key. No stock line changed | stencil-cli refuses a schema string without a translation | 25 |
 | `lang/en.json` | The `reelflies` key (above), inserted before the last stock key. No stock line changed | One sub-object per module for its strings | 25 |
