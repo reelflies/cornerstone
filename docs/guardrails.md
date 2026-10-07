@@ -7,7 +7,7 @@ Agents merge their own PRs and push to ReelFlies_CA (HANDOFF, "Rules for every s
 | The merge script | `scripts/merge.sh`, run from the main clone | A merge without green CI, the gate and sign-off statuses on the head sha, an up-to-date branch, resolved review threads and a declared baseline scope, or judged by any rules but `master`'s |
 | Commit statuses | `scripts/status.mjs` | A sign-off that isn't tied to the exact sha it reviewed |
 | Guarded paths | `scripts/guarded-paths.txt` | A change to the release, store, merge or permission tooling, the release log, the calendar, CI, the secret scan's config or the documents that steer agents without an extra safety review (`rf/safety`) |
-| The baseline-scope check | `scripts/check-baseline-scope.mjs`, `.github/workflows/reelflies-baseline-scope.yml` | A screenshot baseline changed outside the kinds the PR declares |
+| The baseline-scope check | `scripts/check-baseline-scope.mjs`, `.github/workflows/reelflies-baseline-scope.yml` | A screenshot baseline changed outside the page kinds, overlays and widgets the PR declares |
 | The release calendar | `scripts/release-calendar.json`, `scripts/lib/release-calendar.mjs` | Pushes and widget edits during the freezes (read by W0-1 and W0-11) |
 | The store-write helper | `scripts/store/`, `scripts/lib/store-token.mjs`, [store-writes.md](store-writes.md) | A store write that skips the snapshot, the diff or the log row, names a channel other than 1895766, hits an endpoint off the allowlist, edits a widget from T-14 or writes anything but an unpublish from the Flip, runs rules other than `origin/master`'s, or is a store-wide write not typed by Shaun at his terminal |
 | The catalogue apply | `scripts/catalogue/apply*`, `scripts/catalogue/fixtures/`, [catalogue-jobs.md](catalogue-jobs.md) | A catalogue write (ticket 18) not confirmed by Shaun at his terminal with a token he made, run by rules other than `origin/master`'s, sent from a stale plan or one made for another store, outside the four catalogue PUTs, or moving a size label onto another value id; or a restore that no apply logged, or that puts back a field its plan never wrote |
@@ -106,17 +106,26 @@ Every PR body ends with a `Baselines:` line (section 6.6 of the plan):
 ```text
 Baselines: none
 Baselines: product, product@sold-out, overlay rf_rise-off
+Baselines: home, widget home-lead, widget rf-selftest
 Baselines: epoch 18's apply renamed the aught sizes
 ```
 
 - A **page kind** (`home`, `product`, `species-hub` …) covers that kind's plain pin on every channel and at every width, including its UI states (W0-8).
 - **`kind@pin`** covers that pin only (W0-8's several pins per kind).
 - **`overlay <name>`** covers every baseline rendered under that overlay.
+- **`widget <name>`** covers that widget's element shots (W0-9) in every fixture case, variation and width. Name each widget as its own item: `widget home-lead, widget best-sellers`. The name is the widget's folder, in `widgets/` or, for the self-test, `scripts/qa/render/selftest/widgets/`.
 - **`epoch <cause>`** covers every baseline, and only in a PR that changes nothing but files under `scripts/qa/baselines/`: the orchestrator's re-baseline epoch PRs. A PR that also changes anything else and declares an epoch fails.
 - **`none`** covers nothing.
 - One line per body. It may be bold or a list item, and must start the line.
 
-The check reads each PNG's name as `scripts/qa/baselines/<set>/<kind>[@pin][~state][+overlay]-<project>-<platform>.png`. A PNG in any other shape, including the folder or the extension in another case, is covered only by an epoch, so a new naming scheme can't slip past the check. A changed, added, deleted or renamed PNG all count. A PR that changes no baseline passes without the line, but the runbook still asks for `Baselines: none`.
+The check reads each page baseline's name as `scripts/qa/baselines/<set>/<kind>[@pin][~state][+overlay]-<project>-<platform>.png`, and each widget shot's as `scripts/qa/baselines/widgets/<variation>/<widget>-<case>-<project>-<platform>.png`, the name `widget-screens.spec.mjs` gives it. A PNG in any other shape, including the folder or the extension in another case, is covered only by an epoch, so a new naming scheme can't slip past the check. A changed, added, deleted or renamed PNG all count. A PR that changes no baseline passes without the line, but the runbook still asks for `Baselines: none`.
+
+**Widget shots in detail:**
+
+- A page kind, pin or overlay never covers a widget shot, and `widget <name>` never covers a page baseline. `widgets/` holds widget shots only.
+- Widget and fixture case names may both hold hyphens, so a shot's name alone can't say where the widget's name ends. The check reads it against the widgets that exist: the folders in `widgets/` and the self-test folder in the checkout it runs from, plus any widget folder the PR's own files name (one it adds or deletes).
+- If two widgets could own a shot, as when `rf-hero` and `rf-hero-banner` both exist and `rf-hero-banner-default-…png` changes, the check needs both declared. So `widget rf-hero` alone never covers `rf-hero-banner`'s shots. Avoid widget names that start with another widget's name plus a hyphen.
+- A shot that no widget owns (its widget's folder is gone, or its name is in another case) is covered only by an epoch.
 
 The check runs in CI as its own workflow, on every push and on every edit of the PR body, so fixing the line reruns it. Run it locally with:
 

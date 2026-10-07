@@ -2851,6 +2851,62 @@
     ]
   },
   {
+    "name": "i18n.RfReelFlies",
+    "settings": [
+      {
+        "type": "heading",
+        "content": "i18n.RfHeader"
+      },
+
+      {
+        "type": "heading",
+        "content": "i18n.RfMenu"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfMenuTypeIds",
+        "force_reload": true,
+        "id": "rf_menu_type_ids"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfMenuSpeciesRootId",
+        "force_reload": true,
+        "id": "rf_menu_species_root_id"
+      },
+
+      {
+        "type": "heading",
+        "content": "i18n.RfProductCards"
+      },
+
+      {
+        "type": "heading",
+        "content": "i18n.RfProductPage"
+      },
+
+      {
+        "type": "heading",
+        "content": "i18n.RfStoreDetails"
+      },
+
+      {
+        "type": "heading",
+        "content": "i18n.RfCartState"
+      },
+
+      {
+        "type": "heading",
+        "content": "i18n.RfQuickAdd"
+      },
+
+      {
+        "type": "heading",
+        "content": "i18n.RfRegionPrompt"
+      }
+    ]
+  },
+  {
     "name": "i18n.PaymentButtons",
     "enable": "smartButtons",
     "settings": [

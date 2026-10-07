@@ -6,22 +6,64 @@ This repo is Cornerstone (`upstream`, bigcommerce/cornerstone) plus ReelFlies co
 
 | What | Folder |
 |---|---|
-| JavaScript modules | `assets/js/theme/reelflies/`, registered through `app.js` `customClasses` or a dynamic import |
+| JavaScript modules | `assets/js/theme/reelflies/`: per-template modules in `page-modules.js` (which `app.js` spreads into `customClasses`), every-page modules in `reelflies/global.js` (which `global.js` starts), each a dynamic import |
 | Unit tests | `assets/js/test-unit/theme/reelflies/` |
 | Template partials | `templates/components/reelflies/` |
 | Custom page templates (for example the Species hub) | `templates/pages/custom/` |
 | Styles | `assets/scss/reelflies/`: `_settings.scss` is imported after the settings in `theme.scss`, and `_index.scss` at the end of it |
 | Icons | SVG partials in `templates/components/reelflies/icons/`. Don't add to `assets/icons/`, because that regenerates `assets/img/icon-sprite.svg`. |
 | Hero widget template and schema (stored in BigCommerce) | `widgets/` |
+| Web Page sources: the Policy, Help and Brand pages of one channel (stored in BigCommerce, written through `scripts/store/`; never bundled), and `newsletter.json`, the source of record for the CASL newsletter wording that tickets 24 and 50 copy and pin with a test | `content/pages/<channel>/` ([ticket 22](content/pages/1895766/README.md)) |
 | Release, check and generator tooling (never bundled) | `scripts/` |
 | Research notes and their evidence, such as ticket 07's prelaunch probes (never bundled) | `research/` |
 | Decisions | `docs/adr/` |
 | Operator guides, such as [releasing](docs/releasing.md), [guardrails](docs/guardrails.md), [store writes](docs/store-writes.md) and [catalogue jobs](docs/catalogue-jobs.md) | `docs/` |
 | Claude Code permission rules: a draft until Shaun turns them on ([permissions](docs/permissions.md)) | `.claude/` |
 
-- **New theme settings** go in one block at the end of `schema.json`, `schemaTranslations.json` and the `settings` object in `config.json`.
+- **New theme settings** go in the ReelFlies block of `schema.json`, `schemaTranslations.json` and the `settings` object in `config.json`, in your module's group (below).
 - **ReelFlies defaults** may change the *values* of existing `config.json` settings, which is how Theme Styles defaults are set. The `variations` array belongs to ReelFlies.
-- **New strings** go under a top-level `reelflies` key in `lang/en.json`.
+- **New strings** go under the top-level `reelflies` key in `lang/en.json`, in your module's sub-object.
+
+## Slots for parallel tickets
+
+Ticket 25's scaffold gives each module its own lines in every shared file (`plan/build-pipeline.md`, section 6.1), so tickets built in parallel never edit the same lines, which git would merge as a conflict. Change only your own slot or group, keep the blank lines between them, and on a conflict keep both sides in ticket order.
+
+| File | What each module gets | How a ticket fills it |
+|---|---|---|
+| `config.json` `settings` | One group per module in ticket order, a blank line between groups, in the ReelFlies block just before the last stock key (`paymentbuttons-provider-sorting`), so every ReelFlies line ends with a comma | Set your group's values (once the block is live, see [Changing a pre-declared value](#changing-a-pre-declared-value)); add a key that section 6.3 doesn't name at the end of your own group |
+| `config.json` `variations` | Both variations declare `rf_menu_type_ids` and `rf_menu_species_root_id`, empty. ReelFlies US also sets `rf_ship_free_threshold` to `""` (ticket 39) | Set a variation's own value only where it differs from the base |
+| `schema.json` | The ReelFlies group (`i18n.RfReelFlies`), just before the last stock group (`i18n.PaymentButtons`): one heading per settings module, in ticket order, and the two menu-id text settings under the menu heading | Add your settings right after your heading |
+| `schemaTranslations.json` | The `i18n.Rf…` strings (`default` only), just before the last stock key, grouped by module | Add your strings at the end of your module's group |
+| `lang/en.json` | The `reelflies` key, just before the last stock key (`consent_manager`): one sub-object per module, each opening with `"_slot": ""` | Add your strings inside your sub-object, after the placeholder |
+| `assets/scss/reelflies/_index.scss` | One commented-out import per module, in ticket order, with its ticket number | Uncomment your line and add your partial beside it |
+| `assets/js/theme/reelflies/page-modules.js` | One commented slot per module in each template's array (product, listing, cart, page); custom templates map to their base kind's array | Replace your slot line with your loader, `() => import(/* webpackChunkName: "rf-…" */ './…')` |
+| `assets/js/theme/reelflies/global.js` | One slot each for 27, 28, 30 and 52 | Replace your slot line with a function of the page context |
+| `templates/components/reelflies/js-settings.html` | One slot per switch ticket (27, 31, 39, 40, 42, 43, 52) | Replace your slot line with your `{{~inject 'rf…' theme_settings.rf_…}}` lines |
+| `templates/components/reelflies/icons.html` | The icon sheet's include list, alphabetical | Add `icons/<name>.html` and one line in alphabetical order; draw it with `{{> components/reelflies/icon name='<name>'}}` |
+
+The settings groups and their documented defaults (section 6.3). A pre-declared switch with no module behind it does nothing; the release guard lists it once as a new switch at the first push after the scaffold.
+
+| Ticket | Keys (default) |
+|---|---|
+| 27 | `rf_rise` (true) |
+| 28 | `rf_menu_type_ids`, `rf_menu_species_root_id`, `rf_menu_exclude_ids` (all empty; the menu ids in both variations too) |
+| 31 | `rf_price_unit_exclude` (empty) |
+| 39 | `rf_ship_free_threshold` ("60" in base for Canada, decision 2; `""` in ReelFlies US, because .com stays on its flat rate with no threshold, 39's owner decision), `rf_ship_standard_rate` and `rf_ship_expedited_from` (empty until Shaun gives the rates, decision 12) |
+| 40 | `rf_store_same_as` (empty); 40 adds its other `rf_store_*` keys after it |
+| 42 | `rf_cart_state` (true) |
+| 43 | `rf_quick_add` (true) |
+| 52 | `rf_region_prompt` (false) |
+
+`scripts/qa/scaffold.test.mjs` holds these conventions, not the values (only the four switches must stay booleans), and runs the release guard and step 1's diff on the block (spec seam 5).
+
+### Changing a pre-declared value
+
+The release guard's rule 1 covers every `rf_*` key except the two menu ids, values as well as switches ([releasing](docs/releasing.md#the-release-guard)). So once ticket 25's push has put the block live on 1895766, a `config.json` change to any pre-declared key stops every release of `master` with "No flag overrides this", until the live value matches. That includes the value keys `rf_menu_exclude_ids`, `rf_price_unit_exclude`, `rf_ship_*` and `rf_store_same_as`, and a key you add yourself, from its own first push on.
+
+- **Until the release lane gives values step 1's three-way rule,** as the menu ids have (asked for on PR #29; a todo test in `scaffold.test.mjs` holds the behaviour it should have):
+  1. The value is set in Theme Styles on 1895766 first, and logged under "Switch toggles" in `RELEASES.md`. Agents have no route for that edit, so ask the orchestrator to put it in Shaun's batch.
+  2. Then `config.json` changes to match. Don't merge that change before the live value matches: merged first, it stops the next release of `master` for every ticket. Until then, mark the criterion that needs the value waiting, with that trigger.
+- **The switches** stay under rule 1 for good: toggle them in Theme Styles, log the toggle, then change `config.json` ([switch toggles](docs/releasing.md#switch-toggles)).
 
 ## Never
 
@@ -47,9 +89,20 @@ This repo is Cornerstone (`upstream`, bigcommerce/cornerstone) plus ReelFlies co
 | `.github/CODEOWNERS` | Deleted | It named `@bigcommerce/team-trac` | 06 |
 | `config.json` | `variations`: Light, Bold and Warm replaced by "ReelFlies CA" and "ReelFlies US", both with empty settings for now and Light's screenshots as placeholders | One thin variation per storefront, so releases push and activate by name; shared values stay in `settings` | 04 |
 | `config.json` | `name`: "Cornerstone" becomes "ReelFlies"; `version` still tracks the Cornerstone release (6.22.0) | My Themes already holds the Marketplace "Cornerstone"; a second theme of the same name would be easy to pick by mistake. The version follows upstream, so upgrades merge without a conflict on that line | 05 |
-| `assets/js/theme/global.js` | Lines 12 and 25: imports and starts `reelflies/lazy-quick-view` instead of `global/quick-view` | Quick view, ProductDetails and reviews load on the first Quick view click, as `theme-bundle.chunk.quick-view.js` plus three chunks shared with the page classes (about 64 KB raw and 21 KB gzip in all). That takes main.js from 307,607 B to under the 300 KiB limit | 16 |
+| `assets/js/theme/global.js` | Lines 12 and 26: imports and starts `reelflies/lazy-quick-view` instead of `global/quick-view` | Quick view, ProductDetails and reviews load on the first Quick view click, as `theme-bundle.chunk.quick-view.js` plus three chunks shared with the page classes (about 64 KB raw and 21 KB gzip in all). That takes main.js from 307,607 B to under the 300 KiB limit | 16 |
 | `package.json`, `package-lock.json` | `@playwright/test` 1.59.1 and `@axe-core/playwright` 4.10.2 as exact devDependencies; `qa:axe`, `qa:screens`, `qa:quick-view`, `qa:raw-html` and `qa:prepush` scripts | The storefront gates in `scripts/qa/`. Playwright 1.59.1 uses Chromium build 1217; `@axe-core/playwright` 4.10.2 uses the axe-core 4.10.3 already in the lockfile, the same engine as Lighthouse's audit | 16 |
 | `package.json` | `qa:prelaunch` script: runs `scripts/qa/prelaunch.mjs` | The host batch: the storefront gates against the prelaunch host once per checkpoint, with the analytics tags blocked and the results filed by theme uuid (W0-6) | 16 |
+| `package.json` | `qa:lighthouse` script: runs `scripts/qa/lighthouse.mjs` | Ticket 17's Lighthouse budgets on six URLs (median of 3, mobile, the drop rule), which the host batch runs. It uses upstream's own `lighthouse` devDependency (12.8.1 in the lockfile) and `lighthouse-config.js`, both unchanged, so no dependency is added | 17 |
+| `package.json` | `qa:matrix`, `qa:reflow`, `qa:motion`, `qa:focus` and `qa:links` scripts | Ticket 54a's runners in `scripts/qa/`: the switch matrix on W0-8's overlays, reflow at 320, reduced motion, the focus tab-through and the home widget link check ([scripts/qa/README.md](scripts/qa/README.md), "Switch matrix and the extra checks"). None runs in CI or in `qa:prepush` | 54 |
+| `assets/js/app.js` | Line 4 imports `theme/reelflies/page-modules`; line 56's `customClasses` is spread from it (was `{}`) | ReelFlies modules load per page template, each its own chunk, never in main.js; several on one template through one composite importer (build pipeline 6.1) | 25 |
+| `assets/js/theme/global.js` | Line 16 imports `reelflies/global`; line 31, the end of `onReady`, calls it with the page context | One place where the every-page ReelFlies modules (27, 28, 30, 52) start, after the stock globals | 25 |
+| `templates/layout/base.html` | Line 51 includes `components/reelflies/js-settings` at the end of the inject block; line 54 includes `components/reelflies/body-start` right after `<body>`. Ticket 25's skin PR adds `lang="en-CA"` (line 2) and the fonts (line 29), and updates this row | js-settings: the `rf_*` values the theme's JavaScript reads, one slot per switch ticket. body-start: the ReelFlies icon sheet and the shared polite live region, once per page (O22, O24) | 25 |
+| `templates/components/common/body.html` | A comment line, then the wrapper's first and last lines pick `<main>` on `pages/home`, `pages/product` and `pages/cart` (`inArray` on `template`), and keep the stock `<div>` on every other template | Those three templates have no `<main>`, and many others carry their own, so an unconditional one would duplicate it (O24; axe `landmark-one-main`, `landmark-no-duplicate-main`). The id and the `.container` inside stay, for the skip link and `product-details.js:582` | 25 |
+| `assets/scss/theme.scss` | `@import "reelflies/settings"` after `settings/layouts/layouts` (line 48), and `@import "reelflies/index"` at the end | The ReelFlies style layer (ADR 0001) | 25 |
+| `config.json` | `settings`: the ReelFlies block (above), inserted before the last stock key; both variations' `settings` declare the two menu ids, empty, and ReelFlies US sets `rf_ship_free_threshold` to `""`. No stock line changed | Every switch and value section 6.3 names, pre-declared at its owner's default, so parallel tickets each change their own group | 25 |
+| `schema.json` | The ReelFlies group (above), inserted before the last stock group. No stock line changed | The menu ids in Theme Styles, and one heading per settings module for its owner to fill | 25 |
+| `schemaTranslations.json` | The ReelFlies group's strings, inserted before the last stock key. No stock line changed | stencil-cli refuses a schema string without a translation | 25 |
+| `lang/en.json` | The `reelflies` key (above), inserted before the last stock key. No stock line changed | One sub-object per module for its strings | 25 |
 
 New ReelFlies files in upstream folders: `.github/workflows/reelflies-checks.yml`, `.github/workflows/reelflies-baseline-scope.yml` (W0-13), `.gitleaksignore`, `.gitattributes` at the repo root (W0-11: `RELEASES.md` merges as a union, so parallel log branches keep both sides' rows; upstream has no `.gitattributes`), and `RELEASES.md` at the repo root (the release log, written by `scripts/release.sh`, the Switch toggles log, the host batch's Host runs, and the My Themes log of each theme the prune deletes; tickets 05, 15 and 16, W0-3). `stencil bundle` zips only `README.md` and `CHANGELOG.md` from the root's Markdown files, so `RELEASES.md` never ships.
 
@@ -59,17 +112,13 @@ New ReelFlies files in upstream folders: `.github/workflows/reelflies-checks.yml
 
 From the review's upgrade-safe layering plan and the design session ([ADR 0001](docs/adr/0001-scoped-theme-code.md) expects 25–30 files). Add a row above when each one lands.
 
-- `assets/scss/theme.scss`: two imports, `reelflies/settings` after line 47 and `reelflies/index` at the end (line 79)
-- `assets/js/app.js`: `customClasses` registrations
 - `templates/components/products/card.html` and `options/set-rectangle.html`
 - `templates/components/products/product-view.html` and `templates/components/common/responsive-img.html`
 - `templates/pages/category.html`
 - `templates/components/search/quick-results.html` and `assets/js/theme/global/quick-search.js`
-- `templates/layout/base.html`
 - `assets/js/theme/common/product-details.js` and `assets/js/theme/cart.js`
 - `templates/components/common/navigation-menu.html` and `header.html`
 - `templates/pages/errors/404.html`
-- `config.json`, `schema.json`, `schemaTranslations.json` and `lang/en.json`: the blocks described above
 
 Added by the design session (spec, "Hook count"), with the ticket that adds each:
 
@@ -79,7 +128,6 @@ Added by the design session (spec, "Hook count"), with the ticket that adds each
 - `templates/pages/cart.html`, `templates/components/cart/totals.html` and `cart/status-messages.html` (41)
 - `templates/components/common/footer.html` (50)
 - `templates/components/products/schema.html` (40)
-- `templates/layout/base.html`: `lang="en-CA"`, `<main>`, the shared live region and fonts (25)
 
 ## Upgrading to a new Cornerstone release
 

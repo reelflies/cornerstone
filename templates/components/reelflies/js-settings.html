@@ -1,0 +1,24 @@
+{{!--
+    ReelFlies values the theme's JavaScript reads (build pipeline, section 6.1). layout/base.html
+    includes this once, inside its inject block, so each value reaches JavaScript as
+    context.<name>, for example:
+
+        {{~inject 'rfRise' theme_settings.rf_rise}}
+
+    One slot per switch ticket, in ticket order. A ticket replaces its own slot line with its
+    inject lines and leaves the other slots, and the blank lines between them, alone, so
+    parallel tickets never edit the same lines. Nothing here renders markup.
+--}}
+{{!-- 27 header: rf_rise --}}
+
+{{!-- 31 product card: rf_price_unit_exclude --}}
+
+{{!-- 39 product page: rf_ship_* --}}
+
+{{!-- 40 reviews and structured data: rf_store_* --}}
+
+{{!-- 42 cart state: rf_cart_state --}}
+
+{{!-- 43 quick add: rf_quick_add --}}
+
+{{!-- 52 outside-Canada prompt: rf_region_prompt --}}

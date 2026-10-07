@@ -1,0 +1,141 @@
+{
+  "channel_id": 1895766,
+  "ticket": 22,
+  "pages": [
+    {
+      "file": "about-us.html",
+      "name": "About Us",
+      "type": "page",
+      "url": "/about-us/",
+      "path": {
+        "kind": "live",
+        "live": "/about-us/",
+        "evidence": "Live reelflies.ca (channel 1) Web Page id 5 at /about-us/, read with stencil start -c 1 ?debug=context on 2026-10-06; also the target of legacy Redirects such as /AboutUs.asp"
+      },
+      "is_visible": true,
+      "sort_order": 10,
+      "meta_description": "ReelFlies is a Canadian, family-run fly shop in Tillsonburg, Ontario, selling premium hand-tied fishing flies since 2003.",
+      "status": "draft",
+      "approved": null,
+      "forShaun": [
+        { "question": "Left out until you confirm them (ticket 14, \"What the DRAFT leaves out\"; a revisitable default): \"Canada's largest and most popular online fishing fly store\" and \"long established, rapidly growing, award-winning\". Add either back?" },
+        { "key": "pattern-count", "question": "Decision 14's default is \"nearly 2,000\" patterns. The live page says over 2,100, plus 300 about to go live." },
+        { "question": "Left out until written permission is on file (ticket 14 and UX-11: customer mentions need it; a revisitable default): the live page names Bill Spicer and Colin McKeown of The New Fly Fisher as customers (the live home page says \"the late Colin McKeown\"), and recommends Mike Verhoef of Fly Fitters and the guides at Grindstone Angling as guides ReelFlies supplies. Add any back, with permission?" },
+        { "key": "hooks", "question": "The live page lists \"Mustad, Daiiachi, Murato, Dai-Riki, Kamasan, and VMC\". This draft reads Daiichi and Maruto. Is that the right list?" },
+        { "question": "The live page opens with a crew photo (crew.jpg). Keep it, or use ticket 14's About photo? The draft has no photo." },
+        { "question": "The live page's sale terms (no codes during a sale, sale prices final, close alternatives when out of stock) moved to the Help page. The live text ends \"Email us for details\"; this draft says call or use the contact form (decision 11)." },
+        { "question": "This draft is condensed from the live About text (a revisitable default). Left out: \"Our easy-to-navigate website offers one of the most comprehensive selections ... in North America\"; \"nothing short of phenomenal value\"; \"why we are the top choice for fishing flies\"; \"You can buy with complete peace of mind\"; \"These experts ... still rely on ReelFlies.ca to replenish their fly boxes\"; \"We employ some of the most talented fly tiers in the industry\"; \"when we gain a new customer, we keep this customer for life\" and the sentence after it; \"exceed your expectations in every aspect. Even the most discerning Fly Fisher will be satisfied\"; and the closing paragraph (\"like a kid in a candy store\", the reservations about prices, \"when time is of the essence\"). Add any back?" },
+        { "question": "Also rewritten shorter: the supplier list (\"TV Shows\" dropped, with the names above), the photography paragraph (\"pin-sharp\", \"Unlike other websites that hide the quality ... low-resolution illustrations\"), the new-patterns line (\"over 300 new patterns about to be added\" is in the pattern-count question), \"recently moved to larger main street offices\", the two Facebook mentions (one link now), the capitalised labels (ABOUT US, FLY CHOICE, LOCATION, QUALITY, SUPPORT, now headings), and \"stand behind every fishing fly that we sell\" (decision 10's promise line). Keep the shorter versions?" }
+      ]
+    },
+    {
+      "file": "shipping-returns.html",
+      "name": "Shipping & Returns",
+      "type": "page",
+      "url": "/shipping-returns/",
+      "path": {
+        "kind": "live",
+        "live": "/shipping-returns/",
+        "evidence": "Live reelflies.ca (channel 1) Web Page id 2 at /shipping-returns/, read with stencil start -c 1 ?debug=context on 2026-10-06; also the target of legacy Redirects /returns.asp and /help_FreeShipping.asp"
+      },
+      "is_visible": true,
+      "sort_order": 20,
+      "meta_description": "Free standard shipping in Canada on fly orders over $60. Delivery times, Expedited and Express, and how cancellations and claims work at ReelFlies.",
+      "status": "draft",
+      "approved": null,
+      "forShaun": [
+        { "key": "rates", "question": "Decision 12: the standard Canada Post rate below $60 ($X.XX), the tracked Expedited \"from\" price ($Y.YY), and the Express \"from\" price ($Z.ZZ)." },
+        { "key": "larger-items", "question": "The live page says fly boxes don't ship by Standard Canada Post, and that free shipping doesn't cover larger items such as fly boxes, reels or large popper flies. Is this still true?" },
+        { "key": "wrong-address", "question": "Keep the reshipping charges and the 10% restocking fee for a package returned because of a wrong address?" },
+        { "key": "missing-package", "question": "Keep \"contact us after 28 working days\" and \"report within 60 days of the order date\" for missing packages?" },
+        { "question": "The \"Canada Post delivery delays\" notice (updated August 2026) isn't carried over. Add it back?" },
+        { "question": "The $99 free courier offer isn't carried over (decision 2's interim). Add it?" },
+        { "question": "Who pays the postage when ReelFlies asks for a Return to settle a Claim? The draft says only that you'll tell the customer how to send the items." },
+        { "question": "The live page also gives 519-409-0123 and signs off as Steve B, President. The draft uses the toll-free number only, as the footer and Contact do, and no sign-off. Add either back?" }
+      ]
+    },
+    {
+      "file": "contact-us.html",
+      "name": "Contact Us",
+      "type": "contact_form",
+      "contact_fields": "fullname,companyname,phone,orderno",
+      "url": "/contact-us/",
+      "path": {
+        "kind": "live",
+        "live": "/contact-us/",
+        "evidence": "Live reelflies.ca (channel 1) Web Page id 4 at /contact-us/ (a contact form with name, company, phone and order number), read with stencil start -c 1 ?debug=context on 2026-10-06; also the target of the legacy Redirect /mobile/ContactUsForm.aspx"
+      },
+      "is_visible": true,
+      "sort_order": 30,
+      "meta_description": "Contact ReelFlies: use the form, call 1 866 250 4071 toll free, or visit our fly shop in Tillsonburg, Ontario by appointment.",
+      "status": "draft",
+      "approved": null,
+      "forShaun": [
+        { "question": "Which address should receive the form's messages? The sources send no email field, so BigCommerce uses the store's own address until you name one (it isn't shown on the page)." },
+        { "question": "Add phone hours, or the role address once it exists (decision 11)?" }
+      ]
+    },
+    {
+      "file": "privacy-policy.html",
+      "name": "Privacy Policy",
+      "type": "page",
+      "url": "/privacy-policy/",
+      "path": {
+        "kind": "live",
+        "live": "/privacy-policy/",
+        "evidence": "Live reelflies.ca (channel 1) Web Page id 8 at /privacy-policy/ (Effective February 2026, last updated June 2026), read with stencil start -c 1 ?debug=context on 2026-10-06"
+      },
+      "is_visible": true,
+      "sort_order": 50,
+      "meta_description": "How ReelFlies.ca (Digital Barn Ltd.) collects, uses and protects your personal information, and how to reach our Privacy Officer.",
+      "status": "draft",
+      "approved": null,
+      "forShaun": [
+        { "key": "dates", "question": "The effective and last-updated dates to print once this version is approved." },
+        { "key": "privacy-contact", "question": "Decision 11: the live policy names the Privacy Officer and gives her own mailbox. This draft gives the title, the address, the phone number and the contact form, with no email address. Add the role address once it exists, or keep the named mailbox?" },
+        { "key": "region-sentence", "question": "The outside-Canada sentence (GEO-1 f), checked against what ticket 52 builds: the country result is kept in the browser's sessionStorage for the visit and the Stay choice in localStorage for 90 days, and neither the estimate nor the Stay choice is sent to ReelFlies. Two things to weigh before approving: (1) choosing Go sends one Google Analytics event, rf_region_go with the destination (the paired page or the ReelFlies.com home page), and only when analytics has loaded, which the consent banner gates (ticket 52, contract 6.9); (2) a Canadian time zone in the browser also stops the suggestion, so the sentence could say \"from your connection and your browser's time zone\". Approve the wording as drafted, or add either?" },
+        { "key": "casl", "question": "How consent is collected: the footer newsletter box with newsletter.json's wording, and the checkout checkbox that starts unticked (ticket 24). Approve?" },
+        { "key": "consent-banner", "question": "The marked passages describe the cookie consent banner and consent-gated scripts as they are on live reelflies.ca: section 5's opening, the consent sentence of each cookie type (Functional, Analytics, Targeting), Managing Your Cookie Preferences and Privacy by Default; section 8's Google Analytics and Omnisend passages; and section 15's consent tool. Section 2's general opt-in sentence relies on the same setup. Confirm ReelFlies_CA is set up the same way before it goes live (tickets 21 and 23), or the text changes." },
+        { "question": "Live reelflies.ca has two privacy texts: this page (last updated June 2026) and an older copy (February 17, 2026) appended to About Us. This draft starts from the newer one. Ticket 22's channel-1 work adds the outside-Canada sentence to channel 1's /privacy-policy/ page, and the older copy can come off channel 1's About Us." }
+      ]
+    },
+    {
+      "file": "help.html",
+      "name": "Help",
+      "type": "page",
+      "url": "/help/",
+      "path": {
+        "kind": "new",
+        "reason": "No Help page is live on reelflies.ca, so no old path needs a Redirect. The legacy Redirects from /help.asp and /help_answer.asp?ID=9, 10, 11, 14 and 15 point at /about-us/ today; refactor 09 may re-point them here (revisitable)."
+      },
+      "is_visible": true,
+      "sort_order": 60,
+      "meta_description": "Answers to common questions about hook sizes, Assortments, shipping times, changing an order and ordering from outside Canada.",
+      "status": "draft",
+      "approved": null,
+      "forShaun": [
+        { "key": "sale-terms", "question": "The sale terms from the live About page: no other codes during a sale, sale prices final, and a close alternative when an item is briefly out of stock. Keep them here? \"Final\" still allows a Claim." },
+        { "question": "The path is /help/, a new page. Any questions to add or drop?" }
+      ]
+    },
+    {
+      "file": "coupon-codes.html",
+      "name": "Coupon Codes",
+      "type": "page",
+      "url": "/coupon-codes/",
+      "path": {
+        "kind": "live",
+        "live": "/coupon-codes/",
+        "evidence": "Live reelflies.ca (channel 1) Web Page id 7 at /coupon-codes/ (the coupon terms, last in the live footer's page list), read with stencil start -c 1 ?debug=context on 2026-10-06; ticket 59 and plan/reference/cavio-vs-cornerstone-and-hreflang.json list it as a .ca-only path"
+      },
+      "is_visible": true,
+      "sort_order": 70,
+      "meta_description": "How coupon codes work at ReelFlies: one code per order, some single-use, and none with other offers or on sale-priced items.",
+      "status": "draft",
+      "approved": null,
+      "forShaun": [
+        { "question": "Live reelflies.ca has this page at /coupon-codes/ (channel 1 id 7), and ticket 59 expects it on .ca after the Flip. This draft carries it over at the same path, with the live page's two sale-price sentences merged into one (a revisitable default). Keep it, Redirect /coupon-codes/ to /help/ through refactor 09 instead, or drop it on purpose?" }
+      ]
+    }
+  ]
+}
