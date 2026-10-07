@@ -15,6 +15,8 @@
 //   category pin only, so a stable category@alpha pin beside it keeps its cards.
 //
 // Each channel has:
+//   variation     optional: the config.json variation its runs render when QA_VARIATION is
+//                 unset (defaultVariation below). Without one, a run renders ReelFlies CA.
 //   pages         page key -> path. axe and the screenshots visit every one, and so does
 //                 the raw-HTML check, whose assertions pick the kinds they apply to.
 //   notPinnedYet  optional, template -> why the channel can't pin it yet. Only for the
@@ -52,6 +54,9 @@ export const CHANNELS = {
         // reelflies.ca data, the fallback for the product, category and Quick view runs
         // until ReelFlies_CA has products. Nothing here ever writes to channel 1.
         name: 'reelflies.ca (live, read-only)',
+        // Ticket 53: channel 1's own variation, with tree 1's menu ids (decision 10's interim
+        // name). Its baselines are scripts/qa/baselines/1-reelflies-ca-channel-1/.
+        variation: 'ReelFlies CA channel 1',
         pages: {
             // The reference page's hero product (6178). Its description was the same on
             // 2026-10-06 as in the 2026-09-07 product export. Its five related products
@@ -96,6 +101,11 @@ export const CHANNELS = {
         },
     },
 };
+
+// The variation a run renders when QA_VARIATION doesn't name one: the channel's own (channel 1's
+// is "ReelFlies CA channel 1", ticket 53), or ReelFlies CA. An explicit QA_VARIATION always wins.
+export const DEFAULT_VARIATION = 'ReelFlies CA';
+export const defaultVariation = channel => CHANNELS[channel]?.variation || DEFAULT_VARIATION;
 
 // The page kinds the raw-HTML check needs on every channel: spec seam 2 fetches one
 // product page and one category page. A kind@name pin of the kind counts.

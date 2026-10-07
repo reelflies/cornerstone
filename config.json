@@ -490,6 +490,28 @@
 
         "rf_ship_free_threshold": ""
       }
+    },
+    {
+      "name": "ReelFlies CA channel 1",
+      "id": "reelflies-ca-channel-1",
+      "meta": {
+        "desktop_screenshot": "desktop_light.png",
+        "mobile_screenshot": "mobile_light.png",
+        "description": "ReelFlies Canada on channel 1 (live reelflies.ca, tree 1) until the Flip. Shared values live in settings; this variation holds only what differs on channel 1.",
+        "demo_url": "https://reelflies.ca",
+        "optimized_for": [
+          "sports_recreation",
+          "mobile_tablet_desktop",
+          "large_catalog"
+        ],
+        "industries": [
+          "sports_recreation"
+        ]
+      },
+      "settings": {
+        "rf_menu_type_ids": "298,251,255,272,438",
+        "rf_menu_species_root_id": ""
+      }
     }
   ]
 }

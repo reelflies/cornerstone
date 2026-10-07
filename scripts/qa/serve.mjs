@@ -5,6 +5,7 @@
 // until you stop it (Ctrl-C), then stops the server's whole process group and releases both.
 //
 //   QA_PORT=3400 node scripts/qa/serve.mjs                                                  # ReelFlies_CA
+//   QA_PORT=3400 QA_CHANNEL=1 node scripts/qa/serve.mjs                                     # reelflies.ca's data as "ReelFlies CA channel 1" (read-only)
 //   QA_PORT=3400 QA_CHANNEL=1855224 QA_VARIATION="ReelFlies US" node scripts/qa/serve.mjs   # .com's data (read-only)
 //   QA_PORT=3400 QA_OVERLAY=rf_rise-off node scripts/qa/serve.mjs                           # an overlay, on 3410 (W0-8)
 //
