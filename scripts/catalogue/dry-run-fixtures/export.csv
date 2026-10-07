@@ -1,0 +1,43 @@
+Item,ID,Name,Type,SKU,Options,"Brand ID",Channels,Categories,Description,"Is Visible","Sort Order","Internal Image URL (Export)","Image Description","Image is Thumbnail","Image Sort Order"
+Product,101,"Adams Dry Fly",physical,RF-101,,411,1;1855224,10;20,"<p>A classic dry fly.</p>",TRUE,0,,,,
+Variant,1,,,RF-101-Sz16,"Type=Rectangle|Name=Fly Sizes|Value=16",,,,,FALSE,,,,,
+Variant,2,,,RF-101-Sz12,"Type=Rectangle|Name=Fly Sizes|Value=12",,,,,FALSE,,,,,
+Variant,3,,,RF-101-Sz14,"Type=Rectangle|Name=Fly Sizes|Value=14",,,,,FALSE,,,,,
+Variant,4,,,RF-101-Sz10,"Type=Rectangle|Name=Fly Sizes|Value=10",,,,,FALSE,,,,,
+Image,1001,,,,,,,,,,,https://cdn.example/s-x/products/101/images/1001/adams-2__1.1.386.513.jpg?c=2,,TRUE,0
+Image,1002,,,,,,,,,,,https://cdn.example/s-x/products/101/images/1002/adams__2.1.386.513.jpg?c=2,"Adams Dry Fly on white",FALSE,1
+Video,1,,,,,,,,,,,,,,
+Product,102,"Clouser Minnow",physical,RF-102,,,1;1855224,434,"<p>Weighted ""Clouser"" minnow,
+two lines.</p>",TRUE,0,,,,
+Variant,5,,,RF-102-Sz2-0,"Type=Rectangle|Name=Fly Sizes|Value=2-0",,,,,FALSE,,,,,
+Variant,6,,,RF-102-Sz1-0,"Type=Rectangle|Name=Fly Sizes|Value=1-0",,,,,FALSE,,,,,
+Variant,7,,,RF-102-Sz2,"Type=Rectangle|Name=Fly Sizes|Value=2",,,,,FALSE,,,,,
+Variant,8,,,RF-102-Sz4,"Type=Rectangle|Name=Fly Sizes|Value=4",,,,,FALSE,,,,,
+Image,1003,,,,,,,,,,,https://cdn.example/s-x/products/102/images/1003/clouser__3.1.386.513.jpg?c=2,"Clouser Minnow",TRUE,0
+Product,103,"Cray Fish Selection - 8 Flies",physical,RF-103,,411,1;1855224,30,"<p>Eight crayfish.</p>",TRUE,0,,,,
+Variant,9,,,RF-103-Sz32,"Type=Rectangle|Name=Fly Sizes|Value=32",,,,,FALSE,,,,,
+Variant,10,,,RF-103-Sz33,"Type=Rectangle|Name=Fly Sizes|Value=33",,,,,FALSE,,,,,
+Image,1004,,,,,,,,,,,https://cdn.example/s-x/products/103/images/1004/cray__4.1.386.513.jpg?c=2,"Cray Fish Selection",TRUE,0
+Product,104,"Inferno Popper",physical,RF-104,,411,1;1855224,30,"<p>Popper.</p>",TRUE,0,,,,
+Variant,11,,,RF-104-Sz2-0,"Type=Radio|Name=Fly Sizes|Value=2-0",,,,,FALSE,,,,,
+Image,1005,,,,,,,,,,,https://cdn.example/s-x/products/104/images/1005/inferno__5.1.386.513.jpg?c=2,,TRUE,0
+Product,105,"BH Rolled Muddler",physical,RF-105,,411,1;1855226,,"<p>Muddler.</p>",TRUE,0,,,,
+Variant,12,,,RF-105-OL-6,"Type=Swatch|Name=Color|Value=Olive[#68AB3E]Type=Rectangle|Name=Size|Value=6",,,,,FALSE,,,,,
+Variant,13,,,RF-105-TA-6,"Type=Swatch|Name=Color|Value=Tan[#BDB5A2]Type=Rectangle|Name=Size|Value=6",,,,,FALSE,,,,,
+Variant,14,,,RF-105-OL-8,"Type=Swatch|Name=Color|Value=Olive[#68AB3E]Type=Rectangle|Name=Size|Value=8",,,,,FALSE,,,,,
+Image,1006,,,,,,,,,,,https://cdn.example/s-x/products/105/images/1006/muddler__6.1.386.513.jpg?c=2,"Rolled Muddler",TRUE,0
+Product,106,"Old Hidden Fly",physical,RF-106,,411,1,10,"<p>Hidden.</p>",FALSE,0,,,,
+Variant,15,,,RF-106-Sz1-0,"Type=Rectangle|Name=Fly Sizes|Value=1-0",,,,,FALSE,,,,,
+Variant,16,,,RF-106-Sz2,"Type=Rectangle|Name=Fly Sizes|Value=2",,,,,FALSE,,,,,
+Product,107,"Signature Streamer",physical,RF-107,,411,1;1855224,342;10,"<p>Signature, ""bold"", and long.</p>",TRUE,0,,,,
+Variant,17,,,RF-107-Sz4,"Type=Rectangle|Name=Fly Sizes|Value=4",,,,,FALSE,,,,,
+Image,1007,,,,,,,,,,,https://cdn.example/s-x/products/107/images/1007/sig__7.1.386.513.jpg?c=2,"Signature Streamer, ""olive""",TRUE,0
+Product,108,"Mustad Hook [100/pack]",physical,RF-108,,361,1,20,"<p>Hooks.</p>",TRUE,0,,,,
+Variant,18,,,RF-108-Sz1-0,"Type=Rectangle|Name=Fly Sizes|Value=1-0",,,,,FALSE,,,,,
+Variant,19,,,RF-108-Sz2,"Type=Rectangle|Name=Fly Sizes|Value=2",,,,,FALSE,,,,,
+Variant,20,,,RF-108-Sz1,"Type=Rectangle|Name=Fly Sizes|Value=1",,,,,FALSE,,,,,
+Image,1008,,,,,,,,,,,https://cdn.example/s-x/products/108/images/1008/mustad__8.1.386.513.jpg?c=2,,TRUE,0
+Product,109,"Fat Albert",physical,RF-109,,411,1855224,40,"<p>Hopper.</p>",TRUE,0,,,,
+Variant,21,,,RF-109-TAN-8,"Type=Swatch|Name=Colour|Value=Tan[#DDD4BA;#846F36]Type=Rectangle|Name=Fly Sizes|Value=8",,,,,FALSE,,,,,
+Variant,22,,,RF-109-TAN-6,"Type=Swatch|Name=Colour|Value=Tan[#DDD4BA;#846F36]Type=Rectangle|Name=Fly Sizes|Value=6",,,,,FALSE,,,,,
+Image,1009,,,,,,,,,,,https://cdn.example/s-x/products/109/images/1009/fat__9.1.386.513.jpg?c=2,"Fat Albert",TRUE,0

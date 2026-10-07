@@ -103,7 +103,7 @@ Agents build tickets in parallel, each in its own worktree, and each worktree's 
 | `merge` | W0-13's `scripts/merge.sh` | 15 min |
 | `stencil-1` … `stencil-3` | a gate run, while its `stencil start` runs | 30 min |
 | `port-<n>` | a gate run on the ports `n` and `n + 1` | 30 min |
-| `store-write` | W0-11's `scripts/store/apply.mjs`, from its first read to its last log row ([store writes](../../docs/store-writes.md)) | 45 min (the default for a lock with no limit of its own) |
+| `store-write` | W0-11's `scripts/store/apply.mjs`, from its first read to its last log row ([store writes](../../docs/store-writes.md)), and ticket 18's `scripts/catalogue/apply.mjs`, from the token prompt to its last log row ([catalogue jobs](../../docs/catalogue-jobs.md)) | 45 min (the default for a lock with no limit of its own) |
 
 - Each holds `owner.json` (owner, ticket, pid, host and start time) and `owner.txt` with the same facts as lines.
 - **Stale:** a lock older than its limit whose pid isn't running is broken, with a `STALE` line naming the old holder. A lock whose holder still runs is never broken, however old.
