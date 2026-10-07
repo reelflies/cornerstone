@@ -31,6 +31,10 @@ const summary = (fields = {}) => ({
     ok: true,
     accepted: true,
     recorded: 'run',
+    urls: [
+        { key: 'home', path: '/', medians: { performance: 95 } },
+        { key: 'cart', path: '/cart.php', medians: { performance: 93 } },
+    ],
     releaseLines: [
         '  - home `/`: performance 95, LCP 2.10 s, CLS 0.010, TBT 120 ms, accessibility 100; JS 474,688 B, CSS 93,760 B; compared only with itself (SEO-8)',
         '  - not measured yet: species (no tree 4 until refactor 13)',
@@ -215,6 +219,32 @@ test('a run that measured nothing, or a summary that isn\'t this run\'s on the p
     pending(0, summary({ theme: { uuid: '58abad50-a3c0-013f-e2b6-2ec98cc9ce73' } }), /measured theme 58abad50-a3c0-013f-e2b6-2ec98cc9ce73, not 174ad580/);
     pending(0, summary({ theme: null }), /measured theme none/);
     pending(0, summary({ analyticsBlocked: 'no' }), /the analytics tags weren't blocked/);
+});
+
+test('a run in which no URL could be measured records "pending host batch", never fail or pass: a stale cookie gets the prelaunch host\'s 503 maintenance page', () => {
+    const unmeasured = [{ key: 'home', path: '/', medians: null }, { key: 'cart', path: '/cart.php', medians: null }];
+    for (const [status, fields] of [
+        [1, {
+            ok: false, accepted: false, recorded: null, urls: unmeasured,
+        }],
+        [0, { urls: unmeasured }],
+        [0, { urls: [] }],
+        [0, { urls: undefined }],
+        [0, { urls: 'home' }],
+    ]) {
+        const outcome = lighthouseOutcome({
+            status, summary: summary(fields), startedAt: STARTED, uuid: UUID,
+        });
+        assert.equal(outcome.result, 'pending', JSON.stringify(fields));
+        assert.match(outcome.reason, /no URL could be measured/);
+        assert.match(outcome.reason, /503 maintenance page/);
+        assert.equal(stopReason(outcome), null, 'nothing measured never stops the release');
+    }
+    // One URL measured is enough for the run to count: the others' failures are the run's.
+    const partly = lighthouseOutcome({
+        status: 1, summary: summary({ ok: false, accepted: false, urls: [unmeasured[0], { key: 'cart', path: '/cart.php', medians: { performance: 93 } }] }), startedAt: STARTED, uuid: UUID,
+    });
+    assert.equal(partly.result, 'fail');
 });
 
 test('a pass that recorded nothing in the history isn\'t called accepted', () => {

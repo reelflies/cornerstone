@@ -1608,6 +1608,7 @@ const lhSummary = fields => JSON.stringify({
     ok: true,
     accepted: true,
     recorded: 'run',
+    urls: [{ key: 'home', path: '/', medians: { performance: 95 } }],
     releaseLines: ['  - home `/`: performance 95, LCP 2.10 s, CLS 0.010, TBT 120 ms, accessibility 100; JS 474,688 B, CSS 93,760 B'],
     ...fields,
 });

@@ -146,6 +146,13 @@ function summaryProblem({
     const measured = summary.theme && summary.theme.uuid;
     if (measured !== uuid) return `the run measured theme ${measured || 'none'}, not ${uuid}, the theme the push made`;
     if (summary.analyticsBlocked !== 'yes') return 'the analytics tags weren\'t blocked, so the run can\'t be compared with the history';
+    // The runner fails a URL it couldn't load, but a run that loaded none measured nothing about the
+    // build: the prelaunch host answers every page with its 503 maintenance page for a stale or
+    // expired preview cookie, and in an outage. Recorded as fail, it would stop the release and
+    // block the build from channel 1 for good, since the host batch fills in only pending lines.
+    if (!Array.isArray(summary.urls) || !summary.urls.some(url => url && url.medians)) {
+        return 'no URL could be measured (a stale or expired preview cookie gets the prelaunch host\'s 503 maintenance page on every page, and so does an outage there), so the run says nothing about the build';
+    }
     return null;
 }
 
