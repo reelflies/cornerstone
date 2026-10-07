@@ -27,7 +27,7 @@ The rules are a tripwire, not a sandbox. Claude Code matches a Bash rule against
 - an explicit `-X GET` (or `--request GET`): write the GET without `-X`
 - `-G` with `-d`, `--data…` or `--data-urlencode`, which curl turns into a query string: put the query string in the URL instead, as in `curl -sS 'https://api.bigcommerce.com/…/widgets?limit=5'`
 
-`scripts/claude-permissions.test.mjs` matches every rule the way Claude Code documents it (`*` matches any characters; Read rules are gitignore-style paths), and proves that each deny rule fires on a probe, that none catches the commands agents need every day (`stencil bundle` and `start`, `gh pr view` and `create`, pushing a ticket branch, a GET to the store API, symlinking `secrets.stencil.json` into a worktree, reading `config.stencil.json`), and that the allow rules pre-approve the main clone's entry points and no other copy.
+`scripts/claude-permissions.test.mjs` matches every rule the way Claude Code documents it (`*` matches any characters; Read rules are gitignore-style paths), and proves that each deny rule fires on a probe, that none catches the commands agents need every day (`stencil bundle` and `start`, `gh pr view` and `create`, pushing a ticket branch, a GET to the store API, symlinking `secrets.stencil.json` into a worktree, reading `config.stencil.json`), that the allow rules pre-approve the main clone's entry points and no other copy, and that the real push and prune [releasing.md](releasing.md#agent-pushes---confirm-nonprod) gives agents are exactly Shaun's two commands, the main clone's `release.sh` by its full path, which those rules pre-approve and none denies (W0-1b).
 
 ## Turning them on
 

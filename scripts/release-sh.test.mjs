@@ -29,13 +29,16 @@ const lockRoot = () => {
     return dir;
 };
 const LOCK_ROOT = lockRoot();
+// An NVM_DIR with no nvm.sh, so release.sh never sources the developer's nvm (W0-1b): these runs
+// use the Node that runs the tests, first on PATH.
+const NO_NVM = path.join(LOCK_ROOT, 'no-nvm');
 
 function run(args, env = {}, script = SCRIPT) {
     const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^RF_(RELEASE|BC)_/.test(key)));
     const result = spawnSync('bash', [script, ...args], {
         encoding: 'utf8',
         env: {
-            ...inherited, PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH}`, RF_LOCK_ROOT: LOCK_ROOT, ...env,
+            ...inherited, PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH}`, RF_LOCK_ROOT: LOCK_ROOT, NVM_DIR: NO_NVM, ...env,
         },
         timeout: 60000,
     });
@@ -1374,4 +1377,197 @@ test('W0-3: release.sh runs --prune-only on its own after taking the lock, and p
     const writeLog = lineOf(/^release write-log$/);
     assert.match(lines[writeLog + 1], /^release prune-after-push$/);
     assert.equal(lines.filter(line => /release prune-after-push/.test(line)).length, 2);
+});
+
+// --- W0-1b: release.sh selects .nvmrc's Node itself --------------------------------------------
+//
+// Agents run the bare release commands that Claude Code's allow rules name, from a login shell whose
+// Node is nvm's default, not .nvmrc's, and a real release refuses any Node but .nvmrc's. So
+// release.sh selects .nvmrc's Node with nvm before anything else. These runs put a node of the wrong
+// version first on PATH, and a fake NVM_DIR whose nvm.sh puts a node of .nvmrc's version first.
+// Each fake node prints its version for --version, logs every run, and otherwise runs the real node
+// with process.version set to its own, so release.mjs's Node check sees which one ran it. They run in
+// a temp checkout whose copied scripts are uncommitted, so a real release stops at its setup checks,
+// before step 1 (and the checkout has no stencil config either): nothing here reaches the network.
+
+const NVMRC = fs.readFileSync(fileURLToPath(new URL('../.nvmrc', import.meta.url)), 'utf8').trim();
+const WRONG_NODE = 'v19.0.0'; // an odd release, which .nvmrc never pins
+const NODE_REFUSED = new RegExp(`node is ${WRONG_NODE.replace(/\./g, '\\.')}, not ${NVMRC.replace(/\./g, '\\.')} from \\.nvmrc`);
+const SELECTED = new RegExp(`^node {5}v${NVMRC.replace(/\./g, '\\.')} from \\.nvmrc, selected with nvm \\(the shell had ${WRONG_NODE.replace(/\./g, '\\.')}\\)$`, 'm');
+
+// A checkout of the release scripts and a config.json, with .nvmrc's version: the scripts are copied
+// in uncommitted, so the tree is dirty.
+function nodeCheckout() {
+    const repo = gitRepo({
+        'config.json': `${JSON.stringify(themeConfig({ settings: BASE_SETTINGS }), null, 2)}\n`,
+        '.nvmrc': `${NVMRC}\n`,
+    });
+    const scripts = path.dirname(SCRIPT);
+    const into = path.join(repo.clone, 'scripts');
+    fs.mkdirSync(into);
+    fs.readdirSync(scripts).filter(name => /^(release(-[a-z-]+)?\.(mjs|sh|json)|check-contrast\.mjs)$/.test(name)).forEach(name => {
+        fs.copyFileSync(path.join(scripts, name), path.join(into, name));
+    });
+    ['lib', 'store'].forEach(dir => fs.cpSync(path.join(scripts, dir), path.join(into, dir), { recursive: true }));
+    return { ...repo, script: path.join(into, 'release.sh') };
+}
+
+// A folder holding a fake `node` of `version`, which logs each run to `log` as "<version> <args>".
+function fakeNode(root, name, version, log) {
+    const bin = path.join(root, name, 'bin');
+    fs.mkdirSync(bin, { recursive: true });
+    const preload = path.join(root, name, 'version.cjs');
+    fs.writeFileSync(preload, `Object.defineProperty(process, 'version', { value: ${JSON.stringify(version)} });\n`);
+    fs.writeFileSync(path.join(bin, 'node'), [
+        '#!/bin/sh',
+        `printf '%s\\n' "${version} $*" >> '${log}'`,
+        `if [ "$1" = --version ]; then echo '${version}'; exit 0; fi`,
+        `exec '${process.execPath}' --require '${preload}' "$@"`,
+        '',
+    ].join('\n'), { mode: 0o755 });
+    return bin;
+}
+
+// A fake NVM_DIR. Its nvm.sh logs how it was sourced and each `nvm` call, and trips set -u and set -e
+// as the real one may. `nvm use --silent <.nvmrc's version>` then puts `good` first on PATH ("ok"),
+// fails with PATH untouched, as for a version that isn't installed ("missing"), or puts it first
+// and fails, as nvm does for an npm prefix it refuses ("broken").
+function fakeNvm(root, mode, good, log) {
+    const dir = path.join(root, 'nvm');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'nvm.sh'), [
+        `printf '%s\\n' "sourced $*" >> '${log}'`,
+        '[ -z "$RF_TEST_NEVER_SET" ] # unbound under set -u',
+        'false # fatal under set -e',
+        'nvm() {',
+        `    printf '%s\\n' "nvm $*" >> '${log}'`,
+        `    case '${mode}' in`,
+        `        ok) [ "$*" = 'use --silent ${NVMRC}' ] || return 3; PATH='${good}':"$PATH"; export PATH ;;`,
+        '        missing) return 3 ;;',
+        `        broken) PATH='${good}':"$PATH"; export PATH; return 11 ;;`,
+        '    esac',
+        '}',
+        '',
+    ].join('\n'));
+    return dir;
+}
+
+// release.sh from a shell with `first` first on PATH, `nvm` as NVM_DIR (none: unset, with a HOME
+// that has no .nvm), and none of the caller's nvm variables.
+function nodeRun(checkout, args, { first, nvm }) {
+    const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(RF_(RELEASE|BC)_|NVM_|GIT_)/.test(key)));
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-release-home-'));
+    tempDirs.push(home);
+    const env = {
+        ...inherited, PATH: `${first}${path.delimiter}${process.env.PATH}`, RF_LOCK_ROOT: LOCK_ROOT, HOME: home, ...(nvm ? { NVM_DIR: nvm } : {}),
+    };
+    const result = spawnSync('bash', [checkout.script, ...args], { encoding: 'utf8', env, timeout: 60000 });
+    return {
+        status: result.status, stdout: result.stdout, stderr: result.stderr, output: `${result.stdout}\n${result.stderr}`,
+    };
+}
+
+function nodeSetup(mode) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-release-node-'));
+    tempDirs.push(root);
+    const log = path.join(root, 'runs.log');
+    fs.writeFileSync(log, '');
+    const wrong = fakeNode(root, 'wrong', WRONG_NODE, log);
+    const good = fakeNode(root, 'good', `v${NVMRC}`, log);
+    const nvm = mode ? fakeNvm(root, mode, good, log) : null;
+    const lines = () => fs.readFileSync(log, 'utf8').split('\n').filter(Boolean);
+    return {
+        wrong, good, nvm, lines, checkout: nodeCheckout(),
+    };
+}
+
+// Every run of the wrong node was release.sh's --version check, and release.mjs ran on .nvmrc's.
+function assertRanOnNvmrcNode(lines, step) {
+    const wrong = lines.filter(line => line.startsWith(`${WRONG_NODE} `));
+    assert.deepEqual([...new Set(wrong)], [`${WRONG_NODE} --version`], lines.join('\n'));
+    assert.ok(lines.some(line => line.startsWith(`v${NVMRC} scripts/release.mjs ${step}`)), lines.join('\n'));
+    assert.ok(lines.some(line => line.startsWith(`v${NVMRC} scripts/lib/lock.mjs take release`)), 'the lock is taken on .nvmrc\'s node too');
+}
+
+test('W0-1b: from a shell on another Node, release.sh selects .nvmrc\'s with nvm before anything else, and release.mjs runs on it', () => {
+    const setup = nodeSetup('ok');
+    const refused = nodeRun(setup.checkout, [...CA, '-allc'], { first: setup.wrong, nvm: setup.nvm });
+    assertRefused(refused, /all channels/);
+    assert.match(refused.stdout, SELECTED);
+    assert.equal(refused.stdout.match(/from \.nvmrc/g).length, 1, 'one line, and nothing else new');
+    assertRanOnNvmrcNode(setup.lines(), 'prepare');
+});
+
+test('W0-1b: so a real release run from a shell on another Node no longer meets the Node-version refusal', () => {
+    const setup = nodeSetup('ok');
+    const result = nodeRun(setup.checkout, CA, { first: setup.wrong, nvm: setup.nvm });
+    assert.equal(result.status, 2, result.output);
+    assert.match(result.stderr, /the git tree has uncommitted changes/, 'it reached the setup checks, which stop a real release before step 1');
+    assert.doesNotMatch(result.output, NODE_REFUSED);
+    assert.doesNotMatch(result.output, NOTHING_RAN);
+    assert.match(result.stdout, SELECTED);
+    assertRanOnNvmrcNode(setup.lines(), 'prepare');
+});
+
+test('W0-1b: --prune-only selects .nvmrc\'s Node the same way', () => {
+    const setup = nodeSetup('ok');
+    const result = nodeRun(setup.checkout, ['--prune-only', '--channel', '1895766'], { first: setup.wrong, nvm: setup.nvm });
+    assert.notEqual(result.status, 0, result.output);
+    assert.match(result.stdout, SELECTED);
+    assert.doesNotMatch(result.output, /Reading My Themes/);
+    assertRanOnNvmrcNode(setup.lines(), 'prune');
+});
+
+test('W0-1b: with no nvm, a shell on another Node still has a real release refused, as before', () => {
+    const setup = nodeSetup(null);
+    for (const nvm of [null, path.join(setup.checkout.root, 'no-such-nvm')]) {
+        const result = nodeRun(setup.checkout, CA, { first: setup.wrong, nvm });
+        assert.equal(result.status, 2, result.output);
+        assert.match(result.stderr, new RegExp(`${NODE_REFUSED.source}: source ~/\\.nvm/nvm\\.sh && nvm use ${NVMRC.replace(/\./g, '\\.')}`));
+        assert.doesNotMatch(result.output, /from \.nvmrc, selected/);
+        assert.doesNotMatch(result.output, NOTHING_RAN);
+    }
+    assert.ok(setup.lines().some(line => line.startsWith(`${WRONG_NODE} scripts/release.mjs prepare`)), 'release.mjs ran on the shell\'s node');
+});
+
+test('W0-1b: when nvm hasn\'t .nvmrc\'s version, or fails after changing PATH, PATH is left as it was and a real release is refused, as before', () => {
+    for (const mode of ['missing', 'broken']) {
+        const setup = nodeSetup(mode);
+        const result = nodeRun(setup.checkout, CA, { first: setup.wrong, nvm: setup.nvm });
+        assert.equal(result.status, 2, `${mode}: ${result.output}`);
+        assert.match(result.stderr, NODE_REFUSED, mode);
+        assert.doesNotMatch(result.output, /from \.nvmrc, selected/, mode);
+        assert.ok(!setup.lines().some(line => line.startsWith(`v${NVMRC} `)), `${mode}: .nvmrc's node never ran`);
+    }
+});
+
+test('W0-1b: nvm.sh is sourced with --no-use, never with release.sh\'s arguments, and nothing but `nvm use` is called: no Node is ever installed', () => {
+    const setup = nodeSetup('ok');
+    // nvm.sh installs its default when sourced with --install, so release.sh's arguments must never reach it.
+    const result = nodeRun(setup.checkout, [...CA, '--install', '--dry-run'], { first: setup.wrong, nvm: setup.nvm });
+    assertRefused(result, /unknown flag --install/);
+    assert.deepEqual(setup.lines().filter(line => /^(sourced|nvm) /.test(line)), ['sourced --no-use', `nvm use --silent ${NVMRC}`]);
+});
+
+test('W0-1b: with .nvmrc\'s Node already first on PATH, release.sh leaves nvm alone and prints nothing new', () => {
+    const setup = nodeSetup('ok');
+    const result = nodeRun(setup.checkout, CA, { first: setup.good, nvm: setup.nvm });
+    assert.equal(result.status, 2, result.output);
+    assert.match(result.stderr, /the git tree has uncommitted changes/);
+    assert.doesNotMatch(result.output, NODE_REFUSED);
+    assert.doesNotMatch(result.output, /from \.nvmrc|nvm/);
+    assert.ok(!setup.lines().some(line => /^(sourced|nvm) /.test(line)), 'nvm.sh wasn\'t sourced');
+});
+
+test('W0-1b: release.sh selects the Node before it runs node at all, the lock included', () => {
+    const lines = fs.readFileSync(SCRIPT, 'utf8').split('\n').filter(line => !/^\s*#/.test(line));
+    const select = lines.findIndex(line => /^select_nvmrc_node$/.test(line));
+    assert.notEqual(select, -1, 'release.sh calls select_nvmrc_node at the top level');
+    const firstNode = lines.findIndex((line, index) => index > select && !/^trap /.test(line) && /\bnode scripts\//.test(line));
+    const take = lines.findIndex(line => /lock\.mjs take release/.test(line));
+    assert.ok(select < take && take === firstNode, 'the selection, then the lock, the first node run');
+    const before = lines.slice(0, select).join('\n');
+    assert.match(before, /^set -euo pipefail$/m);
+    assert.match(before, /^cd "\$\(dirname "\$\{BASH_SOURCE\[0\]\}"\)\/\.\."$/m);
+    assert.doesNotMatch(before.replace(/^select_nvmrc_node\(\) \{[\s\S]*?^\}$/m, ''), /\bnode\b/, 'no node runs before the selection');
 });
