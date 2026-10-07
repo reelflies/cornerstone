@@ -30,6 +30,7 @@ export const RELEASE_TOOLING = [
     'scripts/release-checks.mjs',
     'scripts/release-diff.mjs',
     'scripts/release-guard.mjs',
+    'scripts/release-lighthouse.mjs',
     'scripts/release-log.mjs',
     'scripts/release-origin.mjs',
     'scripts/release-prune.mjs',

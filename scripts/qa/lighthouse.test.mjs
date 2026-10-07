@@ -18,8 +18,9 @@ import path from 'path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { PRELAUNCH_URL, lighthouseBlockedUrlPatterns } from './analytics-hosts.mjs';
-import { addToHistory, emptyHistory } from './lighthouse-rules.mjs';
+import { addToHistory, emptyHistory, lighthouseReleaseLines } from './lighthouse-rules.mjs';
 import { RESULTS_ROOT, parseArgs, runLighthouseGate } from './lighthouse.mjs';
+import { lighthouseEntryLines, lighthouseOutcome, stopReason } from '../release-lighthouse.mjs';
 
 const fixture = name => JSON.parse(fs.readFileSync(new URL(`lighthouse-fixtures/${name}.json`, import.meta.url), 'utf8'));
 const HOME = fixture('home');
@@ -423,5 +424,90 @@ describe('npm run qa:lighthouse', () => {
         const { status, stderr } = spawnSync(process.execPath, ['scripts/qa/lighthouse.mjs', '--all-channels'], { encoding: 'utf8', env });
         assert.equal(status, 2);
         assert.match(stderr, /unknown argument "--all-channels"/);
+    });
+});
+
+describe('the release\'s run after a push (ticket 17\'s release.sh hook, step 6b)', () => {
+    const host = { QA_BASE_URL: PRELAUNCH_URL, QA_PREVIEW_COOKIE: COOKIE };
+    const PUSHED_SHA = 'f00dfeed'.repeat(5);
+
+    it('names the build by QA_RELEASE_COMMIT, because RELEASES.md records the push only at step 7', async () => {
+        const fresh = await gate({ env: { ...host, QA_RELEASE_COMMIT: PUSHED_SHA }, themes: [{ themeUuid: OTHER_UUID, themeName: 'ReelFlies', variationName: 'ReelFlies CA' }] });
+        assert.equal(fresh.code, 0, fresh.text);
+        assert.equal(summaryOf(fresh, resultsFolder('host', OTHER_UUID)).theme.commit, PUSHED_SHA);
+        assert.equal(fresh.written.channels['1895766'].cart[0].commit, PUSHED_SHA, 'the accepted run records the build\'s commit');
+        assert.match(fresh.text, /58abad50-a3c0-013f-e2b6-2ec98cc9ce73, commit f00dfeed/);
+        // A repeat push can keep the theme's uuid, which RELEASES.md then records with the older commit.
+        const repeat = await gate({ env: { ...host, QA_RELEASE_COMMIT: PUSHED_SHA } });
+        assert.equal(summaryOf(repeat, resultsFolder('host', UUID)).theme.commit, PUSHED_SHA);
+    });
+
+    it('takes RELEASES.md\'s commit without QA_RELEASE_COMMIT, or when it isn\'t a full commit sha', async () => {
+        for (const value of [undefined, 'HEAD', PUSHED_SHA.slice(0, 7)]) {
+            const run = await gate({ env: { ...host, ...(value ? { QA_RELEASE_COMMIT: value } : {}) } }); // eslint-disable-line no-await-in-loop
+            assert.equal(summaryOf(run, resultsFolder('host', UUID)).theme.commit, BUILD_SHA, String(value));
+        }
+    });
+
+    it('writes the lines a release entry records into summary.json, so the release reads them without importing this runner', async () => {
+        const run = await gate({ env: host, results: url => (url.endsWith('adams') ? SEARCH : passing()) });
+        const { releaseLines, ...summary } = summaryOf(run, resultsFolder('host', UUID));
+        assert.deepEqual(releaseLines, lighthouseReleaseLines(summary));
+        assert.match(releaseLines[0], /^ {2}- home `\/`: performance 95, /);
+        assert.ok(releaseLines.some(line => /^ {2}- failed: search /.test(line)), 'each problem is a line too');
+        assert.ok(releaseLines.some(line => /^ {2}- not measured yet: /.test(line)));
+    });
+
+    // This runner's own summary.json, read by the release as step 6b reads it (release-lighthouse.mjs
+    // lighthouseOutcome), so the two can't drift apart unnoticed (rf/skeptic on #38).
+    describe('what the release records from this runner\'s summary', () => {
+        const RELEASE_STARTED = '2026-10-20T13:59:00.000Z';
+        const asRelease = {
+            ...host, QA_CHANNEL: '1895766', QA_RELEASE_COMMIT: PUSHED_SHA, QA_RESULTS_DIR: `scripts/qa/results/host/${UUID}`,
+        };
+        const outcomeOf = (run, uuid = UUID) => lighthouseOutcome({
+            status: run.code, summary: summaryOf(run, resultsFolder('host', UUID)), startedAt: RELEASE_STARTED, uuid,
+        });
+        // What Lighthouse 12 returns when the host answers the page with its 503 maintenance page,
+        // as the prelaunch host does for a stale or expired preview cookie, and in an outage.
+        const maintenance = {
+            ...HOME, runtimeError: { code: 'ERRORED_DOCUMENT_REQUEST', message: 'Lighthouse was unable to reliably load the page you requested. (Status code: 503)' },
+        };
+
+        it('a run that passed is a pass, with the runner\'s lines under it', async () => {
+            const run = await gate({ env: asRelease });
+            assert.equal(run.code, 0, run.text);
+            const outcome = outcomeOf(run);
+            assert.equal(outcome.result, 'pass', outcome.reason);
+            assert.equal(outcome.accepted, true);
+            assert.deepEqual(outcome.lines, summaryOf(run, resultsFolder('host', UUID)).releaseLines);
+            assert.equal(stopReason(outcome), null);
+        });
+
+        it('a run that measured a URL past its budget is a fail, which stops the release before the prune', async () => {
+            const run = await gate({ env: asRelease, results: url => (url.endsWith('adams') ? SEARCH : passing()) });
+            assert.equal(run.code, 1, run.text);
+            const outcome = outcomeOf(run);
+            assert.equal(outcome.result, 'fail', outcome.reason);
+            assert.ok(outcome.lines.some(line => /^ {2}- failed: search /.test(line)));
+            assert.match(stopReason(outcome), /Lighthouse failed on the prelaunch host/);
+        });
+
+        it('a run in which no URL could be measured is pending host batch, never a fail: a stale cookie gets the 503 maintenance page', async () => {
+            const run = await gate({ env: asRelease, results: () => maintenance });
+            assert.equal(run.code, 1, 'the runner itself fails it');
+            assert.ok(summaryOf(run, resultsFolder('host', UUID)).urls.every(url => !url.medians), 'nothing was measured');
+            const outcome = outcomeOf(run);
+            assert.equal(outcome.result, 'pending', JSON.stringify(outcome));
+            assert.match(outcome.reason, /no URL could be measured/);
+            assert.match(outcome.reason, /preview cookie/);
+            assert.deepEqual(lighthouseEntryLines(outcome), ['- Lighthouse: pending host batch']);
+            assert.equal(stopReason(outcome), null);
+        });
+
+        it('a run of another build is pending host batch', async () => {
+            const run = await gate({ env: asRelease });
+            assert.equal(outcomeOf(run, OTHER_UUID).result, 'pending');
+        });
     });
 });

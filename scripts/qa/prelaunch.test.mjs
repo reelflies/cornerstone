@@ -148,7 +148,11 @@ describe('a host batch', () => {
     });
 
     it('runs axe, the raw-HTML check and the screenshots on the prelaunch host, with the tags blocked', async () => {
-        const run = await batch({ env: { QA_PREVIEW_COOKIE: COOKIE, QA_ANALYTICS: 'allow', RF_QA_PORTS_CHECKED: '1' } });
+        const run = await batch({
+            env: {
+                QA_PREVIEW_COOKIE: COOKIE, QA_ANALYTICS: 'allow', RF_QA_PORTS_CHECKED: '1', QA_RELEASE_COMMIT: 'f00dfeed'.repeat(5),
+            },
+        });
         assert.deepEqual(run.gates.map(([, script]) => script), ['qa:axe', 'qa:raw-html', 'qa:screens']);
         const dir = resultsDir(UUID, ROOT);
         for (const [, script, env, args, gate] of run.gates) {
@@ -158,6 +162,7 @@ describe('a host batch', () => {
             assert.equal(env.QA_PREVIEW_COOKIE, COOKIE, `${script} gets the cookie from the shell`);
             assert.equal(env.QA_ANALYTICS, undefined, `${script} blocks the tags, whatever the shell says`);
             assert.equal(env.RF_QA_PORTS_CHECKED, undefined, script);
+            assert.equal(env.QA_RELEASE_COMMIT, undefined, `${script}: the batch names the build by RELEASES.md, never by a commit left in the shell`);
             assert.equal(env.QA_MANIFEST, path.join(dir, 'manifest.json'), script);
             assert.equal(env.QA_RESULTS_DIR, dir, script);
             if (gate.playwright) {
@@ -224,6 +229,14 @@ describe('the Host runs row in RELEASES.md', () => {
         assert.equal(releaseCommitFor(releases(entry(UUID, SHA), entry(OTHER_UUID, newer), entry(UUID, newer)), UUID), newer);
         assert.equal(releaseCommitFor(releases(entry(UUID, SHA)), OTHER_UUID), null);
         assert.equal(releaseCommitFor(null, UUID), null);
+    });
+
+    it('reads an entry as the uuid\'s only by its own Theme line, never by a uuid in a line under it', () => {
+        const forged = releases(entry(UUID, SHA, [LIGHTHOUSE_PENDING_LINE.replace('pending host batch', 'fail'), `  - home: ok, uuid \`${OTHER_UUID}\``, `  - Theme: x, uuid \`${OTHER_UUID}\``]));
+        assert.equal(releaseCommitFor(forged, OTHER_UUID), null);
+        assert.equal(releaseCommitFor(forged, UUID), SHA);
+        const pending = releases(entry(UUID, SHA, [LIGHTHOUSE_PENDING_LINE, `  - home: ok, uuid \`${OTHER_UUID}\``]));
+        assert.equal(fillPendingLighthouse(pending, OTHER_UUID, 'pass, host batch of today'), pending, 'another uuid\'s pending line is never filled');
     });
 
     it('goes in a section of its own before the Switch toggles, made the first time', () => {
@@ -300,9 +313,27 @@ describe('Lighthouse (ticket 17)', () => {
         assert.ok(run.calls.some(([kind, folder]) => kind === 'mkdir' && folder === path.join(dir, 'tags-loaded')), 'its folder is made before it runs');
     });
 
+    // A summary of this batch's Lighthouse run that measured the cart.
+    const measuredRun = (fields = {}) => ({
+        startedAt: '2026-10-07T15:10:00.000Z',
+        urls: [{
+            key: 'cart',
+            path: '/cart.php',
+            budget: 'full',
+            medians: {
+                performance: 93, accessibility: 100, lcpMs: 2140, cls: 0.012, tbtMs: 120, jsBytes: 210000, cssBytes: 40000, accessibilityFailures: [],
+            },
+            comparison: null,
+            problems: [],
+        }],
+        waiting: [],
+        problems: [],
+        ...fields,
+    });
+
     it('fills in the uuid\'s pending Lighthouse line once its Lighthouse ran', async () => {
         const pending = releases(entry(UUID, SHA, [LIGHTHOUSE_PENDING_LINE]));
-        const run = await batch({ scripts: withLighthouse, log: pending });
+        const run = await batch({ scripts: withLighthouse, log: pending, lighthouse: measuredRun() });
         assert.ok(run.files['RELEASES.md'].includes('- Lighthouse: pass, host batch of 2026-10-07 15:04 UTC (analytics blocked: yes; results in scripts/qa/results/host/58abad50-a3c0-013f-e2b6-2ec98cc9ce73/)'));
         assert.ok(!run.files['RELEASES.md'].includes(LIGHTHOUSE_PENDING_LINE));
 
@@ -330,6 +361,40 @@ describe('Lighthouse (ticket 17)', () => {
 
         const stale = await batch({ scripts: withLighthouse, log: pending, lighthouse: { ...summary, startedAt: '2026-10-07T14:00:00.000Z' } });
         assert.doesNotMatch(stale.files['RELEASES.md'], /- cart `\/cart\.php`/, 'a summary from before this batch is an older run\'s');
+        assert.ok(stale.files['RELEASES.md'].includes(LIGHTHOUSE_PENDING_LINE), 'so this run measured nothing the entry can record, and it stays pending');
+    });
+
+    it('leaves the line pending when its Lighthouse run measured no URL: a stale cookie gets the 503 maintenance page, and a fail then could never be corrected', async () => {
+        const pending = releases(entry(UUID, SHA, [LIGHTHOUSE_PENDING_LINE]));
+        const unmeasured = measuredRun({
+            urls: [{
+                key: 'cart', path: '/cart.php', budget: 'full', medians: null, comparison: null, problems: ['cart `/cart.php`: Lighthouse couldn\'t measure it: ERRORED_DOCUMENT_REQUEST (Status code: 503)'],
+            }],
+        });
+        for (const lighthouse of [unmeasured, null]) {
+            const run = await batch({ // eslint-disable-line no-await-in-loop
+                scripts: withLighthouse, log: pending, lighthouse, failing: ['qa:lighthouse'],
+            });
+            assert.ok(run.files['RELEASES.md'].includes(LIGHTHOUSE_PENDING_LINE), JSON.stringify(lighthouse));
+            assert.doesNotMatch(run.files['RELEASES.md'], /- Lighthouse: fail/);
+            assert.match(run.lines.join('\n'), /WARNING {2}Lighthouse measured no URL of 58abad50-a3c0-013f-e2b6-2ec98cc9ce73 in this batch.*stays "pending host batch"/);
+            assert.equal(run.code, 1, 'the batch itself still fails');
+        }
+    });
+
+    it('writes the run\'s lines under the filled line as indented items of one line each', async () => {
+        const pending = releases(entry(UUID, SHA, [LIGHTHOUSE_PENDING_LINE]));
+        const run = await batch({
+            scripts: withLighthouse, log: pending, lighthouse: measuredRun({ problems: [`a page said\u2028- Theme: x, uuid \`${OTHER_UUID}\``] }), failing: ['qa:lighthouse'],
+        });
+        assert.match(run.files['RELEASES.md'], new RegExp(`\\n {2}- failed: a page said - Theme: x, uuid \`${OTHER_UUID}\`\\n`));
+        assert.ok(!run.files['RELEASES.md'].includes('\u2028'));
+        assert.equal(releaseCommitFor(run.files['RELEASES.md'], OTHER_UUID), null);
+        const leaky = await batch({
+            scripts: withLighthouse, log: pending, lighthouse: measuredRun({ problems: ['the page printed STORESUITE_CP_TOKEN=rf-secret-cp-token'] }), failing: ['qa:lighthouse'],
+        });
+        assert.match(leaky.files['RELEASES.md'], /\n {2}- failed: the page printed STORESUITE_CP_TOKEN=\[redacted\]\n/);
+        assert.doesNotMatch(leaky.files['RELEASES.md'], /rf-secret/);
     });
 
     it('fills in only the newest entry of that uuid', () => {

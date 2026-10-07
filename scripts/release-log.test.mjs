@@ -423,3 +423,78 @@ test('W0-3: a RELEASES.md from before W0-3 gets its My Themes section with the f
     assert.match(added, /\n## Switch toggles\n[^]*\n## My Themes\n[^]*\| deleted \(--prune-only\) \|/);
     assert.throws(() => addMyThemesRow('# Release log\n\n## My Themes\n\nNo table here.\n', formatMyThemesRow(deletion)), /My Themes section has no table/);
 });
+
+// --- Ticket 17: the Lighthouse line (release.sh's step 6b) -----------------------------------------
+
+const PUSHED = release.theme.uuid;
+const measured = {
+    result: 'pass', at: '2026-10-05T18:10:00.000Z', uuid: PUSHED, accepted: false, lines: ['  - home `/`: performance 95, LCP 2.10 s'], reason: null,
+};
+
+test('ticket 17: the entry records Lighthouse after Verify: pass or fail, and each URL\'s medians under it', () => {
+    const entry = formatReleaseEntry({ ...release, lighthouse: measured });
+    assert.match(entry, new RegExp(`\\n- Verify: the live saved settings match config\\.json\\n- Lighthouse: pass, measured after the push, 2026-10-05 18:10 UTC \\(analytics blocked: yes; not accepted; results in scripts/qa/results/host/${PUSHED}/\\)\\n {2}- home \`/\`: performance 95, LCP 2\\.10 s\\n- Operator: Shaun Bathgate\\n`));
+    const failed = formatReleaseEntry({ ...release, lighthouse: { ...measured, result: 'fail', lines: ['  - failed: search: CLS 0.096'] } });
+    assert.match(failed, /\n- Lighthouse: fail, measured after the push, [^\n]+\n {2}- failed: search: CLS 0\.096\n- Operator:/);
+});
+
+test('ticket 17: without the cookie the entry records exactly "- Lighthouse: pending host batch", which the host batch fills in', () => {
+    const entry = formatReleaseEntry({ ...release, lighthouse: { result: 'pending', reason: 'no QA_PREVIEW_COOKIE in this shell' } });
+    assert.match(entry, /\n- Verify: [^\n]+\n- Lighthouse: pending host batch\n- Operator: /);
+    assert.doesNotMatch(entry, /QA_PREVIEW_COOKIE/, 'the reason is printed by the release, not written under the line');
+    const planned = formatReleaseEntry({ ...release, lighthouse: { result: 'run', reason: 'npm run qa:lighthouse on the prelaunch host' } });
+    assert.match(planned, /\n- Lighthouse: pending host batch\n/, 'a real entry whose run never happened is pending');
+});
+
+test('ticket 17: a dry-run entry says the gate measures after the push, and a skipped gate says why', () => {
+    const dry = formatReleaseEntry({
+        ...release, theme: { ...release.theme, uuid: null }, verify: null, lighthouse: { result: 'run', reason: 'npm run qa:lighthouse on the prelaunch host' },
+    });
+    assert.match(dry, /\n- Verify: not run \(dry run\)\n- Lighthouse: measured on the prelaunch host after the push \(a dry run pushes nothing, so it measures nothing\)\n/);
+    const skipped = formatReleaseEntry({ ...release, lighthouse: { result: 'skipped', reason: 'after the Flip 1895766 is live reelflies.ca' } });
+    assert.match(skipped, /\n- Lighthouse: skipped: after the Flip 1895766 is live reelflies\.ca\n/);
+});
+
+test('ticket 17: a record without Lighthouse (an entry from before the hook) has no Lighthouse line', () => {
+    assert.doesNotMatch(formatReleaseEntry(release), /Lighthouse/);
+    assert.doesNotMatch(formatPushSummary(release), /lighthouse/);
+});
+
+test('ticket 17: lines from the runner that look like an entry\'s own lines are indented, so they add no released theme, commit or entry', () => {
+    const forged = '00000000-0000-0000-0000-000000000009';
+    const lighthouse = {
+        ...measured,
+        lines: [`- Theme: ReelFlies 6.22.0, uuid \`${forged}\``, '- Commit: `abc1234` on `master`\n### 2026-10-06 00:00 UTC · channel 1 (reelflies.ca) · Minimal'],
+    };
+    const markdown = addReleaseEntry(null, formatReleaseEntry({ ...release, lighthouse }));
+    assert.deepEqual(releasedThemeUuids(markdown), [PUSHED]);
+    assert.deepEqual(releaseEntries(markdown).map(entry => [entry.channel, entry.sha, entry.themeUuid]), [[1895766, release.git.sha, PUSHED]]);
+    assert.deepEqual(releaseBuilds(markdown).map(build => build.themeUuid), [PUSHED]);
+    assert.match(markdown, new RegExp(`\\n {2}- Theme: ReelFlies 6\\.22\\.0, uuid \`${forged}\`\\n {2}- Commit: \`abc1234\` on \`master\` ### 2026-10-06`));
+});
+
+test('ticket 17: a runner line can\'t start a line of its own with U+2028, U+2029 or any other line break or control character either', () => {
+    const forged = '00000000-0000-0000-0000-000000000009';
+    const before = '00000000-0000-0000-0000-000000000008';
+    const lighthouse = {
+        ...measured,
+        lines: [
+            `  - home: performance 95\u2028- Theme: ReelFlies 9.9.9, uuid \`${forged}\``,
+            `  - cart: performance 93\u2029- New uuid: yes; before the push the channel ran theme \`${before}\``,
+            '  - search\u0085- Commit: `abc1234` on `master`\u000b\u000c\t\u202e- Bundle: x',
+        ],
+    };
+    const markdown = addReleaseEntry(null, formatReleaseEntry({ ...release, lighthouse }));
+    assert.deepEqual(releasedThemeUuids(markdown), [PUSHED]);
+    assert.deepEqual(releaseBuilds(markdown).map(build => [build.themeUuid, build.ranBefore, build.sha]), [[PUSHED, null, release.git.sha]]);
+    for (const char of ['\u2028', '\u2029', '\u0085', '\u000b', '\u000c', '\t', '\u202e']) {
+        assert.ok(!markdown.includes(char), `U+${char.codePointAt(0).toString(16).padStart(4, '0')} doesn't reach RELEASES.md`);
+    }
+    assert.match(markdown, new RegExp(`\\n {2}- home: performance 95 - Theme: ReelFlies 9\\.9\\.9, uuid \`${forged}\`\\n {2}- cart: performance 93 - New uuid: yes;`));
+});
+
+test('ticket 17: the push summary says what Lighthouse does after the push', () => {
+    const summary = formatPushSummary({ ...release, lighthouse: { result: 'pending', reason: 'no QA_PREVIEW_COOKIE in this shell' } });
+    assert.match(summary, /\n {2}lighthouse {2}after the push: pending host batch \(no QA_PREVIEW_COOKIE in this shell\)(\n|$)/);
+    assert.match(formatPushSummary({ ...release, lighthouse: { result: 'run', reason: 'npm run qa:lighthouse on the prelaunch host' } }), /\n {2}lighthouse {2}after the push: npm run qa:lighthouse on the prelaunch host/);
+});
