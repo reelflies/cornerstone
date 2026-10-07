@@ -348,32 +348,66 @@ test('W0-3: a My Themes row records the time, the action, the theme uuid, name a
     assert.equal(myThemesRows(addMyThemesRow(null, formatMyThemesRow(unknown)))[0].operator, 'a | b', 'and reads back');
 });
 
-test('W0-3: RELEASES.md and the template have a "My Themes" section with its table, after Switch toggles', () => {
-    for (const markdown of [RELEASES_TEMPLATE, fs.readFileSync(new URL('../RELEASES.md', import.meta.url), 'utf8')]) {
-        assert.ok(markdown.indexOf('\n## My Themes\n') > markdown.indexOf('\n## Switch toggles\n'), 'My Themes comes after Switch toggles');
-        assert.match(markdown, new RegExp(`\\n## My Themes\\n(.|\\n)*\\n${MY_THEMES_HEADER.replace(/[|()]/g, '\\\\$&')}\\n\\|---\\|---\\|---\\|---\\|---\\|---\\|---\\|\\n$`));
-        assert.deepEqual(myThemesRows(markdown), []);
+const MY_THEMES_TABLE = `\n${MY_THEMES_HEADER}\n|---|---|---|---|---|---|---|\n`;
+
+// A RELEASES.md's My Themes section: after Switch toggles, with its header and separator, and rows
+// that read back. It may hold rows, and sections may follow it (the orchestrator's "Store writes"),
+// so only the template is held to an empty table at the end of the file.
+function assertMyThemesSection(markdown) {
+    const toggles = markdown.indexOf('\n## Switch toggles\n');
+    const start = markdown.indexOf('\n## My Themes\n');
+    assert.ok(toggles !== -1 && start > toggles, 'My Themes comes after Switch toggles');
+    const next = markdown.indexOf('\n## ', start + 1);
+    const section = markdown.slice(start, next === -1 ? markdown.length : next + 1);
+    assert.ok(section.includes(MY_THEMES_TABLE), 'the section has its header and separator');
+    for (const row of myThemesRows(markdown)) {
+        assert.match(row.time, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
+        assert.match(row.action, /^deleted \(/);
+        assert.match(row.uuid, /^[0-9a-f-]{36}$/);
+        assert.ok(row.operator, 'every row names its operator');
     }
+}
+
+const repoReleases = () => fs.readFileSync(new URL('../RELEASES.md', import.meta.url), 'utf8');
+
+test('W0-3: the template ends with an empty "My Themes" table, after Switch toggles', () => {
+    assertMyThemesSection(RELEASES_TEMPLATE);
+    assert.ok(RELEASES_TEMPLATE.endsWith(MY_THEMES_TABLE));
+    assert.deepEqual(myThemesRows(RELEASES_TEMPLATE), []);
+});
+
+test('W0-3: the repo\'s RELEASES.md has its My Themes section after Switch toggles, and keeps passing once it logs deletions and a section follows', () => {
+    const repo = repoReleases();
+    assertMyThemesSection(repo);
+    // The states the prune and the orchestrator's mirror bring it to: rows, then a later section.
+    const logged = addMyThemesRow(repo, formatMyThemesRow(deletion));
+    const later = `${logged}\n## Store writes\n\n| Date | Channel |\n|---|---|\n| 2026-10-09 | 1895766 |\n`;
+    for (const markdown of [logged, later, addMyThemesRow(later, formatMyThemesRow({ ...deletion, uuid: '9f0c2a10-0000-0000-0000-000000000002' }))]) {
+        assertMyThemesSection(markdown);
+    }
+    assert.equal(myThemesRows(logged).length, myThemesRows(repo).length + 1);
 });
 
 test('W0-3: rows go at the end of the My Themes table, wherever the section is, and read back', () => {
-    const repo = fs.readFileSync(new URL('../RELEASES.md', import.meta.url), 'utf8');
+    const repo = repoReleases();
+    const before = myThemesRows(repo).length;
     const one = addMyThemesRow(repo, formatMyThemesRow(deletion));
     const two = addMyThemesRow(one, formatMyThemesRow({ ...deletion, timestamp: '2026-10-09T10:16:00.000Z', uuid: '9f0c2a10-0000-0000-0000-000000000002' }));
     assert.ok(two.startsWith(repo.slice(0, repo.indexOf('## My Themes'))), 'nothing above the section changes');
-    assert.deepEqual(myThemesRows(two).map(row => [row.time, row.action, row.uuid, row.nameAndVersion, row.sha, row.zipSha256, row.operator]), [
+    assert.deepEqual(myThemesRows(two).slice(before).map(row => [row.time, row.action, row.uuid, row.nameAndVersion, row.sha, row.zipSha256, row.operator]), [
         ['2026-10-09 10:15', 'deleted (--prune-only)', '9f0c2a10-0000-0000-0000-000000000001', 'ReelFlies 6.22.0', '1be9fb20ffd985c26c59c5b5fcd28006418d9a08', 'ab12', 'Shaun Bathgate'],
         ['2026-10-09 10:16', 'deleted (--prune-only)', '9f0c2a10-0000-0000-0000-000000000002', 'ReelFlies 6.22.0', '1be9fb20ffd985c26c59c5b5fcd28006418d9a08', 'ab12', 'Shaun Bathgate'],
     ]);
+    assert.equal(myThemesRows(two).length, before + 2);
     // A section added later below it (the orchestrator's "Store writes") keeps the rows in My Themes.
-    const later = `${one}\n## Store writes\n\n| Date | Channel |\n|---|---|\n| 2026-10-09 | 1895766 |\n`;
+    const later = `${addMyThemesRow(RELEASES_TEMPLATE, formatMyThemesRow(deletion))}\n## Store writes\n\n| Date | Channel |\n|---|---|\n| 2026-10-09 | 1895766 |\n`;
     const added = addMyThemesRow(later, formatMyThemesRow({ ...deletion, uuid: '9f0c2a10-0000-0000-0000-000000000003' }));
     assert.equal(myThemesRows(added).length, 2);
     assert.match(added, /`9f0c2a10-0000-0000-0000-000000000003`[^\n]*\n\n## Store writes\n/);
     // Release entries still go into Releases, and the rows never count as releases.
     const withEntry = addReleaseEntry(two, formatReleaseEntry(release));
-    assert.equal(releaseEntries(withEntry).length, 2);
-    assert.deepEqual(myThemesRows(withEntry).length, 2);
+    assert.equal(releaseEntries(withEntry).length, releaseEntries(repo).length + 1);
+    assert.equal(myThemesRows(withEntry).length, before + 2);
     assert.ok(!releasedThemeUuids(two).includes('9f0c2a10-0000-0000-0000-000000000002'), 'a deleted theme isn\'t a release');
 });
 
