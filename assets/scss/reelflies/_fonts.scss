@@ -1,0 +1,52 @@
+// =============================================================================
+// REELFLIES FONTS (ticket 25; O02, SEO-13)
+// =============================================================================
+//
+// Onest, self-hosted: one latin variable woff2 (weights 100 to 900, 33,760 B), from
+// @fontsource-variable/onest 5.3.1, which packages Google Fonts' Onest v11 (SIL Open Font
+// License 1.1, assets/fonts/OFL.txt). The theme settings name it "Onest_400" and "Onest_600",
+// with no "Google_" prefix, so getFontsCollection asks Google for nothing and the font comes
+// only from theme assets. components/reelflies/head.html preloads the same file.
+//
+// The URL is relative to the compiled CSS (css/theme-<id>.css), so it resolves to the file
+// that {{cdn 'assets/fonts/…'}} names, locally, on the CDN and in a Theme Editor session.
+// optimized-checkout.scss imports this file too, for the checkout's font keys.
+//
+// "Onest Fallback" is Arial with its metrics matched to Onest's, so the text laid out before
+// Onest arrives takes the same room (CLS). Two faces, because Onest's headings are 600 and Arial
+// has only a regular and a bold. The size-adjust values were measured in Chromium 1217 on four
+// lines of shop copy at 16px (2026-10-06): Onest 400 runs 2.5% wider than Arial, Onest 600 0.9%
+// narrower than Arial Bold. The ticket's estimate was about 104.7%. Onest's ascent and descent
+// (970 and 305 units of 1000) are divided by the same factor, so line boxes match too.
+//
+// -----------------------------------------------------------------------------
+
+@font-face {
+    font-family: "Onest";
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url("../fonts/onest-latin-var.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Onest Fallback";
+    font-style: normal;
+    font-weight: 100 500;
+    src: local("Arial"), local("ArialMT");
+    size-adjust: 102.5%;
+    ascent-override: 94.6%;
+    descent-override: 29.8%;
+    line-gap-override: 0%;
+}
+
+@font-face {
+    font-family: "Onest Fallback";
+    font-style: normal;
+    font-weight: 600 900;
+    src: local("Arial Bold"), local("Arial-BoldMT");
+    size-adjust: 99.1%;
+    ascent-override: 97.9%;
+    descent-override: 30.8%;
+    line-gap-override: 0%;
+}
