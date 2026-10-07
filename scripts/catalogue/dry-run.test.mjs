@@ -227,7 +227,7 @@ test('the pages: one full stop after a decision, "not in the export" where the e
     assert.match(rowOf('Drop "default sizes" on multi-size products'), /\| not in the export \|/);
     assert.match(rowOf('The ReelFlies brand on in-house Live products'), /\| not in the export \|/);
     assert.doesNotMatch(rowOf('Fly Sizes: 1/0 to 6/0, and hook order'), /not in the export/);
-    assert.match(index, /\*\*Tickets 36, 48 and 03:\*\* the ReelFlies brand's listing is at \*\*\/reelflies-2\/\*\*, the URL the store made from its name \(custom_url, not customized\), not the \/brands\/ReelFlies\.html they name\. No URL change is proposed, so ticket 36 needs none approved/);
+    assert.match(index, /\*\*Tickets 36, 48 and 03:\*\* the ReelFlies brand's listing is at \*\*\/reelflies-2\/\*\*, the URL the store made from its name \(custom_url, not customized\), not the \/brands\/ReelFlies\.html they name\. No URL change is proposed, so ticket 36 needs none approved: 36's criteria, 48's button and ticket 18's criterion 3 are read against \/reelflies-2\/ under options A and C \(under B, against the new brand's own store-made URL\)/);
     assert.match(index, /\*\*Ticket 14's re-exported photos\*\* aren't uploaded yet/);
     assert.match(index, /--api --jobs fly-sizes,default-sizes/);
     assert.match(index, /renamed 0, reordered 0, multi-size defaults 0/);

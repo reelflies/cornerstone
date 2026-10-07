@@ -88,7 +88,8 @@ function brandLine(results) {
     if (!url?.url) return `- **Tickets 36, 48 and 03:** the brand listing's URL comes from the API read (each brand's custom_url), and this run has none. The ReelFlies brand is on almost every Live product, so its listing can't gather only the Signature patterns as spec module 12 says. ${pick} ${intro}`;
     const made = url.customized ? 'set by hand (custom_url)' : 'the URL the store made from its name (custom_url, not customized)';
     const planned = url.url === PLANNED_BRAND_URL ? '' : `, not the ${PLANNED_BRAND_URL} they name`;
-    const change = url.url === PLANNED_BRAND_URL ? '' : ` No URL change is proposed, so ticket 36 needs none approved: 36's criteria, 48's button and ticket 18's criterion 3 are read against ${url.url}, and refactor 09's Signature rows are dynamic Brand rows, which follow the brand's URL. Setting custom_url to ${PLANNED_BRAND_URL} would be a store-wide catalogue write (the page moves on reelflies.com and live reelflies.ca too), and isn't proposed.`;
+    const against = url.name === BRAND_NAME ? `${url.url} under options A and C (under B, against the new brand's own store-made URL)` : url.url;
+    const change = url.url === PLANNED_BRAND_URL ? '' : ` No URL change is proposed, so ticket 36 needs none approved: 36's criteria, 48's button and ticket 18's criterion 3 are read against ${against}, and refactor 09's Signature rows are dynamic Brand rows, which follow the brand's URL. Setting custom_url to ${PLANNED_BRAND_URL} would be a store-wide catalogue write (the page moves on reelflies.com and live reelflies.ca too), and isn't proposed.`;
     const which = url.name === BRAND_NAME
         ? ` The ReelFlies brand is on almost every Live product, so its listing can't gather only the Signature patterns as spec module 12 says. ${pick}`
         : ` Option B: the "${url.name}" brand's listing is ticket 36's page.`;

@@ -288,6 +288,7 @@ test('the brand page says the listing\'s URL is the store\'s, and that ticket 36
     const result = job(runJobs(apiModel()), 'brand');
     const notes = result.notes.join('\n');
     assert.match(notes, /The URL: the "ReelFlies" brand's listing is at \/reelflies-2\/, the URL the store made from its name \(custom_url, not customized\), not the \/brands\/ReelFlies\.html that spec module 12, tickets 36 and 48 and ticket 03's amendment name\./);
+    assert.match(notes, /That listing keeps \/reelflies-2\/ under every option below\. Under A and C, tickets 36 and 48 and this ticket's criterion 3 are read against it; under B, against the new brand's own store-made URL\./);
     assert.match(notes, /No URL change is proposed, so ticket 36 needs none approved/);
     assert.match(notes, /refactor 09's Signature rows are dynamic Brand rows, which follow the brand's URL/);
     assert.match(notes, /Setting custom_url to \/brands\/ReelFlies\.html instead would be a store-wide catalogue write/);

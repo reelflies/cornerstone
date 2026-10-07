@@ -351,7 +351,7 @@ function urlNote(record) {
     if (!record.url) return `${subject}: the export has no brand URLs, so the API read says which URL the listing has.`;
     return [
         `${subject}, the URL the store made from its name (${howMade(record)}), not the ${PLANNED_BRAND_URL} that spec module 12, tickets 36 and 48 and ticket 03's amendment name.`,
-        `Under every option below that listing keeps ${record.url} (under B, the new brand's listing has its own store-made URL), and tickets 36 and 48 and this ticket's criterion 3 are read against it.`,
+        `That listing keeps ${record.url} under every option below. Under A and C, tickets 36 and 48 and this ticket's criterion 3 are read against it; under B, against the new brand's own store-made URL.`,
         'No URL change is proposed, so ticket 36 needs none approved: refactor 09\'s Signature rows are dynamic Brand rows, which follow the brand\'s URL, and only their text naming the old URL needs correcting.',
         `Setting custom_url to ${PLANNED_BRAND_URL} instead would be a store-wide catalogue write (the brand page moves on reelflies.com and live reelflies.ca too), outside this job's writes: it is Shaun's to ask for, and not recommended.`,
     ].join(' ');
