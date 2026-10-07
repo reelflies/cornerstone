@@ -1,0 +1,16 @@
+{
+  "_about": "Ticket 21, security headers on ReelFlies_CA (1895766): X-Frame-Options SAMEORIGIN, so other sites can't frame the storefront. HSTS stays inherited (null) until the certificate exists at the Flip (ticket 57), the CSP header stays inherited (off), and so does sitewide HTTPS (on). BigCommerce takes no partial update of a channel's security settings, so all four fields are sent, null where 1895766 keeps inheriting. A lifted write, applied only after Page Builder is checked with it on: if the editor no longer loads 1895766's storefront, the applying agent puts the snapshot's values back with another plan.",
+  "requests": [
+    {
+      "method": "PUT",
+      "path": "/v3/settings/storefront/security",
+      "query": { "channel_id": 1895766 },
+      "body": {
+        "sitewide_https_enabled": null,
+        "csp_header": { "enabled": null, "header_value": null },
+        "x_frame_options_header": { "enabled": true, "setting": "same_origin", "allowed_url": "" },
+        "hsts": { "enabled": null, "include_subdomains": null, "include_preload": null, "max_age": null }
+      }
+    }
+  ]
+}

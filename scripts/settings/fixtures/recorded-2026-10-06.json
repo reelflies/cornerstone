@@ -1,0 +1,947 @@
+{
+  "_about": "Recorded by scripts/settings/read.mjs on 2026-10-07T03:31:58Z (ticket 21), with the read-only token, GET only: the store's own answers for the settings ticket 21 writes, globally and for channels 1, 1855224 and 1895766. Store configuration only; no personal data. The read's snapshot sha256 was 7eee9386fa7b5ca148bd892c311b4bab2250c97b67144237e40f33dd9688d255.",
+  "inventory": {
+    "1": {
+      "data": {
+        "product_out_of_stock_behavior": null,
+        "option_out_of_stock_behavior": null,
+        "update_stock_behavior": null,
+        "edit_order_stock_adjustment": null,
+        "refund_order_stock_adjustment": null,
+        "stock_level_display": null,
+        "default_out_of_stock_message": null,
+        "hide_in_product_filtering": null,
+        "show_pre_order_stock_levels": null,
+        "show_out_of_stock_message": null,
+        "show_quantity_on_backorder": null,
+        "show_quantity_on_hand": null,
+        "show_backorder_message": null,
+        "show_backorder_availability_prompt": null,
+        "backorder_availability_prompt": null,
+        "show_default_shipping_expectation_prompt": null,
+        "default_shipping_expectation_prompt": null
+      },
+      "meta": {}
+    },
+    "1855224": {
+      "data": {
+        "product_out_of_stock_behavior": null,
+        "option_out_of_stock_behavior": null,
+        "update_stock_behavior": null,
+        "edit_order_stock_adjustment": null,
+        "refund_order_stock_adjustment": null,
+        "stock_level_display": null,
+        "default_out_of_stock_message": null,
+        "hide_in_product_filtering": null,
+        "show_pre_order_stock_levels": null,
+        "show_out_of_stock_message": null,
+        "show_quantity_on_backorder": null,
+        "show_quantity_on_hand": null,
+        "show_backorder_message": null,
+        "show_backorder_availability_prompt": null,
+        "backorder_availability_prompt": null,
+        "show_default_shipping_expectation_prompt": null,
+        "default_shipping_expectation_prompt": null
+      },
+      "meta": {}
+    },
+    "1895766": {
+      "data": {
+        "product_out_of_stock_behavior": null,
+        "option_out_of_stock_behavior": null,
+        "update_stock_behavior": null,
+        "edit_order_stock_adjustment": null,
+        "refund_order_stock_adjustment": null,
+        "stock_level_display": null,
+        "default_out_of_stock_message": null,
+        "hide_in_product_filtering": null,
+        "show_pre_order_stock_levels": null,
+        "show_out_of_stock_message": null,
+        "show_quantity_on_backorder": null,
+        "show_quantity_on_hand": null,
+        "show_backorder_message": null,
+        "show_backorder_availability_prompt": null,
+        "backorder_availability_prompt": null,
+        "show_default_shipping_expectation_prompt": null,
+        "default_shipping_expectation_prompt": null
+      },
+      "meta": {}
+    },
+    "global": {
+      "data": {
+        "product_out_of_stock_behavior": "do_nothing",
+        "option_out_of_stock_behavior": "label_option",
+        "update_stock_behavior": "order_placed",
+        "edit_order_stock_adjustment": true,
+        "refund_order_stock_adjustment": true,
+        "stock_level_display": "dont_show",
+        "default_out_of_stock_message": "Out of stock",
+        "hide_in_product_filtering": true,
+        "show_pre_order_stock_levels": false,
+        "show_out_of_stock_message": true,
+        "show_quantity_on_backorder": false,
+        "show_quantity_on_hand": false,
+        "show_backorder_message": false,
+        "show_backorder_availability_prompt": false,
+        "backorder_availability_prompt": "More available for backorder",
+        "show_default_shipping_expectation_prompt": false,
+        "default_shipping_expectation_prompt": "We ship available items right away, and backordered items as soon as they're in stock"
+      },
+      "meta": {}
+    }
+  },
+  "storefront/security": {
+    "1": {
+      "data": {
+        "sitewide_https_enabled": null,
+        "csp_header": {
+          "enabled": null,
+          "header_value": null
+        },
+        "x_frame_options_header": {
+          "enabled": null,
+          "setting": null,
+          "allowed_url": null
+        },
+        "hsts": {
+          "enabled": null,
+          "include_subdomains": null,
+          "include_preload": null,
+          "max_age": null
+        }
+      },
+      "meta": {}
+    },
+    "1855224": {
+      "data": {
+        "sitewide_https_enabled": null,
+        "csp_header": {
+          "enabled": null,
+          "header_value": null
+        },
+        "x_frame_options_header": {
+          "enabled": null,
+          "setting": null,
+          "allowed_url": null
+        },
+        "hsts": {
+          "enabled": null,
+          "include_subdomains": null,
+          "include_preload": null,
+          "max_age": null
+        }
+      },
+      "meta": {}
+    },
+    "1895766": {
+      "data": {
+        "sitewide_https_enabled": null,
+        "csp_header": {
+          "enabled": null,
+          "header_value": null
+        },
+        "x_frame_options_header": {
+          "enabled": null,
+          "setting": null,
+          "allowed_url": null
+        },
+        "hsts": {
+          "enabled": null,
+          "include_subdomains": null,
+          "include_preload": null,
+          "max_age": null
+        }
+      },
+      "meta": {}
+    },
+    "global": {
+      "data": {
+        "sitewide_https_enabled": true,
+        "csp_header": {
+          "enabled": false,
+          "header_value": ""
+        },
+        "x_frame_options_header": {
+          "enabled": false,
+          "setting": "deny",
+          "allowed_url": ""
+        },
+        "hsts": {
+          "enabled": true,
+          "include_subdomains": false,
+          "include_preload": false,
+          "max_age": "zero_seconds"
+        }
+      },
+      "meta": {}
+    }
+  },
+  "storefront/search": {
+    "1": {
+      "data": {
+        "product_filtering_enabled": false,
+        "default_product_sort": null,
+        "content_product_sort": null,
+        "search_suggest": null
+      },
+      "meta": {}
+    },
+    "1855224": {
+      "data": {
+        "product_filtering_enabled": false,
+        "default_product_sort": null,
+        "content_product_sort": null,
+        "search_suggest": null
+      },
+      "meta": {}
+    },
+    "1895766": {
+      "data": {
+        "product_filtering_enabled": false,
+        "default_product_sort": null,
+        "content_product_sort": null,
+        "search_suggest": null
+      },
+      "meta": {}
+    },
+    "global": {
+      "data": {
+        "product_filtering_enabled": true,
+        "default_product_sort": "relevance",
+        "content_product_sort": "relevance",
+        "search_suggest": true
+      },
+      "meta": {}
+    }
+  },
+  "search/filters": {
+    "data": [
+      {
+        "id": "Ym9vbA==",
+        "display_name": "Other",
+        "type": "other",
+        "is_enabled": true,
+        "display_product_count": true,
+        "collapsed_by_default": true,
+        "facet_id": 103,
+        "facet": "bool",
+        "has_free_shipping_facet_id": 100,
+        "is_featured_facet_id": 101,
+        "in_stock_facet_id": 102,
+        "show_free_shipping_filter": false,
+        "show_is_featured_filter": false,
+        "show_in_stock_filter": false
+      },
+      {
+        "id": "Y2F0ZWdvcnk=",
+        "display_name": "Category",
+        "type": "category",
+        "items_to_show": 15,
+        "collapsed_by_default": false,
+        "display_product_count": true,
+        "is_enabled": true,
+        "facet_id": 104,
+        "facet": "category"
+      },
+      {
+        "id": "YnJhbmQ=",
+        "display_name": "Brand",
+        "type": "brand",
+        "sort_by": "alpha",
+        "items_to_show": 10,
+        "collapsed_by_default": false,
+        "display_product_count": true,
+        "is_enabled": false,
+        "facet_id": 105,
+        "facet": "brand"
+      },
+      {
+        "id": "cHJpY2U=",
+        "display_name": "Price",
+        "type": "price",
+        "collapsed_by_default": false,
+        "is_enabled": false,
+        "facet_id": 106,
+        "facet": "price"
+      },
+      {
+        "id": "cmF0aW5n",
+        "display_name": "Rating",
+        "type": "rating",
+        "collapsed_by_default": true,
+        "is_enabled": true,
+        "facet_id": 107,
+        "facet": "rating"
+      },
+      {
+        "id": "Rmx5IFNpemVz",
+        "display_name": "Fly Sizes",
+        "type": "product",
+        "display_product_count": true,
+        "collapsed_by_default": false,
+        "items_to_show": 10,
+        "sort_by": "alpha",
+        "is_enabled": true,
+        "facet_id": 108,
+        "facet": "Fly Sizes"
+      },
+      {
+        "id": "Q2hvb3NlIEZvYW0gU3R5bGU=",
+        "display_name": "Choose Foam Style",
+        "type": "product",
+        "display_product_count": true,
+        "collapsed_by_default": false,
+        "items_to_show": 10,
+        "sort_by": "alpha",
+        "is_enabled": false,
+        "facet_id": 109,
+        "facet": "Choose Foam Style"
+      },
+      {
+        "id": "Q29sb3I=",
+        "display_name": "Color",
+        "type": "product",
+        "display_product_count": true,
+        "collapsed_by_default": false,
+        "items_to_show": 10,
+        "sort_by": "alpha",
+        "is_enabled": false,
+        "facet_id": 110,
+        "facet": "Color"
+      },
+      {
+        "id": "Q29sb3Vy",
+        "display_name": "Colour",
+        "type": "product",
+        "display_product_count": true,
+        "collapsed_by_default": false,
+        "items_to_show": 10,
+        "sort_by": "alpha",
+        "is_enabled": false,
+        "facet_id": 111,
+        "facet": "Colour"
+      },
+      {
+        "id": "Y2hvb3NlIGxlYWRlciB3ZWlnaHQ=",
+        "display_name": "choose leader weight",
+        "type": "product",
+        "display_product_count": true,
+        "collapsed_by_default": false,
+        "items_to_show": 10,
+        "sort_by": "alpha",
+        "is_enabled": false,
+        "facet_id": 112,
+        "facet": "choose leader weight"
+      },
+      {
+        "id": "U3RyaWtlIEluZGljYXRvciBDb2xvdXI=",
+        "display_name": "Strike Indicator Colour",
+        "type": "product",
+        "display_product_count": true,
+        "collapsed_by_default": false,
+        "items_to_show": 10,
+        "sort_by": "alpha",
+        "is_enabled": false,
+        "facet_id": 113,
+        "facet": "Strike Indicator Colour"
+      },
+      {
+        "id": "U2l6ZQ==",
+        "display_name": "Size",
+        "type": "product",
+        "display_product_count": true,
+        "collapsed_by_default": false,
+        "items_to_show": 10,
+        "sort_by": "alpha",
+        "is_enabled": false,
+        "facet_id": 114,
+        "facet": "Size"
+      },
+      {
+        "id": "Q2hvb3NlIFNpemU=",
+        "display_name": "Choose Size",
+        "type": "product",
+        "display_product_count": true,
+        "collapsed_by_default": false,
+        "items_to_show": 10,
+        "sort_by": "alpha",
+        "is_enabled": false,
+        "facet_id": 115,
+        "facet": "Choose Size"
+      },
+      {
+        "id": "WWFybiBJbmRpY2F0b3IgQ29sb3Vy",
+        "display_name": "Yarn Indicator Colour",
+        "type": "product",
+        "display_product_count": true,
+        "collapsed_by_default": false,
+        "items_to_show": 10,
+        "sort_by": "alpha",
+        "is_enabled": false,
+        "facet_id": 116,
+        "facet": "Yarn Indicator Colour"
+      },
+      {
+        "id": "RkxZIEJPWCBPUFRJT05BTA==",
+        "display_name": "FLY BOX OPTIONAL",
+        "type": "product",
+        "display_product_count": true,
+        "collapsed_by_default": false,
+        "items_to_show": 10,
+        "sort_by": "alpha",
+        "is_enabled": false,
+        "facet_id": 117,
+        "facet": "FLY BOX OPTIONAL"
+      }
+    ],
+    "meta": {}
+  },
+  "search/filters/contexts": {
+    "1": {
+      "data": [
+        {
+          "context": {
+            "channel_id": 1,
+            "category_id": 0
+          },
+          "data": [
+            {
+              "id": "Ym9vbA==",
+              "display_name": "Other",
+              "type": "other",
+              "is_enabled": true,
+              "display_product_count": true,
+              "collapsed_by_default": true,
+              "facet_id": 59,
+              "facet": "bool",
+              "show_free_shipping_filter": false,
+              "show_is_featured_filter": false,
+              "show_in_stock_filter": false
+            },
+            {
+              "id": "Y2F0ZWdvcnk=",
+              "display_name": "Category",
+              "type": "category",
+              "items_to_show": 15,
+              "collapsed_by_default": false,
+              "display_product_count": true,
+              "is_enabled": false,
+              "facet_id": 60,
+              "facet": "category"
+            },
+            {
+              "id": "YnJhbmQ=",
+              "display_name": "Brand",
+              "type": "brand",
+              "sort_by": "alpha",
+              "items_to_show": 10,
+              "collapsed_by_default": false,
+              "display_product_count": true,
+              "is_enabled": false,
+              "facet_id": 61,
+              "facet": "brand"
+            },
+            {
+              "id": "cHJpY2U=",
+              "display_name": "Price",
+              "type": "price",
+              "collapsed_by_default": false,
+              "is_enabled": false,
+              "facet_id": 62,
+              "facet": "price"
+            },
+            {
+              "id": "cmF0aW5n",
+              "display_name": "Rating",
+              "type": "rating",
+              "collapsed_by_default": true,
+              "is_enabled": false,
+              "facet_id": 63,
+              "facet": "rating"
+            },
+            {
+              "id": "Rmx5IFNpemVz",
+              "display_name": "Fly Sizes",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": true,
+              "facet_id": 64,
+              "facet": "Fly Sizes"
+            },
+            {
+              "id": "Q2hvb3NlIEZvYW0gU3R5bGU=",
+              "display_name": "Choose Foam Style",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": false,
+              "facet_id": 65,
+              "facet": "Choose Foam Style"
+            },
+            {
+              "id": "Q29sb3I=",
+              "display_name": "Color",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": false,
+              "facet_id": 66,
+              "facet": "Color"
+            },
+            {
+              "id": "Q29sb3Vy",
+              "display_name": "Colour",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": false,
+              "facet_id": 67,
+              "facet": "Colour"
+            },
+            {
+              "id": "Y2hvb3NlIGxlYWRlciB3ZWlnaHQ=",
+              "display_name": "choose leader weight",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": false,
+              "facet_id": 68,
+              "facet": "choose leader weight"
+            },
+            {
+              "id": "U3RyaWtlIEluZGljYXRvciBDb2xvdXI=",
+              "display_name": "Strike Indicator Colour",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": false,
+              "facet_id": 69,
+              "facet": "Strike Indicator Colour"
+            },
+            {
+              "id": "U2l6ZQ==",
+              "display_name": "Size",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": false,
+              "facet_id": 70,
+              "facet": "Size"
+            },
+            {
+              "id": "Q2hvb3NlIFNpemU=",
+              "display_name": "Choose Size",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": false,
+              "facet_id": 71,
+              "facet": "Choose Size"
+            },
+            {
+              "id": "WWFybiBJbmRpY2F0b3IgQ29sb3Vy",
+              "display_name": "Yarn Indicator Colour",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": false,
+              "facet_id": 72,
+              "facet": "Yarn Indicator Colour"
+            },
+            {
+              "id": "RkxZIEJPWCBPUFRJT05BTA==",
+              "display_name": "FLY BOX OPTIONAL",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": false,
+              "facet_id": 73,
+              "facet": "FLY BOX OPTIONAL"
+            }
+          ]
+        }
+      ],
+      "meta": {}
+    },
+    "1855224": {
+      "data": [
+        {
+          "context": {
+            "channel_id": 1855224,
+            "category_id": 0
+          },
+          "data": [
+            {
+              "id": "Ym9vbA==",
+              "display_name": "Other",
+              "type": "other",
+              "is_enabled": true,
+              "display_product_count": true,
+              "collapsed_by_default": true,
+              "facet_id": 77,
+              "facet": "bool",
+              "show_free_shipping_filter": false,
+              "show_is_featured_filter": false,
+              "show_in_stock_filter": false
+            },
+            {
+              "id": "Y2F0ZWdvcnk=",
+              "display_name": "Category",
+              "type": "category",
+              "items_to_show": 15,
+              "collapsed_by_default": false,
+              "display_product_count": true,
+              "is_enabled": true,
+              "facet_id": 78,
+              "facet": "category"
+            },
+            {
+              "id": "YnJhbmQ=",
+              "display_name": "Brand",
+              "type": "brand",
+              "sort_by": "alpha",
+              "items_to_show": 10,
+              "collapsed_by_default": false,
+              "display_product_count": true,
+              "is_enabled": false,
+              "facet_id": 79,
+              "facet": "brand"
+            },
+            {
+              "id": "cHJpY2U=",
+              "display_name": "Price",
+              "type": "price",
+              "collapsed_by_default": false,
+              "is_enabled": true,
+              "facet_id": 80,
+              "facet": "price"
+            },
+            {
+              "id": "Rmx5IFNpemVz",
+              "display_name": "Fly Sizes",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": true,
+              "facet_id": 81,
+              "facet": "Fly Sizes"
+            }
+          ]
+        }
+      ],
+      "meta": {}
+    },
+    "1895766": {
+      "data": [],
+      "meta": {}
+    },
+    "global": {
+      "data": [
+        {
+          "context": {
+            "channel_id": 1,
+            "category_id": 0
+          },
+          "data": [
+            {
+              "id": "Ym9vbA==",
+              "display_name": "Other",
+              "type": "other",
+              "is_enabled": true,
+              "display_product_count": true,
+              "collapsed_by_default": true,
+              "facet_id": 59,
+              "facet": "bool",
+              "show_free_shipping_filter": false,
+              "show_is_featured_filter": false,
+              "show_in_stock_filter": false
+            },
+            {
+              "id": "Y2F0ZWdvcnk=",
+              "display_name": "Category",
+              "type": "category",
+              "items_to_show": 15,
+              "collapsed_by_default": false,
+              "display_product_count": true,
+              "is_enabled": false,
+              "facet_id": 60,
+              "facet": "category"
+            },
+            {
+              "id": "YnJhbmQ=",
+              "display_name": "Brand",
+              "type": "brand",
+              "sort_by": "alpha",
+              "items_to_show": 10,
+              "collapsed_by_default": false,
+              "display_product_count": true,
+              "is_enabled": false,
+              "facet_id": 61,
+              "facet": "brand"
+            },
+            {
+              "id": "cHJpY2U=",
+              "display_name": "Price",
+              "type": "price",
+              "collapsed_by_default": false,
+              "is_enabled": false,
+              "facet_id": 62,
+              "facet": "price"
+            },
+            {
+              "id": "cmF0aW5n",
+              "display_name": "Rating",
+              "type": "rating",
+              "collapsed_by_default": true,
+              "is_enabled": false,
+              "facet_id": 63,
+              "facet": "rating"
+            },
+            {
+              "id": "Rmx5IFNpemVz",
+              "display_name": "Fly Sizes",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": true,
+              "facet_id": 64,
+              "facet": "Fly Sizes"
+            },
+            {
+              "id": "Q2hvb3NlIEZvYW0gU3R5bGU=",
+              "display_name": "Choose Foam Style",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": false,
+              "facet_id": 65,
+              "facet": "Choose Foam Style"
+            },
+            {
+              "id": "Q29sb3I=",
+              "display_name": "Color",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": false,
+              "facet_id": 66,
+              "facet": "Color"
+            },
+            {
+              "id": "Q29sb3Vy",
+              "display_name": "Colour",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": false,
+              "facet_id": 67,
+              "facet": "Colour"
+            },
+            {
+              "id": "Y2hvb3NlIGxlYWRlciB3ZWlnaHQ=",
+              "display_name": "choose leader weight",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": false,
+              "facet_id": 68,
+              "facet": "choose leader weight"
+            },
+            {
+              "id": "U3RyaWtlIEluZGljYXRvciBDb2xvdXI=",
+              "display_name": "Strike Indicator Colour",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": false,
+              "facet_id": 69,
+              "facet": "Strike Indicator Colour"
+            },
+            {
+              "id": "U2l6ZQ==",
+              "display_name": "Size",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": false,
+              "facet_id": 70,
+              "facet": "Size"
+            },
+            {
+              "id": "Q2hvb3NlIFNpemU=",
+              "display_name": "Choose Size",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": false,
+              "facet_id": 71,
+              "facet": "Choose Size"
+            },
+            {
+              "id": "WWFybiBJbmRpY2F0b3IgQ29sb3Vy",
+              "display_name": "Yarn Indicator Colour",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": false,
+              "facet_id": 72,
+              "facet": "Yarn Indicator Colour"
+            },
+            {
+              "id": "RkxZIEJPWCBPUFRJT05BTA==",
+              "display_name": "FLY BOX OPTIONAL",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": false,
+              "facet_id": 73,
+              "facet": "FLY BOX OPTIONAL"
+            }
+          ]
+        },
+        {
+          "context": {
+            "channel_id": 1855224,
+            "category_id": 0
+          },
+          "data": [
+            {
+              "id": "Ym9vbA==",
+              "display_name": "Other",
+              "type": "other",
+              "is_enabled": true,
+              "display_product_count": true,
+              "collapsed_by_default": true,
+              "facet_id": 77,
+              "facet": "bool",
+              "show_free_shipping_filter": false,
+              "show_is_featured_filter": false,
+              "show_in_stock_filter": false
+            },
+            {
+              "id": "Y2F0ZWdvcnk=",
+              "display_name": "Category",
+              "type": "category",
+              "items_to_show": 15,
+              "collapsed_by_default": false,
+              "display_product_count": true,
+              "is_enabled": true,
+              "facet_id": 78,
+              "facet": "category"
+            },
+            {
+              "id": "YnJhbmQ=",
+              "display_name": "Brand",
+              "type": "brand",
+              "sort_by": "alpha",
+              "items_to_show": 10,
+              "collapsed_by_default": false,
+              "display_product_count": true,
+              "is_enabled": false,
+              "facet_id": 79,
+              "facet": "brand"
+            },
+            {
+              "id": "cHJpY2U=",
+              "display_name": "Price",
+              "type": "price",
+              "collapsed_by_default": false,
+              "is_enabled": true,
+              "facet_id": 80,
+              "facet": "price"
+            },
+            {
+              "id": "Rmx5IFNpemVz",
+              "display_name": "Fly Sizes",
+              "type": "product",
+              "display_product_count": true,
+              "collapsed_by_default": false,
+              "items_to_show": 10,
+              "sort_by": "alpha",
+              "is_enabled": true,
+              "facet_id": 81,
+              "facet": "Fly Sizes"
+            }
+          ]
+        }
+      ],
+      "meta": {}
+    }
+  },
+  "currency-assignments": {
+    "1": {
+      "data": {
+        "channel_id": 1,
+        "enabled_currencies": [
+          "CAD"
+        ],
+        "default_currency": "CAD"
+      },
+      "meta": {}
+    },
+    "1855224": {
+      "data": {
+        "channel_id": 1855224,
+        "enabled_currencies": [
+          "USD"
+        ],
+        "default_currency": "USD"
+      },
+      "meta": {}
+    },
+    "1895766": {
+      "data": {
+        "channel_id": 1895766,
+        "enabled_currencies": [
+          "CAD",
+          "USD"
+        ],
+        "default_currency": "CAD"
+      },
+      "meta": {}
+    }
+  }
+}

@@ -16,6 +16,7 @@ The checks every theme change is held to (ticket 16; spec "Testing Decisions", s
 | Host batch on the prelaunch host | `npm run qa:prelaunch` | no | no: once per checkpoint, in the operator's shell with the preview cookie ([Host batch](#host-batch-qaprelaunch)) |
 | UI states (drawer, panel) and kind@name pins | with `qa:axe` and `qa:screens` | no | yes (release.sh, through `qa:prepush`) |
 | Overlays | `QA_OVERLAY=<name> npm run qa:screens` (and `qa:axe`, `qa:raw-html`) | no | no: refused with `QA_FRESH_SERVER=1` ([Render modes](#render-modes-w0-8)) |
+| The skin in a browser (ticket 25): focus ring, skip link, landmarks, Onest, reduced motion, reflow, the default product image | `npx playwright test --config scripts/qa/playwright.config.mjs skin.spec` | no | no: run it in each ticket that changes the skin ([The skin](#the-skin-skinspecmjs)) |
 | Switch matrix: every pinned page with each module switch on and off (ticket 54a) | `npm run qa:matrix` | no | no: ticket 54's full pass, and each switch ticket for its own switch ([Switch matrix](#switch-matrix-and-the-extra-checks-ticket-54a)) |
 | Reflow at 320, reduced motion, the focus tab-through (ticket 54a) | `npm run qa:reflow`, `qa:motion`, `qa:focus` | no | no: in the switch matrix and ticket 54's full pass |
 | Home widget links answer 200 (ticket 54a) | `npm run qa:links` | no | no: ticket 54's full pass |
@@ -177,7 +178,7 @@ Every Playwright gate opens its pages through `fixtures.mjs`, which puts a guard
 
 `scripts/qa/pages.mjs` is the one place that says which page each gate visits, per channel:
 
-- **Page keys** are the spec's template names: `home`, `fly-type`, `species`, `species-hub`, `product`, `cart`, `hook-chart`, `404` and `brand`, plus `category` for the stock category template until ticket 32. A channel pins more pages of one kind as `kind@name`, such as `product@5663` or `product@sold-out` ([Render modes](#render-modes-w0-8)).
+- **Page keys** are the spec's template names: `home`, `fly-type`, `species`, `species-hub`, `product`, `cart`, `hook-chart`, `404` and `brand`, plus `category` for the stock category template until ticket 32, `page` for a Web Page, and `login` and `create-account` for the sign-in forms (ticket 25). ReelFlies_CA has no Web Page yet, so channel 1 pins one (`/coupon-codes/`, a paragraph of terms). A channel pins more pages of one kind as `kind@name`, such as `product@5663` or `product@sold-out` ([Render modes](#render-modes-w0-8)).
 - **Test products are pinned** by URL. Pick ones that will stay in the catalogue.
 - **Every pinned page must answer as its template:** HTTP 404 for `404`, and 200 for every other page. Otherwise axe, the screenshots and the raw-HTML check fail the page instead of checking an error page. A renamed product or a mistyped pin shows up as that failure.
 - **A 5xx or a 429 is asked again** (`retry.mjs`, W0-4). Each retry prints a `RETRY` line first, so a run that passed after one shows it.
@@ -446,7 +447,7 @@ Every pinned page, at 375 and 1280, runs with the tags WCAG 2.0–2.2 A and AA p
 - A listed issue that no longer occurs is reported as fixed, so the entry can be removed.
 - An entry's `templates` are page kinds or `kind@name` pins. Its optional `states` limits it to the page with one of those UI states open; without it, it covers the page in every state.
 - **The list holds three entries, all with the stock desktop sub-menu open** (`panel-open` on channel 1's category page; W0-8, 2026-10-06): `aria-hidden-focus`, `color-contrast` and `target-size`. Ticket 28 replaces the sub-menu with its panel and removes them. The closed stock templates had no serious or critical issues on ReelFlies_CA (home, cart, 404, brand) or on the channel-1 product and category pages on 2026-10-05, and the stock phone menu open (`drawer-open`) has none.
-- The moderate issues found (no `<main>` landmark, content outside landmarks, heading order, duplicate landmarks) are ticket 25's.
+- The moderate issues found were no `<main>` landmark, content outside landmarks, heading order and duplicate landmarks. Ticket 25 gave every template one `<main>`, which `skin.spec.mjs` checks with axe's two landmark rules on every pin. Heading order on the cart and search pages is left for the tickets that rebuild them (41 and 30), and content outside landmarks for the header and footer tickets (27 and 50).
 
 ## Screenshots (`screens.spec.mjs`)
 
@@ -529,18 +530,22 @@ export default {
 - `markupOnly(html)` returns the HTML with comments removed and those text-only elements emptied, their tags kept, so a text search sees only markup (`rf-live-region` uses it).
 - `scriptsOfType(html, type)` returns script contents, such as JSON-LD.
 
-**Tests:** add a fixture page to `raw-html/fixtures/` and a case to `raw-html/raw-html.test.mjs`, or a test file of your own beside it (ticket 25's is `page-frame.test.mjs`), with a failing fixture and a passing one. Every fixture page runs every registered assertion, so a fixture of a whole page carries what every page has: the icon sheet and the live region right after `<body>`, and one `<main>`. CI runs them through `npm run test:scripts`. `raw-html/fetch.test.mjs` checks that the preview cookie reaches `QA_BASE_URL` and never a host a redirect points at.
+**Tests:** add a fixture page to `raw-html/fixtures/` and a case to `raw-html/raw-html.test.mjs`, or a test file of your own beside it (ticket 25's is `page-frame.test.mjs`), with a failing fixture and a passing one. Every fixture page runs every registered assertion, so a fixture of a whole page carries what every page has: `<html lang="en-CA">`, the en-CA content language, the Onest preload, a favicon link and one `og:image` in the head, the icon sheet and the live region right after `<body>`, and one `<main>`. CI runs them through `npm run test:scripts`. `raw-html/fetch.test.mjs` checks that the preview cookie reaches `QA_BASE_URL` and never a host a redirect points at.
 
 **The assertions today:**
 
 | Assertion | Ticket | Checks |
 |---|---|---|
-| `one-canonical` | 16 | exactly one canonical link; not asked of the cart or the 404 page, which have none in stock Cornerstone |
+| `one-canonical` | 16 | exactly one canonical link; not asked of the cart, the 404 page or the sign-in and create-account pages, which have none in stock Cornerstone |
 | `json-ld-parses` | 16 | every `application/ld+json` block parses |
 | `no-region-prompt` | 16, then 52 | no element carries `data-rf-region-prompt` |
 | `one-main` | 25 | exactly one main landmark: a `<main>`, or an element with `role="main"`, counted once. `body.html` makes the wrapper a `<main>` on home, product and cart only |
 | `rf-live-region` | 25 | exactly one `data-rf-live-region` element, with `role="status"`, empty in the server HTML |
 | `rf-icon-sheet` | 25 | the ReelFlies icon sheet (`data-rf-icons`) once, as the first element in `<body>`, with `aria-hidden="true"` |
+| `lang-en-ca` | 25 | `<html lang="en-CA">` and one `content-language` meta element, en-CA (`components/reelflies/head.html`) |
+| `rf-fonts` | 25 | one preload of `fonts/onest-latin-var.woff2`, `as="font"`, `type="font/woff2"` and `crossorigin`, and no link to Google Fonts (stock asked it for Karla and Montserrat) |
+| `rf-brand-head` | 25 | a favicon link with an href, and exactly one `og:image`: the page's own (a product's), or the ReelFlies default share image |
+| `autocomplete` | 25 | on `login` and `create-account` only: the sign-in fields carry `email` and `current-password`, and every store form field its token by `data-field-type` (`TOKENS`). The account and address forms need a signed-in customer, so `render/partials/autocomplete.test.mjs` renders them from fixtures |
 
 **Still to come:**
 
@@ -563,6 +568,26 @@ QA_BASE_URL=https://<prelaunch host> npm run qa:raw-html    # with QA_PREVIEW_CO
 It exits 1 on a failed check, and 2 when the storefront can't be reached or, with `QA_FRESH_SERVER=1`, when something already answers on `QA_PORT` or the port after it.
 
 **Not run on prelaunch yet.** The product and category runs so far were on channel 1 through `stencil start -c 1`. The prelaunch run needs the preview cookie (ticket 11) and ReelFlies_CA's product and category pins (refactor tickets 13 and 14).
+
+## The skin (`skin.spec.mjs`)
+
+Ticket 25's checks in a browser (spec seam 1; stories 67 to 71), on every page pinned for `QA_CHANNEL`, at 375 and 1280:
+
+- **Focus ring:** one Tab, then focus on the first visible link and the first visible button; each shows the ReelFlies ring (2px solid #23272B, 2px offset, `!important` over the stock #0f7fff, on `:focus-visible` only). A mouse press on each focuses it with no ring. Stock `.button` eases `all` over 0.15s, so the check waits for the ring to settle.
+- **Skip link:** the first Tab lands on `.skip-to-main-link`.
+- **Landmarks:** axe's `landmark-one-main` and `landmark-no-duplicate-main`, which are moderate, so the axe gate doesn't fail on them.
+- **Onest:** `onest-latin-var.woff2` is requested once, nothing goes to Google Fonts for the theme's fonts (the create-account page's reCAPTCHA loads its own Roboto, which is the store's widget), one Onest face is loaded, the body's stack starts `Onest, "Onest Fallback"`, and the root font size is 16px.
+- **Reduced motion:** with `prefers-reduced-motion: reduce` emulated, no element or pseudo-element has a transition or animation longer than 0.01ms, where the page without it has the stock 0.15s. jQuery's animations jump too, which Jest checks (`reduced-motion.spec.js`, `global.spec.js`): the theme's jQuery isn't on `window`.
+- **Reflow:** home and category pages don't scroll sideways at 320 CSS px wide, or at 640 (a 1280 window at 200% zoom).
+- **The default product image:** on channel 1, a product with no photo of its own (`/mustad-9479-salmon-egg-fly-hook-100-pack/`, ticket 14's inventory) shows `img/reelflies/default-product.png`.
+
+```sh
+export QA_PORT=3400
+npx playwright test --config scripts/qa/playwright.config.mjs skin.spec
+QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs skin.spec
+```
+
+It isn't part of `qa:prepush`, so a release doesn't run it. Ticket 54 folds the focus, reflow and reduced-motion checks into its runner.
 
 ## Fixture renders (`render/`)
 
@@ -898,5 +923,5 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - `switches.test.mjs` covers ticket 54a's switch registry: the switches against config.json, which switches a template reads, the overlay that flips each, and the markers and chunks a landed module names. `switch-matrix.test.mjs` covers the matrix's plan, its Playwright filters, how it reads each row's JSON report, what it runs for a row and what it prints. `page-checks.test.mjs` proves the reflow, reduced-motion and focus checks in Chromium (skipped in CI, which has none), and `widget-links.test.mjs` the widget link check against a server of its own.
 - `reflow.spec.mjs`, `reduced-motion.spec.mjs`, `focus.spec.mjs` and `switch-stock.spec.mjs` run through `qa:reflow`, `qa:motion`, `qa:focus` and the switch matrix, never through `qa:axe`, `qa:screens` or `qa:prepush`, whose filters don't match them.
 - Jest runs `assets/js/test-unit/`. `jest.config.js` ignores `scripts/`, because Jest 30 would otherwise match `*.test.mjs` and `*.spec.mjs` too.
-- `screens-reference.spec.mjs` runs with `qa:screens`, because its name matches the filter, and never fails it. `review-live.spec.mjs` runs only when named. Neither is a gate. `review/manifest-reporter.test.mjs` checks both against `package.json`'s filters.
+- `screens-reference.spec.mjs` runs with `qa:screens`, because its name matches the filter, and never fails it. `review-live.spec.mjs` and `skin.spec.mjs` run only when named. None of the three is a gate. `review/manifest-reporter.test.mjs` checks both against `package.json`'s filters.
 - Playwright writes its report, traces and failed diffs to `scripts/qa/results/`, which is ignored by git. The manifest reporter writes `results/manifest.json` there too, and the review pages go to `results/review/`. A run with `QA_PREVIEW_COOKIE` writes no traces, so the cookie never lands there.

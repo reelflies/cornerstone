@@ -1,0 +1,861 @@
+{
+    "data": [
+        {
+            "id": 1,
+            "name": "Parachute Adams",
+            "type": "physical",
+            "is_visible": true,
+            "inventory_tracking": "variant",
+            "inventory_level": 30,
+            "categories": [
+                111,
+                201
+            ],
+            "variants": [
+                {
+                    "id": 1001,
+                    "product_id": 1,
+                    "sku": "RF-1-12",
+                    "inventory_level": 6,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5001,
+                            "label": "12",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1002,
+                    "product_id": 1,
+                    "sku": "RF-1-14",
+                    "inventory_level": 12,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5002,
+                            "label": "14",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1003,
+                    "product_id": 1,
+                    "sku": "RF-1-16",
+                    "inventory_level": 8,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5003,
+                            "label": "16",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1004,
+                    "product_id": 1,
+                    "sku": "RF-1-18",
+                    "inventory_level": 4,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5004,
+                            "label": "18",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 2,
+            "name": "Elk Hair Caddis",
+            "type": "physical",
+            "is_visible": true,
+            "inventory_tracking": "variant",
+            "inventory_level": 10,
+            "categories": [
+                113
+            ],
+            "variants": [
+                {
+                    "id": 1005,
+                    "product_id": 2,
+                    "sku": "RF-2-12",
+                    "inventory_level": 3,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5005,
+                            "label": "12",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1006,
+                    "product_id": 2,
+                    "sku": "RF-2-14",
+                    "inventory_level": 5,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5006,
+                            "label": "14",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1007,
+                    "product_id": 2,
+                    "sku": "RF-2-16",
+                    "inventory_level": 2,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5007,
+                            "label": "16",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 3,
+            "name": "Pheasant Tail Nymph",
+            "type": "physical",
+            "is_visible": true,
+            "inventory_tracking": "variant",
+            "inventory_level": 28,
+            "categories": [
+                121
+            ],
+            "variants": [
+                {
+                    "id": 1008,
+                    "product_id": 3,
+                    "sku": "RF-3-14",
+                    "inventory_level": 10,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5008,
+                            "label": "14",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1009,
+                    "product_id": 3,
+                    "sku": "RF-3-16",
+                    "inventory_level": 10,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5009,
+                            "label": "16",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1010,
+                    "product_id": 3,
+                    "sku": "RF-3-18",
+                    "inventory_level": 6,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5010,
+                            "label": "18",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1011,
+                    "product_id": 3,
+                    "sku": "RF-3-20",
+                    "inventory_level": 2,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5011,
+                            "label": "20",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 4,
+            "name": "Woolly Bugger",
+            "type": "physical",
+            "is_visible": true,
+            "inventory_tracking": "product",
+            "inventory_level": 24,
+            "categories": [
+                103
+            ],
+            "variants": [
+                {
+                    "id": 1012,
+                    "product_id": 4,
+                    "sku": "RF-4-10",
+                    "inventory_level": 0,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5012,
+                            "label": "10",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1013,
+                    "product_id": 4,
+                    "sku": "RF-4-8",
+                    "inventory_level": 0,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5013,
+                            "label": "8",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1014,
+                    "product_id": 4,
+                    "sku": "RF-4-6",
+                    "inventory_level": 0,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5014,
+                            "label": "6",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1015,
+                    "product_id": 4,
+                    "sku": "RF-4-4",
+                    "inventory_level": 0,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5015,
+                            "label": "4",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1016,
+                    "product_id": 4,
+                    "sku": "RF-4-2",
+                    "inventory_level": 0,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5016,
+                            "label": "2",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 5,
+            "name": "Pike Bunny",
+            "type": "physical",
+            "is_visible": true,
+            "inventory_tracking": "variant",
+            "inventory_level": 6,
+            "categories": [
+                105
+            ],
+            "variants": [
+                {
+                    "id": 1017,
+                    "product_id": 5,
+                    "sku": "RF-5-6-0",
+                    "inventory_level": 2,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5017,
+                            "label": "6-0",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1018,
+                    "product_id": 5,
+                    "sku": "RF-5-4-0",
+                    "inventory_level": 1,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5018,
+                            "label": "4-0",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1019,
+                    "product_id": 5,
+                    "sku": "RF-5-2-0",
+                    "inventory_level": 3,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5019,
+                            "label": "2-0",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 6,
+            "name": "Clouser Minnow",
+            "type": "physical",
+            "is_visible": true,
+            "inventory_tracking": "none",
+            "inventory_level": 0,
+            "categories": [
+                106,
+                103
+            ],
+            "variants": [
+                {
+                    "id": 1020,
+                    "product_id": 6,
+                    "sku": "RF-6-1-0",
+                    "inventory_level": 0,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5020,
+                            "label": "1/0",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1021,
+                    "product_id": 6,
+                    "sku": "RF-6-2",
+                    "inventory_level": 0,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5021,
+                            "label": "2",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1022,
+                    "product_id": 6,
+                    "sku": "RF-6-4",
+                    "inventory_level": 0,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5022,
+                            "label": "4",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 7,
+            "name": "Hidden Midge",
+            "type": "physical",
+            "is_visible": false,
+            "inventory_tracking": "variant",
+            "inventory_level": 10,
+            "categories": [
+                101
+            ],
+            "variants": [
+                {
+                    "id": 1023,
+                    "product_id": 7,
+                    "sku": "RF-7-22",
+                    "inventory_level": 5,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5023,
+                            "label": "22",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1024,
+                    "product_id": 7,
+                    "sku": "RF-7-24",
+                    "inventory_level": 5,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5024,
+                            "label": "24",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 8,
+            "name": "Channel 1 Midge",
+            "type": "physical",
+            "is_visible": true,
+            "inventory_tracking": "variant",
+            "inventory_level": 5,
+            "categories": [
+                101
+            ],
+            "variants": [
+                {
+                    "id": 1025,
+                    "product_id": 8,
+                    "sku": "RF-8-22",
+                    "inventory_level": 5,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5025,
+                            "label": "22",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 9,
+            "name": "Trout Fly Selection",
+            "type": "physical",
+            "is_visible": true,
+            "inventory_tracking": "variant",
+            "inventory_level": 4,
+            "categories": [
+                201
+            ],
+            "variants": [
+                {
+                    "id": 1026,
+                    "product_id": 9,
+                    "sku": "RF-9-14",
+                    "inventory_level": 4,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5026,
+                            "label": "14",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 10,
+            "name": "Glo Bug",
+            "type": "physical",
+            "is_visible": true,
+            "inventory_tracking": "none",
+            "inventory_level": 0,
+            "categories": [
+                104
+            ],
+            "variants": [
+                {
+                    "id": 1027,
+                    "product_id": 10,
+                    "sku": "RF-10-10",
+                    "inventory_level": 0,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5027,
+                            "label": "10",
+                            "option_id": 901,
+                            "option_display_name": "Size"
+                        },
+                        {
+                            "id": 5028,
+                            "label": "Pink",
+                            "option_id": 902,
+                            "option_display_name": "Colour"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 11,
+            "name": "Tiny Adams",
+            "type": "physical",
+            "is_visible": true,
+            "inventory_tracking": "variant",
+            "inventory_level": 10,
+            "categories": [
+                101
+            ],
+            "variants": [
+                {
+                    "id": 1028,
+                    "product_id": 11,
+                    "sku": "RF-11-26",
+                    "inventory_level": 3,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5029,
+                            "label": "26",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1029,
+                    "product_id": 11,
+                    "sku": "RF-11-14",
+                    "inventory_level": 7,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5030,
+                            "label": "14",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 12,
+            "name": "Fly Box",
+            "type": "physical",
+            "is_visible": true,
+            "inventory_tracking": "product",
+            "inventory_level": 10,
+            "categories": [
+                101
+            ],
+            "variants": [
+                {
+                    "id": 1030,
+                    "product_id": 12,
+                    "sku": "RF-12",
+                    "inventory_level": 0,
+                    "purchasing_disabled": false,
+                    "option_values": []
+                }
+            ]
+        },
+        {
+            "id": 13,
+            "name": "Zebra Midge",
+            "type": "physical",
+            "is_visible": true,
+            "inventory_tracking": "variant",
+            "inventory_level": 3,
+            "categories": [
+                121
+            ],
+            "variants": [
+                {
+                    "id": 1031,
+                    "product_id": 13,
+                    "sku": "RF-13-20",
+                    "inventory_level": 0,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5031,
+                            "label": "20",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1032,
+                    "product_id": 13,
+                    "sku": "RF-13-22",
+                    "inventory_level": 0,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5032,
+                            "label": "22",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1033,
+                    "product_id": 13,
+                    "sku": "RF-13-24",
+                    "inventory_level": 3,
+                    "purchasing_disabled": true,
+                    "option_values": [
+                        {
+                            "id": 5033,
+                            "label": "24",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 14,
+            "name": "Deer Hair Mouse",
+            "type": "physical",
+            "is_visible": true,
+            "inventory_tracking": "product",
+            "inventory_level": 0,
+            "categories": [
+                105
+            ],
+            "variants": [
+                {
+                    "id": 1034,
+                    "product_id": 14,
+                    "sku": "RF-14-2-0",
+                    "inventory_level": 4,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5034,
+                            "label": "2/0",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1035,
+                    "product_id": 14,
+                    "sku": "RF-14-1-0",
+                    "inventory_level": 4,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5035,
+                            "label": "1/0",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 15,
+            "name": "Copper John",
+            "type": "physical",
+            "is_visible": true,
+            "inventory_tracking": "variant",
+            "inventory_level": 4,
+            "categories": [
+                102
+            ],
+            "variants": [
+                {
+                    "id": 1036,
+                    "product_id": 15,
+                    "sku": "RF-15-16-RED",
+                    "inventory_level": 0,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5036,
+                            "label": "16",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        },
+                        {
+                            "id": 5037,
+                            "label": "Red",
+                            "option_id": 902,
+                            "option_display_name": "Colour"
+                        }
+                    ]
+                },
+                {
+                    "id": 1037,
+                    "product_id": 15,
+                    "sku": "RF-15-16-COP",
+                    "inventory_level": 4,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5036,
+                            "label": "16",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        },
+                        {
+                            "id": 5038,
+                            "label": "Copper",
+                            "option_id": 902,
+                            "option_display_name": "Colour"
+                        }
+                    ]
+                },
+                {
+                    "id": 1038,
+                    "product_id": 15,
+                    "sku": "RF-15-18-RED",
+                    "inventory_level": 0,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5039,
+                            "label": "18",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        },
+                        {
+                            "id": 5037,
+                            "label": "Red",
+                            "option_id": 902,
+                            "option_display_name": "Colour"
+                        }
+                    ]
+                },
+                {
+                    "id": 1039,
+                    "product_id": 15,
+                    "sku": "RF-15-18-COP",
+                    "inventory_level": 0,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5039,
+                            "label": "18",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        },
+                        {
+                            "id": 5038,
+                            "label": "Copper",
+                            "option_id": 902,
+                            "option_display_name": "Colour"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 16,
+            "name": "Perdigon",
+            "type": "physical",
+            "is_visible": true,
+            "inventory_tracking": "variant",
+            "inventory_level": 9,
+            "categories": [
+                122
+            ],
+            "variants": [
+                {
+                    "id": 1040,
+                    "product_id": 16,
+                    "sku": "RF-16-14",
+                    "inventory_level": 5,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5040,
+                            "label": "14",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                },
+                {
+                    "id": 1041,
+                    "product_id": 16,
+                    "sku": "RF-16-16",
+                    "inventory_level": 4,
+                    "purchasing_disabled": false,
+                    "option_values": [
+                        {
+                            "id": 5041,
+                            "label": "16",
+                            "option_id": 900,
+                            "option_display_name": "Fly Sizes"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "meta": {
+        "pagination": {
+            "total": 16,
+            "count": 16,
+            "per_page": 250,
+            "current_page": 1,
+            "total_pages": 1
+        }
+    }
+}

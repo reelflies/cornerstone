@@ -1,9 +1,9 @@
-{{!-- ReelFlies hook (ticket 25): <main> on home, product and cart, whose templates have none. Every other template keeps the stock <div>, because many carry their own <main> (build pipeline 6.1). --}}
-{{#inArray (split 'pages/home,pages/product,pages/cart' ',') template}}<main{{else}}<div{{/inArray}} class="body" id="main-content" data-currency-code="{{currency_selector.active_currency_code}}">
+{{!-- ReelFlies hook (ticket 25): <main> on the templates that have none (rf_main_templates): home, product and cart, then the account, sign-in, blog post, sitemap, newsletter and hibernation pages. Every other template keeps the stock <div>, because it carries its own <main> (build pipeline 6.1). --}}{{assignVar 'rf_main_templates' 'pages/home,pages/product,pages/cart,pages/account/add-address,pages/account/add-payment-method,pages/account/add-wishlist,pages/account/addresses,pages/account/download-item,pages/account/edit,pages/account/edit-payment-method,pages/account/orders/completed,pages/account/orders/details,pages/account/payment-methods,pages/account/recent-items,pages/account/return-saved,pages/account/wishlist-details,pages/account/wishlists,pages/auth/create-account,pages/auth/forgot-password,pages/auth/login,pages/auth/new-password,pages/blog-post,pages/sitemap,pages/subscribed,pages/unavailable/hibernation,pages/unsubscribe'}}
+{{#inArray (split (getVar 'rf_main_templates') ',') template}}<main{{else}}<div{{/inArray}} class="body" id="main-content" data-currency-code="{{currency_selector.active_currency_code}}">
     {{#block "hero"}} {{/block}}
     <div class="container">
         {{#block "page"}} {{/block}}
     </div>
     {{> components/common/modal/modal}}
     {{> components/common/alert/alert-modal}}
-{{#inArray (split 'pages/home,pages/product,pages/cart' ',') template}}</main>{{else}}</div>{{/inArray}}
+{{#inArray (split (getVar 'rf_main_templates') ',') template}}</main>{{else}}</div>{{/inArray}}
