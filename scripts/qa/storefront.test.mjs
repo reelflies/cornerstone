@@ -287,6 +287,21 @@ describe('stopping a server a gate started', () => {
         await new Promise(resolve => { setTimeout(resolve, 100); });
         return untilBusy(port, tries - 1);
     };
+    // Waits until no process of `group` is left (kill(-group, 0) throws ESRCH), for up to 3 s.
+    // A free port isn't enough. A server can close its socket before it exits, and a process
+    // that has exited stays in its group until it is reaped: its gate has exited, so the process
+    // that adopts it (init) reaps it a moment later. Until then kill(-group, 0) succeeds on Linux
+    // (CI run 37565463190 failed so) and throws EPERM on macOS.
+    const untilGroupGone = async (group, deadline = Date.now() + 3000) => {
+        try {
+            process.kill(-group, 0);
+        } catch (error) {
+            if (error.code === 'ESRCH') return;
+        }
+        if (Date.now() >= deadline) return;
+        await new Promise(resolve => { setTimeout(resolve, 50); });
+        await untilGroupGone(group, deadline);
+    };
 
     it('stops the whole process group and frees its port', async () => {
         const port = await freePort();
@@ -307,11 +322,18 @@ describe('stopping a server a gate started', () => {
         assert.throws(() => process.kill(-child.pid, 0), { code: 'ESRCH' }, 'no process of the group is left');
     });
 
-    for (const signal of ['SIGINT', 'SIGTERM']) {
-        it(`stops the server's whole group when the gate itself is stopped with ${signal}`, async () => {
+    // The server the gate starts: one that dies on SIGTERM, and one that closes its port on
+    // SIGTERM and exits 300 ms later, as a server that shuts down gracefully does.
+    const servers = [
+        ['', port => `require('http').createServer().listen(${port}, '127.0.0.1')`],
+        [', even when its server frees the port before it exits', port => `const server = require('http').createServer().listen(${port}, '127.0.0.1'); process.on('SIGTERM', () => { server.close(); setTimeout(() => process.exit(0), 300); })`],
+    ];
+    const cases = ['SIGINT', 'SIGTERM'].flatMap(signal => servers.map(([when, script]) => [signal, when, script]));
+    for (const [signal, when, script] of cases) {
+        it(`stops the server's whole group when the gate itself is stopped with ${signal}${when}`, async () => {
             const port = await freePort();
             const storefront = fileURLToPath(new URL('./storefront.mjs', import.meta.url));
-            const command = `${JSON.stringify(process.execPath)} -e "require('http').createServer().listen(${port}, '127.0.0.1')"`;
+            const command = `${JSON.stringify(process.execPath)} -e "${script(port)}"`;
             const gate = spawn(process.execPath, ['--input-type=module', '-e', `
                 import { startProcessGroup } from ${JSON.stringify(storefront)};
                 const server = startProcessGroup(${JSON.stringify(command)});
@@ -327,6 +349,7 @@ describe('stopping a server a gate started', () => {
             clearTimeout(deadline);
             assert.equal(exitCode, 128 + os.constants.signals[signal], 'the gate still stops on the signal');
             assert.deepEqual(await waitForFreePorts({ ports: [port], timeout: 3000 }), [], 'its server is gone');
+            await untilGroupGone(group);
             assert.throws(() => process.kill(-group, 0), { code: 'ESRCH' }, 'no process of the group is left');
         });
     }
