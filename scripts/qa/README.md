@@ -1,6 +1,6 @@
 # Storefront quality gates
 
-The checks every theme change is held to (ticket 16; spec "Testing Decisions", seams 1 to 3). Lighthouse is ticket 17's and joins this folder.
+The checks every theme change is held to (ticket 16; spec "Testing Decisions", seams 1 to 3), and ticket 17's Lighthouse budgets.
 
 | Gate | Command | Runs in CI | Runs before each push |
 |---|---|---|---|
@@ -12,6 +12,7 @@ The checks every theme change is held to (ticket 16; spec "Testing Decisions", s
 | Quick view | `npm run qa:quick-view` | no | no |
 | Fixture renders of partials and widgets | `npm run test:scripts` | yes | yes (release.sh) |
 | Widget element shots | `npm run qa:screens`, with the page shots | no | yes (release.sh, through `qa:prepush`) |
+| Lighthouse budgets (ticket 17) | `npm run qa:lighthouse` | no | not yet: the host batch runs it, and the `release.sh` hook is ticket 17's held second PR ([Lighthouse](#lighthouse-lighthousemjs)) |
 | Host batch on the prelaunch host | `npm run qa:prelaunch` | no | no: once per checkpoint, in the operator's shell with the preview cookie ([Host batch](#host-batch-qaprelaunch)) |
 | UI states (drawer, panel) and kind@name pins | with `qa:axe` and `qa:screens` | no | yes (release.sh, through `qa:prepush`) |
 | Overlays | `QA_OVERLAY=<name> npm run qa:screens` (and `qa:axe`, `qa:raw-html`) | no | no: refused with `QA_FRESH_SERVER=1` ([Render modes](#render-modes-w0-8)) |
@@ -41,7 +42,7 @@ CI has no store credentials, so anything that renders the storefront runs locall
 | `RF_TICKET` | the branch | The ticket the run's locks name, for anyone waiting on them. |
 | `QA_REFERENCE_HTML` | none | The reference page the review pages' reference screens are shot from, instead of `plan/design/reelflies-reference.html` above the checkout ("Review pages") |
 | `QA_MANIFEST` | `scripts/qa/results/manifest.json` | The screenshot manifest a run writes, for example the host batch's in its `QA_RESULTS_DIR` ("Review pages") |
-| `QA_RESULTS_DIR` | none | Set by the host batch to `scripts/qa/results/host/<uuid>/`, the folder a gate files its results in. Ticket 17's Lighthouse runner reads it. |
+| `QA_RESULTS_DIR` | none | Set by the host batch to `scripts/qa/results/host/<uuid>/`, the folder a gate files its results in. Ticket 17's Lighthouse runner files its own in `lighthouse/` inside it. |
 
 **The preview cookie** is a control-panel login, so set it only in your own shell, where it isn't shown or kept in history, and never in a file or a chat (ticket 16):
 
@@ -682,6 +683,67 @@ node scripts/qa/review/review.mjs --pr <number> [--base origin/master]
 
 It writes `results/review/pr-<number>/` with each baseline the working tree changes against its merge base with `--base` (new, untracked baselines too), before and after, beside its reference screen. The page says it is local only, and it is never published.
 
+## Lighthouse (`lighthouse.mjs`)
+
+Ticket 17's speed and accessibility budgets: mobile Lighthouse, three runs of each URL, and the median of each metric held to the budgets and to the drop rule (spec "Testing Decisions", seam 3; stories 68, 70, 72 and 78).
+
+```sh
+export QA_PORT=4100 && npm run qa:lighthouse                           # a local stencil start of this checkout
+npm run qa:prelaunch                                                   # the host batch runs it on the prelaunch host
+QA_BASE_URL=https://reelflies_ca-1895766.mybigcommerce.com npm run qa:lighthouse   # by hand, with QA_PREVIEW_COOKIE read first
+```
+
+**The URLs** are in `lighthouse-urls.json`, one list per channel, covering six page kinds: `home`, `species`, `fly-type`, `product` (one with Fly Sizes), `cart` and `search`. A key is a kind, or `kind@name` for a second page of one kind, as in `pages.mjs`.
+
+- A kind a channel can't list yet goes in its `notPinnedYet` with the reason, which every run prints. ReelFlies_CA lists home, the empty cart and a search for "adams" today; the Species and Fly Type pages wait for refactor 13 and the product page for refactor 14. A kind with neither a URL nor a reason fails the run.
+- Ticket 53 adds channel 1's tree-1 list (Option A).
+- `"budget": "self"` holds a page to no budget, only to its own last accepted run. The home page has it until tickets 46–49 populate it (SEO-8); ticket 49 deletes the line.
+
+**How it runs:**
+
+- The repo's `lighthouse-config.js`, the official release's: Lighthouse's defaults, so mobile emulation and simulated slow 4G. Lighthouse 12.8.1 runs in Playwright's Chromium, build 1217, headless, so the gates and Lighthouse use one browser.
+- Each run starts from a cleared cache and cleared origin storage (Lighthouse's own reset), so it measures a first visit, as SEO-13 asks for CLS.
+- **The analytics tags are blocked**, through `blockedUrlPatterns` from `lighthouseBlockedUrlPatterns()` ([Analytics and live-store writes](#analytics-and-live-store-writes-network-guardmjs)). Every result records "analytics blocked". A run fails when a request to a listed host completed anyway. `QA_ANALYTICS=allow` loads the tags, on the prelaunch host only and before the Flip, as information: such a run is never compared with or added to the history.
+- **A run Lighthouse can't finish** (a 5xx, a page that never paints, a protocol error) is run once more, with a `RETRY` line, as the gates ask a 5xx again (W0-4). A second failure fails that URL, naming Lighthouse's error, and the other URLs are still measured.
+- Lighthouse only loads pages: it clicks nothing and sends no form. It can block URLs but not methods, so it has no write guard like the Playwright gates' (W0-6). Before a live channel's list is added (ticket 53), check in a report's network requests that those pages send no write while they load.
+
+**Where it runs:**
+
+- **No `QA_BASE_URL`:** a local `stencil start` of this checkout (`useStorefront` in `storefront.mjs`), with its port lock and a slot like any gate, on `QA_PORT`. A stencil start serves the webpack dev build, unminified and with its sources inlined as source maps ("Fresh start" above), so **locally only accessibility and CLS are judged**. Performance, LCP and TBT are measured and reported, but say little about the build that ships. A local run never reads or writes the history.
+- **`QA_BASE_URL` set to the prelaunch host:** the build ReelFlies_CA runs, which is what the budgets are for. It needs `QA_PREVIEW_COOKIE` (read as in "The storefront the gates test"). The cookie goes into the browser's cookie jar for the prelaunch host alone, so no other host the page loads from ever gets it, and the browser's profile is a temporary folder removed when the run ends or is stopped. It is never printed and never in a report. Without the cookie the run stops at once: an agent's push records "Lighthouse: pending host batch", and the next host batch measures that build (W0-6). Agents have no cookie, so prelaunch runs are Shaun's host batch.
+- **Another host** (for ticket 56, live reelflies.ca) needs `QA_CHANNEL` to say which channel it serves. The preview cookie is never sent there.
+
+**The budgets,** on each URL's median of three runs: performance 90 or more, LCP 2.5 s or less, CLS 0.05 or less, TBT 200 ms or less, accessibility 100. Each metric takes its own median. A failure names the URL and the metric, and for accessibility the audits that cost points:
+
+```text
+FAIL     search `/search.php?search_query=adams`: accessibility 99, below the budget of 100 (heading-order)
+FAIL     search `/search.php?search_query=adams`: CLS 0.096, over the budget of 0.050
+```
+
+Stock Cornerstone fails these today on a local stencil start: `heading-order` on the cart and search pages, and CLS on the search page (2026-10-06). Ticket 25 owns heading order.
+
+**The drop rule:** a performance median more than 5 points below the URL's last accepted run fails it. Only like is compared with like: runs on a host with the tags blocked.
+
+- **The history** is `lighthouse-history.json`: each channel's URLs, each with its accepted runs (time, source, theme uuid, the build's commit from `RELEASES.md`, the medians), newest last. A malformed file stops the run, so a typo can't switch the rule off.
+- **A run is accepted,** and each URL's medians become its new comparison point, only when a host run with the tags blocked passes every judged budget and the drop rule. A failed run leaves the history as it was.
+- **Ticket 11's baseline** goes in with `--baseline`, which records each URL's medians whatever the budgets say. Then the first run compares with it. If no baseline was taken before ticket 25's push, the rule starts from the first accepted run after it (build pipeline, wave 1).
+
+  ```sh
+  QA_BASE_URL=https://reelflies_ca-1895766.mybigcommerce.com npm run qa:lighthouse -- --baseline 'ticket 11'
+  ```
+
+- A run that changes the history says so. Commit the file through the next release-log PR, with the host batch's `RELEASES.md` rows (build pipeline, section 6.5).
+
+**Results:**
+
+- On a host, under the theme uuid the run reads from the store (GET only, `release-capture.mjs`) before and after the runs: `results/host/<uuid>/lighthouse/`, or `lighthouse/` in the host batch's `QA_RESULTS_DIR`. If the active theme changed meanwhile, the run fails, because its results would mix two builds. Locally, under the commit: `results/local/<sha>[-dirty]/lighthouse/`.
+- Each run's JSON and HTML report (`cart-2.report.html`), and `summary.json`: each run's metrics and Lighthouse's CPU benchmark, the medians, the comparison point, the problems and notes, "analytics blocked", the Lighthouse and Chromium versions, and whether the run was accepted.
+- `lighthouseReleaseLines(summary)` gives the lines a `RELEASES.md` entry records under its Lighthouse line: each URL's five metrics with its JS and CSS bytes (as ticket 11 records them), the kinds not measured yet, and each problem. The host batch writes them ([Host batch](#host-batch-qaprelaunch)), and so will the `release.sh` hook.
+
+It exits 0 when every judged budget and the drop rule passed, 1 when one failed or a URL couldn't be measured, and 2 when it stopped before measuring.
+
+**Not here yet: the `release.sh` hook.** Running the gate after each push to prelaunch, and writing its lines into the release entry, edits the release tooling, so it is ticket 17's second PR, held for Shaun's merge. The runner doesn't decide what a push without the cookie, or a P1 fix after the Flip, records; the hook does.
+
 ## Host batch (`qa:prelaunch`)
 
 `npm run qa:prelaunch` (`prelaunch.mjs`, W0-6) runs the gates against the prelaunch host, which serves the build ReelFlies_CA actually runs. Shaun runs it once per checkpoint, in his own shell, because the host needs his preview cookie (the cookie routine, build pipeline W0-12):
@@ -698,11 +760,12 @@ npm run qa:prelaunch
    - Playwright's reports and output (`axe-report/`, `screenshots-output/` and so on)
    - the screenshot manifest
 3. **The gates.** axe, the raw-HTML check and the screenshots, the same three as `qa:prepush`, on every page pinned for 1895766. They run as the variation the host runs, with the analytics tags blocked whatever `QA_ANALYTICS` says.
-   - Ticket 17's Lighthouse joins them once `npm run qa:lighthouse` exists. Until then the run prints that Lighthouse waits for ticket 17.
+   - Then ticket 17's Lighthouse (`npm run qa:lighthouse`, [Lighthouse](#lighthouse-lighthousemjs)), which files its reports and `summary.json` in the uuid's `lighthouse/` folder. Its budgets and drop rule count like any gate's.
    - Once ticket 08 records Shaun's GA4 hostname filter, set `GA4_HOSTNAME_FILTER_SINCE` in `prelaunch.mjs` to its date. Each batch then adds one Lighthouse run with the tags loaded (`QA_ANALYTICS=allow`). It is information only: it never fails the batch, and the budgets stay on the blocked runs. Its results go in `tags-loaded/` inside the uuid's folder (its `QA_RESULTS_DIR`), so they never overwrite the blocked run's.
 4. **The same build throughout.** It reads the active theme again after the gates, and fails if it changed, because the results would then mix two builds.
 5. **The log.** It appends a row to the "Host runs" section of `RELEASES.md`, which it creates before "Switch toggles" the first time: the date, the theme uuid, the build's commit (from the uuid's newest release entry, or "not in RELEASES.md"), the gates, pass or fail, "analytics blocked", and the commit the gates ran from. "Analytics blocked" is "yes", or, once the tags-loaded run runs, "yes, in the gates it counts; tags loaded in Lighthouse with the tags loaded (information)". `summary.json` records the same. The release's own gates run on a local `stencil start`; these rows are the record that the build ReelFlies_CA actually runs passed on the host.
-   - Once Lighthouse ran, it also fills in that release entry's `- Lighthouse: pending host batch`. That is the line a push made without the cookie records (ticket 17's `release.sh` hook). So ticket 56 can see that the exact build it pushes passed on prelaunch.
+   - Once Lighthouse ran, it also fills in that release entry's `- Lighthouse: pending host batch` with pass or fail, and under it each URL's medians, the kinds not measured yet and every problem, from the run's `summary.json` (`lighthouseReleaseLines`). That is the line a push made without the cookie records (ticket 17's `release.sh` hook). So ticket 56 can see that the exact build it pushes passed on prelaunch.
+   - An accepted Lighthouse run also adds to `scripts/qa/lighthouse-history.json`. Commit it with the `RELEASES.md` change.
    - The orchestrator commits the change through the next release-log PR (build pipeline, section 6.5).
 
 It exits 0 when every counted gate passed, 1 when one failed or the theme changed, and 2 when it stopped before the first gate. It takes no lock: it starts no `stencil start`.
@@ -715,7 +778,8 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
 - `storefront.test.mjs` also covers `QA_PORT`, the start log's name, the locks a gate holds (and the ports checked again after a slot wait), trusting only the server a gate started, and stopping that server when the gate is stopped by a signal. `playwright-config.test.mjs` covers that the config reads `QA_PORT` and holds the locks only in the runner, `prepush.test.mjs` what `qa:prepush` checks before its first gate, `serve.test.mjs` the locks around a `stencil start` by hand, and `scripts/lib/lock.test.mjs` the locks themselves: the stale rules, waiting, the three slots across processes, the signals, `RF_LOCK_ROOT`, and the command line `release.sh` uses.
 - `pages.test.mjs` covers W0-8's pins, baseline names (against the baseline-scope check's parser), UI states, overlays and custom layouts; `overlays.test.mjs` the overlay files, the patch and the throwaway worktree (in git repos of its own); `custom-layouts.test.mjs` the merge into `config.stencil.json`; `playwright-config.test.mjs` the overlay's refusals, ports and folder, and the custom-layouts step before `stencil start`; `storefront.test.mjs` the overlay marker check, and that only an overlay run's own worktree moves a `stencil start` out of the checkout (an `RF_QA_THEME_DIR` left in the shell never does; `prepush.test.mjs` too).
-- `analytics-hosts.test.mjs`, `read-only-posts.test.mjs` and `network-guard.test.mjs` cover the network guard (W0-6), and `harness-selftest.spec.mjs` proves it in a browser. `prelaunch.test.mjs` covers the host batch: the cookie check, the uuid folder, the gates and their environment, the `RELEASES.md` row, Lighthouse once ticket 17 adds it, and that the cookie is never printed.
+- `analytics-hosts.test.mjs`, `read-only-posts.test.mjs` and `network-guard.test.mjs` cover the network guard (W0-6), and `harness-selftest.spec.mjs` proves it in a browser. `prelaunch.test.mjs` covers the host batch: the cookie check, the uuid folder, the gates and their environment, the `RELEASES.md` row, Lighthouse and its medians in the release entry, and that the cookie is never printed.
+- `lighthouse-rules.test.mjs` covers ticket 17's rules on real Lighthouse results (`lighthouse-fixtures/`): the metrics, the median of three, the budgets, the drop rule, the URL lists and the history. `lighthouse.test.mjs` covers the run around them with stand-ins for Lighthouse, the browser, the storefront and the store.
 - `npm run test:scripts` runs every `scripts/**/*.test.mjs` with `node --test`, the fixture renders included.
 - Jest runs `assets/js/test-unit/`. `jest.config.js` ignores `scripts/`, because Jest 30 would otherwise match `*.test.mjs` and `*.spec.mjs` too.
 - `screens-reference.spec.mjs` runs with `qa:screens`, because its name matches the filter, and never fails it. `review-live.spec.mjs` runs only when named. Neither is a gate. `review/manifest-reporter.test.mjs` checks both against `package.json`'s filters.
