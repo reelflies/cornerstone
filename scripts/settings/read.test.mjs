@@ -11,10 +11,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CHANNEL_SETTINGS, NEVER } from '../store/allowlist.mjs';
-import { createClient } from '../store/client.mjs';
 import { FAKE_TOKEN, STORE_HASH, fixtureFetch } from '../store/fixtures/store.mjs';
 import {
-    SCOPES, SCOPED_SETTINGS, markdownReport, parseArgs, readList, settingsRows, takeReads,
+    SCOPES, SCOPED_SETTINGS, markdownReport, parseArgs, readList, readOnlyClient, settingsRows, takeReads,
 } from './read.mjs';
 
 const READ = fileURLToPath(new URL('./read.mjs', import.meta.url));
@@ -46,9 +45,8 @@ function allRoutes() {
     return routes;
 }
 
-const client = (routes, calls = []) => createClient({
-    storeHash: STORE_HASH, token: FAKE_TOKEN, fetch: fixtureFetch(routes, { calls }), readOnly: true,
-});
+// The tests read through the same client factory the command uses.
+const client = (routes, calls = []) => readOnlyClient({ storeHash: STORE_HASH, token: FAKE_TOKEN, fetch: fixtureFetch(routes, { calls }) });
 
 test('the reads are the four scopes of every channel-scoped setting the checklist depends on, plus the store-wide lists', () => {
     assert.deepEqual(SCOPES.map(item => item.scope), ['global', '1', '1855224', '1895766']);
@@ -101,10 +99,16 @@ test('reads are GETs on a read-only client; a failed read is recorded and the ot
     assert.deepEqual(promotions.data.map(item => item.id), [11, 12]);
 });
 
-test('a read-only client refuses anything but GET before it sends it', async () => {
+test('the command\'s own client is read-only: it refuses a PUT, a POST or a DELETE before sending it', async () => {
     const calls = [];
-    await assert.rejects(client({}, calls).request({ method: 'PUT', path: '/v3/settings/inventory', body: {} }), /read-only: PUT/);
+    const own = client({ 'GET /v3/settings/inventory': { body: { data: {}, meta: {} } } }, calls);
+    for (const method of ['PUT', 'POST', 'DELETE']) {
+        // eslint-disable-next-line no-await-in-loop
+        await assert.rejects(own.request({ method, path: '/v3/settings/inventory', body: {} }), new RegExp(`read-only: ${method}`));
+    }
     assert.deepEqual(calls, []);
+    await own.get('/v3/settings/inventory');
+    assert.deepEqual(calls.map(call => call.method), ['GET']);
 });
 
 test('a key that 1895766 shows as null or overridden passes parts 1 and 2: a lifted write once part 3 holds', async () => {
@@ -158,6 +162,14 @@ test('the report quotes every scope, the proof, the filters, the currencies and 
     assert.match(text, /\| 12 \| Spring coupon \| ENABLED \| COUPON \| CAD \| 1 \| cart_value \|/);
     assert.doesNotMatch(text, /SECRETCODE10/);
     assert.match(text, /sha256 [0-9a-f]{64}/);
+});
+
+test('the report\'s headings are the levels the checklist quotes it at: ### for the run, #### for each table', async () => {
+    const { reads, sha256 } = await takeReads(client(allRoutes()), readList());
+    const headings = markdownReport(reads, { taken: '2026-10-06T21:00:00.000Z', sha256 }).filter(line => line.startsWith('#'));
+    assert.equal(headings[0], '### Reads, 2026-10-06T21:00:00.000Z (read-only token, GET only)');
+    assert.ok(headings.length > 1);
+    for (const heading of headings.slice(1)) assert.match(heading, /^#### \S/, heading);
 });
 
 test('the command takes no arguments but --help', () => {

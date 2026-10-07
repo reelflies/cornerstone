@@ -5,8 +5,9 @@
 //
 //   node scripts/settings/read.mjs
 //
-// It prints a Markdown report that research/21-store-settings.md quotes, and keeps the raw reads
-// outside git with the store helper's snapshots:
+// It prints a Markdown report that research/21-store-settings.md quotes under its "Reads" heading
+// (### for the run, #### for each table), and keeps the raw reads outside git with the store
+// helper's snapshots:
 // ~/reelflies/store-snapshots/store-wide/<object>/<time>-read-21.json (scripts/store/snapshot.mjs).
 //
 // For each channel-scoped settings endpoint, the report says which keys pass parts 1 and 2 of
@@ -58,6 +59,13 @@ export const SCOPED_SETTINGS = ['inventory', 'storefront/search', 'storefront/pr
 
 const PAGE_LIMIT = 50;
 const MAX_PAGES = 20;
+
+// The only client the command reads with: GETs only, refused before sending anything else.
+export function readOnlyClient({ storeHash, token, fetch }) {
+    return createClient({
+        storeHash, token, fetch, readOnly: true,
+    });
+}
 
 const spec = ({
     path, query = {}, object, scope, paginate = false,
@@ -177,7 +185,7 @@ function settingsTable(reads, settingsPath) {
     const rows = settingsRows(reads, settingsPath);
     const errors = SCOPES.map(({ scope }) => readFor(reads, `settings/${settingsPath}`, scope)).filter(read => read?.error);
     return [
-        `### \`/v3/settings/${settingsPath}\``,
+        `#### \`/v3/settings/${settingsPath}\``,
         '',
         ...errors.map(read => `- \`${read.key}\`: read failed: ${cell(read.error)}`),
         ...(errors.length ? [''] : []),
@@ -190,7 +198,7 @@ function settingsTable(reads, settingsPath) {
 
 function filtersTable(reads) {
     const read = readFor(reads, 'settings/search/filters', 'global');
-    const head = ['### Product Filtering: the enabled filters (store-wide, `/v3/settings/search/filters`)', ''];
+    const head = ['#### Product Filtering: the enabled filters (store-wide, `/v3/settings/search/filters`)', ''];
     if (!read || read.error) return [...head, `Read failed: ${cell(read?.error || 'not read')}`, ''];
     const list = Array.isArray(read.data) ? read.data : [];
     return [
@@ -228,7 +236,7 @@ const describeAvailable = data => {
 
 function currenciesTable(reads) {
     return [
-        '### Currencies per channel (`/v3/channels/<id>/currency-assignments`)',
+        '#### Currencies per channel (`/v3/channels/<id>/currency-assignments`)',
         '',
         '| Channel | Default | Enabled |',
         '|---|---|---|',
@@ -249,7 +257,7 @@ const describeAction = action => {
 // Promotions, summarised: never their codes, and nothing about who used them.
 function promotionsTable(reads) {
     const read = readFor(reads, 'promotions', 'global');
-    const head = ['### Promotions (store-wide, `/v3/promotions`)', ''];
+    const head = ['#### Promotions (store-wide, `/v3/promotions`)', ''];
     if (!read || read.error) return [...head, `Read failed: ${cell(read?.error || 'not read')}`, ''];
     const list = Array.isArray(read.data) ? read.data : [];
     if (!list.length) return [...head, 'None.', ''];
@@ -269,15 +277,15 @@ function promotionsTable(reads) {
 export function markdownReport(reads, { taken, sha256, files = [] }) {
     const failed = reads.filter(read => read.error).length;
     return [
-        `## Reads, ${taken} (read-only token, GET only)`,
+        `### Reads, ${taken} (read-only token, GET only)`,
         '',
         `${reads.length} reads, ${failed} failed. Snapshot sha256 ${sha256}.`,
         ...files.map(file => `- \`${file.file}\``),
         '',
         ...SCOPED_SETTINGS.flatMap(settings => settingsTable(reads, settings)),
         ...filtersTable(reads),
-        ...scopedList(reads, 'settings/search/filters/contexts', '### Product Filtering: contextual overrides (probe 6\'s reads, `/v3/settings/search/filters/contexts`)', describeContexts),
-        ...scopedList(reads, 'settings/search/filters/available', '### Product Filtering: available filters (`/v3/settings/search/filters/available`)', describeAvailable),
+        ...scopedList(reads, 'settings/search/filters/contexts', '#### Product Filtering: contextual overrides (probe 6\'s reads, `/v3/settings/search/filters/contexts`)', describeContexts),
+        ...scopedList(reads, 'settings/search/filters/available', '#### Product Filtering: available filters (`/v3/settings/search/filters/available`)', describeAvailable),
         ...currenciesTable(reads),
         ...promotionsTable(reads),
     ];
@@ -314,9 +322,7 @@ async function main(argv) {
         secrets.push(token);
         say(`Reading with ${source} (GET only)…`);
         const storeHash = await commandStoreHash();
-        const client = createClient({
-            storeHash, token, fetch: await commandFetch(root), readOnly: true,
-        });
+        const client = readOnlyClient({ storeHash, token, fetch: await commandFetch(root) });
         const now = new Date();
         const { reads, sha256 } = await takeReads(client, readList());
         if (reads.every(read => read.error)) throw new Error(`every read failed, the first with ${reads[0].error}: nothing to report`);
