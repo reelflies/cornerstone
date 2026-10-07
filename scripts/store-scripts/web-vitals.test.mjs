@@ -141,8 +141,9 @@ describe('the vendored web-vitals library', () => {
         assert.match(fs.readFileSync(path.join(path.dirname(file), 'LICENSE'), 'utf8'), /Apache License\s+Version 2\.0/);
     });
 
-    it('is refused when it doesn\'t match the pinned hash', () => {
+    it('is refused when it doesn\'t match the pinned hash', t => {
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-web-vitals-'));
+        t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
         fs.mkdirSync(path.join(dir, path.dirname(VENDOR.file)), { recursive: true });
         fs.mkdirSync(path.join(dir, path.dirname(GLUE_FILE)), { recursive: true });
         fs.writeFileSync(path.join(dir, VENDOR.file), 'var webVitals={};\n');
@@ -232,10 +233,12 @@ describe('the changes file for W0-11', () => {
 });
 
 describe('build.mjs', () => {
-    it('--check passes on the committed file, and names a stale one', () => {
+    it('--check passes on the committed file, and names a stale one', t => {
         const ok = spawnSync(process.execPath, [BUILD, '--check'], { encoding: 'utf8' });
         assert.equal(ok.status, 0, ok.stderr);
-        const stale = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'rf-web-vitals-')), 'web-vitals.json');
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-web-vitals-'));
+        t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+        const stale = path.join(dir, 'web-vitals.json');
         fs.writeFileSync(stale, '{}\n');
         assert.match(checkChanges(stale, readSources()), /is stale: run node scripts\/store-scripts\/build\.mjs/);
         assert.equal(checkChanges(path.join(ROOT, CHANGES_FILE), readSources()), null);
