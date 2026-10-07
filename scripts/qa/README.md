@@ -327,6 +327,8 @@ The module switches are config.json's boolean `rf_*` settings: `rf_rise` (27), `
 | `markers` | the `data-rf-*` attributes the module's markup carries. With the switch off, no element on the page may carry one. |
 | `chunks` | the `webpackChunkName` of each script the module loads, such as `rf-quick-add`. With the switch off, the page may not load one. |
 | `stock` (optional) | the stock markup the module replaces or guards, as page kind → CSS selectors. With the switch off, each must match on every pin of that kind, so a module that changes stock markup while off fails even with its markers and chunks gone. Quick add (43), for example, would name the stock card's Quick view button (`card.html:80-84`) on the kinds that list cards. |
+| `query` (optional) | `{ show, hide }`: the QA overrides of a module its switch alone doesn't show on the runner. Only `rf_region_prompt` has them: `rf_region=out` and `rf_region=in` (ticket 52). See [A module that waits for a QA override](#a-module-that-waits-for-a-qa-override-switch-queryspecmjs). |
+| `notOn` (optional, with `query`) | the page kinds the module never shows on, even with `show`: the prompt's is `cart` |
 
 - **A switch is in the matrix once a template reads it** (`theme_settings.<switch>`, outside a Handlebars comment). Until then its module hasn't landed: the scaffold pre-declares every switch, and flipping one that nothing reads renders the same page.
 - **When your module lands, fill in your entry's `markers` or `chunks`, or both, and `stock` if it replaces or guards stock markup.** `switches.test.mjs` fails, naming your switch, while a template reads it and its entry names neither. It also fails a marker or chunk that no template, and no script under `assets/js`, has. A script may write a marker as `data-rf-…` or through `dataset`. `rf_region_prompt`'s marker is already there: the prompt's root, `data-rf-region-prompt`.
@@ -345,8 +347,9 @@ npm run qa:matrix              # every row
 - **A switch that no template reads** is listed under "Not in the matrix yet", with its ticket, and doesn't fail the run: a switchable module that isn't ready ships switched off (ticket 10's rule).
 - **What fails the plan:** a landed switch with no overlay to flip it (the line names the file to add), and a boolean `rf_*` setting with no entry in `SWITCHES`.
 - **What each row runs.** Each command starts its own stencil start: an overlay never reuses one, and the plain row reuses only a server that renders it.
-  1. Playwright with the matrix's specs (`MATRIX_SPECS`): the screenshot diffs, axe, `switch-stock` (below), reflow, reduced motion, focus, and the network guard's self-test. The filters are anchored to each file's name, so the widget shots, the screenshot self-test and the reference screens don't run. Each spec is a gate of its own: the run writes a JSON report to `results/matrix/<row>.json` (`RF_QA_JSON_REPORT`, which `playwright.config.mjs` adds beside its own reporters), and the matrix reads each spec's result from it.
-  2. The raw-HTML check.
+  1. Playwright with the matrix's specs (`MATRIX_SPECS`): the screenshot diffs, axe, `switch-stock` and `switch-query` (below), reflow, reduced motion, focus, and the network guard's self-test. The filters are anchored to each file's name, so the widget shots, the screenshot self-test and the reference screens don't run. Each spec is a gate of its own: the run writes a JSON report to `results/matrix/<row>.json` (`RF_QA_JSON_REPORT`, which `playwright.config.mjs` adds beside its own reporters), and the matrix reads each spec's result from it.
+  2. The raw-HTML check, on the plain paths: the server HTML never holds a module that is only made in the browser, whatever the query.
+- **A row with `rf_region_prompt` on opens every page with `?rf_region=out`,** and makes the first interaction the prompt waits for, so its screenshots, axe, reflow, motion and focus see the card ([below](#a-module-that-waits-for-a-qa-override-switch-queryspecmjs)). The plan prints it beside the row: `rf_region_prompt on  the overlay rf_region_prompt-on, every page opened with ?rf_region=out`, and `summary.json` keeps each row's `query`.
 - **The output:** the plan, then one line per gate per row (`ok` or `FAIL`, with the first failures under it), then the verdict. Every row runs, whatever the rows before it did.
   - It exits 1 if a gate failed or the plan has a problem, and 2 if it couldn't start.
   - `results/matrix/summary.json` keeps the plan and each gate's result, for ticket 54b's report.
@@ -360,6 +363,18 @@ npm run qa:matrix              # every row
 - A test whose switched-off modules name no markers, chunks or stock markup yet is skipped, with the reason.
 - **What it doesn't prove alone:** that the rest of the page is stock. The off row's screenshots do that, against baselines its module ticket records, so a reviewer compares those PNGs with `master`'s plain ones from before the module's PR; `stock` makes the part that matters most a check.
 
+### A module that waits for a QA override (`switch-query.spec.mjs`)
+
+Ticket 52's outside-Canada prompt shows only to a visitor outside Canada, and only after their first scroll, tap or key press. The runner's time zone is `America/Toronto` (`playwright.config.mjs`), which ticket 52 counts as a veto, and no pin carries `?rf_region=`. So with its switch on and nothing else, every page would render as the plain row and pass without the card. Its `SWITCHES` entry names its QA overrides (`query`), and:
+
+- **A run with a switch on that has a `query`** (the matrix's `rf_region_prompt on` row, or `QA_OVERLAY=rf_region_prompt-on`) opens every pin with the `show` override, `?rf_region=out` (`SWITCH_QUERY` and `pinPath` in `fixtures.mjs`). After the page settles, `storefrontPage` presses Shift, the first interaction (it moves no focus, scrolls nothing and fires on a page too short to scroll), and waits up to 5 s for the card (`firstInteraction` in `page-checks.mjs`). Every other run opens and settles its pages exactly as before, so no plain baseline changes.
+- **`switch-query.spec.mjs`** checks both overrides on every pin, at 375 and 1280:
+  - `show`: the card is on the page after the first interaction, and on the cart (`notOn`) it isn't. If the card didn't show, this gate says so, because the row's other gates then never saw it.
+  - `hide` (`?rf_region=in`): after the first interaction and 2 s more, nothing carries `data-rf-region-prompt`, though the switch is on.
+- On a run with no such switch on it is skipped, with the reason: every run until ticket 52 lands.
+- The raw-HTML check stays on the plain paths. The card is only ever made in the browser, and its `prompt absent` assertion holds the server HTML.
+- **By hand:** `QA_OVERLAY=rf_region_prompt-on npx playwright test --config scripts/qa/playwright.config.mjs switch-query`.
+
 ### Reflow, reduced motion and focus
 
 Each is a thin spec over `page-checks.mjs`. `page-checks.test.mjs` proves each check on fixture pages in Chromium, with a failing fixture beside each passing one. Each spec covers the pinned pages of `QA_CHANNEL`, kind@name pins included, and renders with `QA_OVERLAY` when it is set. None takes a screenshot or has a baseline.
@@ -368,7 +383,7 @@ Each is a thin spec over `page-checks.mjs`. `page-checks.test.mjs` proves each c
 |---|---|---|---|
 | Reflow at 320 (story 71) | `npm run qa:reflow` | The page is wider than the viewport at 320 x 568, so it scrolls sideways. The failure names the outermost boxes past the edge that no ancestor clips: a carousel's track, which its frame clips, doesn't count. | Every pin, as a phone (`phone-375`'s mobile emulation) and as a desktop browser zoomed to 400% (`desktop-1280`), which is WCAG 1.4.10's case |
 | Reduced motion (story 69) | `npm run qa:motion` | With `prefers-reduced-motion: reduce` emulated: an animation still running after the cart count goes up, which is when the rise ring plays (ticket 27). Or any transition or animation an element, `::before` or `::after` declares, or smooth scrolling. Both count only above 10 ms (`MOTION_LIMIT_MS`), because a reset usually sets 0.01 ms. | Every pin, at 375 and 1280 |
-| Focus tab-through (story 67) | `npm run qa:focus` | Tabbing from the top of the page to the end (250 Tabs at most), a focused element whose centre, by `elementFromPoint`, is under a fixed or sticky box that doesn't hold it: the sticky header, the sticky bars (38, 41) or the prompt card (52). | The product and cart pins, at 375 |
+| Focus tab-through (story 67) | `npm run qa:focus` | Tabbing from the top of the page to the end (250 Tabs at most), a focused element whose centre, by `elementFromPoint`, is under a fixed or sticky box that doesn't hold it: the sticky header, the sticky bars (38, 41) or the prompt card (52), which shows only on a run with `rf_region_prompt` on ([above](#a-module-that-waits-for-a-qa-override-switch-queryspecmjs)). | The product and cart pins, at 375 |
 
 - **Reduced motion fails on stock Cornerstone, on every page.** It has no reset, and its buttons, links and menus declare transitions. Ticket 25's skin adds "a global reduced-motion reset" (spec module 1), and each failure says so.
 - **The cart count goes up the way an add sends it** (build pipeline, section 6.9): the stock `cart-quantity-update` on `<body>`, then `rf:cart-changed` on `document`. Nothing reaches the store.

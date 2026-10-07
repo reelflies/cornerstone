@@ -18,8 +18,8 @@ import assert from 'node:assert/strict';
 import { listOverlays, readOverlay } from './overlays.mjs';
 import { PAGE_KEY } from './pages.mjs';
 import {
-    SWITCHES, TEMPLATES_DIR, chunkRequested, datasetName, describeValues, flippingOverlays, moduleSwitches, offSwitches, readSwitchValues, sourceText,
-    stockSelectors, stripHandlebarsComments, switchValues, templatesReading,
+    SWITCHES, TEMPLATES_DIR, chunkRequested, datasetName, describeValues, expectedModules, flippingOverlays, moduleSwitches, offSwitches, queriedSwitches,
+    readSwitchValues, sourceText, stockSelectors, stripHandlebarsComments, switchQuery, switchValues, templatesReading, withQuery,
 } from './switches.mjs';
 
 const CONFIG = JSON.parse(fs.readFileSync(path.resolve('config.json'), 'utf8'));
@@ -67,7 +67,20 @@ describe('the module switches', () => {
                 assert.ok(PAGE_KEY.test(kind) && !kind.includes('@'), `${key}'s stock markup is keyed by page kind, and "${kind}" isn't one`);
                 assert.ok(Array.isArray(selectors) && selectors.length && selectors.every(selector => typeof selector === 'string' && selector.trim()), `${key}'s stock markup on ${kind} is a list of CSS selectors`);
             }
+            if (entry.query) {
+                assert.deepEqual(Object.keys(entry.query).sort(), ['hide', 'show'], `${key}'s query has a show and a hide override`);
+                for (const which of ['show', 'hide']) assert.match(entry.query[which], /^[a-z0-9_]+=[a-z0-9_-]+(&[a-z0-9_]+=[a-z0-9_-]+)*$/, `${key}'s ${which} override is a query string, such as rf_region=out`);
+                assert.notEqual(entry.query.show, entry.query.hide, `${key}'s two overrides differ`);
+                assert.ok(entry.markers.length, `${key} has a query, so it names the marker that shows its module is on the page`);
+            }
+            for (const kind of entry.notOn || []) assert.ok(entry.query && PAGE_KEY.test(kind) && !kind.includes('@'), `${key}'s notOn is a list of page kinds, for a switch with a query`);
         }
+    });
+
+    it('include ticket 52\'s QA overrides for the outside-Canada prompt, which the runner\'s Canadian time zone vetoes', () => {
+        assert.deepEqual(SWITCHES.rf_region_prompt.query, { show: 'rf_region=out', hide: 'rf_region=in' });
+        assert.deepEqual(SWITCHES.rf_region_prompt.notOn, ['cart']);
+        for (const key of ['rf_rise', 'rf_cart_state', 'rf_quick_add']) assert.equal(SWITCHES[key].query, undefined, key);
     });
 
     it('take the variation\'s value over the base one, and an overlay\'s over both', () => {
@@ -194,6 +207,64 @@ describe('a run\'s switch values', () => {
         assert.deepEqual(readSwitchValues({ variation: 'ReelFlies CA' }), switchValues({ config: CONFIG, variation: 'ReelFlies CA' }));
         assert.equal(readSwitchValues({ variation: 'ReelFlies CA', overlay: 'rf_rise-off' }).rf_rise, false);
         assert.throws(() => readSwitchValues({ variation: 'ReelFlies CA', overlay: 'rf-rise-off' }), /isn't an overlay/);
+    });
+});
+
+describe('a switch whose module waits for a QA override', () => {
+    const switches = {
+        rf_rise: {
+            ticket: '27', module: 'the rise ring', markers: ['data-rf-rise'], chunks: [],
+        },
+        rf_region_prompt: {
+            ticket: '52', module: 'the prompt', markers: ['data-rf-region-prompt'], chunks: [], query: { show: 'rf_region=out', hide: 'rf_region=in' }, notOn: ['cart'],
+        },
+        rf_other: {
+            ticket: '99', module: 'another', markers: ['data-rf-other'], chunks: [], query: { show: 'rf_other=show', hide: 'rf_other=hide' },
+        },
+    };
+    const ON = { rf_rise: true, rf_region_prompt: true, rf_other: false };
+
+    it('counts only while its switch is on', () => {
+        assert.deepEqual(queriedSwitches(ON, switches).map(({ key }) => key), ['rf_region_prompt']);
+        assert.deepEqual(queriedSwitches({ ...ON, rf_other: true }, switches).map(({ key, notOn }) => [key, notOn]), [['rf_region_prompt', ['cart']], ['rf_other', []]]);
+        assert.deepEqual(queriedSwitches({ rf_rise: true, rf_region_prompt: false }, switches), []);
+    });
+
+    it('opens every page of a run with the switch on with the override that shows its module', () => {
+        assert.equal(switchQuery(ON, { switches }), 'rf_region=out');
+        assert.equal(switchQuery({ ...ON, rf_other: true }, { switches }), 'rf_region=out&rf_other=show');
+        assert.equal(switchQuery({ rf_region_prompt: false }, { switches }), '');
+    });
+
+    it('swaps one switch\'s override for the one that hides it, and keeps the others showing', () => {
+        assert.equal(switchQuery(ON, { switches, hide: 'rf_region_prompt' }), 'rf_region=in');
+        assert.equal(switchQuery({ ...ON, rf_other: true }, { switches, hide: 'rf_other' }), 'rf_region=out&rf_other=hide');
+    });
+
+    it('is the outside-Canada prompt in this repo, shown with ?rf_region=out', () => {
+        const others = { rf_rise: true, rf_cart_state: true, rf_quick_add: true };
+        assert.equal(switchQuery({ ...others, rf_region_prompt: true }), 'rf_region=out');
+        assert.equal(switchQuery({ ...others, rf_region_prompt: false }), '');
+        assert.equal(switchQuery(readSwitchValues({ variation: 'ReelFlies CA', overlay: 'rf_region_prompt-on' })), 'rf_region=out');
+        assert.equal(switchQuery(readSwitchValues({ variation: 'ReelFlies CA' })), '');
+    });
+
+    it('adds the override to a pinned page\'s path, after any query it has and before any fragment', () => {
+        assert.equal(withQuery('/', 'rf_region=out'), '/?rf_region=out');
+        assert.equal(withQuery('/search.php?search_query=hopper', 'rf_region=out'), '/search.php?search_query=hopper&rf_region=out');
+        assert.equal(withQuery('/fly-hook-size-chart/#size-12', 'rf_region=in'), '/fly-hook-size-chart/?rf_region=in#size-12');
+        assert.equal(withQuery('/cart.php', ''), '/cart.php');
+    });
+
+    it('is expected on a page whose path carries its show override, except on the kinds it never shows on', () => {
+        const expected = (pagePath, kind, values = ON) => expectedModules(values, pagePath, kind, switches).map(({ key, marker }) => [key, marker]);
+        assert.deepEqual(expected('/?rf_region=out', 'home'), [['rf_region_prompt', 'data-rf-region-prompt']]);
+        assert.deepEqual(expected('/brands/ReelFlies.html?rf_region=out', 'brand'), [['rf_region_prompt', 'data-rf-region-prompt']]);
+        assert.deepEqual(expected('/cart.php?rf_region=out', 'cart'), []);
+        assert.deepEqual(expected('/?rf_region=in', 'home'), []);
+        assert.deepEqual(expected('/', 'home'), []);
+        assert.deepEqual(expected('/?rf_region=out', 'home', { ...ON, rf_region_prompt: false }), []);
+        assert.deepEqual(expected('/?rf_region=out&rf_other=show', 'home', { ...ON, rf_other: true }), [['rf_region_prompt', 'data-rf-region-prompt'], ['rf_other', 'data-rf-other']]);
     });
 });
 

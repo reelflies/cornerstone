@@ -14,7 +14,7 @@ import {
 import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
 import {
-    MOTION_LIMIT_MS, describeBump, focusNotes, focusProblems, inPage, motionProblems, overflowProblems, tabThrough,
+    MODULE_WAIT_MS, MOTION_LIMIT_MS, describeBump, firstInteraction, focusNotes, focusProblems, inPage, motionProblems, overflowProblems, tabThrough,
 } from './page-checks.mjs';
 
 const hasChromium = (() => {
@@ -210,6 +210,79 @@ describe('the page checks in a browser', { skip: SKIP }, () => {
             const { steps, end } = await tabThrough(page, { maxTabs: 5 });
             assert.equal(steps.length, 5);
             assert.equal(end, 'stopped after 5 Tabs');
+        });
+
+        // Ticket 52's docked card on phones: fixed at the bottom, at most 96px tall. While it shows,
+        // scroll-padding-bottom keeps focus above it.
+        const CARD = '<section data-rf-region-prompt style="position: fixed; left: 0; right: 0; bottom: 8px; height: 96px; background: #fff">Shipping outside Canada?</section>';
+        const LONG = '<div style="height: 1500px"></div><a href="#a">Hooks</a><div style="height: 300px"></div><a href="#b">Contact us</a><div style="height: 1500px"></div>';
+
+        it('finds a focused link under a docked prompt card at the bottom', async () => {
+            // Chromium centres "Hooks" when Tab scrolls to it, which leaves "Contact us" in view
+            // without a scroll, under the card.
+            const page = await open(page320(`<main>${LONG}</main>${CARD}`), { viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true });
+            const { steps } = await tabThrough(page);
+            assert.deepEqual(focusProblems(steps), ['Tab 2: a "Contact us" is covered by section "Shipping outside Canada?" (elementFromPoint at its centre hit section "Shipping outside Canada?")']);
+        });
+
+        it('passes the same page when the card keeps focus above it with scroll-padding-bottom', async () => {
+            const page = await open(page320(`<style>html { scroll-padding-bottom: 104px; }</style><main>${LONG}</main>${CARD}`), { viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true });
+            const { steps } = await tabThrough(page);
+            assert.equal(steps.length, 2);
+            assert.deepEqual(focusProblems(steps), []);
+        });
+    });
+
+    // Ticket 52's prompt shows only after the visitor's first scroll, tap or key press, and only
+    // outside Canada, which ?rf_region=out stands in for (switches.mjs, query). A run with its
+    // switch on makes that first interaction on every page (fixtures.mjs, storefrontPage).
+    describe('the first interaction a module waits for', () => {
+        const PROMPT = { key: 'rf_region_prompt', marker: 'data-rf-region-prompt' };
+        const STOREFRONT = 'http://rf-qa-selftest.test';
+        const html = page320(`<header><a href="/">ReelFlies</a></header><main><h1>Dry flies</h1></main><script>
+            const show = () => {
+                ['keydown', 'scroll', 'pointerdown'].forEach(type => removeEventListener(type, show, true));
+                if (new URLSearchParams(location.search).get('rf_region') !== 'out') return;
+                setTimeout(() => {
+                    const card = document.createElement('section');
+                    card.dataset.rfRegionPrompt = '';
+                    card.textContent = 'Shipping to an address outside Canada?';
+                    document.body.append(card);
+                }, 300);
+            };
+            ['keydown', 'scroll', 'pointerdown'].forEach(type => addEventListener(type, show, true));
+        </script>`);
+
+        async function visit(search) {
+            const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+            await context.route(`${STOREFRONT}/**`, route => route.fulfill({ contentType: 'text/html', body: html }));
+            const page = await context.newPage();
+            await page.goto(`${STOREFRONT}/${search}`);
+            return page;
+        }
+        const cards = page => page.locator('[data-rf-region-prompt]').count();
+
+        it('is what shows the module: nothing shows before it, and the module shows after it', async () => {
+            const page = await visit('?rf_region=out');
+            await page.waitForTimeout(600);
+            assert.equal(await cards(page), 0);
+            assert.deepEqual(await firstInteraction(page, [PROMPT]), []);
+            assert.equal(await cards(page), 1);
+        });
+
+        it('moves no focus and no scroll position, and follows no link', async () => {
+            const page = await visit('?rf_region=out');
+            await firstInteraction(page, [PROMPT]);
+            assert.deepEqual(await page.evaluate(() => [document.activeElement.tagName, window.scrollY, window.location.search]), ['BODY', 0, '?rf_region=out']);
+        });
+
+        it('names a module that didn\'t show within its wait, and waits for nothing when no module is expected', async () => {
+            const page = await visit('?rf_region=in');
+            assert.deepEqual(await firstInteraction(page, [PROMPT], { timeout: 700 }), [PROMPT]);
+            assert.equal(await cards(page), 0);
+            const started = Date.now();
+            assert.deepEqual(await firstInteraction(page, []), []);
+            assert.ok(Date.now() - started < MODULE_WAIT_MS, 'no expected module, no wait');
         });
     });
 });

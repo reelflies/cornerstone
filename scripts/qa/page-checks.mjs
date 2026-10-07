@@ -19,6 +19,8 @@
 //     focus        the focused element, and what elementFromPoint finds at its centre (story 67)
 // - tabThrough(page) presses Tab from the top of the page until focus leaves the page or comes
 //   back, and records the focus check at each step.
+// - firstInteraction(page, modules) makes the visitor's first interaction, which ticket 52's
+//   prompt waits for, and waits for each module expected to show (switches.mjs, query).
 // - overflowProblems, motionProblems and focusProblems turn the results into a spec's failures;
 //   focusNotes into its notes.
 
@@ -31,6 +33,8 @@ export const MOTION_LIMIT_MS = 10;
 // visible tabbable elements at 375, header and footer included (2026-10-07), so this leaves
 // room for longer pages and the modules still to come.
 export const MAX_TABS = 250;
+// How long the first interaction waits for a module it expects to show (firstInteraction).
+export const MODULE_WAIT_MS = 5000;
 
 export function inPage({ check, limitMs = 10 }) {
     const describe = element => {
@@ -227,6 +231,25 @@ export async function tabThrough(page, { maxTabs = MAX_TABS } = {}) {
         steps.push({ step, ...result });
     }
     return { steps, end: `stopped after ${maxTabs} Tabs` };
+}
+
+// The visitor's first interaction: ticket 52's prompt is made only after the first scroll, tap
+// or key press. It presses Shift, which moves no focus, scrolls nothing and follows no link, and
+// fires where a short page that can't scroll would fire no scroll event. Then it waits up to
+// `timeout` ms for each of `modules` ({ marker }, switches.mjs: expectedModules) to show an
+// element carrying its marker. Resolves to the modules that didn't show; it doesn't fail on
+// them itself, because switch-query.spec.mjs is the check.
+export async function firstInteraction(page, modules = [], { timeout = MODULE_WAIT_MS } = {}) {
+    await page.keyboard.press('Shift');
+    const missing = [];
+    for (const module of modules) {
+        try {
+            await page.locator(`[${module.marker}]`).first().waitFor({ state: 'visible', timeout }); // eslint-disable-line no-await-in-loop
+        } catch {
+            missing.push(module);
+        }
+    }
+    return missing;
 }
 
 const count = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;

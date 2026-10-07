@@ -43,6 +43,24 @@ describe('the matrix plan', () => {
         assert.deepEqual(plan.problems, []);
     });
 
+    it('opens every page of a row with the switch on with its QA override, so the outside-Canada prompt can show', () => {
+        const plan = matrixPlan({
+            config: CONFIG, variation: 'ReelFlies CA', overlays: OVERLAYS, reading: new Set(['rf_rise', 'rf_region_prompt']),
+        });
+        assert.deepEqual(plan.rows.map(({ name, query }) => [name, query]), [
+            ['plain', ''],
+            ['rf_rise off', ''],
+            ['rf_region_prompt on', 'rf_region=out'],
+        ]);
+        const on = matrixPlan({
+            config: { ...CONFIG, settings: { ...CONFIG.settings, rf_region_prompt: true } },
+            variation: 'ReelFlies CA',
+            overlays: [...OVERLAYS, { name: 'rf_region_prompt-off', settings: { rf_region_prompt: false } }],
+            reading: new Set(['rf_region_prompt']),
+        });
+        assert.deepEqual(on.rows.map(({ name, query }) => [name, query]), [['plain', 'rf_region=out'], ['rf_region_prompt off', '']]);
+    });
+
     it('leaves out a switch no template reads yet, and says whose module it waits for', () => {
         const plan = matrixPlan({
             config: CONFIG, variation: 'ReelFlies CA', overlays: OVERLAYS, reading: new Set(['rf_rise']),
@@ -73,6 +91,11 @@ describe('the matrix plan', () => {
 });
 
 describe('a row\'s Playwright run', () => {
+    it('runs the switch-query spec beside the stock-markup one', () => {
+        assert.deepEqual(MATRIX_SPECS.map(({ gate }) => gate), ['screenshots', 'axe', 'stock markup', 'switch queries', 'reflow at 320', 'reduced motion', 'focus', 'network guard']);
+        assert.equal(MATRIX_SPECS.find(({ gate }) => gate === 'switch queries').file, 'switch-query.spec.mjs');
+    });
+
     it('runs every matrix spec, and only those, with this folder\'s config', () => {
         const args = playwrightArgs();
         assert.deepEqual(args.slice(0, 4), ['playwright', 'test', '--config', 'scripts/qa/playwright.config.mjs']);
@@ -175,7 +198,7 @@ describe('running the matrix', () => {
         assert.match(text, /\nNot in the matrix yet:\n {2}rf_cart_state \(ticket 42\): no template reads/);
         assert.match(text, /\nok {7}plain · axe: 1 passed\n/);
         assert.match(text, /\nFAIL {5}rf_rise off · raw HTML: the storefront couldn't be reached, or a port was busy \(its output is above\)\n/);
-        assert.match(text, /\nThe matrix failed: 1 of 16 gates\.$/);
+        assert.match(text, /\nThe matrix failed: 1 of 18 gates\.$/);
     });
 
     it('passes when every gate of every row passed and the plan has no problem', async () => {
@@ -185,7 +208,18 @@ describe('running the matrix', () => {
         const lines = matrixLines({
             plan, results, channel: '1895766', variation: 'ReelFlies CA', port: 3300,
         });
-        assert.equal(lines.at(-1), 'Every gate passed in 2 rows (16 gates).');
+        assert.equal(lines.at(-1), 'Every gate passed in 2 rows (18 gates).');
+    });
+
+    it('says which rows open their pages with a QA override', () => {
+        const queried = matrixPlan({
+            config: CONFIG, variation: 'ReelFlies CA', overlays: OVERLAYS, reading: new Set(['rf_region_prompt']),
+        });
+        const lines = matrixLines({
+            plan: queried, results: null, channel: '1895766', variation: 'ReelFlies CA', port: 4300,
+        });
+        assert.ok(lines.includes('  rf_region_prompt on  the overlay rf_region_prompt-on, every page opened with ?rf_region=out'), lines.join('\n'));
+        assert.ok(lines.includes('  plain                rf_rise on, rf_cart_state on, rf_quick_add on, rf_region_prompt off'), lines.join('\n'));
     });
 
     it('fails a plan with a problem, even with every gate passed', () => {

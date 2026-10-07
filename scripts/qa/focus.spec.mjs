@@ -9,6 +9,10 @@
 // - What it sees but doesn't fail (a focused element with no visible box, one off screen, one
 //   that another element lies over) is noted on the test, for ticket 55's keyboard pass.
 // - With QA_OVERLAY every page renders with that overlay (W0-8), as the switch matrix runs it.
+// - The prompt card shows only on a run with rf_region_prompt on, which opens each page with
+//   ?rf_region=out and makes the first interaction (fixtures.mjs, storefrontPage; the runner's
+//   Canadian time zone vetoes the card otherwise). It shows on the product page and never on the
+//   cart, so it is checked here once ticket 52 lands, in the matrix's "rf_region_prompt on" row.
 // page-checks.mjs has the check; page-checks.test.mjs proves it on a fixed header.
 //
 //   npm run qa:focus

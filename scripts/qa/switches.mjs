@@ -18,6 +18,14 @@
 //            (switch-stock.spec.mjs), so a module that changes stock markup while it is off fails
 //            even with its markers and chunks gone. Quick add (43) would name the stock card's
 //            Quick view button, for example, on the kinds that list cards.
+//   query    optional: the QA overrides of a module that its switch alone doesn't show on the
+//            runner. The outside-Canada prompt (52) shows only outside Canada, and the runner's
+//            time zone (America/Toronto, playwright.config.mjs) vetoes it. A run with the switch on
+//            opens every pinned page with `show` added, and makes the first interaction the
+//            module waits for (fixtures.mjs, storefrontPage), so the run's screenshots, axe,
+//            reflow, motion and focus see it. switch-query.spec.mjs checks that it shows with
+//            `show`, and that nothing of it shows with `hide`. Needs a marker.
+//   notOn    optional, with `query`: the page kinds the module never shows on, even with `show`.
 // The owning ticket fills in its markers and chunks when its module lands: once a template
 // reads theme_settings.<switch>, switches.test.mjs fails until the entry names at least one.
 //
@@ -59,6 +67,10 @@ export const SWITCHES = {
         // made in the browser, so the server HTML never has it, whatever the switch says.
         markers: ['data-rf-region-prompt'],
         chunks: [],
+        // Ticket 52's QA overrides, and the page it never shows on (the cart; checkout isn't
+        // the theme's).
+        query: { show: 'rf_region=out', hide: 'rf_region=in' },
+        notOn: ['cart'],
     },
 };
 
@@ -96,6 +108,40 @@ export const offSwitches = (values, switches = SWITCHES) => Object.entries(value
 
 // The stock markup `entry` must leave on a page of `kind` with its switch off.
 export const stockSelectors = (entry, kind) => entry.stock?.[kind] || [];
+
+// The switches that are on in `values` and have QA overrides (`query`), each with its entry.
+export const queriedSwitches = (values, switches = SWITCHES) => Object.entries(values)
+    .filter(([key, value]) => value === true && switches[key]?.query)
+    .map(([key]) => ({ key, notOn: [], ...switches[key] }));
+
+// The query a run with `values` opens every pinned page with: the `show` override of each switch
+// that is on and has one, or its `hide` override for the switch named `hide`. '' when none has.
+export const switchQuery = (values, { hide = null, switches = SWITCHES } = {}) => queriedSwitches(values, switches)
+    .map(({ key, query }) => (key === hide ? query.hide : query.show))
+    .join('&');
+
+// `pagePath` with `query` added, after a query it has and before its #fragment.
+export function withQuery(pagePath, query) {
+    if (!query) return pagePath;
+    const at = pagePath.indexOf('#');
+    const [base, fragment] = at === -1 ? [pagePath, ''] : [pagePath.slice(0, at), pagePath.slice(at)];
+    return `${base}${base.includes('?') ? '&' : '?'}${query}${fragment}`;
+}
+
+// The modules a page of `kind` opened at `pagePath` should show after the first interaction, in a
+// run with `values`: each switch that is on whose `show` override the path carries, unless the
+// module never shows on that kind. [{ key, ticket, module, marker }], marker being its first.
+export function expectedModules(values, pagePath, kind, switches = SWITCHES) {
+    const params = new URL(pagePath, 'http://storefront.invalid').searchParams;
+    const carries = query => [...new URLSearchParams(query)].every(([name, value]) => params.getAll(name).includes(value));
+    return queriedSwitches(values, switches)
+        .filter(({ query, notOn }) => carries(query.show) && !notOn.includes(kind))
+        .map(({
+            key, ticket, module, markers,
+        }) => ({
+            key, ticket, module, marker: markers[0],
+        }));
+}
 
 export const describeValues = values => Object.entries(values).map(([key, value]) => `${key} ${value ? 'on' : 'off'}`).join(', ');
 

@@ -15,13 +15,19 @@
 //   that isn't ready ships switched off (ticket 10's rule).
 // - A landed switch with no overlay to flip it, or a boolean rf_* setting SWITCHES doesn't know,
 //   fails the matrix.
+// - A row with a switch on whose module waits for a QA override (SWITCHES' `query`: the
+//   outside-Canada prompt, which the runner's Canadian time zone vetoes) opens every page with
+//   the override that shows it (?rf_region=out), and makes the first interaction it waits for
+//   (fixtures.mjs, storefrontPage). The row's `query` says so.
 // - Each row runs two commands, each with its own stencil start (an overlay never reuses a
 //   server, W0-8; the plain row reuses one that renders it):
 //     Playwright, with the specs in MATRIX_SPECS: the screenshot diffs and axe of the gates,
-//       switch-stock (nothing of a switched-off module on the page), reflow at 320, reduced
-//       motion, the focus tab-through, and the network guard's self-test. Its JSON report
-//       (RF_QA_JSON_REPORT, playwright.config.mjs) gives each spec its own result.
-//     the raw-HTML check (raw-html.mjs).
+//       switch-stock (nothing of a switched-off module on the page), switch-query (a module
+//       that waits for a QA override shows with it, and hides with the other), reflow at 320,
+//       reduced motion, the focus tab-through, and the network guard's self-test. Its JSON
+//       report (RF_QA_JSON_REPORT, playwright.config.mjs) gives each spec its own result.
+//     the raw-HTML check (raw-html.mjs), on the plain paths: the server HTML never has a module
+//       that is only made in the browser, whatever the query.
 //   Every row runs, whatever the ones before it did, and the run prints one line per gate per
 //   row, then exits 1 if any failed or the plan has a problem, and 2 if it couldn't start.
 // - It writes scripts/qa/results/matrix/summary.json (ignored by git) for ticket 54b's report,
@@ -40,7 +46,7 @@ import {
     QA_CHANNEL, QA_PORT, QA_VARIATION, ROOT, checkEnv, slug,
 } from './storefront.mjs';
 import {
-    SWITCHES, describeValues, flippingOverlays, moduleSwitches, switchValues, templatesReading,
+    SWITCHES, describeValues, flippingOverlays, moduleSwitches, switchQuery, switchValues, templatesReading,
 } from './switches.mjs';
 
 // The Playwright specs each row runs, one gate each, in the order they are reported.
@@ -48,6 +54,7 @@ export const MATRIX_SPECS = [
     { gate: 'screenshots', file: 'screens.spec.mjs' },
     { gate: 'axe', file: 'axe.spec.mjs' },
     { gate: 'stock markup', file: 'switch-stock.spec.mjs' },
+    { gate: 'switch queries', file: 'switch-query.spec.mjs' },
     { gate: 'reflow at 320', file: 'reflow.spec.mjs' },
     { gate: 'reduced motion', file: 'reduced-motion.spec.mjs' },
     { gate: 'focus', file: 'focus.spec.mjs' },
@@ -61,13 +68,14 @@ const onOff = value => (value ? 'on' : 'off');
 
 // The rows, the switches that wait for their module, and the problems that fail the matrix.
 // `overlays` are read overlays ({ name, settings }); `reading` is the set of switches a template
-// reads (switches.mjs, templatesReading).
+// reads (switches.mjs, templatesReading). Each row's `query` is what its pages are opened with
+// (switches.mjs, switchQuery), '' for none.
 export function matrixPlan({
     config, variation, overlays, reading, switches = SWITCHES,
 }) {
     const values = switchValues({ config, variation });
     const rows = [{
-        name: 'plain', overlay: null, switch: null, values,
+        name: 'plain', overlay: null, switch: null, values, query: switchQuery(values, { switches }),
     }];
     const waiting = [];
     const problems = [];
@@ -85,8 +93,9 @@ export function matrixPlan({
                 problems.push(`no overlay renders ${key} ${onOff(flipped)}: add scripts/qa/overlays/${key}-${onOff(flipped)}.json, setting "${key}" to ${flipped} and nothing else (ticket ${entry.ticket})`);
             } else {
                 if (others.length) notes.push(`${key}: ${[overlay, ...others].join(', ')} all render it ${onOff(flipped)}; the matrix uses ${overlay}`);
+                const rowValues = { ...values, [key]: flipped };
                 rows.push({
-                    name: `${key} ${onOff(flipped)}`, overlay, switch: key, values: { ...values, [key]: flipped },
+                    name: `${key} ${onOff(flipped)}`, overlay, switch: key, values: rowValues, query: switchQuery(rowValues, { switches }),
                 });
             }
         }
@@ -203,7 +212,10 @@ export function matrixLines({
 }) {
     const lines = [`Switch matrix on channel ${channel}, "${variation}", port ${port} (overlays on ${port + OVERLAY_PORT_OFFSET})`, '', 'Rows:'];
     const width = Math.max(...plan.rows.map(({ name }) => name.length)) + 2;
-    for (const row of plan.rows) lines.push(`  ${row.name.padEnd(width)}${row.overlay ? `the overlay ${row.overlay}` : describeValues(row.values)}`);
+    for (const row of plan.rows) {
+        const rendered = row.overlay ? `the overlay ${row.overlay}` : describeValues(row.values);
+        lines.push(`  ${row.name.padEnd(width)}${rendered}${row.query ? `, every page opened with ?${row.query}` : ''}`);
+    }
     if (plan.waiting.length) {
         lines.push('', 'Not in the matrix yet:');
         for (const { key, ticket, reason } of plan.waiting) lines.push(`  ${key} (ticket ${ticket}): ${reason}`);
