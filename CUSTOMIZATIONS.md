@@ -19,7 +19,7 @@ This repo is Cornerstone (`upstream`, bigcommerce/cornerstone) plus ReelFlies co
 | Release, check and generator tooling (never bundled) | `scripts/` |
 | Research notes, checklists and their evidence, such as ticket 07's prelaunch probes and [the store settings checklist](research/21-store-settings.md) (never bundled) | `research/` |
 | Decisions | `docs/adr/` |
-| Operator guides, such as [releasing](docs/releasing.md), [guardrails](docs/guardrails.md) and [store writes](docs/store-writes.md) | `docs/` |
+| Operator guides, such as [releasing](docs/releasing.md), [guardrails](docs/guardrails.md), [store writes](docs/store-writes.md) and [catalogue jobs](docs/catalogue-jobs.md) | `docs/` |
 | Claude Code permission rules: a draft until Shaun turns them on ([permissions](docs/permissions.md)) | `.claude/` |
 
 - **New theme settings** go in the ReelFlies block of `schema.json`, `schemaTranslations.json` and the `settings` object in `config.json`, in your module's group (below).
