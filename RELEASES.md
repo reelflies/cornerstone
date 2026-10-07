@@ -16,6 +16,21 @@ Every theme push to a storefront goes through `scripts/release.sh` ([docs/releas
 - Verify: the live saved settings match config.json
 - Operator: Shaun Bathgate
 
+### 2026-10-07 03:07 UTC · channel 1895766 (ReelFlies_CA) · ReelFlies CA
+
+- Theme: ReelFlies 6.22.0, uuid `174ad580-a42a-013f-3c01-06627e5707c7`
+- New uuid: yes; before the push the channel ran theme `58abad50-a3c0-013f-e2b6-2ec98cc9ce73`
+- Commit: `a30586f5913f2ae391729c9fe0c05885e8712326` on `master`
+- Bundle: `reelflies-ca-6.22.0-a30586f.zip`, 10,938,401 B, sha256 `5ae0f7917aa83549954f5f1c9a58bfe548820e9c6a4df4dd0bac77757c6ed1f2`
+- main.js: 245,069 B
+- Step 1: no differences from the live saved settings
+- Changed in repo: none since `5d0d0cb`, the channel's last release
+- rf_* values pushed: none
+- New switches: none
+- Verify: 1 problem(s): the live theme is "ReelFlies (1)", not "ReelFlies"
+- Operator: Shaun Bathgate
+- Confirmation: non-interactive (agent), `--confirm-nonprod 1895766`
+
 ## Switch toggles
 
 Log every module switch (`rf_*`) toggled in a storefront's Theme Styles here, one row per toggle, in this format. From T-14 to T+30, switch toggles and widget unpublishing are the only changes allowed, apart from P1 fixes through `scripts/release.sh` (SCOPE-3).
