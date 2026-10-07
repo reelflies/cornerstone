@@ -404,6 +404,27 @@
     "afterpay-button-color": "black-mint",
     "amazon-button-color": "Gold",
     "masterpass-button-color": "black",
+
+    "rf_rise": true,
+
+    "rf_menu_type_ids": "",
+    "rf_menu_species_root_id": "",
+    "rf_menu_exclude_ids": "",
+
+    "rf_price_unit_exclude": "",
+
+    "rf_ship_free_threshold": "60",
+    "rf_ship_standard_rate": "",
+    "rf_ship_expedited_from": "",
+
+    "rf_store_same_as": "",
+
+    "rf_cart_state": true,
+
+    "rf_quick_add": true,
+
+    "rf_region_prompt": false,
+
     "paymentbuttons-provider-sorting": []
   },
   "read_only_files": [
@@ -441,7 +462,10 @@
           "sports_recreation"
         ]
       },
-      "settings": {}
+      "settings": {
+        "rf_menu_type_ids": "",
+        "rf_menu_species_root_id": ""
+      }
     },
     {
       "name": "ReelFlies US",
@@ -460,7 +484,12 @@
           "sports_recreation"
         ]
       },
-      "settings": {}
+      "settings": {
+        "rf_menu_type_ids": "",
+        "rf_menu_species_root_id": "",
+
+        "rf_ship_free_threshold": ""
+      }
     }
   ]
 }

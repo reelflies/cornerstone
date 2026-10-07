@@ -45,6 +45,7 @@
 @import "settings/citadel/citadel"; // 4
 @import "settings/stencil/stencil"; // 4
 @import "settings/layouts/layouts"; // 4
+@import "reelflies/settings"; // ReelFlies hook (ticket 25): ReelFlies settings, after the stock ones
 
 
 // Utilities
@@ -77,3 +78,9 @@
 // -----------------------------------------------------------------------------
 
 @import "layouts/layouts"; // 1
+
+
+// ReelFlies
+// -----------------------------------------------------------------------------
+
+@import "reelflies/index"; // ReelFlies hook (ticket 25): the ReelFlies style layer, last

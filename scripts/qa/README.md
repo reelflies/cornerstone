@@ -417,9 +417,11 @@ export default {
 **Helpers in `html.mjs`** read HTML the way a browser builds it:
 
 - `findTags(html, name)` returns start tags with their attributes. Anything inside comments, `<script>`, `<style>`, `<textarea>` and `<title>` doesn't count.
+- `findTags(html)`, with no name, returns every start tag, in page order (`one-main`, `rf-icon-sheet` and `rf-live-region` use it).
+- `markupOnly(html)` returns the HTML with comments removed and those text-only elements emptied, their tags kept, so a text search sees only markup (`rf-live-region` uses it).
 - `scriptsOfType(html, type)` returns script contents, such as JSON-LD.
 
-**Tests:** add a fixture page to `raw-html/fixtures/` and a case to `raw-html/raw-html.test.mjs`, with a failing fixture and a passing one. CI runs them through `npm run test:scripts`. `raw-html/fetch.test.mjs` checks that the preview cookie reaches `QA_BASE_URL` and never a host a redirect points at.
+**Tests:** add a fixture page to `raw-html/fixtures/` and a case to `raw-html/raw-html.test.mjs`, or a test file of your own beside it (ticket 25's is `page-frame.test.mjs`), with a failing fixture and a passing one. Every fixture page runs every registered assertion, so a fixture of a whole page carries what every page has: the icon sheet and the live region right after `<body>`, and one `<main>`. CI runs them through `npm run test:scripts`. `raw-html/fetch.test.mjs` checks that the preview cookie reaches `QA_BASE_URL` and never a host a redirect points at.
 
 **The assertions today:**
 
@@ -428,6 +430,9 @@ export default {
 | `one-canonical` | 16 | exactly one canonical link; not asked of the cart or the 404 page, which have none in stock Cornerstone |
 | `json-ld-parses` | 16 | every `application/ld+json` block parses |
 | `no-region-prompt` | 16, then 52 | no element carries `data-rf-region-prompt` |
+| `one-main` | 25 | exactly one main landmark: a `<main>`, or an element with `role="main"`, counted once. `body.html` makes the wrapper a `<main>` on home, product and cart only |
+| `rf-live-region` | 25 | exactly one `data-rf-live-region` element, with `role="status"`, empty in the server HTML |
+| `rf-icon-sheet` | 25 | the ReelFlies icon sheet (`data-rf-icons`) once, as the first element in `<body>`, with `aria-hidden="true"` |
 
 **Still to come:**
 
@@ -781,6 +786,7 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - `analytics-hosts.test.mjs`, `read-only-posts.test.mjs` and `network-guard.test.mjs` cover the network guard (W0-6), and `harness-selftest.spec.mjs` proves it in a browser. `prelaunch.test.mjs` covers the host batch: the cookie check, the uuid folder, the gates and their environment, the `RELEASES.md` row, Lighthouse and its medians in the release entry, and that the cookie is never printed.
 - `lighthouse-rules.test.mjs` covers ticket 17's rules on real Lighthouse results (`lighthouse-fixtures/`): the metrics, the median of three, the budgets, the drop rule, the URL lists and the history. `lighthouse.test.mjs` covers the run around them with stand-ins for Lighthouse, the browser, the storefront and the store.
 - `npm run test:scripts` runs every `scripts/**/*.test.mjs` with `node --test`, the fixture renders included.
+- `scaffold.test.mjs` holds ticket 25's shared-file slots (build pipeline 6.1; CUSTOMIZATIONS.md, "Slots for parallel tickets"): the ReelFlies settings block, schema group and lang slots, the style layer's imports, the slots in `page-modules.js`, `reelflies/global.js` and `js-settings.html`, and the hooks in `base.html`, `app.js` and `global.js`. It also runs the release guard and step 1's diff on the block (spec seam 5): the first push, a switch toggled live, and a value changed after the scaffold's push (refused by rule 1 until the release lane gives values the three-way rule, which a todo test holds). `render/partials/body.test.mjs` and `reelflies-frame.test.mjs` render the `<main>` hook, the icon sheet, the icon partial, `body-start.html` and `js-settings.html`.
 - Jest runs `assets/js/test-unit/`. `jest.config.js` ignores `scripts/`, because Jest 30 would otherwise match `*.test.mjs` and `*.spec.mjs` too.
 - `screens-reference.spec.mjs` runs with `qa:screens`, because its name matches the filter, and never fails it. `review-live.spec.mjs` runs only when named. Neither is a gate. `review/manifest-reporter.test.mjs` checks both against `package.json`'s filters.
 - Playwright writes its report, traces and failed diffs to `scripts/qa/results/`, which is ignored by git. The manifest reporter writes `results/manifest.json` there too, and the review pages go to `results/review/`. A run with `QA_PREVIEW_COOKIE` writes no traces, so the cookie never lands there.
