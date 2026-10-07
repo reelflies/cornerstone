@@ -1,5 +1,6 @@
 // Ticket 17's release.sh hook: what the release does about Lighthouse after a push, and what the
-// RELEASES.md entry records (release-lighthouse.mjs). Pure: no browser, no store, no files.
+// RELEASES.md entry records (release-lighthouse.mjs). No browser, no store and no files; only the
+// runCommand tests start child processes (node, standing in for npm run qa:lighthouse).
 
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,7 +11,9 @@ import {
     lighthousePlan, PRELAUNCH_CHANNEL, PRELAUNCH_URL, resultsDirFor, runCommand, safeLines, stopReason,
 } from './release-lighthouse.mjs';
 import { PRELAUNCH_URL as QA_PRELAUNCH_URL } from './qa/analytics-hosts.mjs';
-import { HOST_CHANNEL, LIGHTHOUSE_PENDING_LINE as HOST_BATCH_LINE, fillPendingLighthouse } from './qa/prelaunch.mjs';
+import {
+    HOST_CHANNEL, LIGHTHOUSE_PENDING_LINE as HOST_BATCH_LINE, cookieProblem as hostCookieProblem, fillPendingLighthouse,
+} from './qa/prelaunch.mjs';
 
 const UUID = '174ad580-a42a-013f-3c01-06627e5707c7';
 const SHA = 'a30586f5913f2ae391729c9fe0c05885e8712326';
@@ -48,6 +51,13 @@ test('the release and the host batch share one prelaunch host, channel and pendi
     assert.equal(LIGHTHOUSE_PENDING_LINE, '- Lighthouse: pending host batch');
     assert.equal(HOST_BATCH_LINE, LIGHTHOUSE_PENDING_LINE, 'the host batch fills in exactly the line the release writes');
     assert.deepEqual(AFTER_FLIP_PHASES, ['T-0', 'T+30']);
+});
+
+test('the release and the host batch accept and refuse the same cookies, so the release never plans a run the batch would refuse, or the reverse', () => {
+    for (const cookie of [undefined, '', ' ', 'x', '=v', ';', ' ; ', 'a=1', 'a=1;', 'a=1; b', 'a=1; b=2', ' a=1 ; b=2 ', 'a==1', '=; a=1', COOKIE]) {
+        const refused = lighthousePlan({ channel: 1895766, phase: 'build', cookie }).result === 'pending';
+        assert.equal(refused, Boolean(hostCookieProblem(cookie)), JSON.stringify(cookie));
+    }
 });
 
 test('the hook knows every phase the release calendar has, and which come from the Flip on', () => {

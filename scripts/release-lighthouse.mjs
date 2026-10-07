@@ -74,7 +74,8 @@ export function cookieSecrets(cookie) {
 }
 
 // Why a cookie can't be used, or null. Never quotes it. (The same test as the host batch's
-// cookieProblem in scripts/qa/prelaunch.mjs, which this module doesn't import.)
+// cookieProblem in scripts/qa/prelaunch.mjs, which this module doesn't import; a test keeps the
+// two equal.)
 function cookieProblem(cookie) {
     if (!cookie) return 'no QA_PREVIEW_COOKIE in this shell: the prelaunch host answers every page with a 503 without it, and it lives only in Shaun\'s shell (W0-6). The next host batch of this build (npm run qa:prelaunch) measures it and fills in the entry';
     const parts = cookie.split(';').map(part => part.trim()).filter(Boolean);
