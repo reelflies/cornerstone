@@ -4,6 +4,8 @@
 #   scripts/release.sh --channel <id> --variation "<name>" [--dry-run] [--first-release] [--accept-live | --overwrite-live] [--confirm-nonprod <id>]
 #   scripts/release.sh --prune-only [--dry-run]
 #
+# Run it bare: before anything else it selects .nvmrc's Node with nvm when the shell has another (W0-1b).
+#
 #   0 how step 5 is confirmed (typed, or --confirm-nonprod on a non-production target, W0-1) within
 #     the release calendar's limits (scripts/release-calendar.json); --confirm-nonprod runs only from
 #     master at origin/master's tip (scripts/release-origin.mjs)
@@ -25,6 +27,36 @@
 set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+# .nvmrc's Node, before anything runs node (W0-1b). Agents run the bare commands Claude Code's allow
+# rules name, from a login shell on nvm's default Node, and a real release refuses any Node but
+# .nvmrc's (release.mjs checkSetup). So when node on PATH isn't .nvmrc's version and nvm is there
+# ($NVM_DIR, or ~/.nvm), this asks nvm for .nvmrc's version in a subshell and takes only the PATH it
+# makes, once that PATH's node reports the version, printing one line. nvm.sh is sourced with
+# --no-use, so it neither switches to its default nor reads this script's arguments (an --install
+# among them would install a Node), and `nvm use` never installs one. Otherwise PATH stays as it
+# was, and release.mjs refuses a real release on the wrong Node as before.
+select_nvmrc_node() {
+    local wanted had nvm_sh nvm_path
+    [ -f .nvmrc ] || return 0
+    wanted="$(tr -d '[:space:]' < .nvmrc)"
+    had="$(node --version 2>/dev/null || true)"
+    if [ -z "$wanted" ] || [ "$had" = "v$wanted" ]; then return 0; fi
+    nvm_sh="${NVM_DIR:-${HOME:-}/.nvm}/nvm.sh"
+    [ -f "$nvm_sh" ] || return 0
+    # nvm.sh isn't written for set -euo pipefail, so the subshell turns them off. (No quote mark
+    # inside $( ): macOS's bash 3.2 misreads one in a comment there.)
+    nvm_path="$(
+        set +euo pipefail
+        . "$nvm_sh" --no-use >/dev/null 2>&1
+        nvm use --silent "$wanted" >/dev/null 2>&1 && printf '%s' "$PATH"
+    )" || true
+    if [ -n "$nvm_path" ] && [ "$(PATH="$nvm_path" && node --version 2>/dev/null || true)" = "v$wanted" ]; then
+        PATH="$nvm_path"
+        echo "node     v$wanted from .nvmrc, selected with nvm (the shell had ${had:-no node})"
+    fi
+}
+select_nvmrc_node
 
 STATE_DIR=""
 LOCK_TAKEN=""
