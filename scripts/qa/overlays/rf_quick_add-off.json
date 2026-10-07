@@ -1,0 +1,7 @@
+{
+    "description": "Quick add switched off: the stock card, which links to the product page with no \"+ Add\" (ticket 43; ticket 54's switch matrix)",
+    "ticket": "43",
+    "settings": {
+        "rf_quick_add": false
+    }
+}

@@ -1,0 +1,11 @@
+{{!--
+    One icon from the ReelFlies icon sheet (icons.html), as a 1.6px line in the text colour:
+
+        {{> components/reelflies/icon name='bag'}}
+        {{> components/reelflies/icon name='truck' class='rf-strip-icon'}}
+
+    The icon is decorative and hidden from screen readers, so put it beside a visible label, or
+    inside a control that has an accessible name. `name` must be a file in icons/. Its size is
+    20px until a stylesheet sets one.
+--}}
+<svg class="rf-icon{{#if class}} {{class}}{{/if}}" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><use href="#rf-icon-{{name}}"></use></svg>
