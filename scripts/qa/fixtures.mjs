@@ -18,6 +18,11 @@
 //   waits until it stops moving: fonts loaded, lazy images in, network quiet, at the top.
 //   A page that answers 5xx is opened once more after 2 s, and one that answers 429 up to
 //   three times with backoff; the output says so each time (retry.mjs says why).
+//   On a run with a switch on whose module waits for a QA override (switches.mjs, `query`:
+//   ticket 52's prompt, which the runner's Canadian time zone vetoes), it opens the pin with
+//   the override that shows the module (SWITCH_QUERY, such as ?rf_region=out), then makes the
+//   visitor's first interaction and waits for the module (page-checks.mjs, firstInteraction).
+//   Every other run opens and settles the page exactly as before.
 // - dismissCookieBanner(page) closes the store's cookie banner without moving the pointer.
 // - screenshotStylePath(testInfo, channel, template) writes the stylesheet a page's
 //   screenshot applies (screenshotStyle in pages.mjs) and returns its path, for
@@ -28,11 +33,19 @@
 import fs from 'fs';
 import path from 'path';
 import { test as base, expect } from '@playwright/test';
-import { IS_LOCAL, QA_CHANNEL, previewCookies } from './storefront.mjs';
+import {
+    IS_LOCAL, QA_CHANNEL, QA_OVERLAY, QA_VARIATION, previewCookies,
+} from './storefront.mjs';
 import { analyticsMode, isAfterFlip } from './analytics-hosts.mjs';
 import { guardChannel, guardRequestContext, installNetworkGuard } from './network-guard.mjs';
-import { expectedStatus, pinnedPages, screenshotStyle } from './pages.mjs';
+import { firstInteraction } from './page-checks.mjs';
+import {
+    expectedStatus, pageKind, pinnedPages, screenshotStyle,
+} from './pages.mjs';
 import { withRetries } from './retry.mjs';
+import {
+    expectedModules, queriedSwitches, readSwitchValues, switchQuery, withQuery,
+} from './switches.mjs';
 
 // Whether this run blocks the analytics tags. The config's checkEnv has already refused a
 // QA_ANALYTICS the run may not use.
@@ -72,7 +85,18 @@ export { expect };
 
 export const PAGES = pinnedPages(QA_CHANNEL);
 
-export async function storefrontPage(page, template, pagePath = PAGES[template]) {
+// The run's module switches: config.json's for QA_VARIATION, with QA_OVERLAY's on top. Those that
+// are on and whose module waits for a QA override (switches.mjs, `query`) open every pin with
+// the override that shows it: SWITCH_QUERY is 'rf_region=out' on a run with rf_region_prompt on
+// (the switch matrix's "rf_region_prompt on" row), and '' on every other.
+export const SWITCH_VALUES = readSwitchValues({ variation: QA_VARIATION, overlay: QA_OVERLAY });
+export const SWITCH_QUERY = switchQuery(SWITCH_VALUES);
+const QUERIED = queriedSwitches(SWITCH_VALUES).length > 0;
+
+// A pinned page's path as this run opens it.
+export const pinPath = template => withQuery(PAGES[template], SWITCH_QUERY);
+
+export async function storefrontPage(page, template, pagePath = pinPath(template)) {
     const response = await withRetries(() => page.goto(pagePath, { waitUntil: 'load' }), {
         what: `the ${template} page ${pagePath}`,
         verb: 'opening',
@@ -103,6 +127,9 @@ export async function storefrontPage(page, template, pagePath = PAGES[template])
             }))),
         new Promise(resolve => { setTimeout(resolve, 10000); }),
     ]));
+    // A module that shows only after the visitor's first interaction (switches.mjs, `query`).
+    // Whether it showed is switch-query.spec.mjs's check, not this one's.
+    if (QUERIED) await firstInteraction(page, expectedModules(SWITCH_VALUES, pagePath, pageKind(template)));
     return response;
 }
 

@@ -1,0 +1,305 @@
+// The in-page checks behind ticket 54a's reflow, reduced-motion and focus specs
+// (scripts/qa/page-checks.mjs), on fixture pages in Playwright's Chromium, with a failing
+// fixture beside each passing one so a check can't quietly stop working. The browser cases are
+// skipped where Playwright's Chromium isn't installed (CI); the report helpers run everywhere.
+//
+//   node --test scripts/qa/page-checks.test.mjs
+
+/* eslint-env browser */ // the page.evaluate callbacks run in the page
+
+import fs from 'fs';
+import {
+    after, before, describe, it,
+} from 'node:test';
+import assert from 'node:assert/strict';
+import { chromium } from '@playwright/test';
+import {
+    MODULE_WAIT_MS, MOTION_LIMIT_MS, describeBump, firstInteraction, focusNotes, focusProblems, inPage, motionProblems, overflowProblems, tabThrough,
+} from './page-checks.mjs';
+
+const hasChromium = (() => {
+    try {
+        return fs.existsSync(chromium.executablePath());
+    } catch {
+        return false;
+    }
+})();
+const SKIP = !hasChromium && 'Playwright\'s Chromium isn\'t installed here (CI)';
+
+const page320 = body => `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>body { margin: 0; font: 16px sans-serif; }</style></head><body>${body}</body></html>`;
+
+// The reset ticket 25's skin is to add (spec module 1, "a global reduced-motion reset").
+const RESET = `@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+}`;
+
+describe('the page checks in a browser', { skip: SKIP }, () => {
+    let browser;
+    before(async () => {
+        if (hasChromium) browser = await chromium.launch();
+    });
+    after(async () => browser?.close());
+
+    // A fresh page in a context of its own, with `options` (viewport, isMobile, reducedMotion).
+    async function open(html, options = {}) {
+        const context = await browser.newContext({ viewport: { width: 320, height: 568 }, ...options });
+        const page = await context.newPage();
+        await page.setContent(html);
+        return page;
+    }
+
+    describe('reflow at 320', () => {
+        it('passes a page that fits', async () => {
+            const page = await open(page320('<header><a href="#">ReelFlies</a></header><main><p>Flies tied by hand.</p></main>'), { isMobile: true, hasTouch: true });
+            const result = await page.evaluate(inPage, { check: 'overflow' });
+            assert.equal(result.width, 320);
+            assert.deepEqual(overflowProblems(result), []);
+        });
+
+        it('fails a page that scrolls sideways, and names the box past the edge', async () => {
+            const page = await open(page320('<main><div class="strip"><div class="pills" style="width: 410px">Size 12</div></div></main>'), { isMobile: true, hasTouch: true });
+            const result = await page.evaluate(inPage, { check: 'overflow' });
+            assert.ok(result.scrollWidth > result.width, JSON.stringify(result));
+            const [problem] = overflowProblems(result);
+            assert.match(problem, /410 px wide at 320 px, so it scrolls sideways/);
+            assert.match(problem, /div\.pills "Size 12" \(right edge at 410 px\)/);
+        });
+
+        it('passes a box that overflows inside a container that clips it, such as a carousel', async () => {
+            const page = await open(page320('<div class="carousel" style="overflow: hidden"><div class="track" style="width: 1200px">slides</div></div>'));
+            assert.deepEqual(overflowProblems(await page.evaluate(inPage, { check: 'overflow' })), []);
+        });
+
+        it('fails the same box without the clip, at 320 without phone emulation too', async () => {
+            const page = await open(page320('<div class="carousel"><div class="track" style="width: 1200px">slides</div></div>'));
+            const result = await page.evaluate(inPage, { check: 'overflow' });
+            assert.match(overflowProblems(result)[0], /div\.track "slides"/);
+        });
+    });
+
+    describe('reduced motion', () => {
+        const STOCK = `<style>
+            a.button { display: inline-block; transition: background-color 0.15s ease; }
+            .ring::after { content: ''; transition: transform 200ms; }
+            .spinner { animation: spin 2s linear infinite; }
+            html { scroll-behavior: smooth; }
+            @keyframes spin { to { transform: rotate(1turn); } }
+        </style>`;
+        const BODY = '<a class="button" href="#">Add</a><span class="ring"></span><span class="nothing"></span><div class="spinner">.</div>';
+
+        it('finds the transitions, animations and smooth scrolling a page declares under reduced motion', async () => {
+            const page = await open(page320(`${STOCK}${BODY}`), { reducedMotion: 'reduce' });
+            const declared = await page.evaluate(inPage, { check: 'motion', limitMs: MOTION_LIMIT_MS });
+            const found = declared.map(({ element, kind, what }) => `${element} ${kind} ${what}`);
+            assert.ok(found.includes('a.button transition background-color'), found.join('\n'));
+            assert.ok(found.includes('span.ring::after transition transform'), found.join('\n'));
+            assert.ok(found.includes('div.spinner animation spin'), found.join('\n'));
+            assert.ok(found.includes('html scroll-behavior smooth'), found.join('\n'));
+            assert.ok(!found.some(line => line.startsWith('span.nothing')), 'a pseudo-element with no content isn\'t there to move');
+            const running = await page.evaluate(inPage, { check: 'animations', limitMs: MOTION_LIMIT_MS });
+            assert.deepEqual(running.map(({ what }) => what), ['spin']);
+            const problems = motionProblems({ running, declared });
+            assert.match(problems[0], /1 animation runs under reduced motion: div\.spinner "\." CSSAnimation spin \(infinite\)/);
+            assert.match(problems[1], /4 declarations would move under reduced motion/);
+        });
+
+        it('passes the same page with a global reduced-motion reset', async () => {
+            const page = await open(page320(`${STOCK}<style>${RESET}</style>${BODY}`), { reducedMotion: 'reduce' });
+            const declared = await page.evaluate(inPage, { check: 'motion', limitMs: MOTION_LIMIT_MS });
+            const running = await page.evaluate(inPage, { check: 'animations', limitMs: MOTION_LIMIT_MS });
+            assert.deepEqual(motionProblems({ running, declared }), []);
+        });
+
+        // The rise ring (ticket 27) plays when the cart count goes up. bumpCart sends what an add
+        // sends (build pipeline 6.9): the stock cart-quantity-update on <body> through jQuery, or,
+        // where jQuery isn't global (Cornerstone's build, whose expose-loader rule never matches its
+        // jquery alias), the change the stock handler makes to the count; then rf:cart-changed.
+        const RING = `<span class="cart-quantity">2</span><span class="ring"></span><script>
+            window.$ = selector => ({ trigger: (name, value) => { window.triggered = [selector, name, value]; } });
+            document.addEventListener('rf:cart-changed', event => {
+                window.changed = event.detail;
+                if (!window.respectsReducedMotion || !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                    document.querySelector('.ring').animate([{ transform: 'scale(1)' }, { transform: 'scale(1.6)' }], { duration: 600 });
+                }
+            });
+        </script>`;
+
+        it('sends a cart count change the way an add does, and sees a ring that plays anyway', async () => {
+            const page = await open(page320(RING), { reducedMotion: 'reduce' });
+            assert.deepEqual(await page.evaluate(inPage, { check: 'bumpCart' }), { from: 2, to: 3, via: 'jquery' });
+            assert.deepEqual(await page.evaluate(() => window.triggered), ['body', 'cart-quantity-update', 3]);
+            assert.deepEqual(await page.evaluate(() => window.changed), { source: 'qa', productId: 0 });
+            const running = await page.evaluate(inPage, { check: 'animations', limitMs: MOTION_LIMIT_MS });
+            assert.match(motionProblems({ running, declared: [] })[0], /span\.ring Animation a script animation \(600 ms\)/);
+        });
+
+        it('passes a ring that checks prefers-reduced-motion first', async () => {
+            const page = await open(page320(`<script>window.respectsReducedMotion = true;</script>${RING}`), { reducedMotion: 'reduce' });
+            await page.evaluate(inPage, { check: 'bumpCart' });
+            assert.deepEqual(await page.evaluate(inPage, { check: 'animations', limitMs: MOTION_LIMIT_MS }), []);
+        });
+
+        it('changes the count as the stock handler does where jQuery isn\'t global, and a ring that watches the count plays', async () => {
+            const page = await open(page320(`<a class="navUser-action" aria-label="Cart with 2 items"><span class="countPill cart-quantity">2</span></a><span class="ring"></span><script>
+                new MutationObserver(() => document.querySelector('.ring').animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400 }))
+                    .observe(document.querySelector('.cart-quantity'), { childList: true, characterData: true, subtree: true });
+            </script>`), { reducedMotion: 'reduce' });
+            assert.deepEqual(await page.evaluate(inPage, { check: 'bumpCart' }), { from: 2, to: 3, via: 'count' });
+            assert.deepEqual(await page.evaluate(() => [document.querySelector('.cart-quantity').textContent, document.querySelector('.cart-quantity').classList.contains('countPill--positive')]), ['3', true]);
+            const running = await page.evaluate(inPage, { check: 'animations', limitMs: MOTION_LIMIT_MS });
+            assert.match(motionProblems({ running, declared: [] })[0], /span\.ring Animation a script animation \(400 ms\)/);
+        });
+
+        it('sends the event on a page with no count too', async () => {
+            const page = await open(page320('<script>document.addEventListener("rf:cart-changed", () => { window.changed = true; });</script>'));
+            assert.deepEqual(await page.evaluate(inPage, { check: 'bumpCart' }), { from: 0, to: 1, via: 'event only' });
+            assert.equal(await page.evaluate(() => window.changed), true);
+        });
+
+        it('says how the count went up, for the test\'s annotation', () => {
+            assert.equal(describeBump({ from: 2, to: 3, via: 'jquery' }), '2 to 3, through the stock cart-quantity-update (jQuery), then rf:cart-changed');
+            assert.equal(describeBump({ from: 0, to: 1, via: 'count' }), '0 to 1, by changing .cart-quantity as the stock handler does (jQuery isn\'t global), then rf:cart-changed');
+            assert.equal(describeBump({ from: 0, to: 1, via: 'event only' }), 'no cart count on the page; rf:cart-changed only');
+        });
+    });
+
+    describe('the focus tab-through', () => {
+        const HEADER = '<header style="position: fixed; top: 0; left: 0; right: 0; height: 60px; background: #fff; z-index: 10"><a href="#home">Home</a></header>';
+        const CONTENT = '<a id="first" href="#first" style="display: block; margin-top: 20px">Shop dry flies</a><div style="height: 2000px"></div><a href="#last">Contact us</a>';
+
+        it('finds a focused link under the fixed header', async () => {
+            const page = await open(page320(`${HEADER}<main>${CONTENT}</main>`), { viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true });
+            const { steps, end } = await tabThrough(page);
+            assert.deepEqual(steps.map(({ kind }) => kind), ['ok', 'covered', 'ok']);
+            assert.match(end, /focus (left the page|came back to a "Home") after 3 Tab\(s\)/);
+            assert.deepEqual(focusProblems(steps), ['Tab 2: a#first "Shop dry flies" is covered by header "Home" (elementFromPoint at its centre hit header "Home")']);
+        });
+
+        it('passes the same page when the content starts below the header', async () => {
+            const page = await open(page320(`${HEADER}<main style="padding-top: 60px">${CONTENT}</main>`), { viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true });
+            const { steps } = await tabThrough(page);
+            assert.equal(steps.length, 3);
+            assert.deepEqual(focusProblems(steps), []);
+        });
+
+        it('starts from the top of the page, whatever had focus before', async () => {
+            const page = await open(page320(`${HEADER}<main style="padding-top: 60px">${CONTENT}<button id="banner">Reject all</button></main>`), { viewport: { width: 375, height: 667 } });
+            await page.focus('#banner');
+            const { steps } = await tabThrough(page);
+            assert.equal(steps[0].element, 'a "Home"');
+        });
+
+        it('notes a focused element it can\'t see, and one something else lies over, without failing them', async () => {
+            const page = await open(page320(`<main style="padding-top: 10px">
+                <a href="#skip" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Skip to main content</a>
+                <a href="/cart.php" style="position: absolute; width: 0; height: 0; overflow: hidden"><svg></svg></a>
+                <span style="position: relative; display: inline-block"><input id="size" type="radio" name="size"><label for="size" style="position: absolute; inset: 0; background: #eee">12</label></span>
+            </main>`));
+            const { steps } = await tabThrough(page);
+            assert.deepEqual(steps.map(({ kind }) => kind), ['hidden', 'hidden', 'other']);
+            assert.deepEqual(focusProblems(steps), []);
+            assert.deepEqual(focusNotes(steps), [
+                '2 focused elements had no visible box: a "Skip to main content"; a[href="/cart.php"]',
+                '1 focused element had another element over its centre (not fixed or sticky): input#size under label "12"',
+            ]);
+        });
+
+        it('stops at its limit on a page that never runs out of focusable elements', async () => {
+            const links = Array.from({ length: 30 }, (unused, index) => `<a href="#${index}">${index}</a>`).join(' ');
+            const page = await open(page320(links));
+            const { steps, end } = await tabThrough(page, { maxTabs: 5 });
+            assert.equal(steps.length, 5);
+            assert.equal(end, 'stopped after 5 Tabs');
+        });
+
+        // Ticket 52's docked card on phones: fixed at the bottom, at most 96px tall. While it shows,
+        // scroll-padding-bottom keeps focus above it.
+        const CARD = '<section data-rf-region-prompt style="position: fixed; left: 0; right: 0; bottom: 8px; height: 96px; background: #fff">Shipping outside Canada?</section>';
+        const LONG = '<div style="height: 1500px"></div><a href="#a">Hooks</a><div style="height: 300px"></div><a href="#b">Contact us</a><div style="height: 1500px"></div>';
+
+        it('finds a focused link under a docked prompt card at the bottom', async () => {
+            // Chromium centres "Hooks" when Tab scrolls to it, which leaves "Contact us" in view
+            // without a scroll, under the card.
+            const page = await open(page320(`<main>${LONG}</main>${CARD}`), { viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true });
+            const { steps } = await tabThrough(page);
+            assert.deepEqual(focusProblems(steps), ['Tab 2: a "Contact us" is covered by section "Shipping outside Canada?" (elementFromPoint at its centre hit section "Shipping outside Canada?")']);
+        });
+
+        it('passes the same page when the card keeps focus above it with scroll-padding-bottom', async () => {
+            const page = await open(page320(`<style>html { scroll-padding-bottom: 104px; }</style><main>${LONG}</main>${CARD}`), { viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true });
+            const { steps } = await tabThrough(page);
+            assert.equal(steps.length, 2);
+            assert.deepEqual(focusProblems(steps), []);
+        });
+    });
+
+    // Ticket 52's prompt shows only after the visitor's first scroll, tap or key press, and only
+    // outside Canada, which ?rf_region=out stands in for (switches.mjs, query). A run with its
+    // switch on makes that first interaction on every page (fixtures.mjs, storefrontPage).
+    describe('the first interaction a module waits for', () => {
+        const PROMPT = { key: 'rf_region_prompt', marker: 'data-rf-region-prompt' };
+        const STOREFRONT = 'http://rf-qa-selftest.test';
+        const html = page320(`<header><a href="/">ReelFlies</a></header><main><h1>Dry flies</h1></main><script>
+            const show = () => {
+                ['keydown', 'scroll', 'pointerdown'].forEach(type => removeEventListener(type, show, true));
+                if (new URLSearchParams(location.search).get('rf_region') !== 'out') return;
+                setTimeout(() => {
+                    const card = document.createElement('section');
+                    card.dataset.rfRegionPrompt = '';
+                    card.textContent = 'Shipping to an address outside Canada?';
+                    document.body.append(card);
+                }, 300);
+            };
+            ['keydown', 'scroll', 'pointerdown'].forEach(type => addEventListener(type, show, true));
+        </script>`);
+
+        async function visit(search) {
+            const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+            await context.route(`${STOREFRONT}/**`, route => route.fulfill({ contentType: 'text/html', body: html }));
+            const page = await context.newPage();
+            await page.goto(`${STOREFRONT}/${search}`);
+            return page;
+        }
+        const cards = page => page.locator('[data-rf-region-prompt]').count();
+
+        it('is what shows the module: nothing shows before it, and the module shows after it', async () => {
+            const page = await visit('?rf_region=out');
+            await page.waitForTimeout(600);
+            assert.equal(await cards(page), 0);
+            assert.deepEqual(await firstInteraction(page, [PROMPT]), []);
+            assert.equal(await cards(page), 1);
+        });
+
+        it('moves no focus and no scroll position, and follows no link', async () => {
+            const page = await visit('?rf_region=out');
+            await firstInteraction(page, [PROMPT]);
+            assert.deepEqual(await page.evaluate(() => [document.activeElement.tagName, window.scrollY, window.location.search]), ['BODY', 0, '?rf_region=out']);
+        });
+
+        it('names a module that didn\'t show within its wait, and waits for nothing when no module is expected', async () => {
+            const page = await visit('?rf_region=in');
+            assert.deepEqual(await firstInteraction(page, [PROMPT], { timeout: 700 }), [PROMPT]);
+            assert.equal(await cards(page), 0);
+            const started = Date.now();
+            assert.deepEqual(await firstInteraction(page, []), []);
+            assert.ok(Date.now() - started < MODULE_WAIT_MS, 'no expected module, no wait');
+        });
+    });
+});
+
+describe('the report helpers', () => {
+    it('cap the motion they list, and group what repeats', () => {
+        const declared = Array.from({ length: 30 }, (unused, index) => ({
+            element: index < 20 ? 'a.navPages-action' : `span.x${index}`, kind: 'transition', what: 'all', durationMs: 150,
+        }));
+        const [line] = motionProblems({ running: [], declared }, { max: 3 });
+        assert.match(line, /^30 declarations would move under reduced motion, in 11 groups \(ticket 25's global reduced-motion reset turns them off\): a\.navPages-action transition all \(150 ms\) ×20; span\.x20 transition all \(150 ms\); span\.x21 transition all \(150 ms\); and 8 more groups$/);
+    });
+
+    it('say nothing about a page that fits, moves nothing and covers no focus', () => {
+        assert.deepEqual(overflowProblems({ width: 320, scrollWidth: 320, offenders: [] }), []);
+        assert.deepEqual(motionProblems({ running: [], declared: [] }), []);
+        assert.deepEqual(focusProblems([{ step: 1, kind: 'ok', element: 'a' }]), []);
+        assert.deepEqual(focusNotes([{ step: 1, kind: 'ok', element: 'a' }]), []);
+    });
+});

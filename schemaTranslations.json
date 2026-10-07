@@ -6079,6 +6079,48 @@
     "pl": "Masterpass",
     "ja": "Masterpass"
   },
+  "i18n.RfReelFlies": {
+    "default": "ReelFlies"
+  },
+
+  "i18n.RfHeader": {
+    "default": "Header"
+  },
+
+  "i18n.RfMenu": {
+    "default": "Menu"
+  },
+  "i18n.RfMenuTypeIds": {
+    "default": "Fly Type category ids, comma-separated, in menu order"
+  },
+  "i18n.RfMenuSpeciesRootId": {
+    "default": "Flies by Species category id"
+  },
+
+  "i18n.RfProductCards": {
+    "default": "Product cards"
+  },
+
+  "i18n.RfProductPage": {
+    "default": "Product page"
+  },
+
+  "i18n.RfStoreDetails": {
+    "default": "Store details"
+  },
+
+  "i18n.RfCartState": {
+    "default": "Cart state"
+  },
+
+  "i18n.RfQuickAdd": {
+    "default": "Quick add"
+  },
+
+  "i18n.RfRegionPrompt": {
+    "default": "Outside-Canada prompt"
+  },
+
   "i18n.BoltProviderSortingLabel": {
     "default": "Bolt",
     "fr": "Bolt",

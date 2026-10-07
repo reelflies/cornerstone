@@ -1,0 +1,67 @@
+// =============================================================================
+// REELFLIES
+// =============================================================================
+//
+// The ReelFlies style layer (ADR 0001; build pipeline, section 6.1), imported at the end of
+// theme.scss so it builds on every stock rule. Settings, tokens and mixins go in _settings.scss,
+// which theme.scss imports after the stock settings.
+//
+// One import per module, in ticket order, each a slot until its ticket uncomments it and adds
+// its partial (_<name>.scss beside this file). Change only your own line, and keep its ticket
+// number: the blank lines between slots keep parallel tickets' edits apart, so git never sees
+// two of them touch the same lines.
+//
+// The whole layer is reported against the performance budget's estimate of about 12 KB
+// (scripts/check-bundle.mjs).
+//
+// -----------------------------------------------------------------------------
+
+// @import "foundation"; // 25 skin foundation: fonts, tokens, focus ring, reduced motion
+
+// @import "header"; // 27 header and shipping strip
+
+// @import "menu"; // 28 grouped menu and phone drawer
+
+// @import "rail"; // 29 desktop rail and banner strip
+
+// @import "search"; // 30 quick search
+
+// @import "card"; // 31 product card and grid
+
+// @import "category"; // 32 Fly Type and Species pages
+
+// @import "facets"; // 33 Fly size filter
+
+// @import "hub"; // 34 Species hub
+
+// @import "chart"; // 35 hook size chart page
+
+// @import "brand"; // 36 ReelFlies brand listing
+
+// @import "size-pills"; // 37 size pills
+
+// @import "add-flow"; // 38 add flow
+
+// @import "product"; // 39 product page layout
+
+// @import "reviews"; // 40 reviews
+
+// @import "cart"; // 41 cart
+
+// @import "cart-state"; // 42 cart state
+
+// @import "quick-add"; // 43 quick add button and panel
+
+// @import "home-hero"; // 46 home hero
+
+// @import "home-tiles"; // 47 home category cards and tiles
+
+// @import "home-bands"; // 48 home product bands
+
+// @import "home-links"; // 49 home link sections
+
+// @import "footer"; // 50 footer
+
+// @import "empty-states"; // 51 404 and empty states
+
+// @import "region"; // 52 outside-Canada prompt

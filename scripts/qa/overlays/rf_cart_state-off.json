@@ -1,0 +1,7 @@
+{
+    "description": "The cart state switched off: the stock product page and cards, with no in-cart counts and no cart-state script (ticket 42; ticket 54's switch matrix)",
+    "ticket": "42",
+    "settings": {
+        "rf_cart_state": false
+    }
+}
