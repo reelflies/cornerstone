@@ -1,6 +1,6 @@
 // Ticket 21's changes files under store-settings/, run through the store-write helper (W0-11,
 // scripts/store/) on the store's own answers, recorded by scripts/settings/read.mjs on
-// 2026-10-07 (fixtures/recorded-2026-10-07.json). No token and no network.
+// 2026-10-06 (fixtures/recorded-2026-10-06.json). No token and no network.
 //
 // - store-settings/1895766/: lifted writes. Each passes the allowlist and the channel rule, plans
 //   with parts 1 and 2 of the three-part test proved, and applies with part 3 holding; a leak to
@@ -22,13 +22,13 @@ import { readLogRows } from '../store/log.mjs';
 import { buildPlan, checkRequests } from '../store/plan.mjs';
 
 const DIR = new URL('../../store-settings/', import.meta.url);
-const recorded = JSON.parse(fs.readFileSync(new URL('./fixtures/recorded-2026-10-07.json', import.meta.url), 'utf8'));
+const recorded = JSON.parse(fs.readFileSync(new URL('./fixtures/recorded-2026-10-06.json', import.meta.url), 'utf8'));
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-settings-changes-'));
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 let roots = 0;
 const newRoot = () => path.join(tmp, `root-${++roots}`);
 
-const unset = phaseOn(parseCalendar({ flip: null, status: 'provisional', source: 'ticket 10' }), '2026-10-07');
+const unset = phaseOn(parseCalendar({ flip: null, status: 'provisional', source: 'ticket 10' }), '2026-10-06');
 const contentFreeze = phaseOn(parseCalendar({ flip: '2027-03-01', status: 'set', source: 'ticket 10' }), '2027-02-20');
 const flipped = phaseOn(parseCalendar({ flip: '2027-03-01', status: 'set', source: 'ticket 10' }), '2027-03-02');
 

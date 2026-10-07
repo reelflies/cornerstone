@@ -2,7 +2,7 @@
 
 The one checklist of control-panel and API settings that the theme depends on for ReelFlies_CA (channel 1895766). Theme settings in `config.json` aren't here: they ship through `scripts/release.sh`. Refactor 07 keeps the category settings, such as Menu Display Depth.
 
-First written 2026-10-07 from the read-only reads below. Each row says where the setting lives, what the reads show, the target, who changes it, and what it waits on. Every default taken here is revisitable.
+First written 2026-10-06 from the read-only reads below. Each row says where the setting lives, what the reads show, the target, who changes it, and what it waits on. Every default taken here is revisitable.
 
 ## How a setting changes
 
@@ -16,11 +16,11 @@ First written 2026-10-07 from the read-only reads below. Each row says where the
 - **Shaun's batch** holds everything store-wide, every promotion, and anything the helper never writes. His approval pages are `plan/approvals/21-*.md` in the plan folder (`~/reelflies/theme/plan/`), outside this repo.
   - A store-wide setting or a promotion is planned with `plan.mjs --approved` from `store-settings/store-wide/`, and Shaun applies it at his own terminal with `apply.mjs --approved`. The same day, .com and channel 1 get a smoke test.
   - Control-panel items have no API the helper may use. Shaun sets them by hand, and the next read records the result.
-- `scripts/settings/changes.test.mjs` runs every changes file through the helper's plan and apply. It uses the store's own answers, recorded in `scripts/settings/fixtures/recorded-2026-10-07.json`.
+- `scripts/settings/changes.test.mjs` runs every changes file through the helper's plan and apply. It uses the store's own answers, recorded in `scripts/settings/fixtures/recorded-2026-10-06.json`.
 
 ## The checklist
 
-Values are from the reads of 2026-10-07 (below). "Inherits" means 1895766 shows `null` and takes the global value.
+Values are from the reads of 2026-10-06 (below). "Inherits" means 1895766 shows `null` and takes the global value.
 
 | # | Setting | Where | Scope, by the reads | On 1895766 now | Target | Route | Status |
 |---|---|---|---|---|---|---|---|
