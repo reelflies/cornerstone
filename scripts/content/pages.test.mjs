@@ -89,22 +89,41 @@ describe('the format rules (pageProblems)', () => {
         assert.match(problemsOf({ url: '/Shipping Returns' }).join('\n'), /url "\/Shipping Returns" isn't a lower-case path/);
         assert.match(problemsOf({ url: '/contact-us/' }).join('\n'), /url \/contact-us\/ is used twice/);
         assert.match(problemsOf({ name: 'Contact Us' }).join('\n'), /name "Contact Us" is used twice/);
+        assert.match(problemsOf({ name: ' ' }).join('\n'), /shipping-returns\.html: no name/);
+    });
+
+    it('asks for is_visible as true or false, and sort_order as a whole number', () => {
+        assert.match(problemsOf({ is_visible: 'yes' }).join('\n'), /is_visible must be true or false/);
+        assert.match(problemsOf({ is_visible: undefined }).join('\n'), /is_visible must be true or false/);
+        for (const sortOrder of [2.5, -10, '20', undefined]) {
+            assert.match(problemsOf({ sort_order: sortOrder }).join('\n'), /sort_order must be a whole number/, String(sortOrder));
+        }
+        assert.deepEqual(problemsOf({ is_visible: false, sort_order: 0 }), []);
     });
 
     it('asks a live path to match its url, and a new path to give its reason', () => {
         assert.match(problemsOf({ path: { kind: 'live', live: '/shipping/', evidence: 'x' } }).join('\n'), /live path \/shipping\/ isn't its url/);
         assert.match(problemsOf({ path: { kind: 'new' } }).join('\n'), /a new path needs its reason/);
         assert.match(problemsOf({ path: { kind: 'moved' } }).join('\n'), /path.kind/);
+        assert.match(problemsOf({ path: { kind: 'live', live: '/shipping-returns/' } }).join('\n'), /a live path needs its evidence/);
     });
 
     it('keeps a contact form to the stock fields', () => {
         const site2 = sample();
         site2.pages[1].contact_fields = 'fullname,email';
         assert.match(pageProblems(site2).join('\n'), /contact_fields "email"/);
+        const site3 = sample();
+        site3.pages[1].contact_fields = '';
+        assert.match(pageProblems(site3).join('\n'), /contact-us\.html: a contact form lists its contact_fields/);
+    });
+
+    it('gives contact_fields only to a contact form', () => {
+        assert.match(problemsOf({ contact_fields: 'fullname' }).join('\n'), /shipping-returns\.html: only a contact form has contact_fields/);
     });
 
     it('keeps meta descriptions to 160 characters', () => {
         assert.match(problemsOf({ meta_description: 'x'.repeat(161) }).join('\n'), /meta_description is 161 characters/);
+        assert.match(problemsOf({ meta_description: '' }).join('\n'), /no meta_description/);
     });
 
     it('refuses markup that a Web Page body must not carry', () => {
@@ -114,6 +133,9 @@ describe('the format rules (pageProblems)', () => {
             ['<script>alert(1)</script>', /<script>/],
             ['<style>p{}</style>', /<style>/],
             ['<iframe src="https://example.com/"></iframe>', /<iframe>/],
+            ['<form action="/contact-us/"><p>x</p></form>', /<form>/],
+            ['<object data="https://example.com/x.swf"></object>', /<object>/],
+            ['<embed src="https://example.com/x.swf">', /<embed>/],
             ['<p style="color:red">x</p>', /style= attribute/],
             ['<p onclick="x()">x</p>', /onclick= attribute/],
         ];
@@ -130,11 +152,19 @@ describe('the format rules (pageProblems)', () => {
         assert.match(pageProblems(site2).join('\n'), /newsletter.*email address/);
     });
 
+    it('looks for an email address in the entry\'s own fields too, since meta_description is sent', () => {
+        assert.match(problemsOf({ meta_description: 'Write to someone@example.ca.' }).join('\n'), /shipping-returns\.html: an email address/);
+        assert.match(problemsOf({ forShaun: [{ question: 'Use someone@example.ca?' }] }).join('\n'), /shipping-returns\.html: an email address/);
+    });
+
     it('allows links only to these pages, the hook size chart, the blog, https sites and the phone', () => {
         const ok = `${BANNER}\n<p><a href="/contact-us/">a</a> <a href="/fly-hook-size-chart/#size-14">b</a> <a href="/blog/">c</a> <a href="https://reelflies.com/">d</a> <a href="tel:+18662504071">e</a></p>`;
         assert.deepEqual(problemsOf({}, ok), []);
         assert.match(problemsOf({}, `${BANNER}\n<p><a href="/returns/">x</a></p>`).join('\n'), /links to \/returns\/, which isn't one of these pages/);
         assert.match(problemsOf({}, `${BANNER}\n<p><a href="http://reelflies.com/">x</a></p>`).join('\n'), /links to http:\/\/reelflies.com\//);
+        for (const tel of ['tel:18662504071', 'tel:+1 866 250 4071', 'tel:+']) {
+            assert.match(problemsOf({}, `${BANNER}\n<p><a href="${tel}">x</a></p>`).join('\n'), /a link is a path here, an https:\/\/ address or tel:\+<digits>/, tel);
+        }
     });
 
     it('asks a draft page to open with the DRAFT banner, and its markers to match forShaun', () => {
@@ -144,6 +174,7 @@ describe('the format rules (pageProblems)', () => {
         assert.deepEqual(problemsOf({ forShaun: [{ key: 'rates', question: 'The standard rate?' }] }, marked), []);
         assert.match(problemsOf({ forShaun: [{ key: 'rates', question: 'The standard rate?' }] }).join('\n'), /forShaun "rates" has no marker in the body/);
         assert.match(problemsOf({ forShaun: [{ question: '' }] }).join('\n'), /forShaun entry 1 has no question/);
+        assert.match(problemsOf({ forShaun: { rates: 'The standard rate?' } }).join('\n'), /forShaun must be a list/);
     });
 
     it('asks an approved page to name who approved it and when, and to carry no DRAFT markers', () => {
@@ -151,6 +182,12 @@ describe('the format rules (pageProblems)', () => {
         assert.deepEqual(problemsOf(approved, '<h2>Shipping</h2>'), []);
         assert.match(problemsOf(approved).join('\n'), /approved page still carries DRAFT markers/);
         assert.match(problemsOf({ status: 'approved' }, '<h2>Shipping</h2>').join('\n'), /approved page needs approved.by and approved.date/);
+        for (const date of ['20/10/2026', '2026-10-2', 'October 20, 2026', '']) {
+            const badDate = { status: 'approved', approved: { by: 'Shaun', date } };
+            assert.match(problemsOf(badDate, '<h2>Shipping</h2>').join('\n'), /approved page needs approved.by and approved.date \(YYYY-MM-DD\)/, date);
+        }
+        const stillAsking = { ...approved, forShaun: [{ question: 'The standard rate?' }] };
+        assert.match(problemsOf(stillAsking, '<h2>Shipping</h2>').join('\n'), /approved page still has forShaun entries/);
         assert.match(problemsOf({ approved: { by: 'Shaun', date: '2026-10-20' } }).join('\n'), /draft page has an approval/);
         assert.match(problemsOf({ status: 'live' }).join('\n'), /status "live"/);
     });
@@ -159,6 +196,29 @@ describe('the format rules (pageProblems)', () => {
         assert.match(problemsOf({}, `${BANNER}\n<p>Free on fly-only orders.</p>`).join('\n'), /"fly-only"/);
         assert.match(problemsOf({}, `${BANNER}\n<p>Free on fly only orders.</p>`).join('\n'), /"fly-only"/);
         assert.match(problemsOf({ meta_description: 'hasMerchantReturnPolicy' }).join('\n'), /hasMerchantReturnPolicy/);
+        assert.match(problemsOf({}, `${BANNER}\n<p data-schema="hasMerchantReturnPolicy">x</p>`).join('\n'), /hasMerchantReturnPolicy/);
+        assert.match(problemsOf({ meta_description: 'Free on fly-only orders over $60.' }).join('\n'), /shipping-returns\.html: "fly-only"/);
+    });
+
+    it('checks newsletter.json: both sentences, its status and no "fly-only"', () => {
+        const withNewsletter = changes => {
+            const site2 = sample();
+            site2.newsletter = { ...site2.newsletter, ...changes };
+            return pageProblems(site2).join('\n');
+        };
+        assert.match(withNewsletter({ line: '' }), /newsletter\.json: needs the line and the consent wording/);
+        assert.match(withNewsletter({ consent: undefined }), /newsletter\.json: needs the line and the consent wording/);
+        assert.match(withNewsletter({ status: 'live' }), /newsletter\.json: status "live"/);
+        assert.match(withNewsletter({ line: 'Deals on fly-only orders.' }), /newsletter\.json: "fly-only"/);
+        const site2 = sample();
+        site2.newsletter = null;
+        assert.match(pageProblems(site2).join('\n'), /newsletter\.json: needs the line and the consent wording/);
+    });
+
+    it('names a page whose body file is missing', () => {
+        const site2 = sample();
+        site2.pages[0].body = undefined;
+        assert.match(pageProblems(site2).join('\n'), /shipping-returns\.html: no body/);
     });
 
     it('reads markers and links the way a browser would, ignoring comments', () => {

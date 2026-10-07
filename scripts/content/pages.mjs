@@ -163,7 +163,7 @@ function entryProblems(item, index) {
         problems.push(`${where}: a new path needs its reason`);
     }
     if (item.type === 'contact_form') {
-        const fields = typeof item.contact_fields === 'string' ? item.contact_fields.split(',') : [];
+        const fields = typeof item.contact_fields === 'string' && item.contact_fields ? item.contact_fields.split(',') : [];
         if (!fields.length) problems.push(`${where}: a contact form lists its contact_fields`);
         for (const field of fields) if (!CONTACT_FIELDS.includes(field)) problems.push(`${where}: contact_fields "${field}" isn't one of ${CONTACT_FIELDS.join(', ')}`);
     } else if ('contact_fields' in item) {
