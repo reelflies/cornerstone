@@ -113,6 +113,38 @@ test('verify reports an unchanged theme, the wrong variation and every settings 
     ]);
 });
 
+// The first agent push (RELEASES.md, 2026-10-07 03:07 UTC) went live as "ReelFlies (1)": My Themes
+// already held a "ReelFlies", so the store numbered the new upload, and verify called that a problem.
+test('W0-3b: verify accepts the name the store gives a repeat upload, config.json\'s name followed by " (n)", and still fails any other name', () => {
+    const verifyName = (themeName, name = 'ReelFlies') => verifyRelease({
+        before: { themeUuid: '58abad50', themeVersionUuid: 'v1' },
+        after: {
+            settings: { 'body-bg': '#ffffff', logo_size: '300x100', channels: [] },
+            capture: {
+                themeUuid: '174ad580', themeVersionUuid: 'v2', themeName, variationName: 'ReelFlies CA',
+            },
+        },
+        config: { ...config, name },
+        variation: 'ReelFlies CA',
+    });
+    for (const accepted of ['ReelFlies', 'ReelFlies (1)', 'ReelFlies (2)', 'ReelFlies (10)', 'ReelFlies (123)']) {
+        assert.deepEqual(verifyName(accepted), [], accepted);
+    }
+    const refused = [
+        'Cornerstone', 'Cavio', 'reelflies', 'reelflies (1)', 'ReelFlies ', 'ReelFlies(1)', 'ReelFlies  (1)', 'ReelFlies (1) ', ' ReelFlies (1)',
+        'ReelFlies (0)', 'ReelFlies (01)', 'ReelFlies (-1)', 'ReelFlies (1.5)', 'ReelFlies (x)', 'ReelFlies ()', 'ReelFlies (1',
+        'ReelFlies (1) (1)', 'ReelFlies (1) copy', 'ReelFlies US', 'ReelFlies US (1)', 'My ReelFlies (1)', 'ReelFlies (１)', null,
+    ];
+    for (const name of refused) {
+        assert.deepEqual(verifyName(name), [`the live theme is "${name}", not "ReelFlies" or "ReelFlies (n)"`], String(name));
+    }
+    // config.json's name is matched as text, never as a pattern.
+    assert.deepEqual(verifyName('R.F (1)', 'R.F'), []);
+    assert.deepEqual(verifyName('RxF (1)', 'R.F'), ['the live theme is "RxF (1)", not "R.F" or "R.F (n)"']);
+    assert.deepEqual(verifyName('Fly (US) (2)', 'Fly (US)'), []);
+    assert.deepEqual(verifyName('Fly (2)', 'Fly (US)'), ['the live theme is "Fly (2)", not "Fly (US)" or "Fly (US) (n)"']);
+});
+
 test('values of settings named like credentials are never shown, only their length', () => {
     assert.equal(displayValue('instagram-access-token', 'IGQVJabcdefghijklmnop'), '[hidden, 21 characters]');
     assert.equal(displayValue('rf_api_key', 'abc'), '[hidden, 3 characters]');
