@@ -1,0 +1,11 @@
+{
+  "_about": "Ticket 21, inventory on ReelFlies_CA (1895766): show the stock level only when it is low. The reads of 2026-10-07 show option_out_of_stock_behavior is already label_option globally, which 1895766 inherits (sold-out sizes stay visible and marked), product_out_of_stock_behavior is do_nothing (fully sold-out products stay listed, ticket 13 decision 1) and the out-of-stock message is the plain 'Out of stock', so none of those needs a write. A lifted write: plan and apply with scripts/store/ (docs/store-writes.md).",
+  "requests": [
+    {
+      "method": "PUT",
+      "path": "/v3/settings/inventory",
+      "query": { "channel_id": 1895766 },
+      "body": { "stock_level_display": "show_when_low" }
+    }
+  ]
+}

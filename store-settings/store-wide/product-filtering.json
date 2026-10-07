@@ -1,0 +1,155 @@
+{
+  "_about": "Ticket 21, Product Filtering's store-wide default list (PUT /v3/settings/search/filters): Fly Sizes first and open, 15 values, sorted by option value (hook order once ticket 18's Fly Sizes job lands); Category hidden; Brand and Price stay hidden; every other filter as read on 2026-10-07, read-only facet fields left out. The list takes no channel_id, so it is Shaun's: plan.mjs --approved, then apply.mjs --approved at his terminal. The reads show channels 1 and 1855224 each have their own channel-wide filter context, which differ from this list, so it is expected to reach ReelFlies_CA (1895766, no context) only. The same-day checks prove it: read.mjs again, then .com's Dry Flies page still shows its Price facet.",
+  "requests": [
+    {
+      "method": "PUT",
+      "path": "/v3/settings/search/filters",
+      "body": [
+        {
+          "id": "Rmx5IFNpemVz",
+          "display_name": "Fly Sizes",
+          "type": "product",
+          "display_product_count": true,
+          "collapsed_by_default": false,
+          "items_to_show": 15,
+          "sort_by": "option_values",
+          "is_enabled": true
+        },
+        {
+          "id": "Ym9vbA==",
+          "display_name": "Other",
+          "type": "other",
+          "is_enabled": true,
+          "display_product_count": true,
+          "collapsed_by_default": true,
+          "show_free_shipping_filter": false,
+          "show_is_featured_filter": false,
+          "show_in_stock_filter": false
+        },
+        {
+          "id": "cmF0aW5n",
+          "display_name": "Rating",
+          "type": "rating",
+          "collapsed_by_default": true,
+          "is_enabled": true
+        },
+        {
+          "id": "Y2F0ZWdvcnk=",
+          "display_name": "Category",
+          "type": "category",
+          "items_to_show": 15,
+          "collapsed_by_default": false,
+          "display_product_count": true,
+          "is_enabled": false
+        },
+        {
+          "id": "YnJhbmQ=",
+          "display_name": "Brand",
+          "type": "brand",
+          "sort_by": "alpha",
+          "items_to_show": 10,
+          "collapsed_by_default": false,
+          "display_product_count": true,
+          "is_enabled": false
+        },
+        {
+          "id": "cHJpY2U=",
+          "display_name": "Price",
+          "type": "price",
+          "collapsed_by_default": false,
+          "is_enabled": false
+        },
+        {
+          "id": "Q2hvb3NlIEZvYW0gU3R5bGU=",
+          "display_name": "Choose Foam Style",
+          "type": "product",
+          "display_product_count": true,
+          "collapsed_by_default": false,
+          "items_to_show": 10,
+          "sort_by": "alpha",
+          "is_enabled": false
+        },
+        {
+          "id": "Q29sb3I=",
+          "display_name": "Color",
+          "type": "product",
+          "display_product_count": true,
+          "collapsed_by_default": false,
+          "items_to_show": 10,
+          "sort_by": "alpha",
+          "is_enabled": false
+        },
+        {
+          "id": "Q29sb3Vy",
+          "display_name": "Colour",
+          "type": "product",
+          "display_product_count": true,
+          "collapsed_by_default": false,
+          "items_to_show": 10,
+          "sort_by": "alpha",
+          "is_enabled": false
+        },
+        {
+          "id": "Y2hvb3NlIGxlYWRlciB3ZWlnaHQ=",
+          "display_name": "choose leader weight",
+          "type": "product",
+          "display_product_count": true,
+          "collapsed_by_default": false,
+          "items_to_show": 10,
+          "sort_by": "alpha",
+          "is_enabled": false
+        },
+        {
+          "id": "U3RyaWtlIEluZGljYXRvciBDb2xvdXI=",
+          "display_name": "Strike Indicator Colour",
+          "type": "product",
+          "display_product_count": true,
+          "collapsed_by_default": false,
+          "items_to_show": 10,
+          "sort_by": "alpha",
+          "is_enabled": false
+        },
+        {
+          "id": "U2l6ZQ==",
+          "display_name": "Size",
+          "type": "product",
+          "display_product_count": true,
+          "collapsed_by_default": false,
+          "items_to_show": 10,
+          "sort_by": "alpha",
+          "is_enabled": false
+        },
+        {
+          "id": "Q2hvb3NlIFNpemU=",
+          "display_name": "Choose Size",
+          "type": "product",
+          "display_product_count": true,
+          "collapsed_by_default": false,
+          "items_to_show": 10,
+          "sort_by": "alpha",
+          "is_enabled": false
+        },
+        {
+          "id": "WWFybiBJbmRpY2F0b3IgQ29sb3Vy",
+          "display_name": "Yarn Indicator Colour",
+          "type": "product",
+          "display_product_count": true,
+          "collapsed_by_default": false,
+          "items_to_show": 10,
+          "sort_by": "alpha",
+          "is_enabled": false
+        },
+        {
+          "id": "RkxZIEJPWCBPUFRJT05BTA==",
+          "display_name": "FLY BOX OPTIONAL",
+          "type": "product",
+          "display_product_count": true,
+          "collapsed_by_default": false,
+          "items_to_show": 10,
+          "sort_by": "alpha",
+          "is_enabled": false
+        }
+      ]
+    }
+  ]
+}

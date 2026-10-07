@@ -1,0 +1,43 @@
+{
+  "_about": "Ticket 21, the free-shipping promotion on ReelFlies_CA (BUILD-1; ticket 13 decision 2): free standard shipping in Canada on fly orders over CAD $60, fly boxes and gear not included. It names channel 1895766 and currency CAD, because an empty channels list reaches every channel and currency '*' also discounts .com (ticket 03 item 7). Promotions are Shaun's: plan.mjs --approved, then apply.mjs --approved at his terminal. The ELIGIBLE and APPLIED wording is DRAFT copy for his approval; the UPSELL line is ticket 13's default.",
+  "_waiting": "Not planned yet. rules[0].condition.cart.items.categories waits for the tree-4 Fly Type ids (refactor 13), and rules[0].action.shipping.zone_ids for the Canada shipping zone's id, which the read-only account can't read (no Store logistics scope): Shaun gives it, or a read with that scope. Remove this key when both are filled; the tests then require them.",
+  "requests": [
+    {
+      "method": "POST",
+      "path": "/v3/promotions",
+      "body": {
+        "name": "ReelFlies_CA free shipping on fly orders over $60",
+        "redemption_type": "AUTOMATIC",
+        "channels": [{ "id": 1895766 }],
+        "currency_code": "CAD",
+        "status": "ENABLED",
+        "stop": false,
+        "rules": [
+          {
+            "action": { "shipping": { "free_shipping": true, "zone_ids": [] } },
+            "apply_once": true,
+            "stop": false,
+            "condition": { "cart": { "items": { "categories": [] }, "minimum_spend": 60 } }
+          }
+        ],
+        "notifications": [
+          {
+            "type": "UPSELL",
+            "content": "Free standard shipping in Canada on fly orders over $60. Fly boxes and gear not included.",
+            "locations": ["PRODUCT_PAGE", "CART_PAGE"]
+          },
+          {
+            "type": "ELIGIBLE",
+            "content": "Your fly order qualifies for free standard shipping in Canada.",
+            "locations": ["CART_PAGE", "CHECKOUT_PAGE"]
+          },
+          {
+            "type": "APPLIED",
+            "content": "Free standard shipping in Canada is applied to your fly order.",
+            "locations": ["CART_PAGE", "CHECKOUT_PAGE"]
+          }
+        ]
+      }
+    }
+  ]
+}
