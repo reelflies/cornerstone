@@ -13,6 +13,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { acquireLock, readHolder } from './lib/lock.mjs';
 import { phaseOn, readCalendar } from './lib/release-calendar.mjs';
+import { AFTER_FLIP_PHASES } from './release-lighthouse.mjs';
 import { originRepo } from './release-origin-fixture.mjs';
 
 const SCRIPT = fileURLToPath(new URL('./release.sh', import.meta.url));
@@ -1816,16 +1817,22 @@ test('ticket 17: the push summary and a dry run\'s entry say what Lighthouse doe
     assert.equal(report.status, 0, report.output);
     assert.match(report.stdout, /\n {2}lighthouse {2}after the push: npm run qa:lighthouse on the prelaunch host, with the preview cookie\n/);
     assert.match(report.stdout, /\n- Verify: not run \(dry run\)\n- Lighthouse: measured on the prelaunch host after the push \(a dry run pushes nothing, so it measures nothing\)\n/);
+    // Step 5 reads only the committed calendar and today, never the overrides, so its line is
+    // judged against the same calendar, as the step 5 tests above are: the test holds on any day.
     const typed = stepFive({}, { QA_PREVIEW_COOKIE: '' });
-    assert.match(typed.stdout, /\n {2}lighthouse {2}after the push: pending host batch \(no QA_PREVIEW_COOKIE in this shell/);
+    if (AFTER_FLIP_PHASES.includes(phaseOn(readCalendar()).phase)) {
+        assert.match(typed.stdout, /\n {2}lighthouse {2}skipped \(after the Flip 1895766 is live reelflies\.ca/);
+    } else {
+        assert.match(typed.stdout, /\n {2}lighthouse {2}after the push: pending host batch \(no QA_PREVIEW_COOKIE in this shell/);
+    }
 });
 
 test('ticket 17: before step 1 the release says what Lighthouse will do after the push, and never shows the cookie', () => {
-    const { env } = fixtures();
-    const without = run([...CA, '--dry-run'], { ...env, QA_PREVIEW_COOKIE: '' });
+    // The day before the Flip (T-14 on onDate's calendar), the last day step 6b runs, then the Flip.
+    const without = run([...CA, '--dry-run'], { ...onDate('2027-02-28'), QA_PREVIEW_COOKIE: '' });
     assert.equal(without.status, 0, without.output);
     assert.match(without.stdout, /^lighthouse after the push: pending host batch \(no QA_PREVIEW_COOKIE in this shell/m);
-    const withCookie = run([...CA, '--dry-run'], { ...env, QA_PREVIEW_COOKIE: LH_COOKIE });
+    const withCookie = run([...CA, '--dry-run'], { ...onDate('2027-02-28'), QA_PREVIEW_COOKIE: LH_COOKIE });
     assert.equal(withCookie.status, 0, withCookie.output);
     assert.match(withCookie.stdout, /^lighthouse after the push: npm run qa:lighthouse on the prelaunch host/m);
     assert.doesNotMatch(withCookie.output, /rf-secret/);
