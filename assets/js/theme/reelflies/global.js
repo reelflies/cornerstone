@@ -12,6 +12,10 @@
 // - Change only your own slot line; the blank lines keep parallel tickets' edits apart.
 // - One module failing, or its chunk failing to load, is reported in the console; the others
 //   still start.
+// - Before them, ticket 25's reduced-motion setting for jQuery's animations (reduced-motion.js).
+
+import $ from 'jquery';
+import followReducedMotion from './reduced-motion';
 
 export const GLOBAL_MODULES = [
     // 27 header: rise ring
@@ -29,6 +33,11 @@ function reportError(error) {
 }
 
 export default function reelfliesGlobal(context, modules = GLOBAL_MODULES, onError = reportError) {
+    try {
+        followReducedMotion(window, $);
+    } catch (error) {
+        onError(error);
+    }
     modules.forEach(start => {
         try {
             const started = start(context);
