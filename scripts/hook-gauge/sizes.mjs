@@ -3,6 +3,8 @@
 //
 // - CHART_SIZES: 6/0, the biggest hook, down to 1/0, then 1, 2, 4 … 24 (spec module 22; the
 //   hook order of ticket 18's Fly Sizes job and of ticket 33's facet sorter).
+// - CHART_URL: the hook size chart Resource's path, which the home band's links and the rows'
+//   page lookup share.
 // - anchorId(size): each row's id, the contract with ticket 49 (build pipeline 6.9):
 //   size-6-0 … size-1-0, then size-1 … size-24.
 // - facetParam(size): the Fly Sizes facet in BigCommerce's own URL form (SEO-6), with ticket
@@ -13,6 +15,8 @@
 export const CHART_SIZES = Object.freeze([
     '6/0', '5/0', '4/0', '3/0', '2/0', '1/0', '1', '2', '4', '6', '8', '10', '12', '14', '16', '18', '20', '22', '24',
 ]);
+
+export const CHART_URL = '/fly-hook-size-chart/';
 
 // The product option, and the facet it becomes on category pages.
 export const FACET_NAME = 'Fly Sizes';

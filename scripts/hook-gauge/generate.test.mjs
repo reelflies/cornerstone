@@ -9,7 +9,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { describe, it } from 'node:test';
+import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readCalibration } from './geometry.mjs';
 import { PARTIAL_FILE, partialSource } from './gauge.mjs';
@@ -17,7 +17,13 @@ import { PARTIAL_FILE, partialSource } from './gauge.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const GENERATE = path.join(HERE, 'generate.mjs');
 const run = (...args) => spawnSync(process.execPath, [GENERATE, ...args], { encoding: 'utf8' });
-const scratch = () => fs.mkdtempSync(path.join(os.tmpdir(), 'rf-hook-gauge-'));
+const scratches = [];
+const scratch = () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-hook-gauge-'));
+    scratches.push(dir);
+    return dir;
+};
+after(() => scratches.forEach(dir => fs.rmSync(dir, { recursive: true, force: true })));
 
 describe('the generated partial', () => {
     it('is committed exactly as the generator writes it', () => {
@@ -77,6 +83,35 @@ describe('generate.mjs', () => {
         assert.equal(written.status, 0, written.stderr);
         assert.equal(fs.readFileSync(file, 'utf8'), partialSource());
         assert.equal(run('--check', '--file', file).status, 0);
+    });
+
+    it('--calibration draws from another calibration file', () => {
+        const dir = scratch();
+        const calibration = readCalibration();
+        const other = path.join(dir, 'calibration.json');
+        fs.writeFileSync(other, JSON.stringify({ ...calibration, lengths: { ...calibration.lengths, 14: 11 } }));
+        const file = path.join(dir, 'hook-gauge.html');
+        const written = run('--calibration', other, '--file', file);
+        assert.equal(written.status, 0, written.stderr);
+        assert.equal(fs.readFileSync(file, 'utf8'), partialSource(readCalibration(other)));
+        assert.equal(run('--check', '--file', file).status, 1, 'the committed calibration draws a different partial');
+    });
+
+    it('ends in one line naming the problem, not a stack trace, when the calibration can\'t be read or drawn', () => {
+        const dir = scratch();
+        const calibration = readCalibration();
+        const bad = path.join(dir, 'bad.json');
+        fs.writeFileSync(bad, JSON.stringify({ ...calibration, lengths: { ...calibration.lengths, 24: 20 } }));
+        const drawn = run('--check', '--calibration', bad);
+        assert.equal(drawn.status, 1);
+        assert.match(drawn.stderr, /^generate\.mjs: the hook gauge calibration can't be drawn:\n- 22 \(6 mm\) must be longer than 24 \(20 mm\)/);
+        assert.doesNotMatch(drawn.stderr, /\n\s+at /);
+        const broken = path.join(dir, 'broken.json');
+        fs.writeFileSync(broken, '{ "unit": ');
+        const unread = run('--calibration', broken, '--file', path.join(dir, 'hook-gauge.html'));
+        assert.equal(unread.status, 1);
+        assert.match(unread.stderr, /^generate\.mjs: can't read the hook gauge calibration .*broken\.json: /);
+        assert.equal(fs.existsSync(path.join(dir, 'hook-gauge.html')), false, 'nothing is written');
     });
 
     it('refuses an unknown argument', () => {

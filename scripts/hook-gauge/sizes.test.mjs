@@ -5,7 +5,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    CHART_SIZES, FACET_NAME, anchorId, facetParam, isChartSize, normalizeSize,
+    CHART_SIZES, CHART_URL, FACET_NAME, anchorId, facetParam, isChartSize, normalizeSize,
 } from './sizes.mjs';
 
 describe('the chart sizes', () => {
@@ -21,6 +21,10 @@ describe('the chart sizes', () => {
             'size-6-0', 'size-5-0', 'size-4-0', 'size-3-0', 'size-2-0', 'size-1-0',
             'size-1', 'size-2', 'size-4', 'size-6', 'size-8', 'size-10', 'size-12', 'size-14', 'size-16', 'size-18', 'size-20', 'size-22', 'size-24',
         ]);
+    });
+
+    it('are shown at one path, the hook size chart Resource\'s /fly-hook-size-chart/', () => {
+        assert.equal(CHART_URL, '/fly-hook-size-chart/');
     });
 
     it('refuses an anchor for a size the chart has no row for', () => {

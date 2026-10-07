@@ -5,7 +5,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { CHART_SIZES } from './sizes.mjs';
+import { CHART_SIZES, CHART_URL } from './sizes.mjs';
 import {
     LAYOUTS, calibrationProblems, fitScale, hookBox, readCalibration, rowWidth,
 } from './geometry.mjs';
@@ -81,7 +81,7 @@ describe('the layouts', () => {
             ['2/0', '1/0', '1', '2', '4', '6'],
             ['8', '10', '12', '14', '16', '18', '20'],
         ]);
-        assert.equal(LAYOUTS.band.href, '/fly-hook-size-chart/');
+        assert.equal(LAYOUTS.band.href, CHART_URL);
     });
 
     it('band: each phone row fits the 343px column with 44px targets and no sideways scroll (CD-12)', () => {
@@ -108,6 +108,15 @@ describe('the layouts', () => {
         }
     });
 
+    it('band: the phone scales count no side padding on the hook links; with the reference\'s 6px a side they need smaller ones (for ticket 49 and the template PR)', () => {
+        const [first] = LAYOUTS.band.rows;
+        // The reference's .gauge .hw has 6px of padding a side and no gap between links.
+        assert.equal(rowWidth(first, lengths, LAYOUTS.band.k.phone, { pad: 6, gap: 0 }), 380.7);
+        assert.equal(fitScale(first, lengths, 343, { pad: 6 }), 1.6);
+        assert.equal(fitScale(first, lengths, 288, { pad: 6, target: 36 }), 1.3);
+        assert.equal(fitScale(first, lengths, 343), 2.1, 'with no side padding, the phone scale is the largest that fits');
+    });
+
     it('band: its one desktop row, 2/0 to 20, fits a 960px column', () => {
         assert.ok(rowWidth(LAYOUTS.band.rows.flat(), lengths, LAYOUTS.band.k.desktop) <= 960);
     });
@@ -126,5 +135,14 @@ describe('the layouts', () => {
         // 25 * 2 = 50 px, and 5 * 2 = 10 px widened to the 44 px target, plus one 4 px gap.
         assert.equal(rowWidth(['2', '24'], few, 2), 98);
         assert.equal(rowWidth(['2', '24'], few, 2, { target: 0, gap: 0 }), 60);
+    });
+
+    it('rowWidth adds each link\'s side padding to its hook before the target, and fitScale counts it', () => {
+        const few = { 2: 25, 24: 5 };
+        // 50 + 2 * 6 = 62 px, and 10 + 12 = 22 px widened to 44 px, plus one 4 px gap.
+        assert.equal(rowWidth(['2', '24'], few, 2, { pad: 6 }), 110);
+        // 25k + 12 + 44 + 4 <= 110 up to k = 2.0.
+        assert.equal(fitScale(['2', '24'], few, 110, { pad: 6 }), 2);
+        assert.equal(fitScale(['2', '24'], few, 109.9, { pad: 6 }), 1.9);
     });
 });

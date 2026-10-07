@@ -12,7 +12,7 @@
 
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { CHART_SIZES, isChartSize } from './sizes.mjs';
+import { CHART_SIZES, CHART_URL, isChartSize } from './sizes.mjs';
 
 export const CALIBRATION_FILE = fileURLToPath(new URL('./calibration.json', import.meta.url));
 const STATUSES = ['provisional', 'checked'];
@@ -34,6 +34,9 @@ const freezeRows = rows => Object.freeze(rows.map(row => Object.freeze(row)));
 // k is in px per mm: desktop, phone (a 343px column at 375), and narrow (a 288px column at 320,
 // story 71) where a layout needs one. The values are the reference design's (.chart-gauge,
 // .gband and their phone rules), except band.narrow, which is the largest that fits at 320.
+// The phone and narrow scales fit only with no side padding on the hook links: the reference's
+// .gauge .hw has 6px a side, and with it the band needs 1.6 px/mm at 343px and 1.3 at 288px
+// (fitScale's pad, below; for ticket 49 and the chart template's styles).
 export const LAYOUTS = Object.freeze({
     chart: Object.freeze({
         rows: freezeRows([['6/0', '5/0', '4/0', '3/0', '2/0', '1/0', '1'], ['2', '4', '6', '8', '10', '12', '14', '16', '18', '20', '22', '24']]),
@@ -42,7 +45,7 @@ export const LAYOUTS = Object.freeze({
     }),
     band: Object.freeze({
         rows: freezeRows([['2/0', '1/0', '1', '2', '4', '6'], ['8', '10', '12', '14', '16', '18', '20']]),
-        href: '/fly-hook-size-chart/',
+        href: CHART_URL,
         k: Object.freeze({ desktop: 3, phone: 2.1, narrow: 1.7 }),
     }),
 });
@@ -95,19 +98,22 @@ export function hookBox(length, k) {
     return { width: round1(length * k), height: round1(length * k * HOOK.aspect) };
 }
 
-// A row's width in px: each hook at its drawn width or the tap target, whichever is wider,
-// plus the gaps between them.
-export function rowWidth(sizes, lengths, k, { target = 44, gap = 4 } = {}) {
-    const items = sizes.map(size => Math.max(hookBox(lengths[size], k).width, target));
+// A row's width in px: each hook at its drawn width plus its link's side padding (`pad` px a
+// side, none by default), or the tap target, whichever is wider, plus the gaps between them.
+export function rowWidth(sizes, lengths, k, { target = 44, gap = 4, pad = 0 } = {}) {
+    const items = sizes.map(size => Math.max(hookBox(lengths[size], k).width + 2 * pad, target));
     return round1(items.reduce((sum, width) => sum + width, 0) + gap * Math.max(sizes.length - 1, 0));
 }
 
 // The largest scale, in steps of 0.1 px/mm and at most `max`, at which the row fits `column`
 // px, or null when the targets alone are too wide.
-export function fitScale(sizes, lengths, column, { target = 44, gap = 4, max = 10 } = {}) {
-    if (rowWidth(sizes, lengths, 0, { target, gap }) > column) return null;
+export function fitScale(sizes, lengths, column, {
+    target = 44, gap = 4, pad = 0, max = 10,
+} = {}) {
+    const spacing = { target, gap, pad };
+    if (rowWidth(sizes, lengths, 0, spacing) > column) return null;
     for (let tenths = Math.floor(max * 10); tenths > 0; tenths -= 1) {
-        if (rowWidth(sizes, lengths, tenths / 10, { target, gap }) <= column) return tenths / 10;
+        if (rowWidth(sizes, lengths, tenths / 10, spacing) <= column) return tenths / 10;
     }
     return null;
 }
