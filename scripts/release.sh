@@ -14,7 +14,10 @@
 #     colours' contrast, then the release guard: rf_* module switches and menu ids
 #   2 clean build      3 checks      4 bundle, check the zip, then axe, raw HTML and screenshots
 #   5 push (never in a dry run: a dry run prints the push command and the log entry, then stops)
-#   6 verify           7 log the release in RELEASES.md
+#   6 verify           6b Lighthouse on the prelaunch host (ticket 17): with the operator's preview
+#                         cookie it runs the gate; without it, as on an agent's push, the entry
+#                         records "pending host batch" for the next host batch (W0-6)
+#   7 log the release in RELEASES.md
 #   then prune old ReelFlies builds from My Themes (W0-3), logging each deletion in RELEASES.md: a
 #   plan only in a dry run, and until a --prune-only has deleted a theme
 #
@@ -22,9 +25,17 @@
 # and records its plan, which a real --prune-only needs (within 60 minutes) and deletes no more than.
 #
 # docs/releasing.md explains each step, flag and refusal. The node steps are in scripts/release.mjs.
-# Every failed step stops the release, and only one release or dry run runs at a time on this Mac.
+# Every failed step but 6b stops the release (6b records what went wrong, and step 7 still writes the
+# entry), and only one release or dry run runs at a time on this Mac.
 
 set -euo pipefail
+
+# Ticket 17: the preview cookie, a control-panel login that Shaun reads into his shell for step 6b,
+# leaves the environment before anything runs, so nvm, npm ci's install scripts, the builds, the
+# gates and stencil-cli never get it. Only the release steps that use it get it back (release(),
+# below).
+rf_preview_cookie="${QA_PREVIEW_COOKIE-}"
+unset QA_PREVIEW_COOKIE
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
@@ -83,7 +94,14 @@ LOCK_TAKEN=1
 STATE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/rf-release.XXXXXX")"
 export RF_RELEASE_STATE="$STATE_DIR/state.json"
 
-release() { node scripts/release.mjs "$@"; }
+# The release's node steps. The ones that use the preview cookie get it back (above): prepare and
+# pre-push for the push summary's lighthouse line, and step 6b's run.
+release() {
+    case "$1" in
+        prepare | pre-push | lighthouse) QA_PREVIEW_COOKIE="$rf_preview_cookie" node scripts/release.mjs "$@" ;;
+        *) node scripts/release.mjs "$@" ;;
+    esac
+}
 step() { printf '\n== %s\n' "$1"; }
 
 # W0-3: --prune-only prunes My Themes and nothing else. Any argument that is the flag, with or
@@ -170,7 +188,15 @@ fi
 npx stencil "${push_args[@]}" </dev/null 2>&1 | release redact
 
 release verify
+# Step 6b (ticket 17): Lighthouse needs the theme live, so it runs after the push, and before step 7
+# so the entry records the scores and pass or fail. It doesn't stop the release by itself: the push
+# is done, so step 7 must write its entry, and if the step fails anyway step 7 records "pending host
+# batch". A failed gate, or Ctrl-C during the run, stops the release once the entry is written,
+# before the prune. This script traps only its exit, so a SIGHUP or SIGTERM that reaches it (a
+# closed terminal) ends it before step 7, with no entry: docs/releasing.md says not to.
+release lighthouse || echo "WARNING  step 6b stopped (above), so step 7 records Lighthouse as pending host batch" >&2
 release write-log
 # W0-3: after the log entry, so the prune counts this release. write-log stops the release when
-# verify found a problem, so nothing is pruned then.
+# verify found a problem, Lighthouse failed or its run was stopped (step 6b), so nothing is pruned
+# then.
 release prune-after-push

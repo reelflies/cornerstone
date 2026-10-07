@@ -1,0 +1,22 @@
+{
+    "data": [
+        { "product_id": 1, "channel_id": 1895766 },
+        { "product_id": 1, "channel_id": 1 },
+        { "product_id": 2, "channel_id": 1895766 },
+        { "product_id": 3, "channel_id": 1895766 },
+        { "product_id": 4, "channel_id": 1895766 },
+        { "product_id": 5, "channel_id": 1895766 },
+        { "product_id": 6, "channel_id": 1895766 },
+        { "product_id": 7, "channel_id": 1895766 },
+        { "product_id": 8, "channel_id": 1 },
+        { "product_id": 9, "channel_id": 1895766 },
+        { "product_id": 10, "channel_id": 1895766 },
+        { "product_id": 11, "channel_id": 1895766 },
+        { "product_id": 12, "channel_id": 1895766 },
+        { "product_id": 13, "channel_id": 1895766 },
+        { "product_id": 14, "channel_id": 1895766 },
+        { "product_id": 15, "channel_id": 1895766 },
+        { "product_id": 16, "channel_id": 1895766 }
+    ],
+    "meta": { "pagination": { "total": 17, "count": 17, "per_page": 50, "current_page": 1, "total_pages": 1 } }
+}

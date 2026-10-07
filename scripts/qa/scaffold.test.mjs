@@ -90,10 +90,11 @@ describe('config.json: the ReelFlies settings block', () => {
         for (const key of SWITCHES) assert.equal(typeof config.settings[key], 'boolean', key);
     });
 
-    it('declares the two menu ids in both variations too', () => {
-        for (const name of VARIATIONS) {
-            const variation = config.variations.find(item => item.name === name);
-            for (const key of MENU_ID_KEYS) assert.ok(key in variation.settings, `${key} in ${name}`);
+    // Ticket 53's channel-1 variation too, which sets tree 1's ids.
+    it('declares the two menu ids in every variation too', () => {
+        assert.ok(VARIATIONS.every(name => config.variations.some(item => item.name === name)));
+        for (const variation of config.variations) {
+            for (const key of MENU_ID_KEYS) assert.ok(key in variation.settings, `${key} in ${variation.name}`);
         }
     });
 

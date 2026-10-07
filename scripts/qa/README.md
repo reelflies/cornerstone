@@ -12,10 +12,11 @@ The checks every theme change is held to (ticket 16; spec "Testing Decisions", s
 | Quick view | `npm run qa:quick-view` | no | no |
 | Fixture renders of partials and widgets | `npm run test:scripts` | yes | yes (release.sh) |
 | Widget element shots | `npm run qa:screens`, with the page shots | no | yes (release.sh, through `qa:prepush`) |
-| Lighthouse budgets (ticket 17) | `npm run qa:lighthouse` | no | not yet: the host batch runs it, and the `release.sh` hook is ticket 17's held second PR ([Lighthouse](#lighthouse-lighthousemjs)) |
+| Lighthouse budgets (ticket 17) | `npm run qa:lighthouse` | no | after each push to prelaunch, with the operator's preview cookie (`release.sh` step 6b); without it the entry records "pending host batch", and the host batch runs it ([Lighthouse](#lighthouse-lighthousemjs)) |
 | Host batch on the prelaunch host | `npm run qa:prelaunch` | no | no: once per checkpoint, in the operator's shell with the preview cookie ([Host batch](#host-batch-qaprelaunch)) |
 | UI states (drawer, panel) and kind@name pins | with `qa:axe` and `qa:screens` | no | yes (release.sh, through `qa:prepush`) |
 | Overlays | `QA_OVERLAY=<name> npm run qa:screens` (and `qa:axe`, `qa:raw-html`) | no | no: refused with `QA_FRESH_SERVER=1` ([Render modes](#render-modes-w0-8)) |
+| The skin in a browser (ticket 25): focus ring, skip link, landmarks, Onest, reduced motion, reflow, the default product image | `npx playwright test --config scripts/qa/playwright.config.mjs skin.spec` | no | no: run it in each ticket that changes the skin ([The skin](#the-skin-skinspecmjs)) |
 | Switch matrix: every pinned page with each module switch on and off (ticket 54a) | `npm run qa:matrix` | no | no: ticket 54's full pass, and each switch ticket for its own switch ([Switch matrix](#switch-matrix-and-the-extra-checks-ticket-54a)) |
 | Reflow at 320, reduced motion, the focus tab-through (ticket 54a) | `npm run qa:reflow`, `qa:motion`, `qa:focus` | no | no: in the switch matrix and ticket 54's full pass |
 | Home widget links answer 200 (ticket 54a) | `npm run qa:links` | no | no: ticket 54's full pass |
@@ -34,7 +35,7 @@ CI has no store credentials, so anything that renders the storefront runs locall
 | Variable | Default | Meaning |
 |---|---|---|
 | `QA_CHANNEL` | `1895766` | Channel to render (ReelFlies_CA) |
-| `QA_VARIATION` | `ReelFlies CA` | Theme variation; it must exist in `config.json` |
+| `QA_VARIATION` | the channel's own: `ReelFlies CA channel 1` on channel 1 (ticket 53), `ReelFlies CA` on every other | Theme variation; it must exist in `config.json`. The default comes from the channel's `variation` in `pages.mjs` (`defaultVariation`); a value you set always wins |
 | `QA_BASE_URL` | none | Test this host (for example the prelaunch host) instead of a local `stencil start` |
 | `QA_PREVIEW_COOKIE` | none | Cookie for the prelaunch host, as `name=value; name2=value2`. It goes only to `QA_BASE_URL` and is never printed. A run that sends it keeps no Playwright traces, because a trace records every request's Cookie header. |
 | `QA_FRESH_SERVER` | none | `1` (`release.sh` sets it): never reuse a running server. Each gate starts its own, and the run stops if anything already answers on its ports. |
@@ -45,7 +46,8 @@ CI has no store credentials, so anything that renders the storefront runs locall
 | `RF_TICKET` | the branch | The ticket the run's locks name, for anyone waiting on them. |
 | `QA_REFERENCE_HTML` | none | The reference page the review pages' reference screens are shot from, instead of `plan/design/reelflies-reference.html` above the checkout ("Review pages") |
 | `QA_MANIFEST` | `scripts/qa/results/manifest.json` | The screenshot manifest a run writes, for example the host batch's in its `QA_RESULTS_DIR` ("Review pages") |
-| `QA_RESULTS_DIR` | none | Set by the host batch to `scripts/qa/results/host/<uuid>/`, the folder a gate files its results in. Ticket 17's Lighthouse runner files its own in `lighthouse/` inside it. |
+| `QA_RESULTS_DIR` | none | Set by the host batch to `scripts/qa/results/host/<uuid>/`, the folder a gate files its results in. Ticket 17's Lighthouse runner files its own in `lighthouse/` inside it. `release.sh`'s step 6b sets it too, to the pushed theme's folder. |
+| `QA_RELEASE_COMMIT` | none | The pushed commit's full sha, set by `release.sh`'s step 6b, which runs Lighthouse before step 7 writes the push's `RELEASES.md` entry. The Lighthouse runner names the build by it instead of by the uuid's entry. Anything but a full sha is ignored. The host batch never passes one on from the shell: it names the build by the uuid's entry. |
 
 **The preview cookie** is a control-panel login, so set it only in your own shell, where it isn't shown or kept in history, and never in a file or a chat (ticket 16):
 
@@ -86,6 +88,7 @@ Agents build tickets in parallel, each in its own worktree, and each worktree's 
 
   ```sh
   QA_PORT=3400 node scripts/qa/serve.mjs                                                  # ReelFlies_CA
+  QA_PORT=3400 QA_CHANNEL=1 node scripts/qa/serve.mjs                                     # reelflies.ca's data as "ReelFlies CA channel 1" (read-only)
   QA_PORT=3400 QA_CHANNEL=1855224 QA_VARIATION="ReelFlies US" node scripts/qa/serve.mjs   # .com's data (read-only)
   ```
 
@@ -101,7 +104,7 @@ Agents build tickets in parallel, each in its own worktree, and each worktree's 
 | `merge` | W0-13's `scripts/merge.sh` | 15 min |
 | `stencil-1` … `stencil-3` | a gate run, while its `stencil start` runs | 30 min |
 | `port-<n>` | a gate run on the ports `n` and `n + 1` | 30 min |
-| `store-write` | W0-11's `scripts/store/apply.mjs`, from its first read to its last log row ([store writes](../../docs/store-writes.md)) | 45 min (the default for a lock with no limit of its own) |
+| `store-write` | W0-11's `scripts/store/apply.mjs`, from its first read to its last log row ([store writes](../../docs/store-writes.md)), and ticket 18's `scripts/catalogue/apply.mjs`, from the token prompt to its last log row ([catalogue jobs](../../docs/catalogue-jobs.md)) | 45 min (the default for a lock with no limit of its own) |
 
 - Each holds `owner.json` (owner, ticket, pid, host and start time) and `owner.txt` with the same facts as lines.
 - **Stale:** a lock older than its limit whose pid isn't running is broken, with a `STALE` line naming the old holder. A lock whose holder still runs is never broken, however old.
@@ -118,6 +121,9 @@ Agents build tickets in parallel, each in its own worktree, and each worktree's 
 4. **Once no worktree from before W0-7 is left,** nothing takes `.locks/stencil` any more, and the orchestrator deletes it.
 
 **The channel-1 fallback.** ReelFlies_CA has no products and no tree-4 categories yet, so its product and category pages 404. Until they exist, `QA_CHANNEL=1` renders this repo's templates with live reelflies.ca data. It is read-only: stencil start passes every request through to the live store, so the gates refuse every write on channel 1 and 1855224 ([Analytics and live-store writes](#analytics-and-live-store-writes-network-guardmjs)). Channel 1 has only a product page and a category page pinned.
+
+- **It renders channel 1's own variation,** "ReelFlies CA channel 1" (ticket 53, decision 10's interim name), which holds tree 1's menu ids. `QA_CHANNEL=1` picks it without `QA_VARIATION`, and its baselines are in `baselines/1-reelflies-ca-channel-1/`, with the widget shots in `baselines/widgets/reelflies-ca-channel-1/`. Before ticket 53, channel-1 runs rendered ReelFlies CA into `1-reelflies-ca/`; that set moved, unchanged, and isn't kept.
+- If Shaun renames the variation, one PR renames it in `config.json` and `pages.mjs` and moves both baseline folders.
 
 ## Analytics and live-store writes (`network-guard.mjs`)
 
@@ -177,7 +183,7 @@ Every Playwright gate opens its pages through `fixtures.mjs`, which puts a guard
 
 `scripts/qa/pages.mjs` is the one place that says which page each gate visits, per channel:
 
-- **Page keys** are the spec's template names: `home`, `fly-type`, `species`, `species-hub`, `product`, `cart`, `hook-chart`, `404` and `brand`, plus `category` for the stock category template until ticket 32. A channel pins more pages of one kind as `kind@name`, such as `product@5663` or `product@sold-out` ([Render modes](#render-modes-w0-8)).
+- **Page keys** are the spec's template names: `home`, `fly-type`, `species`, `species-hub`, `product`, `cart`, `hook-chart`, `404` and `brand`, plus `category` for the stock category template until ticket 32, `page` for a Web Page, and `login` and `create-account` for the sign-in forms (ticket 25). ReelFlies_CA has no Web Page yet, so channel 1 pins one (`/coupon-codes/`, a paragraph of terms). A channel pins more pages of one kind as `kind@name`, such as `product@5663` or `product@sold-out` ([Render modes](#render-modes-w0-8)).
 - **Test products are pinned** by URL. Pick ones that will stay in the catalogue.
 - **Every pinned page must answer as its template:** HTTP 404 for `404`, and 200 for every other page. Otherwise axe, the screenshots and the raw-HTML check fail the page instead of checking an error page. A renamed product or a mistyped pin shows up as that failure.
 - **A 5xx or a 429 is asked again** (`retry.mjs`, W0-4). Each retry prints a `RETRY` line first, so a run that passed after one shows it.
@@ -446,7 +452,7 @@ Every pinned page, at 375 and 1280, runs with the tags WCAG 2.0–2.2 A and AA p
 - A listed issue that no longer occurs is reported as fixed, so the entry can be removed.
 - An entry's `templates` are page kinds or `kind@name` pins. Its optional `states` limits it to the page with one of those UI states open; without it, it covers the page in every state.
 - **The list holds three entries, all with the stock desktop sub-menu open** (`panel-open` on channel 1's category page; W0-8, 2026-10-06): `aria-hidden-focus`, `color-contrast` and `target-size`. Ticket 28 replaces the sub-menu with its panel and removes them. The closed stock templates had no serious or critical issues on ReelFlies_CA (home, cart, 404, brand) or on the channel-1 product and category pages on 2026-10-05, and the stock phone menu open (`drawer-open`) has none.
-- The moderate issues found (no `<main>` landmark, content outside landmarks, heading order, duplicate landmarks) are ticket 25's.
+- The moderate issues found were no `<main>` landmark, content outside landmarks, heading order and duplicate landmarks. Ticket 25 gave every template one `<main>`, which `skin.spec.mjs` checks with axe's two landmark rules on every pin. Heading order on the cart and search pages is left for the tickets that rebuild them (41 and 30), and content outside landmarks for the header and footer tickets (27 and 50).
 
 ## Screenshots (`screens.spec.mjs`)
 
@@ -489,7 +495,7 @@ It also tries channel 1's product-page stylesheet on a product page in miniature
 3. Review the new PNGs and commit them with the template.
 4. If the page shows new live data, add its selector to `LIVE_DATA`. If part of the page can't be pinned, leave it out for that page only: in its channel's `mask` if its size holds still, or in its channel's `hold` if it can change the page's height.
 
-**Per variation:** run with `QA_VARIATION="ReelFlies US"` to make or check that variation's set. Only the ReelFlies CA sets exist today, so a release with ReelFlies US fails at the screenshots until its set is made. Both variations still have empty settings, so a US set would be identical.
+**Per variation:** run with `QA_VARIATION="ReelFlies US"` to make or check that variation's set. The sets today are ReelFlies CA's on 1895766 and the channel-1 variation's on channel 1 (above), so a release with ReelFlies US fails at the screenshots until its set is made. Both variations still have empty settings, so a US set would be identical.
 
 **After an upstream merge**, run `npm run qa:screens` and `QA_CHANNEL=1 npm run qa:screens`, as in CUSTOMIZATIONS.md, "Upgrading".
 
@@ -529,18 +535,22 @@ export default {
 - `markupOnly(html)` returns the HTML with comments removed and those text-only elements emptied, their tags kept, so a text search sees only markup (`rf-live-region` uses it).
 - `scriptsOfType(html, type)` returns script contents, such as JSON-LD.
 
-**Tests:** add a fixture page to `raw-html/fixtures/` and a case to `raw-html/raw-html.test.mjs`, or a test file of your own beside it (ticket 25's is `page-frame.test.mjs`), with a failing fixture and a passing one. Or put them in `assertions/<id>.test.mjs` beside the assertion, which keeps a ticket's tests out of the shared file; the loader skips `*.test.mjs`, and `home-hero.test.mjs` builds its pages from a widget's render. Every fixture page runs every registered assertion, so a fixture of a whole page carries what every page has: the icon sheet and the live region right after `<body>`, and one `<main>`. CI runs them through `npm run test:scripts`. `raw-html/fetch.test.mjs` checks that the preview cookie reaches `QA_BASE_URL` and never a host a redirect points at.
+**Tests:** add a fixture page to `raw-html/fixtures/` and a case to `raw-html/raw-html.test.mjs`, or a test file of your own beside it (ticket 25's is `page-frame.test.mjs`), with a failing fixture and a passing one. Or put them in `assertions/<id>.test.mjs` beside the assertion, which keeps a ticket's tests out of the shared file; the loader skips `*.test.mjs`, and `home-hero.test.mjs` builds its pages from a widget's render. Every fixture page runs every registered assertion, so a fixture of a whole page carries what every page has: `<html lang="en-CA">`, the en-CA content language, the Onest preload, a favicon link and one `og:image` in the head, the icon sheet and the live region right after `<body>`, and one `<main>`. CI runs them through `npm run test:scripts`. `raw-html/fetch.test.mjs` checks that the preview cookie reaches `QA_BASE_URL` and never a host a redirect points at.
 
 **The assertions today** judge the page as served. None reads the repo's record of a widget (`widgets/<name>/channels/<channel>.json`), so a widget placed or unpublished on 1895766 never fails the gate on every branch until that file's PR merges (build pipeline, section 6.6). Whether the store holds what the repo records is the sync's check, `widgets-sync.mjs --verify` ([docs/widgets.md](../../docs/widgets.md)).
 
 | Assertion | Ticket | Checks |
 |---|---|---|
-| `one-canonical` | 16 | exactly one canonical link; not asked of the cart or the 404 page, which have none in stock Cornerstone |
+| `one-canonical` | 16 | exactly one canonical link; not asked of the cart, the 404 page or the sign-in and create-account pages, which have none in stock Cornerstone |
 | `json-ld-parses` | 16 | every `application/ld+json` block parses |
 | `no-region-prompt` | 16, then 52 | no element carries `data-rf-region-prompt` |
 | `one-main` | 25 | exactly one main landmark: a `<main>`, or an element with `role="main"`, counted once. `body.html` makes the wrapper a `<main>` on home, product and cart only |
 | `rf-live-region` | 25 | exactly one `data-rf-live-region` element, with `role="status"`, empty in the server HTML |
 | `rf-icon-sheet` | 25 | the ReelFlies icon sheet (`data-rf-icons`) once, as the first element in `<body>`, with `aria-hidden="true"` |
+| `lang-en-ca` | 25 | `<html lang="en-CA">` and one `content-language` meta element, en-CA (`components/reelflies/head.html`) |
+| `rf-fonts` | 25 | one preload of `fonts/onest-latin-var.woff2`, `as="font"`, `type="font/woff2"` and `crossorigin`, and no link to Google Fonts (stock asked it for Karla and Montserrat) |
+| `rf-brand-head` | 25 | a favicon link with an href, and exactly one `og:image`: the page's own (a product's), or the ReelFlies default share image |
+| `autocomplete` | 25 | on `login` and `create-account` only: the sign-in fields carry `email` and `current-password`, and every store form field its token by `data-field-type` (`TOKENS`). The account and address forms need a signed-in customer, so `render/partials/autocomplete.test.mjs` renders them from fixtures |
 | `home-one-h1` | 46 | at most one `<h1>` on the home page (the stock logo today, none on ticket 27's branch before the hero is placed), and with the hero on the page, exactly one: the hero's |
 | `home-hero` | 46 | when the page has the hero: its `<img>` has a srcset (320w to 1600w), sizes, width and height, and is the page's only `fetchpriority="high"`; its `<h1>` has text; its two buttons are `<a href>`. A page without the hero passes |
 | `home-no-carousel` | 46 | no stock carousel (`.heroCarousel`) on the home page |
@@ -566,6 +576,26 @@ QA_BASE_URL=https://<prelaunch host> npm run qa:raw-html    # with QA_PREVIEW_CO
 It exits 1 on a failed check, and 2 when the storefront can't be reached or, with `QA_FRESH_SERVER=1`, when something already answers on `QA_PORT` or the port after it.
 
 **Not run on prelaunch yet.** The product and category runs so far were on channel 1 through `stencil start -c 1`. The prelaunch run needs the preview cookie (ticket 11) and ReelFlies_CA's product and category pins (refactor tickets 13 and 14).
+
+## The skin (`skin.spec.mjs`)
+
+Ticket 25's checks in a browser (spec seam 1; stories 67 to 71), on every page pinned for `QA_CHANNEL`, at 375 and 1280:
+
+- **Focus ring:** one Tab, then focus on the first visible link and the first visible button; each shows the ReelFlies ring (2px solid #23272B, 2px offset, `!important` over the stock #0f7fff, on `:focus-visible` only). A mouse press on each focuses it with no ring. Stock `.button` eases `all` over 0.15s, so the check waits for the ring to settle.
+- **Skip link:** the first Tab lands on `.skip-to-main-link`.
+- **Landmarks:** axe's `landmark-one-main` and `landmark-no-duplicate-main`, which are moderate, so the axe gate doesn't fail on them.
+- **Onest:** `onest-latin-var.woff2` is requested once, nothing goes to Google Fonts for the theme's fonts (the create-account page's reCAPTCHA loads its own Roboto, which is the store's widget), one Onest face is loaded, the body's stack starts `Onest, "Onest Fallback"`, and the root font size is 16px.
+- **Reduced motion:** with `prefers-reduced-motion: reduce` emulated, no element or pseudo-element has a transition or animation longer than 0.01ms, where the page without it has the stock 0.15s. jQuery's animations jump too, which Jest checks (`reduced-motion.spec.js`, `global.spec.js`): the theme's jQuery isn't on `window`.
+- **Reflow:** home and category pages don't scroll sideways at 320 CSS px wide, or at 640 (a 1280 window at 200% zoom).
+- **The default product image:** on channel 1, a product with no photo of its own (`/mustad-9479-salmon-egg-fly-hook-100-pack/`, ticket 14's inventory) shows `img/reelflies/default-product.png`.
+
+```sh
+export QA_PORT=3400
+npx playwright test --config scripts/qa/playwright.config.mjs skin.spec
+QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs skin.spec
+```
+
+It isn't part of `qa:prepush`, so a release doesn't run it. Ticket 54 folds the focus, reflow and reduced-motion checks into its runner.
 
 ## Fixture renders (`render/`)
 
@@ -865,11 +895,11 @@ Stock Cornerstone fails these today on a local stencil start: `heading-order` on
 
 - On a host, under the theme uuid the run reads from the store (GET only, `release-capture.mjs`) before and after the runs: `results/host/<uuid>/lighthouse/`, or `lighthouse/` in the host batch's `QA_RESULTS_DIR`. If the active theme changed meanwhile, the run fails, because its results would mix two builds. Locally, under the commit: `results/local/<sha>[-dirty]/lighthouse/`.
 - Each run's JSON and HTML report (`cart-2.report.html`), and `summary.json`: each run's metrics and Lighthouse's CPU benchmark, the medians, the comparison point, the problems and notes, "analytics blocked", the Lighthouse and Chromium versions, and whether the run was accepted.
-- `lighthouseReleaseLines(summary)` gives the lines a `RELEASES.md` entry records under its Lighthouse line: each URL's five metrics with its JS and CSS bytes (as ticket 11 records them), the kinds not measured yet, and each problem. The host batch writes them ([Host batch](#host-batch-qaprelaunch)), and so will the `release.sh` hook.
+- `lighthouseReleaseLines(summary)` gives the lines a `RELEASES.md` entry records under its Lighthouse line: each URL's five metrics with its JS and CSS bytes (as ticket 11 records them), the kinds not measured yet, and each problem. The runner writes them into `summary.json` as `releaseLines`. The host batch writes them into the entry ([Host batch](#host-batch-qaprelaunch)), and so does `release.sh`'s step 6b, which reads them from `summary.json`, because release tooling never imports this QA code.
 
 It exits 0 when every judged budget and the drop rule passed, 1 when one failed or a URL couldn't be measured, and 2 when it stopped before measuring.
 
-**Not here yet: the `release.sh` hook.** Running the gate after each push to prelaunch, and writing its lines into the release entry, edits the release tooling, so it is ticket 17's second PR, held for Shaun's merge. The runner doesn't decide what a push without the cookie, or a P1 fix after the Flip, records; the hook does.
+**The `release.sh` hook (step 6b).** After each push to prelaunch, between verify and the log entry, the release runs this gate on the prelaunch host when `QA_PREVIEW_COOKIE` is in the operator's shell, and the entry records pass or fail with these lines. Without the cookie, as on every agent's push, or when the run measured no URL (a stale cookie gets the 503 maintenance page), the entry records `- Lighthouse: pending host batch`, which the next host batch of that uuid fills in. From the Flip it records "skipped": whether a P1 fix runs the gate is Shaun's open question, and until he answers no run after the Flip is accepted. The hook decides all of this, not the runner; its rules are in [releasing](../../docs/releasing.md#lighthouse-after-the-push-step-6b).
 
 ## Host batch (`qa:prelaunch`)
 
@@ -891,7 +921,10 @@ npm run qa:prelaunch
    - Once ticket 08 records Shaun's GA4 hostname filter, set `GA4_HOSTNAME_FILTER_SINCE` in `prelaunch.mjs` to its date. Each batch then adds one Lighthouse run with the tags loaded (`QA_ANALYTICS=allow`). It is information only: it never fails the batch, and the budgets stay on the blocked runs. Its results go in `tags-loaded/` inside the uuid's folder (its `QA_RESULTS_DIR`), so they never overwrite the blocked run's.
 4. **The same build throughout.** It reads the active theme again after the gates, and fails if it changed, because the results would then mix two builds.
 5. **The log.** It appends a row to the "Host runs" section of `RELEASES.md`, which it creates before "Switch toggles" the first time: the date, the theme uuid, the build's commit (from the uuid's newest release entry, or "not in RELEASES.md"), the gates, pass or fail, "analytics blocked", and the commit the gates ran from. "Analytics blocked" is "yes", or, once the tags-loaded run runs, "yes, in the gates it counts; tags loaded in Lighthouse with the tags loaded (information)". `summary.json` records the same. The release's own gates run on a local `stencil start`; these rows are the record that the build ReelFlies_CA actually runs passed on the host.
-   - Once Lighthouse ran, it also fills in that release entry's `- Lighthouse: pending host batch` with pass or fail, and under it each URL's medians, the kinds not measured yet and every problem, from the run's `summary.json` (`lighthouseReleaseLines`). That is the line a push made without the cookie records (ticket 17's `release.sh` hook). So ticket 56 can see that the exact build it pushes passed on prelaunch.
+   - Once Lighthouse ran, it also fills in that release entry's `- Lighthouse: pending host batch` with pass or fail, and under it each URL's medians, the kinds not measured yet and every problem, from the run's `summary.json` (`lighthouseReleaseLines`). That is the line a push made without the cookie records (`release.sh`'s step 6b, ticket 17), and the batch fills in exactly that line, which it takes from the release tooling (`release-lighthouse.mjs`). So ticket 56 can see that the exact build it pushes passed on prelaunch.
+     - The entry is the uuid's newest one whose own `- Theme:` line names it; a uuid in any other line of an entry doesn't count.
+     - The lines go in as step 6b writes them (`safeLines`): one line each, indented, with every line end and control character folded and the cookie taken out.
+     - A run that measured no URL (no summary of this batch's run, or every page failed to load, as with a stale or expired cookie, which gets the 503 maintenance page) leaves the line pending, with a `WARNING`, because a fail filled in then could never be corrected. The batch itself still fails.
    - An accepted Lighthouse run also adds to `scripts/qa/lighthouse-history.json`. Commit it with the `RELEASES.md` change.
    - The orchestrator commits the change through the next release-log PR (build pipeline, section 6.5).
 
@@ -906,12 +939,12 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
 - `storefront.test.mjs` also covers `QA_PORT`, the start log's name, the locks a gate holds (and the ports checked again after a slot wait), trusting only the server a gate started, and stopping that server when the gate is stopped by a signal. `playwright-config.test.mjs` covers that the config reads `QA_PORT` and holds the locks only in the runner, `prepush.test.mjs` what `qa:prepush` checks before its first gate, `serve.test.mjs` the locks around a `stencil start` by hand, and `scripts/lib/lock.test.mjs` the locks themselves: the stale rules, waiting, the three slots across processes, the signals, `RF_LOCK_ROOT`, and the command line `release.sh` uses.
 - `pages.test.mjs` covers W0-8's pins, baseline names (against the baseline-scope check's parser), UI states, overlays and custom layouts; `overlays.test.mjs` the overlay files, the patch and the throwaway worktree (in git repos of its own); `custom-layouts.test.mjs` the merge into `config.stencil.json`; `playwright-config.test.mjs` the overlay's refusals, ports and folder, and the custom-layouts step before `stencil start`; `storefront.test.mjs` the overlay marker check, and that only an overlay run's own worktree moves a `stencil start` out of the checkout (an `RF_QA_THEME_DIR` left in the shell never does; `prepush.test.mjs` too).
-- `analytics-hosts.test.mjs`, `read-only-posts.test.mjs` and `network-guard.test.mjs` cover the network guard (W0-6), and `harness-selftest.spec.mjs` proves it in a browser. `prelaunch.test.mjs` covers the host batch: the cookie check, the uuid folder, the gates and their environment, the `RELEASES.md` row, Lighthouse and its medians in the release entry, and that the cookie is never printed.
+- `analytics-hosts.test.mjs`, `read-only-posts.test.mjs` and `network-guard.test.mjs` cover the network guard (W0-6), and `harness-selftest.spec.mjs` proves it in a browser. `prelaunch.test.mjs` covers the host batch: the cookie check, the uuid folder, the gates and their environment, the `RELEASES.md` row, Lighthouse and its medians in the release entry (the entry read by its own Theme line, the lines folded and redacted, and the line left pending by a run that measured nothing), and that the cookie is never printed.
 - `lighthouse-rules.test.mjs` covers ticket 17's rules on real Lighthouse results (`lighthouse-fixtures/`): the metrics, the median of three, the budgets, the drop rule, the URL lists and the history. `lighthouse.test.mjs` covers the run around them with stand-ins for Lighthouse, the browser, the storefront and the store.
 - `npm run test:scripts` runs every `scripts/**/*.test.mjs` with `node --test`, the fixture renders included.
 - `scaffold.test.mjs` holds ticket 25's shared-file slots (build pipeline 6.1; CUSTOMIZATIONS.md, "Slots for parallel tickets"): the ReelFlies settings block, schema group and lang slots, the style layer's imports, the slots in `page-modules.js`, `reelflies/global.js` and `js-settings.html`, and the hooks in `base.html`, `app.js` and `global.js`. It also runs the release guard and step 1's diff on the block (spec seam 5): the first push, a switch toggled live, and a value changed after the scaffold's push (refused by rule 1 until the release lane gives values the three-way rule, which a todo test holds). `render/partials/body.test.mjs` and `reelflies-frame.test.mjs` render the `<main>` hook, the icon sheet, the icon partial, `body-start.html` and `js-settings.html`.
 - `switches.test.mjs` covers ticket 54a's switch registry: the switches against config.json, which switches a template reads, the overlay that flips each, and the markers and chunks a landed module names. `switch-matrix.test.mjs` covers the matrix's plan, its Playwright filters, how it reads each row's JSON report, what it runs for a row and what it prints. `page-checks.test.mjs` proves the reflow, reduced-motion and focus checks in Chromium (skipped in CI, which has none), and `widget-links.test.mjs` the widget link check against a server of its own.
 - `reflow.spec.mjs`, `reduced-motion.spec.mjs`, `focus.spec.mjs` and `switch-stock.spec.mjs` run through `qa:reflow`, `qa:motion`, `qa:focus` and the switch matrix, never through `qa:axe`, `qa:screens` or `qa:prepush`, whose filters don't match them.
 - Jest runs `assets/js/test-unit/`. `jest.config.js` ignores `scripts/`, because Jest 30 would otherwise match `*.test.mjs` and `*.spec.mjs` too.
-- `screens-reference.spec.mjs` runs with `qa:screens`, because its name matches the filter, and never fails it. `review-live.spec.mjs` runs only when named. Neither is a gate. `review/manifest-reporter.test.mjs` checks both against `package.json`'s filters.
+- `screens-reference.spec.mjs` runs with `qa:screens`, because its name matches the filter, and never fails it. `review-live.spec.mjs` and `skin.spec.mjs` run only when named. None of the three is a gate. `review/manifest-reporter.test.mjs` checks both against `package.json`'s filters.
 - Playwright writes its report, traces and failed diffs to `scripts/qa/results/`, which is ignored by git. The manifest reporter writes `results/manifest.json` there too, and the review pages go to `results/review/`. A run with `QA_PREVIEW_COOKIE` writes no traces, so the cookie never lands there.

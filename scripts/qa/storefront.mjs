@@ -2,7 +2,8 @@
 // raw-html.mjs (ticket 16).
 //
 //   QA_CHANNEL         channel to render (default 1895766, ReelFlies_CA)
-//   QA_VARIATION       theme variation (default "ReelFlies CA")
+//   QA_VARIATION       theme variation (default: the channel's own in pages.mjs, "ReelFlies CA
+//                      channel 1" on channel 1 (ticket 53), and "ReelFlies CA" on every other)
 //   QA_BASE_URL        test this host instead of a local `stencil start`
 //   QA_PREVIEW_COOKIE  cookie for the prelaunch host ("name=value; ..."); sent only
 //                      to QA_BASE_URL and never printed
@@ -45,11 +46,12 @@ import { analyticsMode } from './analytics-hosts.mjs';
 import {
     OVERLAY_MARKER, OVERLAY_PORT_OFFSET, createOverlayCheckout, overlayCheckoutPrefix, overlayEnvProblem, overlayProblems, readOverlay,
 } from './overlays.mjs';
+import { defaultVariation } from './pages.mjs';
 import { fetchWithRetries } from './retry.mjs';
 
 export const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 export const QA_CHANNEL = process.env.QA_CHANNEL || '1895766';
-export const QA_VARIATION = process.env.QA_VARIATION || 'ReelFlies CA';
+export const QA_VARIATION = process.env.QA_VARIATION || defaultVariation(QA_CHANNEL);
 export const QA_OVERLAY = process.env.QA_OVERLAY || '';
 export const DEFAULT_QA_PORT = 3300;
 // Browsersync's port: QA_PORT (3300 by default), or QA_PORT + 10 for an overlay run (W0-8), so

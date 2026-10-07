@@ -4,7 +4,7 @@
 // Keys are page keys: a page kind, which is a template name from the spec's seam 1 list
 // (home, fly-type, species, species-hub, product, cart, hook-chart, 404 and brand, plus
 // category for the stock category template until ticket 32 builds the Fly Type and Species
-// pages), or kind@name for one more pin of the same kind (W0-8), such as product@5663 or
+// pages, page for a Web Page, and login and create-account for the sign-in forms), or kind@name for one more pin of the same kind (W0-8), such as product@5663 or
 // product@sold-out. A template ticket adds its page here when it lands; the screenshot and axe
 // runs then cover it.
 // - The kind decides what the page must answer (expectedStatus), which raw-HTML assertions
@@ -15,6 +15,8 @@
 //   category pin only, so a stable category@alpha pin beside it keeps its cards.
 //
 // Each channel has:
+//   variation     optional: the config.json variation its runs render when QA_VARIATION is
+//                 unset (defaultVariation below). Without one, a run renders ReelFlies CA.
 //   pages         page key -> path. axe and the screenshots visit every one, and so does
 //                 the raw-HTML check, whose assertions pick the kinds they apply to.
 //   notPinnedYet  optional, template -> why the channel can't pin it yet. Only for the
@@ -36,6 +38,10 @@ export const CHANNELS = {
             cart: '/cart.php',
             brand: '/brands/ReelFlies.html',
             404: '/rf-qa-missing-page/',
+            // Ticket 25: the sign-in and create-account forms, whose stock templates had no <main>
+            // and whose fields carry the autocomplete tokens (raw-HTML assertion autocomplete).
+            login: '/login.php',
+            'create-account': '/login.php?action=create_account',
         },
         // Pin both, and delete these lines, when refactor tickets 13 and 14 land.
         notPinnedYet: {
@@ -48,6 +54,9 @@ export const CHANNELS = {
         // reelflies.ca data, the fallback for the product, category and Quick view runs
         // until ReelFlies_CA has products. Nothing here ever writes to channel 1.
         name: 'reelflies.ca (live, read-only)',
+        // Ticket 53: channel 1's own variation, with tree 1's menu ids (decision 10's interim
+        // name). Its baselines are scripts/qa/baselines/1-reelflies-ca-channel-1/.
+        variation: 'ReelFlies CA channel 1',
         pages: {
             // The reference page's hero product (6178). Its description was the same on
             // 2026-10-06 as in the 2026-09-07 product export. Its five related products
@@ -55,6 +64,10 @@ export const CHANNELS = {
             // them: `hold` below keeps that from moving the page.
             product: '/realistic-flying-hot-butt-hopper-brown/',
             category: '/flies/realistic-trout-flies/', // tree 1; 12 cards with Quick view, and facets
+            // A Web Page (pages/page), for ticket 25's focus ring and landmark checks: ReelFlies_CA
+            // has none yet (ticket 22's sources sync later). One paragraph of terms that read the
+            // same on 2026-10-07 as the coupon wording on reelflies.ca has for years.
+            page: '/coupon-codes/',
         },
         // The live catalogue decides which products these pages list, so the lists can't
         // be pinned here. Pin a listing that holds still before unmasking one.
@@ -88,6 +101,11 @@ export const CHANNELS = {
         },
     },
 };
+
+// The variation a run renders when QA_VARIATION doesn't name one: the channel's own (channel 1's
+// is "ReelFlies CA channel 1", ticket 53), or ReelFlies CA. An explicit QA_VARIATION always wins.
+export const DEFAULT_VARIATION = 'ReelFlies CA';
+export const defaultVariation = channel => CHANNELS[channel]?.variation || DEFAULT_VARIATION;
 
 // The page kinds the raw-HTML check needs on every channel: spec seam 2 fetches one
 // product page and one category page. A kind@name pin of the kind counts.

@@ -108,13 +108,14 @@ describe('the fixture page around a widget', () => {
         assert.doesNotMatch(html, /<header|<footer/);
     });
 
-    it('loads the theme\'s fonts and its compiled CSS, and no script', async () => {
+    it('loads the theme\'s compiled CSS, whose @font-face brings Onest from theme assets, and no script', async () => {
         const html = await renderWidgetPage(band());
         const links = findTags(html, 'link');
         assert.ok(links.some(link => link.attrs.rel === 'stylesheet' && link.attrs.href === THEME_CSS_PATH), 'the theme CSS');
-        assert.ok(links.some(link => /^https:\/\/fonts\.googleapis\.com\/css/.test(link.attrs.href)), 'getFontsCollection\'s Google Fonts link, from the theme settings');
+        // Onest comes from theme assets through the CSS (ticket 25), so no theme font asks Google.
+        assert.ok(!links.some(link => /fonts\.googleapis\.com/.test(link.attrs.href)), 'no Google Fonts link: the theme settings name no Google font');
         assert.deepEqual(findTags(html, 'script'), []);
-        assert.match(html, /<html class="js" lang="en/);
+        assert.match(html, /<html class="js" lang="en-CA">/);
     });
 
     it('leaves the markup balanced', async () => {
