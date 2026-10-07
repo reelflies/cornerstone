@@ -30,7 +30,7 @@ export const MY_THEMES_HEADER = '| Time (UTC) | Action | Theme uuid | Name and v
 const MY_THEMES_SECTION = `
 ## My Themes
 
-Every theme the release tooling deletes from My Themes, one row each, written by \`scripts/release.sh\`'s prune right after the deletion (W0-3, [docs/releasing.md](docs/releasing.md#pruning-my-themes)). The prune runs after each push, and on its own with \`--prune-only\`. It deletes only themes named ReelFlies that this file records as a release, active on no channel, never the latest or previous release on 1895766 or channel 1, and always keeps the newest three. The commit and zip sha256 are the deleted build's, from its release entry. Don't edit the rows by hand.
+Every theme the release tooling deletes from My Themes, one row each, written by \`scripts/release.sh\`'s prune right after the deletion (W0-3, [docs/releasing.md](docs/releasing.md#pruning-my-themes)). The prune runs after each push, and on its own with \`--prune-only\`. It deletes only themes named ReelFlies that this file records as a release, active on no channel and not flagged \`is_active\` in My Themes, never the latest or previous release on 1895766 or channel 1, and always keeps the newest three. The commit and zip sha256 are the deleted build's, from its release entry. Don't edit the rows by hand.
 
 ${MY_THEMES_HEADER}
 |---|---|---|---|---|---|---|

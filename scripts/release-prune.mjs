@@ -14,9 +14,12 @@
 //     Hero-2024, Cavio or the Marketplace Cornerstone, whatever RELEASES.md says)
 //   - RELEASES.md records its uuid as a release (an unknown ReelFlies uuid is kept)
 //   - it is active on no channel: every channel's active theme was read (activeByChannel), and
-//     channels 1, 1855224, 1895766 and every channel RELEASES.md names must be among them.
-//     My Themes' is_active flag decides nothing: it outlives an activation (the build active on
-//     1895766 and old Hero builds on no storefront both show true), so the plan only shows it
+//     channels 1, 1855224, 1895766 and every channel RELEASES.md names must be among them
+//   - My Themes doesn't flag it is_active. That is the store's own "active somewhere" signal: on
+//     2026-10-05 it was true on exactly the three themes a channel ran, including the Cavio copy on
+//     channel 1861300, which has no site and which that day's channel reads missed. So it keeps a
+//     theme even when no channel read shows it running (revisitable, on a dry run showing a flagged
+//     build that no channel runs)
 //   - it isn't the latest or the previous release on 1895766 or channel 1, nor the theme either
 //     ran before its latest release: those are the rollback (ticket 53 reader)
 //   - it isn't one of the newest three, ranked by its newest entry's time in RELEASES.md (the file's
@@ -32,6 +35,8 @@ export const KEEP_NEWEST = 3;
 export const ROLLBACK_CHANNELS = Object.freeze([1895766, 1]);
 // Channels whose active theme every plan must have read, besides the ones RELEASES.md names.
 export const REQUIRED_CHANNELS = Object.freeze([...new Set([...Object.keys(LIVE_CHANNELS).map(Number), ...ROLLBACK_CHANNELS])].sort((a, b) => a - b));
+// The keep reason for a theme My Themes flags is_active.
+const FLAGGED_ACTIVE = 'My Themes flags it is_active (active on a channel, perhaps one the reads didn\'t list)';
 
 const newerFirst = (a, b) => (a.timestamp === b.timestamp ? b.order - a.order : b.timestamp.localeCompare(a.timestamp));
 
@@ -72,9 +77,10 @@ function requiredChannels(markdown) {
 // themes: GET /v3/themes's data. activeByChannel: { channelId: active theme uuid } for every
 // channel read. markdown: RELEASES.md. Returns { themeCount, channels, running, builds, toDelete, others }:
 // builds are the ReelFlies themes, recorded ones newest first and then the unknown ones, each
-// { uuid, name, record, action: 'keep' | 'delete', reasons, flaggedActive }; toDelete lists the ones to delete,
-// oldest first; others are the themes not named ReelFlies, which the prune never touches; running
-// is each channel's active theme, { channel, uuid, name }, for the plan's text.
+// { uuid, name, record, action: 'keep' | 'delete', reasons }; toDelete lists the ones to delete,
+// oldest first; others are the themes not named ReelFlies, which the prune never touches, each
+// { uuid, name, flaggedActive }; running is each channel's active theme, { channel, uuid, name },
+// for the plan's text.
 // Throws when a required channel wasn't read, or a channel read has no active theme: the prune
 // never guesses a theme is unused.
 export function planPrune({ themes, activeByChannel, markdown }) {
@@ -95,12 +101,13 @@ export function planPrune({ themes, activeByChannel, markdown }) {
         const record = records.get(item.uuid) || null;
         const reasons = [
             ...activeOn(item.uuid).map(channel => `active on channel ${channel}`),
+            ...(item.is_active === true ? [FLAGGED_ACTIVE] : []),
             ...(record ? [] : ['RELEASES.md doesn\'t record it as a release']),
             ...(rollback.get(item.uuid) || []),
             ...(record && recorded.indexOf(item) < KEEP_NEWEST ? [`one of the newest ${KEEP_NEWEST}`] : []),
         ];
         return {
-            uuid: item.uuid, name: item.name, record, action: reasons.length ? 'keep' : 'delete', reasons, flaggedActive: item.is_active === true,
+            uuid: item.uuid, name: item.name, record, action: reasons.length ? 'keep' : 'delete', reasons,
         };
     });
     const names = new Map(themes.map(item => [item.uuid, item.name]));
@@ -110,7 +117,7 @@ export function planPrune({ themes, activeByChannel, markdown }) {
         running: channels.map(channel => ({ channel, uuid: activeByChannel[channel], name: names.get(activeByChannel[channel]) || null })),
         builds,
         toDelete: builds.filter(build => build.action === 'delete').reverse(),
-        others: themes.filter(item => item.name !== PRUNE_NAME).map(item => ({ uuid: item.uuid, name: item.name })),
+        others: themes.filter(item => item.name !== PRUNE_NAME).map(item => ({ uuid: item.uuid, name: item.name, flaggedActive: item.is_active === true })),
     };
 }
 
@@ -126,13 +133,13 @@ export function describePlan(plan) {
     ];
     for (const build of plan.builds) {
         const why = build.action === 'delete'
-            ? `older than the newest ${KEEP_NEWEST}, active on no channel, and not a rollback`
+            ? `older than the newest ${KEEP_NEWEST}, active on no channel, not flagged is_active, and not a rollback`
             : build.reasons.join('; ');
-        const flag = build.flaggedActive ? ' (My Themes flags it is_active, which outlives an activation: the active-theme reads decide)' : '';
-        lines.push(`  ${build.action.padEnd(8)} ${describeBuild(build)}: ${why}${flag}`);
+        lines.push(`  ${build.action.padEnd(8)} ${describeBuild(build)}: ${why}`);
     }
     if (plan.others.length) {
-        lines.push(`  ${plan.others.length} other theme(s) aren't named ${PRUNE_NAME}, so the prune never touches them: ${plan.others.map(other => other.name).join(', ')}`);
+        const others = plan.others.map(other => `${other.name} (${other.uuid.slice(0, 8)}${other.flaggedActive ? ', flagged is_active' : ''})`);
+        lines.push(`  ${plan.others.length} other theme(s) aren't named ${PRUNE_NAME}, so the prune never touches them: ${others.join(', ')}`);
     }
     lines.push(`  ${plan.toDelete.length} to delete, ${plan.builds.length - plan.toDelete.length} ${PRUNE_NAME} theme(s) kept`);
     return lines;
