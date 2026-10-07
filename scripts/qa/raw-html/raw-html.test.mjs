@@ -74,6 +74,14 @@ describe('the registered assertions', () => {
         const canonical = checkPage(page, assertions).find(result => result.id === 'one-canonical');
         assert.equal(canonical.status, 'skip');
     });
+
+    it('don\'t ask for a canonical on the sign-in or create-account page (ticket 25)', () => {
+        for (const kind of ['login', 'create-account']) {
+            const page = fixture('good-product.html', kind);
+            page.html = page.html.replace(/<link rel='canonical'[^>]*>/, '');
+            assert.equal(checkPage(page, assertions).find(result => result.id === 'one-canonical').status, 'skip', kind);
+        }
+    });
 });
 
 describe('the harness', () => {
