@@ -45,8 +45,13 @@ export default defineConfig({
     workers: 3,
     retries: 0,
     timeout: 90000,
-    // The manifest reporter writes results/manifest.json for the review pages (W0-10).
-    reporter: [['list'], ['html', { outputFolder: 'results/report', open: 'never' }], ['./review/manifest-reporter.mjs']],
+    // The manifest reporter writes results/manifest.json for the review pages (W0-10). The switch
+    // matrix (switch-matrix.mjs, ticket 54a) also asks for a JSON report through
+    // RF_QA_JSON_REPORT, to give each spec of a row its own result.
+    reporter: [
+        ['list'], ['html', { outputFolder: 'results/report', open: 'never' }], ['./review/manifest-reporter.mjs'],
+        ...(process.env.RF_QA_JSON_REPORT ? [['json', { outputFile: process.env.RF_QA_JSON_REPORT }]] : []),
+    ],
     // A missing baseline fails instead of being written, so no run can make one that every
     // later run then passes unreviewed. `-- --update-snapshots` writes them on purpose.
     updateSnapshots: 'none',

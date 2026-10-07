@@ -1,0 +1,7 @@
+{
+    "description": "The outside-Canada prompt switched on, which is off everywhere by default: shown only with ?rf_region=out after a first interaction, never in the server HTML (ticket 52; ticket 54's switch matrix)",
+    "ticket": "52",
+    "settings": {
+        "rf_region_prompt": true
+    }
+}
