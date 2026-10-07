@@ -146,7 +146,7 @@ test('W0-3: a ReelFlies theme RELEASES.md doesn\'t record is never deleted', () 
     assert.ok(plan.builds.filter(build => build.reasons.some(reason => /newest 3/.test(reason))).every(build => build.record));
 });
 
-test('W0-3: a recorded uuid whose My Themes name isn\'t exactly ReelFlies is never deleted: it isn\'t a candidate at all', () => {
+test('W0-3: a recorded uuid whose My Themes name isn\'t exactly ReelFlies or "ReelFlies (n)" is never deleted: it isn\'t a candidate at all', () => {
     const themes = sixThemes().map(item => {
         if (item.uuid === uuid(1)) return { ...item, name: 'Hero-2024' };
         if (item.uuid === uuid(2)) return { ...item, name: 'reelflies' };
@@ -157,6 +157,69 @@ test('W0-3: a recorded uuid whose My Themes name isn\'t exactly ReelFlies is nev
     assert.deepEqual(deleted(plan), []);
     assert.deepEqual(plan.builds.map(build => build.uuid), [uuid(6), uuid(5), uuid(4)]);
     assert.ok(plan.others.some(other => other.name === 'Hero-2024'));
+    // W0-3b: only the store's own suffix counts, once, with a whole number from 1. Twelve recorded
+    // builds whose names only look like it: none is a candidate, so none is deleted.
+    const lookalikes = [
+        'ReelFlies(1)', 'ReelFlies  (1)', 'ReelFlies (0)', 'ReelFlies (01)', 'ReelFlies (x)', 'ReelFlies ()',
+        'ReelFlies (1) (1)', 'ReelFlies (1) copy', 'reelflies (1)', 'ReelFlies US (1)', 'Cavio (1)', 'ReelFlies (１)',
+    ];
+    const markdown = log(...lookalikes.map((name, i) => entry(i + 1, day(i + 1))));
+    const named = [...OTHERS, ...lookalikes.map((name, i) => theme(uuid(i + 1), name))];
+    const lookalikePlan = planPrune({ themes: named, activeByChannel: active(HERO_US), markdown });
+    assert.deepEqual(lookalikePlan.builds, []);
+    assert.deepEqual(deleted(lookalikePlan), []);
+    assert.deepEqual(lookalikePlan.others.map(other => other.name), [...OTHERS.map(other => other.name), ...lookalikes]);
+});
+
+// W0-3b: the store names a repeat upload "ReelFlies (1)", "ReelFlies (2)" and so on while My Themes
+// already holds a "ReelFlies" (the first agent push, RELEASES.md 2026-10-07 03:07 UTC). Those are
+// ReelFlies builds too, and the number in the name ranks nothing: RELEASES.md doesn't record it, and
+// only RELEASES.md ranks builds.
+const SUFFIXES = {
+    1: 'ReelFlies (4)', 2: 'ReelFlies', 3: 'ReelFlies (1)', 4: 'ReelFlies (2)', 5: 'ReelFlies (12)', 6: 'ReelFlies (3)',
+};
+const suffixedThemes = () => [...OTHERS, ...[1, 2, 3, 4, 5, 6].map(n => theme(uuid(n), SUFFIXES[n]))];
+
+test('W0-3b: themes named "ReelFlies (n)" are ReelFlies builds, ranked by RELEASES.md like the others, never by the number in their name', () => {
+    const plan = planPrune({ themes: suffixedThemes(), activeByChannel: active(), markdown: SIX });
+    assert.deepEqual(plan.builds.map(build => [build.uuid, build.name]), [6, 5, 4, 3, 2, 1].map(n => [uuid(n), SUFFIXES[n]]));
+    assert.deepEqual(deleted(plan), [uuid(1), uuid(2), uuid(3)], 'oldest first, by RELEASES.md');
+    assert.deepEqual(plan.others.map(other => other.name), ['Cornerstone', 'Hero-2024-2.9.5', 'Hero-2024-2.9.5-US', 'Cavio']);
+    // The plan shows each build under its name in My Themes.
+    const text = describePlan(plan).join('\n');
+    assert.match(text, /6 named ReelFlies or "ReelFlies \(n\)"/);
+    assert.match(text, new RegExp(`1895766 ReelFlies \\(3\\) \\(${uuid(6).slice(0, 8)}\\)`));
+    assert.match(text, new RegExp(`delete {3}${uuid(1)} ReelFlies \\(4\\) 6\\.22\\.0, released 2026-10-01 09:00 UTC from 1111111: older than the newest 3`));
+    assert.match(text, new RegExp(`delete {3}${uuid(2)} ReelFlies 6\\.22\\.0, released 2026-10-02 09:00 UTC`));
+    assert.match(text, new RegExp(`keep {5}${uuid(5)} ReelFlies \\(12\\) 6\\.22\\.0, released 2026-10-05 09:00 UTC from 5555555: .*the previous release on channel 1895766 \\(the rollback\\); one of the newest 3`));
+});
+
+test('W0-3b: every other rule still keeps a "ReelFlies (n)" build: recorded by uuid, inactive everywhere, not is_active, not a rollback, outside the newest three', () => {
+    // Builds 1 to 9 on 1895766, one a day, all suffixed but build 2; build 9 runs there now.
+    const NINE = log(...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => entry(n, day(n), { ranBefore: uuid(n - 1) })));
+    const named = n => (n === 2 ? 'ReelFlies' : `ReelFlies (${n})`);
+    const themes = [...OTHERS, ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => theme(uuid(n), named(n), n === 3 ? { is_active: true } : {})), theme(uuid(99), 'ReelFlies (99)')];
+    const plan = planPrune({ themes, activeByChannel: active(uuid(9), { 1855224: uuid(4) }), markdown: NINE });
+    const reasons = Object.fromEntries(plan.builds.map(build => [build.uuid, build.reasons.join('; ')]));
+    assert.match(reasons[uuid(99)], /RELEASES\.md doesn't record it as a release/, 'an unrecorded uuid');
+    assert.match(reasons[uuid(4)], /active on channel 1855224/, 'active on a channel');
+    assert.match(reasons[uuid(3)], /My Themes flags it is_active/, 'is_active');
+    assert.match(reasons[uuid(9)], /the latest release on channel 1895766/, 'the latest release');
+    assert.match(reasons[uuid(8)], /the previous release on channel 1895766 \(the rollback\)/, 'the rollback');
+    assert.deepEqual([9, 8, 7].map(n => /one of the newest 3/.test(reasons[uuid(n)])), [true, true, true], 'the newest three');
+    assert.deepEqual(deleted(plan), [uuid(1), uuid(2), uuid(5), uuid(6)], 'only builds no rule keeps, "ReelFlies" and "ReelFlies (n)" alike, oldest first');
+});
+
+test('W0-3b: the store as the first agent push left it: "ReelFlies" and "ReelFlies (1)" are both ReelFlies builds, and both stay', () => {
+    // The repo's own RELEASES.md: 58abad50 pushed as "ReelFlies" on 2026-10-06, then 174ad580, which
+    // the store named "ReelFlies (1)", on 2026-10-07; 1895766 runs 174ad580.
+    const repo = fs.readFileSync(new URL('../RELEASES.md', import.meta.url), 'utf8');
+    const first = '58abad50-a3c0-013f-e2b6-2ec98cc9ce73';
+    const second = '174ad580-a42a-013f-3c01-06627e5707c7';
+    const plan = planPrune({ themes: [...OTHERS, theme(first), theme(second, 'ReelFlies (1)')], activeByChannel: active(second), markdown: repo });
+    assert.deepEqual(plan.builds.map(build => [build.uuid, build.name, build.action]), [[second, 'ReelFlies (1)', 'keep'], [first, 'ReelFlies', 'keep']]);
+    assert.match(plan.builds[1].reasons.join('; '), /the theme channel 1895766 ran before its latest release \(the rollback\)/);
+    assert.deepEqual(deleted(plan), []);
 });
 
 test('W0-3: the rollback is kept: the previous release on 1895766 and on channel 1, and the theme each ran before its latest release', () => {
@@ -200,7 +263,7 @@ test('W0-3: with three ReelFlies builds or fewer, nothing is deleted', () => {
 
 test('W0-3: the plan names each ReelFlies theme with its decision and reasons, and counts the others', () => {
     const text = describePlan(planPrune({ themes: sixThemes(), activeByChannel: active(), markdown: SIX })).join('\n');
-    assert.match(text, /My Themes holds 10 of 20 themes; 6 named ReelFlies; channels checked: 1, 1855224, 1895766/);
+    assert.match(text, /My Themes holds 10 of 20 themes; 6 named ReelFlies or "ReelFlies \(n\)"; channels checked: 1, 1855224, 1895766/);
     // Which theme each channel runs, so a channel the store lists without a site shows what it runs.
     assert.match(text, new RegExp(`\\n {2}each channel runs: 1 Hero-2024-2\\.9\\.5-US \\(7c519850\\), 1855224 Hero-2024-2\\.9\\.5-US \\(7c519850\\), 1895766 ReelFlies \\(${uuid(6).slice(0, 8)}\\)\\n`));
     const unlisted = describePlan(planPrune({ themes: sixThemes(), activeByChannel: active(uuid(6), { 1861300: 'ffffffff-0000-0000-0000-000000000000' }), markdown: SIX })).join('\n');
@@ -209,7 +272,7 @@ test('W0-3: the plan names each ReelFlies theme with its decision and reasons, a
     assert.match(text, new RegExp(`delete {3}${uuid(1)} ReelFlies 6\\.22\\.0, released 2026-10-01 09:00 UTC from 1111111: older than the newest 3, active on no channel, not flagged is_active, and not a rollback`));
     // Each other theme with its uuid, and the flag, so a dry run shows whether a theme no channel
     // runs any more (Cavio 25121d00 since 2026-10-06) is still flagged.
-    assert.match(text, /4 other theme\(s\) aren't named ReelFlies, so the prune never touches them: Cornerstone \(e3d82ce0\), Hero-2024-2\.9\.5 \(786ab980\), Hero-2024-2\.9\.5-US \(7c519850, flagged is_active\), Cavio \(25121d00, flagged is_active\)/);
+    assert.match(text, /4 other theme\(s\) aren't named ReelFlies or "ReelFlies \(n\)", so the prune never touches them: Cornerstone \(e3d82ce0\), Hero-2024-2\.9\.5 \(786ab980\), Hero-2024-2\.9\.5-US \(7c519850, flagged is_active\), Cavio \(25121d00, flagged is_active\)/);
     assert.match(text, /3 to delete/);
 });
 
@@ -423,7 +486,12 @@ test('W0-3: the prune modules never activate or upload a theme, and only release
         const source = fs.readFileSync(new URL(file, import.meta.url), 'utf8');
         assert.doesNotMatch(source, /activateTheme|postTheme|actions\/activate/, `${file} activates or uploads nothing`);
     }
+    const imports = source => [...source.matchAll(/^import .* from '([^']+)';$/gm)].map(match => match[1]).sort();
     const prune = fs.readFileSync(new URL('./release-prune.mjs', import.meta.url), 'utf8');
-    assert.deepEqual([...prune.matchAll(/^import .* from '([^']+)';$/gm)].map(match => match[1]).sort(), ['./release-checks.mjs', './release-log.mjs']);
+    assert.deepEqual(imports(prune), ['./release-checks.mjs', './release-diff.mjs', './release-log.mjs']);
     assert.doesNotMatch(prune, /fetch\(|stencil-cli|deleteThemeById/);
+    // W0-3b: release-diff.mjs, for isStoreNameFor, stays pure: Node's util only, and no store call.
+    const diff = fs.readFileSync(new URL('./release-diff.mjs', import.meta.url), 'utf8');
+    assert.deepEqual(imports(diff), ['util']);
+    assert.doesNotMatch(diff, /fetch\(|stencil-cli|deleteThemeById|activateTheme|postTheme|actions\/activate/);
 });
