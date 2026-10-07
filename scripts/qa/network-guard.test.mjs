@@ -18,7 +18,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { PRELAUNCH_URL } from './analytics-hosts.mjs';
+import { PRELAUNCH_URL, isAfterFlip, readFlip } from './analytics-hosts.mjs';
 import {
     LIVE_CHANNELS, guardChannel, guardNotice, guardRequestContext, installNetworkGuard, refusesWrites, requestAction,
 } from './network-guard.mjs';
@@ -71,8 +71,10 @@ describe('which runs refuse writes', () => {
     });
 
     it('read the Flip from the release calendar when they aren\'t told it', () => {
-        // The calendar on master has no Flip date yet (scripts/release-calendar.json).
-        assert.equal(refusesWrites({ channel: '1895766', storefront: LOCAL, local: true }), false);
+        // A local 1895766 run refuses writes from the Flip on and not before. Judged against the
+        // repo's calendar (scripts/release-calendar.json), so the test holds on any day and with
+        // any Flip date, or none.
+        assert.equal(refusesWrites({ channel: '1895766', storefront: LOCAL, local: true }), isAfterFlip({ flip: readFlip() }));
     });
 });
 
