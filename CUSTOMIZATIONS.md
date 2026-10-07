@@ -13,6 +13,7 @@ This repo is Cornerstone (`upstream`, bigcommerce/cornerstone) plus ReelFlies co
 | Styles | `assets/scss/reelflies/`: `_settings.scss` is imported after the settings in `theme.scss`, and `_index.scss` at the end of it |
 | Icons | SVG partials in `templates/components/reelflies/icons/`. Don't add to `assets/icons/`, because that regenerates `assets/img/icon-sprite.svg`. |
 | Widgets API templates, schemas and per-channel files (stored in BigCommerce), synced by `scripts/widgets-sync.mjs` ([widgets](docs/widgets.md)) | `widgets/` |
+| Store content kept as changes files for the store-write helper, such as a channel's SEO settings | `content/` |
 | Release, check and generator tooling (never bundled) | `scripts/` |
 | Research notes and their evidence, such as ticket 07's prelaunch probes (never bundled) | `research/` |
 | Decisions | `docs/adr/` |
