@@ -12,14 +12,26 @@ import {
 const FLIP = '2027-03-01';
 const calendar = (flip = FLIP, status = 'provisional') => parseCalendar({ flip, status, source: 'ticket 10 comment, 2026-11-02' });
 
-test('the committed calendar starts with no Flip date, provisional, citing ticket 10', () => {
+// The committed calendar. Every change to the file changes this pin too, so the diff shows it.
+const COMMITTED = {
+    flip: '2027-02-16',
+    status: 'provisional',
+    source: 'ticket 10 comment 2026-10-06: provisional window; Shaun sets the real date after ticket 26\'s re-estimate',
+};
+
+test('the committed calendar holds the provisional Flip date from ticket 10\'s lane-G comment', () => {
     assert.equal(CALENDAR_PATH, fileURLToPath(new URL('../release-calendar.json', import.meta.url)));
-    assert.deepEqual(JSON.parse(fs.readFileSync(CALENDAR_PATH, 'utf8')), {
-        flip: null,
-        status: 'provisional',
-        source: 'ticket 10: Flip date after ticket 26',
+    assert.deepEqual(JSON.parse(fs.readFileSync(CALENDAR_PATH, 'utf8')), COMMITTED);
+    assert.deepEqual(readCalendar(), COMMITTED);
+    // The T-dates in ticket 10's 2026-10-06 lane-G comment.
+    assert.deepEqual(milestonesFor(readCalendar().flip), {
+        'T-35': '2027-01-12',
+        'T-28': '2027-01-19',
+        'T-21': '2027-01-26',
+        'T-14': '2027-02-02',
+        'T-0': '2027-02-16',
+        'T+30': '2027-03-18',
     });
-    assert.deepEqual(readCalendar(), { flip: null, status: 'provisional', source: 'ticket 10: Flip date after ticket 26' });
 });
 
 test('the milestones are worked back and forward from the Flip date in calendar days', () => {
@@ -148,10 +160,13 @@ test('the command prints the phase for a date, and --json the whole result', () 
     const script = fileURLToPath(new URL('./release-calendar.mjs', import.meta.url));
     const text = spawnSync(process.execPath, [script, '--date', '2026-10-06'], { encoding: 'utf8' });
     assert.equal(text.status, 0, text.stderr);
-    assert.match(text.stdout, /no Flip date yet/);
+    assert.match(text.stdout, /^Release calendar: Flip 2027-02-16 \(provisional; ticket 10 comment 2026-10-06/);
+    assert.match(text.stdout, /2026-10-06 is in build \(building, before code complete\); next: T-35 on 2027-01-12\./);
+    assert.match(text.stdout, /^ {2}T-21 {2}2027-01-26$/m);
     const json = spawnSync(process.execPath, [script, '--date', '2026-10-06', '--json'], { encoding: 'utf8' });
     assert.equal(json.status, 0, json.stderr);
-    assert.equal(JSON.parse(json.stdout).phase, 'unset');
+    assert.equal(JSON.parse(json.stdout).phase, 'build');
+    assert.equal(JSON.parse(json.stdout).daysToFlip, 133);
     const bad = spawnSync(process.execPath, [script, '--date', 'tomorrow'], { encoding: 'utf8' });
     assert.notEqual(bad.status, 0);
     assert.match(bad.stderr, /YYYY-MM-DD/);

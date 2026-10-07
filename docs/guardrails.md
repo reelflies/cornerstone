@@ -136,11 +136,17 @@ PR_BODY="$(gh pr view 12 -R reelflies/reelflies-cornerstone --json body -q .body
 
 ## The release calendar
 
-`scripts/release-calendar.json` holds the Flip date:
+`scripts/release-calendar.json` holds the Flip date. Since PR #44 it holds lane G's provisional date, Tue 2027-02-16 (ticket 10's 2026-10-06 lane-G comment):
 
 ```json
-{ "flip": null, "status": "provisional", "source": "ticket 10: Flip date after ticket 26" }
+{
+  "flip": "2027-02-16",
+  "status": "provisional",
+  "source": "ticket 10 comment 2026-10-06: provisional window; Shaun sets the real date after ticket 26's re-estimate"
+}
 ```
+
+The file is the record, and `node scripts/lib/release-calendar.mjs` prints the date it holds, today's phase and the milestones. A PR that changes the date changes this example with it.
 
 - `flip` is a date (`YYYY-MM-DD`) or `null`. `status` is `provisional` or `set`. `source` names the ticket 10 comment that gave the date. Any other key, or a date that doesn't exist, is refused, so a typo can't read as "no Flip date".
 - The orchestrator writes the provisional date (lane G's Flip window, then ticket 26's re-estimate), and Shaun sets the real one in ticket 10. The file is guarded, so each change gets a safety review.
