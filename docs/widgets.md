@@ -8,7 +8,7 @@ The sync never writes to the store itself. It reads the channel with GETs only a
 
 | Path | What |
 |---|---|
-| `widgets/<name>/template.html` | The template, uploaded as the widget template `rf-<name>`. It reads its `widget_configuration` at the top level and its query's result as `_.data`. It may include `widgets/_shared/` partials, which the sync inlines (a store template can't include partials). |
+| `widgets/<name>/template.html` | The template, uploaded as the widget template `rf-<name>`. It reads its `widget_configuration` at the top level and its query's result as `_.data`. It may include `widgets/_shared/` partials, which the sync inlines (a store template can't include partials). The store gets it without its Handlebars comments (`stripComments` in `scripts/widgets/source.mjs`): the store checks a template's HTML, comments included, and refused the hero's first upload as "not valid HTML". So notes go in comments freely. Close void elements (`<img … />`), as BigCommerce's own examples do, because the store doesn't document its check. |
 | `widgets/<name>/schema.json` | Its Page Builder schema: an array with one `tab`, holding sections of settings. |
 | `widgets/<name>/query.graphql` | Optional: its `storefront_api_query`. |
 | `widgets/<name>/channels/<channel>.json` | The widget on one channel: `channel_id`, its `configuration` (every schema setting's value there, and nothing else), its `placement` (`template_file`, `region`, `sort_order`, `status`) and the `uuids` the store gave its template, widget and placement (`null` until it makes them). |

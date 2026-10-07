@@ -10,7 +10,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { renderWidget } from '../qa/render/render.mjs';
 import {
-    SYNC_CHANNELS, WIDGETS_DIR, entriesFor, inlineShared, readChannelFile, readWidget, setPlacementStatus, writeUuids,
+    SYNC_CHANNELS, WIDGETS_DIR, entriesFor, inlineShared, readChannelFile, readWidget, setPlacementStatus, stripComments, writeUuids,
 } from './source.mjs';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-widgets-source-'));
@@ -73,12 +73,53 @@ test('the hero\'s 1895766 file sets every schema field and nothing else, and rec
     });
 });
 
-test('a widget\'s schema, query and template comments are what the store gets', () => {
+test('a widget\'s schema and query are what the store gets, and its template without its Handlebars comments', () => {
     const { root } = widgetsRoot('rf-x', { template: '{{!-- a note --}}<p>{{text}}</p>' });
     fs.writeFileSync(path.join(root, 'rf-x', 'query.graphql'), 'query Q { site { settings { storeName } } }\n');
     const widget = readWidget('rf-x', { root });
     assert.equal(widget.query, 'query Q { site { settings { storeName } } }');
-    assert.equal(widget.template, '{{!-- a note --}}<p>{{text}}</p>');
+    assert.equal(widget.template, '<p>{{text}}</p>');
+});
+
+// The store refused the hero, whose comment names <width>, <path> and <channel>, with "422:
+// template: is not valid HTML" (2026-10-07). A comment renders nothing, so the store gets none.
+test('comments are dropped as Handlebars drops them, so the store renders what the fixture renderer renders', async () => {
+    const template = [
+        '{{!--',
+        '    A note naming <width>, <path> and }} inside a block comment.',
+        '--}}',
+        '<div class="rf-x">',
+        '    {{! a short note }}',
+        '    <p>{{text}}{{!-- mid-line --}}!</p>',
+        '    <p>{{~! trims the space before ~}}  {{text}}</p>',
+        '  {{!-- standalone, indented --}}  ',
+        '</div>',
+        '{{! last line, no newline }}',
+    ].join('\n');
+    assert.equal(stripComments(template), [
+        '<div class="rf-x">',
+        '    <p>{{text}}!</p>',
+        '    <p>{{text}}</p>',
+        '</div>',
+        '',
+    ].join('\n'));
+    const { root } = widgetsRoot('rf-x', { template });
+    const stripped = fs.mkdtempSync(path.join(tmp, 'stripped-'));
+    fs.mkdirSync(path.join(stripped, 'rf-x'));
+    fs.writeFileSync(path.join(stripped, 'rf-x', 'template.html'), readWidget('rf-x', { root }).template);
+    const fixture = { configuration: { text: 'Hello' } };
+    assert.equal(await renderWidget('rf-x', fixture, { root: stripped }), await renderWidget('rf-x', fixture, { root }));
+});
+
+test('the hero the store gets has no comments, renders as its fixture does, and closes its <img>', async () => {
+    const hero = readWidget('home-lead');
+    assert.doesNotMatch(hero.template, /\{\{~?!/);
+    assert.match(hero.template, /<img\b[^>]*\/>/);
+    const stripped = fs.mkdtempSync(path.join(tmp, 'hero-'));
+    fs.mkdirSync(path.join(stripped, 'home-lead'));
+    fs.writeFileSync(path.join(stripped, 'home-lead', 'template.html'), hero.template);
+    const fixture = JSON.parse(fs.readFileSync(path.join(WIDGETS_DIR, 'home-lead', 'fixtures', 'default.json'), 'utf8'));
+    assert.equal(await renderWidget('home-lead', fixture, { root: stripped }), await renderWidget('home-lead', fixture));
 });
 
 test('a widget without template.html or schema.json, or with a schema that isn\'t an array, is refused', () => {

@@ -84,6 +84,39 @@ export function inlineShared(source, root = WIDGETS_DIR) {
     return `${source}${source.endsWith('\n') ? '' : '\n'}${definitions.join('')}`;
 }
 
+// Handlebars comments, {{!-- … --}} (which may hold "}}") and {{! … }}, with any ~ whitespace control.
+const COMMENT = /\{\{(~?)!(?:--[\s\S]*?--(~?)\}\}|(?!--)[\s\S]*?(~?)\}\})/g;
+
+// The template without its Handlebars comments, dropped as Handlebars drops them: a comment alone
+// on its lines goes with those lines, and a ~ takes the whitespace on its side. They render
+// nothing, and the store's HTML check reads the text inside them: it refused the hero's, which
+// names <width>, <path> and <channel>, as "not valid HTML" (2026-10-07).
+export function stripComments(source) {
+    let out = '';
+    let at = 0;
+    for (const match of source.matchAll(COMMENT)) {
+        const start = match.index;
+        const end = start + match[0].length;
+        const trimBefore = match[1] === '~';
+        const trimAfter = (match[2] || match[3]) === '~';
+        const lineStart = source.lastIndexOf('\n', start - 1) + 1;
+        const newline = source.indexOf('\n', end);
+        const lineEnd = newline === -1 ? source.length : newline + 1;
+        const standalone = !trimBefore && !trimAfter && lineStart >= at
+            && /^[ \t]*$/.test(source.slice(lineStart, start)) && /^[ \t]*\r?\n?$/.test(source.slice(end, lineEnd));
+        if (standalone) {
+            out += source.slice(at, lineStart);
+            at = lineEnd;
+        } else {
+            out += source.slice(at, start);
+            if (trimBefore) out = out.trimEnd();
+            at = end;
+            if (trimAfter) while (at < source.length && /\s/.test(source[at])) at += 1;
+        }
+    }
+    return out + source.slice(at);
+}
+
 // The ids a widget_configuration holds: every setting's, in tabs, sections, hidden groups and
 // conditional settings. An array setting holds its items under its own id.
 const settingIds = schema => {
@@ -102,8 +135,8 @@ const settingIds = schema => {
     return ids;
 };
 
-// A widget as the store should hold it: its template (with _shared partials inlined), schema and
-// query, and the names its template and widget take on every channel.
+// A widget as the store should hold it: its template (with _shared partials inlined and no
+// comments), schema and query, and the names its template and widget take on every channel.
 export function readWidget(name, { root = WIDGETS_DIR } = {}) {
     if (!NAME.test(name)) throw new Error(`"${name}" isn't a widget name: a folder in widgets/ (lower-case letters, digits and -)`);
     const dir = path.join(root, name);
@@ -118,7 +151,7 @@ export function readWidget(name, { root = WIDGETS_DIR } = {}) {
         root,
         templateName: `rf-${name}`,
         widgetName: `rf-${name}`,
-        template: inlineShared(fs.readFileSync(templateFile, 'utf8'), root),
+        template: stripComments(inlineShared(fs.readFileSync(templateFile, 'utf8'), root)),
         schema,
         settings: settingIds(schema),
         query: fs.existsSync(queryFile) ? fs.readFileSync(queryFile, 'utf8').trim() : '',
