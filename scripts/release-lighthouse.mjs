@@ -49,6 +49,10 @@ export const AFTER_FLIP_PHASES = ['T-0', 'T+30'];
 export const BEFORE_FLIP_PHASES = ['unset', 'build', 'T-35', 'T-28', 'T-21', 'T-14'];
 // Six URLs, three runs each and a retry take about 10 minutes; past this the runner is stopped.
 export const LIGHTHOUSE_TIMEOUT_MS = 30 * 60000;
+// How long a run asked to stop has to close its browser before it gets SIGKILL.
+export const KILL_AFTER_MS = 30000;
+// How long the release waits for the run's output once its npm has exited.
+export const PIPE_WAIT_MS = 5000;
 const SIGNALS = ['SIGINT', 'SIGTERM', 'SIGHUP'];
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -261,31 +265,60 @@ function pipeRedacted(stream, to, secrets) {
 }
 
 // Runs `command` and resolves, never rejects, to { status, signal, timedOut, interrupted, error }
-// once it has exited and its output is written. While it runs, SIGINT, SIGTERM and SIGHUP sent to
-// the release stop the child instead (`signals` is `process`, or a stand-in in a test), so
-// release.sh goes on to write its entry; a terminal's Ctrl-C reaches the child itself too. Past
-// `timeoutMs` the child gets SIGTERM.
+// once it has exited and its output is written. The child leads a process group of its own, and
+// every signal goes to that whole group (npm, the shell npm starts, the runner), not to npm alone.
+// While it runs, SIGINT, SIGTERM and SIGHUP sent to the release stop the child instead (`signals`
+// is `process`, or a stand-in in a test), so release.sh goes on to write its entry. Past
+// `timeoutMs` the child gets SIGTERM. Either way, it gets SIGKILL `graceMs` later if it is still
+// running, or at once on a second signal, so nothing it ignores can hold the release (and its lock)
+// open. Once the child has exited, its output is waited for `pipeWaitMs` at most: then whatever the
+// run left in its group, holding the output open, gets SIGKILL too.
 export function runCommand({
-    command, args, env, cwd, secrets, timeoutMs = LIGHTHOUSE_TIMEOUT_MS, signals = process, out = process.stdout, err = process.stderr,
+    command, args, env, cwd, secrets, timeoutMs = LIGHTHOUSE_TIMEOUT_MS, graceMs = KILL_AFTER_MS, pipeWaitMs = PIPE_WAIT_MS, signals = process, out = process.stdout, err = process.stderr,
 }) {
     return new Promise(resolve => {
         let interrupted = null;
         let timedOut = false;
-        const child = spawn(command, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
+        let killTimer = null;
+        let pipeTimer = null;
+        const child = spawn(command, args, {
+            cwd, env, stdio: ['ignore', 'pipe', 'pipe'], detached: true,
+        });
+        const signal = name => {
+            try {
+                process.kill(-child.pid, name);
+            } catch {
+                try {
+                    child.kill(name);
+                } catch {
+                    // it has gone
+                }
+            }
+        };
+        // The first stop sends `name` and gives the run graceMs to close its browser; a second one
+        // doesn't wait.
+        const stop = name => {
+            if (killTimer) {
+                signal('SIGKILL');
+                return;
+            }
+            signal(name);
+            killTimer = setTimeout(() => signal('SIGKILL'), graceMs);
+        };
         const handlers = SIGNALS.map(name => [name, () => {
             interrupted = interrupted || name;
-            child.kill(name);
+            stop(name);
         }]);
         handlers.forEach(([name, handler]) => signals.on(name, handler));
         const timer = setTimeout(() => {
             timedOut = true;
-            child.kill('SIGTERM');
+            stop('SIGTERM');
         }, timeoutMs);
         let finished = false;
         const finish = result => {
             if (finished) return; // a child that can't start may send 'close' after 'error'
             finished = true;
-            clearTimeout(timer);
+            [timer, killTimer, pipeTimer].forEach(clearTimeout);
             handlers.forEach(([name, handler]) => signals.removeListener(name, handler));
             resolve({
                 status: null, signal: null, timedOut, interrupted, error: null, ...result,
@@ -293,6 +326,15 @@ export function runCommand({
         };
         const written = Promise.all([pipeRedacted(child.stdout, out, secrets), pipeRedacted(child.stderr, err, secrets)]);
         child.on('error', error => finish({ error }));
-        child.on('close', (status, signal) => written.then(() => finish({ status, signal })));
+        child.on('exit', (status, exitSignal) => {
+            const ended = { status, signal: exitSignal };
+            pipeTimer = setTimeout(() => {
+                signal('SIGKILL');
+                child.stdout.destroy();
+                child.stderr.destroy();
+                finish(ended);
+            }, pipeWaitMs);
+            written.then(() => finish(ended));
+        });
     });
 }

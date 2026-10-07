@@ -1,7 +1,7 @@
 // Ticket 17's release.sh hook: what the release does about Lighthouse after a push, and what the
 // RELEASES.md entry records (release-lighthouse.mjs). Pure: no browser, no store, no files.
 
-import test from 'node:test';
+import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { MILESTONES } from './lib/release-calendar.mjs';
@@ -400,7 +400,17 @@ const nodeChild = (script, options = {}) => {
     const err = sink();
     const signals = new EventEmitter();
     const done = runCommand({
-        command: process.execPath, args: ['-e', script], env: { ...process.env, ...options.env }, cwd: process.cwd(), secrets: options.secrets || [], timeoutMs: options.timeoutMs ?? 20000, signals, out, err,
+        command: process.execPath,
+        args: ['-e', script],
+        env: { ...process.env, ...options.env },
+        cwd: process.cwd(),
+        secrets: options.secrets || [],
+        timeoutMs: options.timeoutMs ?? 20000,
+        graceMs: options.graceMs ?? 20000,
+        pipeWaitMs: options.pipeWaitMs ?? 20000,
+        signals,
+        out,
+        err,
     });
     return {
         done, out, err, signals,
@@ -436,6 +446,74 @@ test('Ctrl-C during the run stops the child, not the release, which goes on to w
     assert.equal(result.interrupted, 'SIGINT');
     assert.equal(result.signal, 'SIGINT');
     for (const name of ['SIGINT', 'SIGTERM', 'SIGHUP']) assert.equal(child.signals.listenerCount(name), 0, `${name} is let go once the child exits`);
+});
+
+const alive = pid => {
+    try {
+        process.kill(pid, 0);
+        return true;
+    } catch {
+        return false;
+    }
+};
+const settles = (promise, ms) => Promise.race([promise, new Promise(resolve => { setTimeout(() => resolve('still running'), ms); })]);
+// A child that takes no notice of SIGINT, SIGTERM or SIGHUP, and prints its pid when it is ready.
+const STUBBORN = 'for (const name of ["SIGINT", "SIGTERM", "SIGHUP"]) process.on(name, () => {}); console.log("ready " + process.pid); setInterval(() => {}, 1000);';
+// Every pid a child printed as "ready <pid>": killed when the file ends, so a failing test can't
+// leave a stubborn process behind.
+const printed = new Set();
+const pidsOf = child => [...child.out.text().matchAll(/ready (\d+)/g)].map(match => Number(match[1]));
+after(() => printed.forEach(pid => { if (alive(pid)) process.kill(pid, 'SIGKILL'); }));
+const ready = async child => {
+    for (let waited = 0; !/ready \d+/.test(child.out.text()) && waited < 10000; waited += 50) await new Promise(resolve => { setTimeout(resolve, 50); }); // eslint-disable-line no-await-in-loop
+    pidsOf(child).forEach(pid => printed.add(pid));
+};
+
+test('a child that takes no notice of SIGTERM at its time limit gets SIGKILL after the grace period', async () => {
+    const child = nodeChild(STUBBORN, { timeoutMs: 300, graceMs: 300 });
+    await ready(child);
+    const result = await settles(child.done, 10000);
+    assert.notEqual(result, 'still running', 'the step can\'t hang past its limit with the release lock held');
+    assert.equal(result.timedOut, true);
+    assert.equal(result.signal, 'SIGKILL');
+    assert.equal(result.interrupted, null);
+});
+
+test('a second Ctrl-C, or any second signal, stops a child that took no notice of the first at once', async () => {
+    const child = nodeChild(STUBBORN);
+    await ready(child);
+    child.signals.emit('SIGINT');
+    assert.equal(await settles(child.done, 500), 'still running', 'the child ignored the first');
+    child.signals.emit('SIGHUP');
+    const result = await settles(child.done, 5000);
+    assert.notEqual(result, 'still running');
+    assert.equal(result.interrupted, 'SIGINT');
+    assert.equal(result.signal, 'SIGKILL');
+    for (const name of ['SIGINT', 'SIGTERM', 'SIGHUP']) assert.equal(child.signals.listenerCount(name), 0, `${name} is let go`);
+});
+
+test('a signal reaches the whole of the run, not only npm: a grandchild that ignores nothing stops with it', async () => {
+    const child = nodeChild('const c = require("child_process").spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "inherit" }); console.log("ready " + c.pid); console.log("ready " + process.pid); process.on("SIGTERM", () => {}); setInterval(() => {}, 1000);', { timeoutMs: 20000, graceMs: 20000 });
+    await ready(child);
+    const grandchild = pidsOf(child)[0];
+    child.signals.emit('SIGTERM');
+    for (let waited = 0; alive(grandchild) && waited < 5000; waited += 50) await new Promise(resolve => { setTimeout(resolve, 50); }); // eslint-disable-line no-await-in-loop
+    assert.equal(alive(grandchild), false, 'the grandchild got the SIGTERM npm ignored');
+    child.signals.emit('SIGTERM');
+    const result = await settles(child.done, 5000);
+    assert.notEqual(result, 'still running');
+    assert.equal(result.signal, 'SIGKILL');
+});
+
+test('once the child has exited, the run ends after a short wait even if something it started still holds its output', async () => {
+    const child = nodeChild('const c = require("child_process").spawn(process.execPath, ["-e", "process.on(\'SIGTERM\', () => {}); setInterval(() => {}, 1000)"], { stdio: "inherit" }); console.log("ready " + c.pid); setTimeout(() => process.exit(3), 100);', { pipeWaitMs: 300 });
+    await ready(child);
+    const result = await settles(child.done, 5000);
+    assert.notEqual(result, 'still running', 'a held pipe doesn\'t keep the step running');
+    assert.equal(result.status, 3);
+    const grandchild = pidsOf(child)[0];
+    for (let waited = 0; alive(grandchild) && waited < 5000; waited += 50) await new Promise(resolve => { setTimeout(resolve, 50); }); // eslint-disable-line no-await-in-loop
+    assert.equal(alive(grandchild), false, 'what the run left behind is stopped');
 });
 
 test('a command that can\'t start resolves with its error, and throws nothing', async () => {
