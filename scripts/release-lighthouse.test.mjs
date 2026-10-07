@@ -129,12 +129,17 @@ test('the run\'s results are filed under the pushed theme\'s uuid, which must be
     assert.throws(() => resultsDirFor('../x'), /isn't a theme uuid/);
 });
 
-test('the run gets the prelaunch host, the channel, the variation, the folder and the commit, and the cookie, and none of the shell\'s other QA_ settings', () => {
+test('the run gets the prelaunch host, the channel, the variation, the folder and the commit, and the cookie, and none of the shell\'s other QA_ settings, store tokens or release state', () => {
     const env = lighthouseEnv({
         env: {
             PATH: '/bin',
             HOME: '/Users/x',
             QA_PREVIEW_COOKIE: COOKIE,
+            RF_BC_API_TOKEN: 'rf-secret-api',
+            RF_BC_READ_TOKEN: 'rf-secret-read',
+            RF_BC_WRITE_TOKEN: 'rf-secret-write',
+            RF_RELEASE_STATE: '/tmp/rf-release.x/state.json',
+            RF_RELEASE_CONFIG: '/tmp/fixture.json',
             QA_ANALYTICS: 'allow',
             QA_OVERLAY: 'rf_rise-off',
             QA_BASE_URL: 'https://reelflies.ca',

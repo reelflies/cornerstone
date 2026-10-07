@@ -110,15 +110,20 @@ export function resultsDirFor(uuid) {
     return `scripts/qa/results/host/${uuid}`;
 }
 
-// The environment for `npm run qa:lighthouse` after the push: the shell's, without any of its own
-// QA_ or RF_QA_ settings except the preview cookie, so an overlay, a results folder or
-// QA_ANALYTICS=allow left in the shell can't change what is measured or where it is filed. It
-// names the prelaunch host, its channel and variation, the uuid's folder, and the pushed commit,
-// which RELEASES.md doesn't record until step 7.
+// What the run never gets from the shell: its own QA settings (QA_, RF_QA_), so an overlay, a
+// results folder or QA_ANALYTICS=allow left in the shell can't change what is measured or where it
+// is filed; the store API tokens (RF_BC_), which the runner doesn't use (it reads the active theme
+// with stencil-cli's token, from secrets.stencil.json); and the release's own state and test
+// switches (RF_RELEASE_).
+const NOT_FOR_THE_RUN = /^((RF_)?QA_|RF_BC_|RF_RELEASE_)/;
+
+// The environment for `npm run qa:lighthouse` after the push: the shell's, without the names
+// above except the preview cookie. It names the prelaunch host, its channel and variation, the
+// uuid's folder, and the pushed commit, which RELEASES.md doesn't record until step 7.
 export function lighthouseEnv({
     env, variation, uuid, commit,
 }) {
-    const kept = Object.fromEntries(Object.entries(env).filter(([name]) => name === 'QA_PREVIEW_COOKIE' || !/^(RF_)?QA_/.test(name)));
+    const kept = Object.fromEntries(Object.entries(env).filter(([name]) => name === 'QA_PREVIEW_COOKIE' || !NOT_FOR_THE_RUN.test(name)));
     return {
         ...kept,
         QA_BASE_URL: PRELAUNCH_URL,

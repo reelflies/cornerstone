@@ -1622,7 +1622,7 @@ function lighthouseFolder() {
 const fs = require('fs');
 const path = require('path');
 const env = process.env;
-const seen = ['QA_BASE_URL', 'QA_CHANNEL', 'QA_VARIATION', 'QA_PORT', 'QA_RESULTS_DIR', 'QA_RELEASE_COMMIT', 'QA_ANALYTICS', 'QA_OVERLAY', 'QA_MANIFEST'];
+const seen = ['QA_BASE_URL', 'QA_CHANNEL', 'QA_VARIATION', 'QA_PORT', 'QA_RESULTS_DIR', 'QA_RELEASE_COMMIT', 'QA_ANALYTICS', 'QA_OVERLAY', 'QA_MANIFEST', 'RF_BC_API_TOKEN', 'RF_BC_READ_TOKEN', 'RF_RELEASE_STATE'];
 fs.writeFileSync(env.FAKE_LH_LOG, JSON.stringify({ args: process.argv.slice(2), cwd: process.cwd(), cookie: env.QA_PREVIEW_COOKIE === ${JSON.stringify(LH_COOKIE)}, ...Object.fromEntries(seen.map(name => [name, env[name] ?? null])) }));
 console.log('the runner printed ' + env.QA_PREVIEW_COOKIE);
 if (env.FAKE_LH_SUMMARY) {
@@ -1671,10 +1671,16 @@ test('ticket 17: an agent\'s push has no preview cookie, so step 6b runs nothing
     assert.equal(step.after.lighthouse.result, 'pending');
 });
 
-test('ticket 17: with the cookie, step 6b runs npm run qa:lighthouse on the prelaunch host for the pushed build, with none of the shell\'s own QA_ settings', () => {
+test('ticket 17: with the cookie, step 6b runs npm run qa:lighthouse on the prelaunch host for the pushed build, with none of the shell\'s own QA_ settings, store tokens or release state', () => {
     const step = lighthouseRun({
         env: {
-            QA_PREVIEW_COOKIE: LH_COOKIE, FAKE_LH_SUMMARY: lhSummary(), QA_ANALYTICS: 'allow', QA_OVERLAY: 'rf_rise-off', QA_MANIFEST: '/tmp/x.json',
+            QA_PREVIEW_COOKIE: LH_COOKIE,
+            FAKE_LH_SUMMARY: lhSummary(),
+            QA_ANALYTICS: 'allow',
+            QA_OVERLAY: 'rf_rise-off',
+            QA_MANIFEST: '/tmp/x.json',
+            RF_BC_API_TOKEN: 'rf-secret-api-token-value',
+            RF_BC_READ_TOKEN: 'rf-secret-read-token-value',
         },
     });
     assert.equal(step.status, 0, step.output);
@@ -1691,6 +1697,9 @@ test('ticket 17: with the cookie, step 6b runs npm run qa:lighthouse on the prel
         QA_ANALYTICS: null,
         QA_OVERLAY: null,
         QA_MANIFEST: null,
+        RF_BC_API_TOKEN: null,
+        RF_BC_READ_TOKEN: null,
+        RF_RELEASE_STATE: null,
     });
     assert.equal(step.after.lighthouse.result, 'pass');
     assert.equal(step.after.lighthouse.accepted, true);
@@ -1818,6 +1827,23 @@ test('ticket 17: before step 1 the release says what Lighthouse will do after th
     const flip = run([...CA, '--dry-run'], { ...onDate('2027-03-01'), QA_PREVIEW_COOKIE: LH_COOKIE });
     assert.equal(flip.status, 0, flip.output);
     assert.match(flip.stdout, /^lighthouse skipped \(after the Flip 1895766 is live reelflies\.ca/m);
+});
+
+test('ticket 17: release.sh takes the preview cookie out of the environment before anything runs, and gives it back only to the release steps that use it', () => {
+    const lines = fs.readFileSync(SCRIPT, 'utf8').split('\n').filter(line => !/^\s*#/.test(line));
+    const at = pattern => lines.findIndex(line => pattern.test(line));
+    const unset = at(/^unset QA_PREVIEW_COOKIE$/);
+    assert.notEqual(unset, -1);
+    assert.equal(lines[unset - 1], 'rf_preview_cookie="${QA_PREVIEW_COOKIE-}"');
+    const firstRun = at(/\b(node|npm|npx|select_nvmrc_node|release)\b/);
+    assert.ok(unset < firstRun, 'before nvm, the lock, npm ci, the builds, the gates and stencil-cli');
+    assert.equal(lines.filter(line => /export[^\n]*QA_PREVIEW_COOKIE|export rf_preview_cookie/.test(line)).length, 0, 'never exported again');
+    const given = lines.filter(line => /QA_PREVIEW_COOKIE=/.test(line));
+    assert.deepEqual(given.map(line => line.trim()), [
+        'prepare | pre-push | lighthouse) QA_PREVIEW_COOKIE="$rf_preview_cookie" node scripts/release.mjs "$@" ;;',
+    ], 'only inside release(), for the steps that use it');
+    const fn = lines.slice(at(/^release\(\) \{$/), at(/^release\(\) \{$/) + 6).join('\n');
+    assert.match(fn, /^release\(\) \{\n {4}case "\$1" in\n {8}prepare \| pre-push \| lighthouse\) QA_PREVIEW_COOKIE="\$rf_preview_cookie" node scripts\/release\.mjs "\$@" ;;\n {8}\*\) node scripts\/release\.mjs "\$@" ;;\n {4}esac\n\}$/);
 });
 
 test('ticket 17: release.sh runs Lighthouse after verify and before the log entry, and only after a real push', () => {

@@ -29,6 +29,13 @@
 
 set -euo pipefail
 
+# Ticket 17: the preview cookie, a control-panel login that Shaun reads into his shell for step 6b,
+# leaves the environment before anything runs, so nvm, npm ci's install scripts, the builds, the
+# gates and stencil-cli never get it. Only the release steps that use it get it back (release(),
+# below).
+rf_preview_cookie="${QA_PREVIEW_COOKIE-}"
+unset QA_PREVIEW_COOKIE
+
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 # .nvmrc's Node, before anything runs node (W0-1b). Agents run the bare commands Claude Code's allow
@@ -86,7 +93,14 @@ LOCK_TAKEN=1
 STATE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/rf-release.XXXXXX")"
 export RF_RELEASE_STATE="$STATE_DIR/state.json"
 
-release() { node scripts/release.mjs "$@"; }
+# The release's node steps. The ones that use the preview cookie get it back (above): prepare and
+# pre-push for the push summary's lighthouse line, and step 6b's run.
+release() {
+    case "$1" in
+        prepare | pre-push | lighthouse) QA_PREVIEW_COOKIE="$rf_preview_cookie" node scripts/release.mjs "$@" ;;
+        *) node scripts/release.mjs "$@" ;;
+    esac
+}
 step() { printf '\n== %s\n' "$1"; }
 
 # W0-3: --prune-only prunes My Themes and nothing else. Any argument that is the flag, with or
