@@ -419,17 +419,17 @@ export default {
 - `findTags(html, name)` returns start tags with their attributes. Anything inside comments, `<script>`, `<style>`, `<textarea>` and `<title>` doesn't count.
 - `scriptsOfType(html, type)` returns script contents, such as JSON-LD.
 
-**Tests:** add a fixture page to `raw-html/fixtures/` and a case to `raw-html/raw-html.test.mjs`, with a failing fixture and a passing one. CI runs them through `npm run test:scripts`. `raw-html/fetch.test.mjs` checks that the preview cookie reaches `QA_BASE_URL` and never a host a redirect points at.
+**Tests:** add a fixture page to `raw-html/fixtures/` and a case to `raw-html/raw-html.test.mjs`, with a failing fixture and a passing one. Or put them in `assertions/<id>.test.mjs` beside the assertion, which keeps a ticket's tests out of the shared file; the loader skips `*.test.mjs`, and `home-hero.test.mjs` builds its pages from a widget's render. CI runs them through `npm run test:scripts`. `raw-html/fetch.test.mjs` checks that the preview cookie reaches `QA_BASE_URL` and never a host a redirect points at.
 
-**The assertions today:**
+**The assertions today** judge the page as served. None reads the repo's record of a widget (`widgets/<name>/channels/<channel>.json`), so a widget placed or unpublished on 1895766 never fails the gate on every branch until that file's PR merges (build pipeline, section 6.6). Whether the store holds what the repo records is the sync's check, `widgets-sync.mjs --verify` ([docs/widgets.md](../../docs/widgets.md)).
 
 | Assertion | Ticket | Checks |
 |---|---|---|
 | `one-canonical` | 16 | exactly one canonical link; not asked of the cart or the 404 page, which have none in stock Cornerstone |
 | `json-ld-parses` | 16 | every `application/ld+json` block parses |
 | `no-region-prompt` | 16, then 52 | no element carries `data-rf-region-prompt` |
-| `home-one-h1` | 46 | exactly one `<h1>` on the home page: the hero's, once ticket 27 makes the logo a `<div>` |
-| `home-hero` | 46 | the hero's `<img>` has a srcset (320w to 1600w), sizes, width and height, and is the page's only `fetchpriority="high"`; its `<h1>` has text; its two buttons are `<a href>`. Whether the page must have the hero follows `widgets/home-lead/channels/<channel>.json`: required once its placement is recorded active, refused once recorded inactive, checked if present before that |
+| `home-one-h1` | 46 | at most one `<h1>` on the home page (the stock logo today, none on ticket 27's branch before the hero is placed), and with the hero on the page, exactly one: the hero's |
+| `home-hero` | 46 | when the page has the hero: its `<img>` has a srcset (320w to 1600w), sizes, width and height, and is the page's only `fetchpriority="high"`; its `<h1>` has text; its two buttons are `<a href>`. A page without the hero passes |
 | `home-no-carousel` | 46 | no stock carousel (`.heroCarousel`) on the home page |
 
 **Still to come:**

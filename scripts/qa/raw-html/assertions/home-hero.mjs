@@ -3,33 +3,17 @@
 // image; the H1 is the hero's heading; and both buttons are <a href> links.
 //
 // The hero is a widget (widgets/home-lead), placed on the store by scripts/widgets-sync.mjs, so
-// whether the page must have it comes from the channel's file, widgets/home-lead/channels/
-// <channel>.json, which records the placement once it is applied:
-//
-// - placement recorded and "active": the page must have the hero
-// - placement recorded and "inactive" (unpublished, R12): the page must not have it
-// - nothing recorded yet, or no file for the channel: the hero is checked if the page has it
-//
-// So the check follows the repo's record of the store, and a hero that went missing from the
-// store, or an unpublish that didn't take, fails the run.
+// the page has it only while its placement is active on the channel. The check runs whenever the
+// page has the hero, and passes a page without it. It never reads the repo's record of the store
+// (widgets/home-lead/channels/<channel>.json): a gate that did would fail on master and every
+// open branch from each apply until the channel file's PR merged, the trap section 6.6 of the
+// build pipeline removes. Whether the store holds what the repo records is the sync's check,
+// run after each apply: node scripts/widgets-sync.mjs --channel <id> --verify (docs/widgets.md).
 
-import fs from 'fs';
-import path from 'path';
-import { QA_CHANNEL, ROOT } from '../../storefront.mjs';
 import { findTags, markupOnly } from '../html.mjs';
 
-export const WIDGET = 'home-lead';
 export const HERO_CLASS = 'rf-hero';
 const WIDTHS = [320, 480, 640, 960, 1280, 1600];
-
-// What the channel's file says about the hero: 'active', 'inactive', 'unplaced' or 'no-file'.
-export function heroExpectation(channel = QA_CHANNEL, widgetsDir = path.join(ROOT, 'widgets')) {
-    const file = path.join(widgetsDir, WIDGET, 'channels', `${channel}.json`);
-    if (!fs.existsSync(file)) return 'no-file';
-    const { placement, uuids } = JSON.parse(fs.readFileSync(file, 'utf8'));
-    if (!uuids || !uuids.placement) return 'unplaced';
-    return placement.status === 'active' ? 'active' : 'inactive';
-}
 
 const classes = tag => (tag.attrs.class || '').split(/\s+/);
 
@@ -51,13 +35,10 @@ export function heroHtml(source) {
 
 const text = html => html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 
-export function heroProblems(html, expectation) {
+// What's wrong with the hero on the page, or nothing when the page doesn't have it.
+export function heroProblems(html) {
     const hero = heroHtml(html);
-    const where = `widgets/${WIDGET}/channels/${QA_CHANNEL}.json`;
-    if (!hero) {
-        return expectation === 'active' ? [`${where} records the hero placed and active, and the home page has no .${HERO_CLASS}`] : [];
-    }
-    if (expectation === 'inactive') return [`${where} records the hero unpublished (inactive), and the home page still has it`];
+    if (!hero) return [];
 
     const problems = [];
     const images = findTags(hero, 'img');
@@ -86,9 +67,9 @@ export function heroProblems(html, expectation) {
 export default {
     id: 'home-hero',
     ticket: 46,
-    description: 'the hero: a real <img> with srcset, sizes, width and height, the only fetchpriority="high"; the H1; two <a href> buttons (when widgets/home-lead records it placed)',
+    description: 'the hero, when the page has it: a real <img> with srcset, sizes, width and height, the only fetchpriority="high"; the H1; two <a href> buttons',
     pages: ['home'],
     check(page) {
-        return heroProblems(page.html, heroExpectation());
+        return heroProblems(page.html);
     },
 };

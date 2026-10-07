@@ -1,20 +1,18 @@
 // Tests the home page's hero assertions (ticket 46): home-hero and home-one-h1, on home pages
-// built from the hero widget's own render, with the stock logo <h1> and with ticket 27's <div>.
+// built from the hero widget's own render, with the stock logo <h1> and with ticket 27's <div>,
+// and with the hero on the page or not. Both judge only the page: whether the store has the hero
+// placed is the sync's check (widgets-sync.mjs --verify), so a widget write on 1895766 never
+// fails anyone's gate (build pipeline, section 6.6).
 //
 //   node --test scripts/qa/raw-html/assertions/home-hero.test.mjs
 
-import test, { after } from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { readFixture, renderWidget, WIDGETS_DIR } from '../../render/render.mjs';
 import { checkPage, loadAssertions } from '../../raw-html.mjs';
-import hero, { heroExpectation, heroHtml, heroProblems } from './home-hero.mjs';
+import hero, { heroHtml, heroProblems } from './home-hero.mjs';
 import oneH1 from './home-one-h1.mjs';
-
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-home-hero-'));
-after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 const fixture = readFixture(path.join(WIDGETS_DIR, 'home-lead', 'fixtures', 'default.json'));
 const STOCK_LOGO = '<h1 class="header-logo header-logo--center"><a href="/" class="header-logo__link"><img src="/logo.png" alt="ReelFlies.ca"></a></h1>';
@@ -49,8 +47,23 @@ test('the hero as the widget renders it passes, with the logo as a <div> (ticket
     assert.deepEqual(results.filter(result => result.status === 'fail'), []);
 });
 
-test('with the stock logo <h1> the home page has two, which is why the hero waits for ticket 27', async () => {
-    assert.deepEqual(oneH1.check(await homePage({ logo: STOCK_LOGO })), ['the home page has 2 <h1> elements, not 1']);
+test('without the hero, home may have no <h1> (ticket 27\'s branch) or one (the stock logo today), never two', async () => {
+    assert.deepEqual(oneH1.check(await homePage({ widget: '' })), [], 'the logo as a <div> and the hero not placed: 0 <h1>');
+    assert.deepEqual(oneH1.check(await homePage({ logo: STOCK_LOGO, widget: '' })), [], 'the stock logo <h1>: 1');
+    assert.deepEqual(oneH1.check(await homePage({ logo: `${STOCK_LOGO}<h1>Welcome</h1>`, widget: '' })), ['the home page has 2 <h1> elements, not at most 1']);
+});
+
+test('with the hero on the page, its heading is the only <h1>, which is why the hero goes active only after ticket 27', async () => {
+    assert.deepEqual(oneH1.check(await homePage({ logo: STOCK_LOGO })), ['the home page has 2 <h1> elements, not 1: with the hero on it, the hero\'s heading is the only <h1>']);
+    const headless = (await renderWidget('home-lead', fixture)).replace(/<h1[^>]*>[\s\S]*?<\/h1>/, '');
+    assert.deepEqual(oneH1.check(await homePage({ logo: STOCK_LOGO, widget: headless })), ['the home page\'s one <h1> isn\'t in the hero: with the hero on it, the hero\'s heading is the <h1>']);
+    assert.deepEqual(oneH1.check(await homePage({ widget: headless })), ['the home page has 0 <h1> elements, not 1: with the hero on it, the hero\'s heading is the only <h1>']);
+});
+
+test('the <h1> count ignores comments and the text of scripts', async () => {
+    const page = await homePage({ widget: '' });
+    page.html = page.html.replace('</head>', '<script>var h = "<h1>x</h1>";</script></head><!-- <h1>old</h1> -->');
+    assert.deepEqual(oneH1.check(page), []);
 });
 
 test('the hero is found by its element, never by text in a script or a comment', async () => {
@@ -74,30 +87,16 @@ test('each broken promise of the hero is named', async () => {
         [{ widget: (await renderWidget('home-lead', fixture)).replace(/<a class="rf-hero__button rf-hero__button--secondary"[^>]*>([^<]*)<\/a>/, '<button class="rf-hero__button">$1</button>') }, /1 button links[\s\S]*<button>/],
     ];
     for (const [options, expected] of cases) {
-        const problems = heroProblems((await homePage(options)).html, 'unplaced'); // eslint-disable-line no-await-in-loop
+        const problems = heroProblems((await homePage(options)).html); // eslint-disable-line no-await-in-loop
         assert.match(problems.join('\n'), expected);
     }
 });
 
-test('a hero recorded active must be on the page, and one recorded inactive must not', async () => {
-    const without = (await homePage({ widget: '' })).html;
-    assert.match(heroProblems(without, 'active').join('\n'), /records the hero placed and active, and the home page has no \.rf-hero/);
-    assert.deepEqual(heroProblems(without, 'inactive'), []);
-    assert.deepEqual(heroProblems(without, 'unplaced'), []);
-    assert.match(heroProblems((await homePage()).html, 'inactive').join('\n'), /records the hero unpublished \(inactive\), and the home page still has it/);
-});
-
-test('the expectation follows the channel\'s file in widgets/home-lead/channels/', () => {
-    const write = (channel, data) => {
-        fs.mkdirSync(path.join(tmp, 'home-lead', 'channels'), { recursive: true });
-        fs.writeFileSync(path.join(tmp, 'home-lead', 'channels', `${channel}.json`), JSON.stringify(data));
-    };
-    const uuid = 'e1e1e1e1-1234-4abc-8def-0123456789ab';
-    write(1, { placement: { status: 'active' }, uuids: { placement: null } });
-    write(2, { placement: { status: 'active' }, uuids: { placement: uuid } });
-    write(3, { placement: { status: 'inactive' }, uuids: { placement: uuid } });
-    assert.equal(heroExpectation(1, tmp), 'unplaced');
-    assert.equal(heroExpectation(2, tmp), 'active');
-    assert.equal(heroExpectation(3, tmp), 'inactive');
-    assert.equal(heroExpectation(4, tmp), 'no-file');
+test('the gate checks the hero whenever the page has it, and never asks the store\'s state', async () => {
+    const without = await homePage({ widget: '' });
+    assert.deepEqual(heroProblems(without.html), [], 'no hero on the page: nothing to check');
+    assert.deepEqual(hero.check(without), []);
+    assert.deepEqual(hero.check(await homePage()), []);
+    assert.equal(hero.check.length, 1, 'check(page) takes the page and nothing else');
+    assert.equal(heroProblems.length, 1, 'heroProblems(html) takes the page\'s HTML and nothing else');
 });
