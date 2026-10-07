@@ -1,0 +1,18 @@
+{
+  "ticket": 22,
+  "status": "draft",
+  "approved": null,
+  "role": "The source of record for the CASL newsletter wording, for the whole theme (README, \"The CASL newsletter wording\")",
+  "source": "The reference page's default: plan/design/src/reference.src.html:1134-1136",
+  "usedBy": {
+    "50": "the footer's newsletter column, as lang strings: the line above the box, the consent below it; a test of 50's pins its copy to this file",
+    "24": "beside the checkout newsletter checkbox, which starts unticked; a test of 24's pins its copy to this file",
+    "22": "privacy-policy.html, section 14, quotes the consent word for word"
+  },
+  "line": "A few emails a year about new patterns and ReelFlies sales.",
+  "consent": "By subscribing you agree to receive email from ReelFlies. You can unsubscribe at any time.",
+  "forShaun": [
+    { "question": "Approve both sentences? They are the reference page's default." },
+    { "question": "CASL asks that a request for consent say who is asking and how to reach them. In the footer, the Contact column beside the box gives the name, address and phone number. At checkout, should the wording name ReelFlies (Digital Barn Ltd.) and link the Privacy Policy as well (ticket 24)?" }
+  ]
+}
