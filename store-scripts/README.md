@@ -15,7 +15,9 @@ node scripts/store-scripts/build.mjs           # rewrites store-scripts/1895766/
 node scripts/store-scripts/build.mjs --check   # exits 1 if it is stale; the tests run this too
 ```
 
-`scripts/store-scripts/web-vitals.test.mjs` checks the glue, the vendored file's hash, the one-tag inline script, its size (4 KB gzip at most, inside the 150 KB third-party budget), and that the changes file passes W0-11's checks as a lifted write. `web-vitals-browser.test.mjs` runs the built script in Chromium and checks that LCP, INP and CLS reach a stand-in `gtag`. It is skipped where Playwright's Chromium isn't installed, as in CI.
+`scripts/store-scripts/web-vitals.test.mjs` checks the glue, the vendored file's hash, the one-tag inline script, its size (4 KB gzip at most, inside the 150 KB third-party budget), and that the changes file passes W0-11's checks as a lifted write. `web-vitals-browser.test.mjs` runs the built script in Chromium and checks that LCP, INP and CLS reach both a stand-in global `gtag` and, on a page without one, `window.dataLayer`. It is skipped where Playwright's Chromium isn't installed, as in CI.
+
+`scripts/store-scripts/lint.test.mjs` lints this folder under the repo's ESLint config, because CI's ESLint step names only `assets/js` and `scripts`. `.eslintrc` here leaves out `web-vitals/vendor/`, the minified library, which the hash pins instead.
 
 ## Re-vendoring web-vitals
 
@@ -35,4 +37,5 @@ node ~/reelflies/theme/cornerstone/scripts/store/apply.mjs <plan>
 ```
 
 - The Scripts API lists only the scripts the calling API account created, so the writer account sees its own scripts and nothing added in the control panel. An update is a `PUT /v3/content/scripts/<uuid>` with the uuid the create returned, recorded in `log.jsonl`.
-- **Enabling it is Shaun's,** in the control panel (Storefront > Script Manager), once GA4 open point (b) has its filter. The checklist is `research/23-analytics-and-integrations.md`.
+- **Creating it disabled doesn't wait for GA4 open point (b).** It changes nothing on the storefront, so an agent runs the three commands above once the PR merges, on the orchestrator's go.
+- **Enabling it is Shaun's,** in the control panel (Storefront > Script Manager), once GA4 open point (b) has its filter. Then he checks it in DebugView with analytics cookies accepted, because its consent category is analytics. The checklist is `research/23-analytics-and-integrations.md`.

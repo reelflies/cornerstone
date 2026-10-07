@@ -1,6 +1,6 @@
 # Analytics, email and integrations on ReelFlies_CA (ticket 23)
 
-The checklist for ticket 23: what is connected to ReelFlies_CA (channel 1895766) today, what each acceptance criterion still needs, and who does it. Written 2026-10-06 from read-only reads only: no store writes were made.
+The checklist for ticket 23: what is connected to ReelFlies_CA (channel 1895766) today, what each acceptance criterion still needs, and who does it. Written 2026-10-06 from read-only reads only: no store writes were made. Revised 2026-10-07 after PR #35's reviews.
 
 - **The reads:** `node scripts/integrations/read.mjs` (GET only, read-only token), at 2026-10-07T04:04:53Z. The raw reads, with each template's body, are outside git at `~/reelflies/store-snapshots/store-wide/integrations/2026-10-07T04-04-53.104Z-read-23.json`. API secrets, coupon codes and send counts are never kept.
 - **The script budget:** `node scripts/integrations/script-budget.mjs https://reelflies.ca/` at 2026-10-07T04:08:23Z. It reads the page's HTML and the script files it names, and runs none of them, so no tag fired and no visit was counted. The prelaunch host needs Shaun's preview cookie, so 1895766's own page waits for him (below).
@@ -15,18 +15,18 @@ The checklist for ticket 23: what is connected to ReelFlies_CA (channel 1895766)
 | 3 | GA4 open point (b): prelaunch and test hosts filtered out | GA4 Admin: data streams, data filters | the property | no filter | an internal-traffic data filter (below) | Shaun | **open**; web-vitals stays disabled until it exists |
 | 4 | GA4 ecommerce events | BigCommerce's GA4 snippet subscribes to the data layer (`subscribeOnBodlEvents`) | global | data layer on (ticket 08); `data_tag_enabled` reads false on every provider | page view, add to cart and purchase once each in DebugView | Shaun; ticket 55's test order | **waiting** (refactor 14 for products on 1895766) |
 | 5 | GA4 annotations | GA4 Admin: annotations | the property | none known | one per dated event, list below | Shaun in GA4; the orchestrator puts the list in `RELEASES.md` | **waiting** |
-| 6 | Web-vitals field data | Script Manager on 1895766 | channel | built: `store-scripts/1895766/web-vitals.json`, not created | created disabled, enabled once (b) has its filter | an agent creates it (W0-11, lifted); Shaun enables it | **built; waits on (b)** |
+| 6 | Web-vitals field data | Script Manager on 1895766 | channel | built: `store-scripts/1895766/web-vitals.json`, not created | created disabled, enabled once (b) has its filter | an agent creates it disabled (W0-11, lifted) once this PR merges, on the orchestrator's go; Shaun enables it | **built;** the disabled create doesn't wait for (b); enabling does |
 | 7 | GA4 custom definitions for the web-vitals parameters | GA4 Admin: custom definitions | the property | none | `metric_rating` and `metric_navigation_type` as event-scoped dimensions; `metric_value` as a custom metric | Shaun | **waiting** (with 6) |
 | 8 | Legacy Universal Analytics `UA-1225874-8` | Data Solutions: the "Google Analytics" provider | global | on, consent-tagged (analytics). **The same provider's code also holds Omnisend's order-attribution snippet (`SOUNDEST-V6-1`)** | UA removed (it stopped collecting in 2023), the Omnisend snippet kept until Omnisend confirms how it attributes orders | Shaun (a store-wide write), ticket 08 | **open** (ticket 08) |
 | 9 | Meta Pixel `2233770690192958` | Data Solutions: the "Facebook Pixel" provider | global | on; its inline snippet carries **no consent tag** in the HTML, and loads `fbevents.js` | PageView, AddToCart and Purchase once each in Test Events, from 1895766; AddToCart once per add on channel 1 too | Shaun | **waiting** (criterion 2; refactor 14) |
 | 10 | Omnisend on 1895766 | the Omnisend app; Script Manager | channel | not known: the API can't list control-panel scripts. On channel 1, two Omnisend launchers load (below) | footer signup and checkout subscribers reach Omnisend with consent; a test order shows | Shaun | **waiting** (criterion 3) |
 | 11 | Omnisend coupon codes on 1895766 | Omnisend; BigCommerce coupons | channel | not checked | they work on 1895766 | ticket 24 assigns them | ticket 24 |
 | 12 | Abandoned-cart email owner | native: Marketing > Abandoned cart emails; or Omnisend | native: global, channels inherit | **native is off:** 3 global templates, none active; 1 and 1895766 use the global ones (`use_global` true) | exactly one active for 1895766 | Shaun chooses; interim below | **waiting** (criterion 4) |
-| 13 | Transactional email branding | Storefront > Email templates | global (no channel has its own templates) | not checked | the logo (the 133x95 PNG until ticket 14's master) and colours | Shaun (the templates are store-wide) | **waiting** |
-| 14 | Transactional email links | the 15 email templates and 3 abandoned-cart templates | global | **every link is a template variable, a BigCommerce asset or page path, or bigcommerce.com:** none needs a fix (table below) | links point at reelflies.ca after the Flip | recorded here; ticket 57 checks on Flip day | **met** for BigCommerce's emails |
+| 13 | Transactional email branding | Storefront > Email templates | global (no channel has its own templates) | not checked yet. The stored read holds every template's body, so whether each uses the store-logo variable, and which colours it hard-codes, can be read from it without a store call (revisitable, next agent on ticket 23) | the logo (the 133x95 PNG until ticket 14's master) and colours | Shaun (the templates are store-wide) | **waiting** |
+| 14 | Transactional email links | the 15 email templates and 3 abandoned-cart templates | global | **every link is a template variable, a BigCommerce asset or page path, or bigcommerce.com:** none needs a fix (table below) | links point at reelflies.ca after the Flip | recorded here; ticket 57 checks on Flip day | **done** for BigCommerce's 18 templates. Criterion 9 is only partly met: Omnisend's emails (15) wait on Shaun |
 | 15 | Omnisend email links | Omnisend's flows and campaigns | Omnisend | not readable here | every link on reelflies.ca after the Flip | Shaun lists them (below) | **waiting** |
-| 16 | Review app | none | | native reviews (ticket 13 decision 5, default) | | | **not applicable** for now |
-| 17 | Script Manager list for 1895766 | Storefront > Script Manager | channel | the Scripts API lists only the scripts the calling account created: 0 for the read-only account | every script in the footer, async, consent-tagged, within the budget | Shaun's list, or the budget tool with the cookie | **waiting** (criterion 6) |
+| 16 | Review app | none | | native reviews (ticket 13 decision 5, default). Still open from the owner comment: is a review app running on channel 1 today? Channel 1's home page loads no review-app script, but its product pages weren't read | | Shaun answers (his checks, below) | **not applicable** for now |
+| 17 | Script Manager list for 1895766 | Storefront > Script Manager | channel | the Scripts API lists only the scripts the calling account created: 0 for the read-only account | every script in the footer, async, consent-tagged, within the budget. The one deliberate exception: ReelFlies' web-vitals script is inline, which the API loads only as "default", never async (revisitable) | Shaun's list, or the budget tool with the cookie | **waiting** (criterion 6) |
 | 18 | Third-party budget | | | Script Manager scripts on channel 1: about 33 KB gzip. Everything third-party, the Data Solutions tags included: about 447 KB gzip (below) | 150 KB gzip for Script Manager scripts | Shaun approves the tidy-up | **waiting** (17) |
 | 19 | Site verification tags | Data Solutions: "Site Verification Tags" | global | one meta tag (Pinterest), on | keep | | no action |
 
@@ -52,9 +52,11 @@ The checklist for ticket 23: what is connected to ReelFlies_CA (channel 1895766)
 - **GA4 has no hostname data filter.** Its data filters are "internal traffic" (by the `traffic_type` parameter, which an IP rule sets) and "developer traffic" (debug mode).
 - **Recommended:** in the web data stream's tag settings, define internal traffic by the office's public IP address, then add an "Internal traffic" data filter set to Exclude. Put it in Testing first, check the "Test data filter name" dimension, then make it Active. A filter changes data from then on, and can't be undone for data already processed.
   - The prelaunch host answers only with Shaun's preview cookie, so its traffic is his own, and the tags-loaded Lighthouse runs (W0-6, ticket 17) run from the same Mac and network. The IP rule covers both.
+  - **The IP rule covers the office network only.** A prelaunch page opened from another network, such as ticket 55's real-device passes on mobile data, still reaches the reports. Add each tester's network to the rule, or filter reports by hostname as a backstop. That is Shaun's call; the default is revisitable.
   - Local `stencil start` serves no tags, and every gate run blocks the analytics hosts anyway (W0-6).
 - **How criteria 1 and 5 are checked under the filter:** in **DebugView**, through Tag Assistant (tagassistant.google.com, connected to the prelaunch page in a browser that has the preview cookie), **while the filter is still in Testing.** In Testing, matching events are only labelled, so they still show. Once it is Active, events from the office's IP are dropped before DebugView too. So run the checks, then make the filter Active. A later recheck (ticket 55's test orders) switches it back to Testing for the session, or runs from a network outside the IP rule.
-- **Interim until Shaun sets it:** analytics stays blocked in every gate (W0-6), and the web-vitals script isn't created or stays disabled. Once he sets the filter, ticket 08 records the date and `GA4_HOSTNAME_FILTER_SINCE` in `scripts/qa/prelaunch.mjs` takes it (W0-6's tags-loaded run).
+  - **Accept analytics cookies in the consent banner first.** Cookie consent is on: GA4's Consent Mode defaults to denied, and the web-vitals script's consent category is analytics, so without consent it never loads and the check fails with no clear reason.
+- **Interim until Shaun sets it:** analytics stays blocked in every gate (W0-6), and the web-vitals script stays disabled. Creating it disabled doesn't wait for the filter: an agent does that once this PR merges, on the orchestrator's go. Only enabling it waits. Once he sets the filter, ticket 08 records the date and `GA4_HOSTNAME_FILTER_SINCE` in `scripts/qa/prelaunch.mjs` takes it (W0-6's tags-loaded run).
 
 ## GA4 annotations
 
@@ -84,8 +86,8 @@ The budget (research.json, performance budget) is "a third-party **Script Manage
 | `gtag.js?id=G-BQ4RFFK3KW` (GA4) | Data Solutions, GA4 provider (injected by its inline snippet) | head | injected, async | none in the HTML; Consent Mode defaults to denied | 164,088 B |
 | `gtag.js?id=UA-1225874-8` (UA) | Data Solutions, "Google Analytics" provider | head | async | analytics (`data-bc-cookie-consent="3"`) | 135,452 B |
 | `fbevents.js` (Meta Pixel) | Data Solutions, "Facebook Pixel" provider (injected) | head | injected, async | **none** | 112,681 B |
-| Omnisend launcher, `omnisnippet1.com` (`SOUNDEST-V6-SM`) | Script Manager, by its marker and consent tag (Shaun's list confirms); injected by its snippet | body | injected | functional (`"2"`) | 15,821 B |
-| Omnisend launcher, `omnisrc.com` (`SOUNDEST-V6-2-S`) | Script Manager, by its consent tag (Shaun's list confirms); injected by an older snippet | body | injected | functional (`"2"`) | 15,821 B |
+| Omnisend launcher, `omnisnippet1.com` (`SOUNDEST-V6-SM`) | Script Manager, by its marker and consent tag (to be confirmed by Shaun's list); injected by its snippet | body | injected | functional (`"2"`) | 15,821 B |
+| Omnisend launcher, `omnisrc.com` (`SOUNDEST-V6-2-S`) | Script Manager, by its consent tag (to be confirmed by Shaun's list); injected by an older snippet | body | injected | functional (`"2"`) | 15,821 B |
 | six inline snippets (gtag set-ups, Omnisend, Meta) | the above | head and body | inline | as above | 3,141 B |
 | **Everything third-party** | | | | | **447,004 B** |
 | **Script Manager scripts only** (both Omnisend launchers and their snippets) | | | | | **about 33,000 B** |
@@ -101,7 +103,14 @@ The budget (research.json, performance budget) is "a third-party **Script Manage
   node scripts/integrations/script-budget.mjs https://reelflies_ca-1895766.mybigcommerce.com/
   ```
 
-  The cookie goes to the prelaunch page only, never to a script's host, and is never printed. The tool exits 1 when the third-party total is over 150 KB, which it will be while GA4 and the Meta Pixel are counted. Read its table for the Script Manager rows.
+  The cookie goes to the prelaunch page only, never to a script's host or through a redirect, and is never printed (`script-budget.test.mjs` checks all three).
+
+  **Its verdict isn't criterion 6's.** The tool's "within" or "over", and its exit code, judge every third-party script on the page, the Data Solutions tags included, so it says "over" (exit 1) while GA4 and the Meta Pixel load. Judge criterion 6 from the Script Manager rows and Shaun's control-panel list. Also, when reading its table:
+  - It doesn't mark which rows are Script Manager scripts. Use the consent tags and markers above.
+  - Once the web-vitals script is enabled, the tool labels it "Google tag (gtag)", because the glue calls `gtag`. It is ReelFlies' Script Manager script, 3,631 B gzip.
+  - It counts only Google's, Meta's and Omnisend's inline snippets as third party. Another vendor's inline snippet shows as the store's, and neither it nor the file it injects is measured. Nor is a script served from the store's WebDAV folder (`cdn*.bigcommerce.com/s-*/content/`), which shows as BigCommerce's. Measure any such row by hand.
+
+  A Script Manager column and subtotal, the web-vitals label, and other vendors' snippets are a revisitable follow-up for the next agent on ticket 23, before Shaun's run (PR #35, "Review findings").
 - The web-vitals script adds 3,631 B gzip (its own budget is 4,096 B).
 
 ## Email templates and their links
@@ -132,6 +141,7 @@ Read 2026-10-07 with `scripts/integrations/read.mjs`. **No channel has templates
 - "external" is `http://www.bigcommerce.com/` in every case, the "Powered by BigCommerce" footer.
 - **What makes them right after the Flip** is 1895766's site URL becoming `https://reelflies.ca`, which ticket 57 changes on Flip day. The read-only account can't read site URLs (`/v3/channels/<id>/site` answered 403: it lacks the Sites & Routes scope), so ticket 57's Flip-day check reads it in the control panel, or the account gets Sites & Routes: read-only.
 - **Rerun:** `node scripts/integrations/read.mjs` prints this table again, with any link that needs a look in a "To look at" column: the prelaunch host, a hard-coded reelflies.ca path, a variable followed by a page path, reelflies.com, or a relative link.
+  - **What a rerun doesn't flag yet** (revisitable, for the next agent on ticket 23 before ticket 57's Flip-day rerun): it reads only quoted `href` and `src` values, so an unquoted link, a `background` attribute or a CSS `url()` isn't listed at all; a page path after a variable host (`https://{{store.domain_name}}/fly-tying/`) passes as external; and a link that starts with `{{`, such as a block helper around a hard-coded host, passes as a variable. Today's 18 templates hold 78 links, all quoted, and none of these shapes, so the table above stands.
 
 **Omnisend's emails (Shaun):** list each active flow and campaign template (welcome, abandoned cart, order follow-up and any others) with its links. A link is fine if it is built from Omnisend's store or product variables. Fix any link hard-coded to `reelflies_ca-1895766.mybigcommerce.com` or to a reelflies.ca category path, which the Flip changes. Record the list in ticket 23's comments.
 
@@ -147,20 +157,24 @@ Read 2026-10-07 with `scripts/integrations/read.mjs`. **No channel has templates
 - **How it sends:** through `window.gtag` if there is one, else onto `window.dataLayer` as `gtag()` would (BigCommerce's GA4 snippet). It carries no measurement id.
 - **What it is:** web-vitals 6.2.2 (Apache-2.0), vendored and pinned by sha256, plus a short glue, in one inline `<script>` of 9,868 characters and 3,631 B gzip.
 - **Script Manager settings:** footer, `script_tag` (the API requires load method "default" for an inline script, so "async" doesn't apply; it runs after the page's content and does its work in performance observers), storefront pages only, consent category analytics, created disabled, `auto_uninstall` false.
-- **Tests:** `scripts/store-scripts/web-vitals.test.mjs` (glue, payload, W0-11's checks) and `web-vitals-browser.test.mjs` (the built script in Chromium sends LCP, INP and CLS through a global gtag and through the data layer).
-- **Creating it** is a lifted write (decision 4) through `scripts/store/`, as `store-scripts/README.md` shows. Creating it disabled changes nothing on the storefront.
-- **Enabling it is Shaun's,** in Storefront > Script Manager, once point (b)'s filter exists. Then he checks criterion 5 in DebugView while the filter is in Testing: open a prelaunch page through Tag Assistant, click something, switch tabs, and look for `LCP`, `INP` and `CLS` events with `metric_value`.
+  - So it is the one script on 1895766 that can't meet criterion 6's "async". That is deliberate and revisitable: the alternative, a `src` script with async from a file in the store's WebDAV folder, needs a write outside decision 4.
+- **Tests:** `scripts/store-scripts/web-vitals.test.mjs` (glue, payload, W0-11's checks), `web-vitals-browser.test.mjs` (the built script in Chromium sends LCP, INP and CLS through a global gtag and through the data layer) and `lint.test.mjs` (the glue under the repo's ESLint config).
+- **Creating it** is a lifted write (decision 4) through `scripts/store/`, as `store-scripts/README.md` shows. Creating it disabled changes nothing on the storefront, so it doesn't wait for point (b): once this PR merges, on the orchestrator's go, an agent runs the plan, `apply --dry-run` (W0-11's first write runs dry first) and `apply` from the main clone.
+- **Enabling it is Shaun's,** in Storefront > Script Manager, once point (b)'s filter exists. Then he checks criterion 5 in DebugView while the filter is in Testing: open a prelaunch page through Tag Assistant, **accept analytics cookies in the consent banner**, click something, switch tabs, and look for `LCP`, `INP` and `CLS` events with `metric_value`.
+- **Field data comes only from visitors who accept analytics cookies,** because the script's consent category is analytics.
 - **Reading it after the Flip** (ticket 58): GA4's custom definitions (item 7), then an exploration of the 75th percentile of `metric_value` per event name, or the BigQuery export (web.dev, "Measure and debug performance with Google Analytics 4 and BigQuery"). The targets are INP 200 ms or less and CLS 0.1 or less.
 
 ## Shaun's checks before the T-21 freeze
 
-1. **GA4 DebugView (criterion 1):** through Tag Assistant on the prelaunch host, with point (b)'s filter in Testing, a page view, an add to cart and a purchase from 1895766, each once. The add to cart and purchase need products on 1895766 (refactor 14) and a test order (ticket 55).
+1. **GA4 DebugView (criterion 1):** through Tag Assistant on the prelaunch host, with point (b)'s filter in Testing and analytics cookies accepted in the consent banner, a page view, an add to cart and a purchase from 1895766, each once. The add to cart and purchase need products on 1895766 (refactor 14) and a test order (ticket 55).
 2. **Meta Test Events (criterion 2):** the same three from 1895766, with AddToCart once per add. Also add one item to a cart on live reelflies.ca (the old theme) and record whether AddToCart fires once: ticket 08's double-firing check. That is a write on channel 1, so it is his.
 3. **Omnisend (criterion 3):** a test subscriber from the footer signup on 1895766 with consent recorded, and the test order.
 4. **Abandoned cart (criterion 4):** the owner, above.
-5. **Web-vitals (criterion 5):** above.
+5. **Web-vitals (criterion 5):** above, with analytics cookies accepted.
 6. **Script Manager (criterion 6):** the list for 1895766, and the tidy-up.
 7. **Annotations (criterion 7):** the rows above that have happened.
+8. **Omnisend's email links (criterion 9):** the list under "Omnisend's emails", above.
+9. **Review app on channel 1 (the owner comment's open question):** is one running on reelflies.ca today? If it is, say whether 1895766 should have it too. Until he answers, reviews are native and there is nothing to connect.
 
 ## Criteria
 
@@ -170,11 +184,11 @@ Read 2026-10-07 with `scripts/integrations/read.mjs`. **No channel has templates
 | Meta Test Events: the same three, AddToCart once per add | **Waiting:** Shaun; refactor 14 |
 | Omnisend: a test subscriber with consent, and a test order | **Waiting:** Shaun connects Omnisend to 1895766 |
 | Exactly one abandoned-cart email active for 1895766, Shaun's choice recorded | **Waiting:** native is off (0 of 3 active); default Omnisend, for Shaun to confirm |
-| A web-vitals event with LCP, INP and CLS values arrives in GA4 from a prelaunch page view | **Waiting:** built and tested; waits on point (b)'s filter, the disabled create (W0-11) and Shaun enabling it |
-| The Script Manager list for 1895766 recorded, every script footer, async, consent-tagged, within 150 KB gzip | **Waiting:** Shaun's control-panel list or the budget tool with the cookie. Channel 1 is measured above |
+| A web-vitals event with LCP, INP and CLS values arrives in GA4 from a prelaunch page view | **Waiting:** built and tested. Next, the disabled create through W0-11, once this PR merges and on the orchestrator's go (it doesn't wait for point (b)). Then Shaun enables it once point (b)'s filter exists, and checks DebugView with analytics cookies accepted |
+| The Script Manager list for 1895766 recorded, every script footer, async, consent-tagged, within 150 KB gzip | **Waiting:** Shaun's control-panel list or the budget tool with the cookie. Channel 1 is measured above. ReelFlies' web-vitals script is the one deliberate non-async entry: inline, which the API loads only as "default" (revisitable) |
 | A GA4 annotation for every dated event so far, the list in `RELEASES.md` | **Waiting:** Shaun adds the annotations; the orchestrator copies the list above |
 | A review app's reviews on a test product | **Not applicable:** native reviews (ticket 13 decision 5) |
-| The list of emails and links recorded; ticket 57 asked for the Flip-day check | **Met** for BigCommerce's emails; Omnisend's wait on Shaun. Ticket 57 already holds the Flip-day email check (57:44); the PR asks the orchestrator to add the site-URL note |
+| The list of emails and links recorded; ticket 57 asked for the Flip-day check | **Partly met; waiting** (trigger: Shaun lists Omnisend's flows and campaigns with their links). BigCommerce's 18 templates are listed above, and ticket 57 already holds the Flip-day email check (57:44); the PR asks the orchestrator to add the site-URL note |
 | All checked before the T-21 code freeze | **Waiting** |
 
 ## Defaults taken (each revisitable)
