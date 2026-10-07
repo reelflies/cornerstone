@@ -12,7 +12,7 @@ The sync never writes to the store itself. It reads the channel with GETs only a
 | `widgets/<name>/schema.json` | Its Page Builder schema: an array with one `tab`, holding sections of settings. |
 | `widgets/<name>/query.graphql` | Optional: its `storefront_api_query`. |
 | `widgets/<name>/channels/<channel>.json` | The widget on one channel: `channel_id`, its `configuration` (every schema setting's value there, and nothing else), its `placement` (`template_file`, `region`, `sort_order`, `status`) and the `uuids` the store gave its template, widget and placement (`null` until it makes them). |
-| `widgets/<name>/fixtures/` | Its fixture renders and element shots (W0-9, [scripts/qa/README.md](../scripts/qa/README.md#widgets)). Never synced. |
+| `widgets/<name>/fixtures/` | Its fixture renders and element shots (W0-9, [scripts/qa/README.md](../scripts/qa/README.md#widgets)). Never synced. Each shot fixture's baselines are made for every variation the gates render, ReelFlies CA and ReelFlies CA channel 1 (`QA_VARIATION="<variation>" npx playwright test --config scripts/qa/playwright.config.mjs widget-screens -g 'widget <name>' --update-snapshots` for each), because a `QA_CHANNEL=1` run shoots every widget too; `scripts/qa/widget-baselines.test.mjs` fails CI when one is missing. |
 
 Styles go in the theme's ReelFlies layer, `assets/scss/reelflies/_<name>.scss`, with `rf-` classes and no inline CSS (build pipeline, decision 6), so every channel's copy looks the same. The partial is imported from your ticket's own slot line in `assets/scss/reelflies/_index.scss` (ticket 25's scaffold): uncomment it and point it at `_<name>.scss`, as 46's line, `@import "home-lead"; // 46 home hero`, does.
 
