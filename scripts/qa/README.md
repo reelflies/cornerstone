@@ -428,10 +428,12 @@ export default {
 | `one-canonical` | 16 | exactly one canonical link; not asked of the cart or the 404 page, which have none in stock Cornerstone |
 | `json-ld-parses` | 16 | every `application/ld+json` block parses |
 | `no-region-prompt` | 16, then 52 | no element carries `data-rf-region-prompt` |
+| `home-one-h1` | 46 | exactly one `<h1>` on the home page: the hero's, once ticket 27 makes the logo a `<div>` |
+| `home-hero` | 46 | the hero's `<img>` has a srcset (320w to 1600w), sizes, width and height, and is the page's only `fetchpriority="high"`; its `<h1>` has text; its two buttons are `<a href>`. Whether the page must have the hero follows `widgets/home-lead/channels/<channel>.json`: required once its placement is recorded active, refused once recorded inactive, checked if present before that |
 
 **Still to come:**
 
-- one `<h1>` (ticket 27)
+- no page with more than one `<h1>`, and the logo never inside one (ticket 27)
 - the tree-4 nav links in the header `<nav>` (28)
 - facet links with `_bc_fsnf=1` and `rel="nofollow"` (33)
 - the structured data's contents (40). The home page is already fetched wherever it is pinned.
@@ -489,16 +491,17 @@ The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixtu
 
 ### Widgets
 
-**The widget folder** (W0-9 sets this layout; ticket 46's sync reads `template.html` and ignores `fixtures/`):
+**The widget folder** (W0-9 sets this layout; ticket 46's sync, `scripts/widgets-sync.mjs`, reads `template.html`, `schema.json`, `query.graphql` and `channels/`, and ignores `fixtures/`; [docs/widgets.md](../../docs/widgets.md)):
 
 | Path | What |
 |---|---|
 | `widgets/<name>/template.html` | the widget template |
 | `widgets/<name>/fixtures/<case>.json` | its fixtures |
 | `widgets/<name>/fixtures/files/` | the images its fixture data points at |
-| `widgets/_shared/<partial>.html` | markup two widgets share (ticket 48's product card), included as `{{> _shared/<partial>}}`. A store widget template can't include partials, so the sync must inline these before upload. |
-
-Ticket 46 adds the schema, the query and `channels/<channel>.json` beside `template.html`.
+| `widgets/_shared/<partial>.html` | markup two widgets share (ticket 48's product card), included as `{{> _shared/<partial>}}`. A store widget template can't include partials, so the sync inlines these before upload, as inline partials at the template's end. |
+| `widgets/<name>/schema.json` | its Page Builder schema (ticket 46) |
+| `widgets/<name>/query.graphql` | optional: its `storefront_api_query` |
+| `widgets/<name>/channels/<channel>.json` | the widget on one channel: its `widget_configuration`, placement and recorded uuids. A shot fixture should carry its channel's configuration, as `home-lead`'s does (`render/widgets/home-lead.test.mjs` checks it). |
 
 **A widget fixture:**
 
@@ -549,7 +552,16 @@ Page baselines hide widget regions ("What the screenshots hide" above), because 
 
 A theme change that restyles buttons or headings changes the self-test's baselines too: update them in the same commit and name `widget rf-selftest` on the `Baselines:` line.
 
-### Worked example
+### Widget layout specs
+
+A widget whose layout makes promises a shot can't prove has its own Playwright spec on the same fixture page (`openWidget` in `render/widget-page.mjs`), named `<widget>-screens.spec.mjs` so `qa:screens` runs it. `home-lead-screens.spec.mjs` (ticket 46) checks the hero:
+
+- 300 px tall or less at 801, 1024 and 1280 px, with its text inside it and the photo filling it (CD-1)
+- on phones, the text below the photo, and the photo cropped to 16:10
+- the photo loaded from its srcset, the page's one `fetchpriority="high"`, and mirrored
+- its text 4.5:1 or better over the scrim and the photo on desktop, at 801 and 1280 px. The text is made transparent, each line box is shot, and the lightest pixel behind it is read back through a canvas; each ratio is a test annotation.
+- no serious or critical axe issues in the widget
+
 
 `render/example/` tests a partial from fixture JSON, with two fixtures that pass and one that fails. Copy it for your own partial.
 
@@ -775,6 +787,7 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - Playwright runs `scripts/qa/*.spec.mjs` with this folder's config.
 - `harness-selftest.spec.mjs` runs with `qa:axe`, `qa:screens` and `qa:quick-view`, on pages it serves itself. It proves that a pinned page answering with the wrong status fails the run without being asked again, that one answering 5xx twice or 429 four times fails, and that dismissing the cookie banner leaves nothing hovered. Its 5xx and 429 retry cases answer the pinned 404 page (or the channel's first page) with a 500, or a 429 with `Retry-After: 1`, once and then let the request through, so the second answer is the storefront's real one.
 - `widget-screens.spec.mjs` runs with `qa:screens`, because the script's `screens` filter matches its name.
+- `home-lead-screens.spec.mjs` runs with `qa:screens` too, for the same reason.
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
 - `storefront.test.mjs` also covers `QA_PORT`, the start log's name, the locks a gate holds (and the ports checked again after a slot wait), trusting only the server a gate started, and stopping that server when the gate is stopped by a signal. `playwright-config.test.mjs` covers that the config reads `QA_PORT` and holds the locks only in the runner, `prepush.test.mjs` what `qa:prepush` checks before its first gate, `serve.test.mjs` the locks around a `stencil start` by hand, and `scripts/lib/lock.test.mjs` the locks themselves: the stale rules, waiting, the three slots across processes, the signals, `RF_LOCK_ROOT`, and the command line `release.sh` uses.
 - `pages.test.mjs` covers W0-8's pins, baseline names (against the baseline-scope check's parser), UI states, overlays and custom layouts; `overlays.test.mjs` the overlay files, the patch and the throwaway worktree (in git repos of its own); `custom-layouts.test.mjs` the merge into `config.stencil.json`; `playwright-config.test.mjs` the overlay's refusals, ports and folder, and the custom-layouts step before `stencil start`; `storefront.test.mjs` the overlay marker check, and that only an overlay run's own worktree moves a `stencil start` out of the checkout (an `RF_QA_THEME_DIR` left in the shell never does; `prepush.test.mjs` too).

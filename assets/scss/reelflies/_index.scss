@@ -1,0 +1,11 @@
+// =============================================================================
+// THE REELFLIES LAYER (ADR 0001; CUSTOMIZATIONS.md)
+// =============================================================================
+//
+// Imported once, at the end of theme.scss, after every stock component and layout, so a
+// ReelFlies rule wins a tie with a stock one. Each module's partial is one import here, in
+// ticket order. Ticket 25's scaffold sets this file's slots; on a conflict, keep both sides.
+//
+// -----------------------------------------------------------------------------
+
+@import "home-lead"; // 46: the photo hero (widgets/home-lead)

@@ -52,6 +52,7 @@ This repo is Cornerstone (`upstream`, bigcommerce/cornerstone) plus ReelFlies co
 | `package.json` | `qa:prelaunch` script: runs `scripts/qa/prelaunch.mjs` | The host batch: the storefront gates against the prelaunch host once per checkpoint, with the analytics tags blocked and the results filed by theme uuid (W0-6) | 16 |
 | `package.json` | `qa:lighthouse` script: runs `scripts/qa/lighthouse.mjs` | Ticket 17's Lighthouse budgets on six URLs (median of 3, mobile, the drop rule), which the host batch runs. It uses upstream's own `lighthouse` devDependency (12.8.1 in the lockfile) and `lighthouse-config.js`, both unchanged, so no dependency is added | 17 |
 | `package.json` | `widgets:sync` script: runs `scripts/widgets-sync.mjs` | The widget sync: home content as code, synced to one channel at a time through the store-write helper ([widgets](docs/widgets.md)) | 46 |
+| `assets/scss/theme.scss` | One line at the end: `@import "reelflies/index";` | The ReelFlies SCSS layer, last, so its rules win a tie with stock ones; widget styles live there (build pipeline, decision 6). Ticket 25's scaffold owns `reelflies/_index.scss` and adds `reelflies/settings` after line 47 | 46 (25's scaffold keeps it) |
 
 New ReelFlies files in upstream folders: `.github/workflows/reelflies-checks.yml`, `.github/workflows/reelflies-baseline-scope.yml` (W0-13), `.gitleaksignore`, `.gitattributes` at the repo root (W0-11: `RELEASES.md` merges as a union, so parallel log branches keep both sides' rows; upstream has no `.gitattributes`), and `RELEASES.md` at the repo root (the release log, written by `scripts/release.sh`, the Switch toggles log, the host batch's Host runs, and the My Themes log of each theme the prune deletes; tickets 05, 15 and 16, W0-3). `stencil bundle` zips only `README.md` and `CHANGELOG.md` from the root's Markdown files, so `RELEASES.md` never ships.
 
@@ -61,7 +62,7 @@ New ReelFlies files in upstream folders: `.github/workflows/reelflies-checks.yml
 
 From the review's upgrade-safe layering plan and the design session ([ADR 0001](docs/adr/0001-scoped-theme-code.md) expects 25–30 files). Add a row above when each one lands.
 
-- `assets/scss/theme.scss`: two imports, `reelflies/settings` after line 47 and `reelflies/index` at the end (line 79)
+- `assets/scss/theme.scss`: `reelflies/settings` after line 47 (the `reelflies/index` import at the end is made, above)
 - `assets/js/app.js`: `customClasses` registrations
 - `templates/components/products/card.html` and `options/set-rectangle.html`
 - `templates/components/products/product-view.html` and `templates/components/common/responsive-img.html`
