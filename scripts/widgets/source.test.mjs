@@ -68,7 +68,7 @@ test('the hero reads as rf-home-lead, with its schema and no storefront query', 
     assert.equal(widget.dir, path.join(WIDGETS_DIR, 'home-lead'));
 });
 
-test('the hero\'s 1895766 file sets every schema field and nothing else, and records no uuids yet', () => {
+test('the hero\'s 1895766 file sets every schema field and nothing else, and records the uuids its first apply made', () => {
     const widget = readWidget('home-lead');
     const channelFile = readChannelFile(widget, 1895766);
     const ids = widget.schema.flatMap(tab => tab.sections.flatMap(section => section.settings.map(setting => setting.id))).sort();
@@ -77,6 +77,7 @@ test('the hero\'s 1895766 file sets every schema field and nothing else, and rec
     assert.deepEqual(channelFile.placement, {
         template_file: 'pages/home', region: 'home_below_menu', sort_order: 0, status: 'inactive',
     });
+    for (const uuid of Object.values(channelFile.uuids)) assert.match(uuid, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
 });
 
 test('a widget\'s schema and query are what the store gets, and its template with each comment emptied', () => {
@@ -186,9 +187,16 @@ test('a _shared partial\'s comments are emptied too, after it is inlined', async
     assert.equal(await renderWidget('rf-x', fixture, { root: storeCopy('rf-x', stored) }), await renderWidget('rf-x', fixture, { root }));
 });
 
-test('a partial call inside a comment is neither inlined nor refused: notes may name any partial', () => {
+test('a partial call inside a comment is neither inlined nor refused: notes may name any partial', async () => {
     const { root } = widgetsRoot('rf-x', { template: '{{!-- built like {{> components/products/card}}, once {{> _shared/old-card}} --}}<p>{{text}}</p>' });
     assert.equal(readWidget('rf-x', { root }).template, '{{!}}<p>{{text}}</p>');
+    // In a _shared partial too.
+    const shared = widgetsRoot('rf-x', { template: '<p>{{> _shared/rf-note text=text}}</p>\n' }).root;
+    fs.mkdirSync(path.join(shared, '_shared'));
+    fs.writeFileSync(path.join(shared, '_shared', 'rf-note.html'), '{{!-- built like {{> components/products/card}} --}}\n<em>{{text}}</em>\n');
+    const stored = readWidget('rf-x', { root: shared }).template;
+    const fixture = { configuration: { text: 'Hello' } };
+    assert.equal(await renderWidget('rf-x', fixture, { root: storeCopy('rf-x', stored) }), await renderWidget('rf-x', fixture, { root: shared }));
 });
 
 // Handlebars' lexer counts a column short after a U+2028 or U+2029 in a token that spans lines, so
@@ -205,17 +213,29 @@ test('a template Handlebars can\'t parse is refused, naming its file', () => {
     assert.throws(() => readWidget('rf-x', { root }), /^Error: widgets\/rf-x\/template\.html: Parse error/);
 });
 
-// Each widget's store copy (BigCommerce's own examples close <img … />; the store doesn't say what
-// its HTML check reads), rendered with every fixture.
-test('every widget renders from the store\'s copy as from its files, with no comment text and its void elements closed', async () => {
+// The void elements in a template that don't close with "/>" (BigCommerce's own examples close
+// <img … />; the store doesn't say what its HTML check reads).
+const unclosedVoids = template => (template.match(/<(?:area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)\b[^>]*>/gi) ?? [])
+    .filter(tag => !/\/\s*>$/.test(tag));
+
+test('a void element counts as closed only with "/>", attributes or none', () => {
+    assert.deepEqual(unclosedVoids('<p>a<br>b<hr><img src="x"><input type="text" ></p>'), ['<br>', '<hr>', '<img src="x">', '<input type="text" >']);
+    assert.deepEqual(unclosedVoids('<p>a<br/>b<br />c<img src="x" / ><wbr /></p><b>not void</b>'), []);
+});
+
+// Each widget's store copy, rendered with every fixture.
+test('every widget has a fixture, and renders from the store\'s copy as from its files, with no comment text and its void elements closed', async () => {
     const cases = widgetCases();
-    assert.ok(cases.some(({ widget }) => widget === 'home-lead'));
+    const widgets = fs.readdirSync(WIDGETS_DIR, { withFileTypes: true })
+        .filter(entry => entry.isDirectory() && !entry.name.startsWith('_')).map(entry => entry.name).sort();
+    assert.ok(widgets.includes('home-lead'));
+    assert.deepEqual([...new Set(cases.map(({ widget }) => widget))].sort(), widgets, 'a widget has no fixture in widgets/<name>/fixtures/');
     const stored = {};
     for (const { widget, name, fixture } of cases) {
         if (!stored[widget]) {
             const { template } = readWidget(widget);
             assert.ok(commentsIn(template).every(comment => comment.value === ''), `${widget}: a comment keeps text`);
-            assert.deepEqual(template.match(/<(?:area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)\b[^>]*[^/]>/gi) ?? [], [], `${widget}: a void element isn't closed with />`);
+            assert.deepEqual(unclosedVoids(template), [], `${widget}: a void element isn't closed with />`);
             stored[widget] = storeCopy(widget, template);
         }
         // eslint-disable-next-line no-await-in-loop
