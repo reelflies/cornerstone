@@ -1,0 +1,9 @@
+{{!--
+    What every page needs right after <body> (ticket 25), included once from layout/base.html:
+    - the ReelFlies icon sheet (icons.html), which the icon partial draws from
+    - the shared polite live region, empty at load. Every ReelFlies status message goes through
+      it, by assets/js/theme/reelflies/live-region.js, so screen readers already watch it when
+      the first message lands.
+--}}
+{{> components/reelflies/icons}}
+<div class="is-srOnly" role="status" aria-live="polite" aria-atomic="true" data-rf-live-region></div>

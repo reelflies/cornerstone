@@ -1017,6 +1017,95 @@
         "pdp-retail-price-label": "MSRP:",
         "pdp-custom-fields-tab-label": "Additional Information"
     },
+    "reelflies": {
+        "header": {
+            "_slot": ""
+        },
+
+        "menu": {
+            "_slot": ""
+        },
+
+        "search": {
+            "_slot": ""
+        },
+
+        "card": {
+            "_slot": ""
+        },
+
+        "category": {
+            "_slot": ""
+        },
+
+        "facets": {
+            "_slot": ""
+        },
+
+        "hub": {
+            "_slot": ""
+        },
+
+        "chart": {
+            "_slot": ""
+        },
+
+        "brand": {
+            "_slot": ""
+        },
+
+        "size_pills": {
+            "_slot": ""
+        },
+
+        "add_flow": {
+            "_slot": ""
+        },
+
+        "product": {
+            "_slot": ""
+        },
+
+        "reviews": {
+            "_slot": ""
+        },
+
+        "cart": {
+            "_slot": ""
+        },
+
+        "cart_state": {
+            "_slot": ""
+        },
+
+        "quick_add": {
+            "_slot": ""
+        },
+
+        "home": {
+            "_slot": ""
+        },
+
+        "footer": {
+            "_slot": ""
+        },
+
+        "not_found": {
+            "_slot": ""
+        },
+
+        "cart_empty": {
+            "_slot": ""
+        },
+
+        "search_empty": {
+            "_slot": ""
+        },
+
+        "region": {
+            "_slot": ""
+        }
+    },
     "consent_manager": {
         "data_collection_warning": "We use cookies (and other similar technologies) to collect data to improve your shopping experience.",
         "accept_all_cookies": "Accept All Cookies",
