@@ -1,4 +1,5 @@
-// The storefront channels scripts/release.sh may push to, and the exact push command (ticket 05).
+// The storefront channels scripts/release.sh may push to, and the exact push command (ticket 05;
+// ticket 53 adds channel 1, live reelflies.ca, typed only).
 //
 //   import { findTarget, buildPushArgs } from './release-targets.mjs';
 //
@@ -17,8 +18,23 @@ export const CONFIRM_NONPROD = 'nonprod';
 //                  non-production target.
 //   liveFromFlip   the channel becomes live reelflies.ca at the Flip, so --confirm-nonprod is refused
 //                  there from the Flip whatever `production` says (W0-1; ticket 57 marks it production
-//                  that day). Ticket 53's channel-1 entry will be production: true, typed only.
+//                  that day).
+//
+// A production target is released only by an operator typing at their own terminal, never by an
+// agent, dry runs included (ticket 53; release-checks.mjs operatorProblems), and only from master at
+// origin/master's tip, so only merged code reaches it.
 export const RELEASE_TARGETS = {
+    // Ticket 53 (Option A): live reelflies.ca on tree 1, until the Flip. Its own variation, with tree
+    // 1's menu ids, typed by Shaun (ticket 56 pushes it by T-28). This replaces ticket 05's "never
+    // -c 1" with "channel 1 only through this target".
+    1: {
+        name: 'reelflies.ca',
+        slug: 'ca-channel-1',
+        variations: ['ReelFlies CA channel 1'],
+        liveFile: 'config.ca-channel-1.live.json',
+        production: true,
+        confirmation: [CONFIRM_TYPED],
+    },
     1895766: {
         name: 'ReelFlies_CA',
         slug: 'ca',
@@ -32,7 +48,6 @@ export const RELEASE_TARGETS = {
 
 // Channels that are refused on purpose, with the reason the operator sees.
 const REFUSED_CHANNELS = {
-    1: 'channel 1 is live reelflies.ca: it is pushed only through ticket 53\'s guarded channel-1 target, which doesn\'t exist yet',
     1855224: 'channel 1855224 is reelflies.com: .com stays on its own theme until it moves to the fork (out of scope)',
 };
 

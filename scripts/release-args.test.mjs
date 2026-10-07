@@ -1,10 +1,11 @@
-// release.sh's arguments (tickets 05 and 15; W0-1's --confirm-nonprod). release-sh.test.mjs runs
-// each refusal through release.sh itself; these check what parseReleaseArgs returns.
+// release.sh's arguments (tickets 05 and 15; W0-1's --confirm-nonprod), and the variation each
+// target takes (resolveTarget; ticket 53's channel-1 target). release-sh.test.mjs runs each refusal
+// through release.sh itself; these check what parseReleaseArgs and resolveTarget return.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    parsePruneArgs, parseReleaseArgs, PRUNE_USAGE, USAGE,
+    parsePruneArgs, parseReleaseArgs, PRUNE_USAGE, resolveTarget, USAGE,
 } from './release-args.mjs';
 
 const CA = ['--channel', '1895766', '--variation', 'ReelFlies CA'];
@@ -46,6 +47,28 @@ test('W0-1: the usage line names --confirm-nonprod', () => {
 });
 
 // --- W0-3: --prune-only ------------------------------------------------------------------------
+
+// --- Ticket 53: the guarded channel-1 target takes only its own variation ---------------------
+
+const CONFIG = {
+    variations: ['ReelFlies CA', 'ReelFlies US', 'ReelFlies CA channel 1'].map(name => ({ name })),
+};
+
+test('ticket 53: channel 1 takes "ReelFlies CA channel 1", named, and no other variation', () => {
+    assert.equal(resolveTarget({ channel: 1, variation: 'ReelFlies CA channel 1' }, CONFIG).name, 'reelflies.ca');
+    assert.throws(() => resolveTarget({ channel: 1, variation: 'ReelFlies CA' }, CONFIG), /"ReelFlies CA" isn't released to channel 1: reelflies\.ca takes "ReelFlies CA channel 1"/);
+    assert.throws(() => resolveTarget({ channel: 1, variation: 'ReelFlies US' }, CONFIG), /isn't released to channel 1/);
+    assert.throws(() => resolveTarget({ channel: 1895766, variation: 'ReelFlies CA channel 1' }, CONFIG), /"ReelFlies CA channel 1" isn't released to channel 1895766/);
+});
+
+test('ticket 53: the channel-1 target needs the variation in config.json', () => {
+    const without = { variations: CONFIG.variations.slice(0, 2) };
+    assert.throws(() => resolveTarget({ channel: 1, variation: 'ReelFlies CA channel 1' }, without), /"ReelFlies CA channel 1" isn't a variation in config\.json/);
+});
+
+test('ticket 53: --confirm-nonprod 1 parses, and is refused later by the target and the live-channel list', () => {
+    assert.equal(parseReleaseArgs(['--channel', '1', '--variation', 'ReelFlies CA channel 1', '--confirm-nonprod', '1']).confirmNonprod, 1);
+});
 
 test('W0-3: --prune-only runs on its own, with or without --dry-run', () => {
     assert.deepEqual(parsePruneArgs(['--prune-only']), { pruneOnly: true, dryRun: false });

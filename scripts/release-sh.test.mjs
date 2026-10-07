@@ -34,13 +34,16 @@ const LOCK_ROOT = lockRoot();
 // use the Node that runs the tests, first on PATH.
 const NO_NVM = path.join(LOCK_ROOT, 'no-nvm');
 
+// A null value in `env` takes that variable out of the run's environment (CLAUDECODE, ticket 53).
+const withoutNulls = env => Object.fromEntries(Object.entries(env).filter(([, value]) => value !== null));
+
 function run(args, env = {}, script = SCRIPT) {
     const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^RF_(RELEASE|BC)_/.test(key)));
     const result = spawnSync('bash', [script, ...args], {
         encoding: 'utf8',
-        env: {
+        env: withoutNulls({
             ...inherited, PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH}`, RF_LOCK_ROOT: LOCK_ROOT, NVM_DIR: NO_NVM, ...env,
-        },
+        }),
         timeout: 60000,
     });
     return {
@@ -68,7 +71,7 @@ const refusals = [
     ['an empty variation', ['--channel', '1895766', '--variation', '', '--dry-run'], /--variation is empty/],
     ['a variation that is not in config.json', ['--channel', '1895766', '--variation', 'Light', '--dry-run'], /"Light" isn't a variation in config\.json/],
     ['a channel that is not a release target', ['--channel', '42', '--variation', 'ReelFlies CA', '--dry-run'], /not a release target/],
-    ['channel 1 (live reelflies.ca)', ['--channel', '1', '--variation', 'ReelFlies CA', '--dry-run'], /ticket 53/],
+    ['channel 1 (live reelflies.ca) with a variation other than its own', ['--channel', '1', '--variation', 'ReelFlies CA', '--dry-run'], /"ReelFlies CA" isn't released to channel 1: reelflies\.ca takes "ReelFlies CA channel 1"/],
     ['channel 1855224 (reelflies.com)', ['--channel', '1855224', '--variation', 'ReelFlies US', '--dry-run'], /\.com stays on its own theme/],
     ['a variation not allowed for the channel', ['--channel', '1895766', '--variation', 'ReelFlies US', '--dry-run'], /"ReelFlies US" isn't released to channel 1895766/],
     ['--accept-live with --overwrite-live', [...CA, '--accept-live', '--overwrite-live', '--dry-run'], /either --accept-live or --overwrite-live/],
@@ -79,7 +82,7 @@ const refusals = [
     ['--confirm-nonprod given twice', [...CA, '--confirm-nonprod', '1895766', '--confirm-nonprod', '1895766', '--dry-run'], /--confirm-nonprod was given 2 times/],
     ['--confirm-nonprod with --overwrite-live', [...CA, '--confirm-nonprod', '1895766', '--overwrite-live', '--dry-run'], /--confirm-nonprod can't be combined with --overwrite-live/],
     ['--confirm-nonprod with --first-release', [...CA, '--confirm-nonprod', '1895766', '--first-release', '--dry-run'], /--confirm-nonprod can't be combined with --first-release/],
-    ['--confirm-nonprod on channel 1 (live reelflies.ca: typed only)', ['--channel', '1', '--variation', 'ReelFlies CA', '--confirm-nonprod', '1', '--dry-run'], /ticket 53/],
+    ['--confirm-nonprod on channel 1 (live reelflies.ca: typed only)', ['--channel', '1', '--variation', 'ReelFlies CA channel 1', '--confirm-nonprod', '1', '--dry-run'], /--confirm-nonprod refused: channel 1 is live reelflies\.ca: its push is confirmed only by typing the channel id at the terminal/],
     ['--confirm-nonprod on channel 1855224, which isn\'t a target', ['--channel', '1855224', '--variation', 'ReelFlies US', '--confirm-nonprod', '1855224', '--dry-run'], /\.com stays on its own theme/],
 ];
 
@@ -702,7 +705,7 @@ const RELEASE_MJS = fileURLToPath(new URL('./release.mjs', import.meta.url));
 // The environment for release.mjs: none of the test-only overrides, tokens or GIT_* variables.
 function cleanEnv(env) {
     const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(RF_(RELEASE|BC)_|GIT_)/.test(key)));
-    return { ...inherited, ...env };
+    return withoutNulls({ ...inherited, ...env });
 }
 
 const gitRepo = files => {
@@ -1868,4 +1871,217 @@ test('ticket 17: release.sh runs Lighthouse after verify and before the log entr
     assert.match(lines[verify + 2], /^release write-log$/);
     assert.equal(lines.filter(line => /release lighthouse/.test(line)).length, 1);
     assert.ok(at(/release dry-run-report/) < verify, 'a dry run exits before the push, so it never runs Lighthouse');
+});
+
+// --- Ticket 53: the guarded channel-1 target (Option A) ----------------------------------------
+//
+// Channel 1 is live reelflies.ca. release.sh takes it only with "ReelFlies CA channel 1", typed by
+// an operator at a terminal: never --confirm-nonprod, and never an agent's run, dry runs included.
+// No test here reads channel 1: every run without the fixtures is refused before anything runs (no
+// terminal under node --test), and the fixture runs read nothing from the store and stop before the
+// build. A fixture run is fully offline only with all three of RF_RELEASE_CONFIG,
+// RF_RELEASE_LIVE_FIXTURE and RF_RELEASE_TREE_FIXTURE, which is when the operator rule lets it run.
+
+const CHANNEL_1 = ['--channel', '1', '--variation', 'ReelFlies CA channel 1'];
+const OPERATOR_ONLY = /^REFUSED {2}channel 1 \(reelflies\.ca\) is live reelflies\.ca: only an operator typing at their own terminal releases to it, dry runs included, never an agent \(ticket 53\): /m;
+// Tree 1, as lane G re-read it on 2026-10-07: the top level, then the Fly Types under Flies (398).
+const TREE_1 = [398, 399, 400, 438, 298, 251, 255, 272];
+// The pre-declared switches (scaffold, section 6.3), which Hero-2024 doesn't have.
+const SWITCHES = {
+    rf_rise: true, rf_cart_state: true, rf_quick_add: true, rf_region_prompt: false,
+};
+const HERO = { theme: 'Hero-2024-2.9.5-US', variation: 'Minimal' };
+
+// A config with the three variations, a capture of channel 1 (Hero-2024 by default), the release log
+// and tree 1's ids, for RF_RELEASE_CONFIG, RF_RELEASE_LIVE_FIXTURE, RF_RELEASE_LOG_FIXTURE and
+// RF_RELEASE_TREE_FIXTURE.
+function channelOneFixtures({
+    repo = {}, channelOne = { rf_menu_type_ids: '298,251,255,272,438', rf_menu_species_root_id: '' }, live = {}, liveTheme = HERO.theme, liveVariation = HERO.variation,
+    tree = TREE_1,
+} = {}) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-release-channel-1-'));
+    tempDirs.push(dir);
+    const config = themeConfig({ name: 'ReelFlies', settings: { ...BASE_SETTINGS, ...SWITCHES, ...repo } });
+    config.variations.push({
+        name: 'ReelFlies CA channel 1', id: 'reelflies-ca-channel-1', meta: VARIATION_META, settings: channelOne,
+    });
+    const settings = { ...BASE_SETTINGS, ...live };
+    const capture = {
+        name: liveTheme,
+        settings,
+        variations: [{ name: liveVariation, settings: {} }],
+        capture: {
+            channelId: 1,
+            themeUuid: LIVE_THEME_UUID,
+            themeName: liveTheme,
+            variationName: liveVariation,
+            variationUuid: '00000000-0000-0000-0000-00000000bbbb',
+            activeConfigurationUuid: '00000000-0000-0000-0000-00000000cccc',
+            savedConfigurationUuid: '00000000-0000-0000-0000-00000000cccc',
+            savedEqualsActive: true,
+            unpublishedKeys: [],
+            publishedSettings: settings,
+            themeCount: 12,
+            capturedAt: '2026-10-07T04:21:00.000Z',
+        },
+    };
+    const files = {
+        RF_RELEASE_CONFIG: ['config.json', config],
+        RF_RELEASE_LIVE_FIXTURE: ['config.ca-channel-1.live.json', capture],
+        RF_RELEASE_TREE_FIXTURE: ['tree-1.json', tree],
+    };
+    const env = Object.fromEntries(Object.entries(files).map(([name, [file, data]]) => {
+        fs.writeFileSync(path.join(dir, file), `${JSON.stringify(data, null, 2)}\n`);
+        return [name, path.join(dir, file)];
+    }));
+    fs.writeFileSync(path.join(dir, 'RELEASES.md'), releaseLog(null));
+    return { ...env, RF_RELEASE_LOG_FIXTURE: path.join(dir, 'RELEASES.md') };
+}
+
+// The fork live on channel 1, after its first push: its variation, and the rf_* values it pushed.
+const forkLive = (extra = {}) => ({
+    liveTheme: 'ReelFlies',
+    liveVariation: 'ReelFlies CA channel 1',
+    live: {
+        ...SWITCHES, rf_menu_type_ids: '298,251,255,272,438', rf_menu_species_root_id: '', ...extra,
+    },
+});
+
+test('ticket 53: release.sh refuses the channel-1 target without an operator at a terminal, dry runs included, before anything runs', () => {
+    for (const args of [CHANNEL_1, [...CHANNEL_1, '--dry-run'], [...CHANNEL_1, '--dry-run', '--first-release']]) {
+        const result = run(args, { CLAUDECODE: null });
+        assert.equal(result.status, 2, result.output);
+        assertRefused(result, OPERATOR_ONLY);
+        assert.match(result.stderr, /stdin isn't a terminal; stdout isn't a terminal/);
+        assert.doesNotMatch(result.stderr, /agent's shell/, 'CLAUDECODE is unset');
+    }
+});
+
+test('ticket 53: release.sh refuses the channel-1 target in an agent\'s shell, naming CLAUDECODE', () => {
+    const result = run([...CHANNEL_1, '--dry-run'], { CLAUDECODE: '1' });
+    assertRefused(result, OPERATOR_ONLY);
+    assert.match(result.stderr, /this is an agent's shell: Claude Code set CLAUDECODE in it/);
+});
+
+test('ticket 53: a channel-1 run on only some of the fixtures still reads the store, so the operator rule refuses it', () => {
+    const env = channelOneFixtures();
+    for (const missing of ['RF_RELEASE_CONFIG', 'RF_RELEASE_LIVE_FIXTURE', 'RF_RELEASE_TREE_FIXTURE']) {
+        assertRefused(run([...CHANNEL_1, '--dry-run'], { ...env, [missing]: null, CLAUDECODE: null }), OPERATOR_ONLY);
+    }
+    assertRefused(run(CHANNEL_1, { ...env, CLAUDECODE: null }), /test-only and need --dry-run/);
+});
+
+test('ticket 53: --confirm-nonprod is refused on channel 1 before the operator rule and before any fetch: its push is always typed', () => {
+    for (const env of [{ CLAUDECODE: null }, { ...channelOneFixtures(), CLAUDECODE: '1' }]) {
+        const result = run([...CHANNEL_1, '--dry-run', '--confirm-nonprod', '1'], env);
+        assertRefused(result, /--confirm-nonprod refused: channel 1 is live reelflies\.ca: its push is confirmed only by typing the channel id at the terminal, whatever release-targets\.mjs declares/);
+        assert.doesNotMatch(result.output, /^origin |fetched/m);
+    }
+});
+
+test('ticket 53: the first push over Hero-2024 needs --first-release, and runs no diff without it', () => {
+    const result = run([...CHANNEL_1, '--dry-run'], { ...channelOneFixtures(), CLAUDECODE: '1' });
+    assert.equal(result.status, 1, result.output);
+    assert.match(result.stdout, /^fixture {2}no operator check: this dry run reads nothing from the store \(RF_RELEASE_CONFIG, RF_RELEASE_LIVE_FIXTURE and RF_RELEASE_TREE_FIXTURE\) and stops before the build$/m);
+    assert.match(result.stderr, /channel 1 runs Hero-2024-2\.9\.5-US · variation "Minimal".*not this fork.*--first-release/);
+});
+
+test('ticket 53: the first push lists the Hero values it replaces, and the switch values channel 1 has never had, for Shaun to confirm at step 5', () => {
+    const env = channelOneFixtures({ live: { 'color-textBase': '#4f4f4f', 'payment-visa': true } });
+    const result = run([...CHANNEL_1, '--dry-run', '--first-release'], { ...env, CLAUDECODE: '1' });
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.stdout, /first release: replacing Hero-2024-2\.9\.5-US · variation "Minimal"/);
+    assert.match(result.stdout, /^replaces 1 setting\(s\) both themes name differ: the push replaces their live values with config\.json's \(a report: it never stops the release\)$/m);
+    assert.match(result.stdout, /^ {2}replaced {3}color-textBase: live "#4f4f4f", config\.json "#545454"$/m);
+    assert.doesNotMatch(result.stdout, /replaced {3}payment-visa/, 'a Hero-only key isn\'t replaced by a value: the new theme doesn\'t have it');
+    assert.match(result.stdout, /category ids from .*tree-1\.json/);
+    assert.match(result.stdout, /rf_\* values to push: .*rf_menu_type_ids = "298,251,255,272,438"/);
+    for (const key of Object.keys(SWITCHES)) assert.match(result.stdout, new RegExp(`new switch {2}${key} `));
+    assert.match(result.stdout, /^confirm {2}channel 1 has no live value for 4 rf_\* setting\(s\) above \(its first push, or a module's first release there\): step 5 asks you to confirm them by typing the channel id$/m);
+    assert.match(result.stdout, /guard: pass/);
+    assert.match(result.stdout, /stopped before the clean build/);
+});
+
+test('ticket 53: after the first push the target diffs and guards as normal, and passes when nothing changed', () => {
+    const result = run([...CHANNEL_1, '--dry-run'], { ...channelOneFixtures(forkLive()), CLAUDECODE: '1' });
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.stdout, /no differences from the live saved settings/);
+    assert.doesNotMatch(result.stdout, /^confirm {2}channel 1 has no live value/m);
+    assert.match(result.stdout, /guard: pass/);
+});
+
+test('ticket 53: a switch that differs from channel 1\'s live value stops the push, and no flag overrides it', () => {
+    const env = channelOneFixtures(forkLive({ rf_quick_add: false }));
+    for (const extra of [[], ['--overwrite-live'], ['--accept-live']]) {
+        const result = run([...CHANNEL_1, '--dry-run', ...extra], { ...env, CLAUDECODE: '1' });
+        assert.equal(result.status, 1, `${extra}: ${result.output}`);
+        if (extra[0] === '--accept-live') continue; // eslint-disable-line no-continue
+        assert.match(result.stdout, /FAIL {5}rf_quick_add: live false, config\.json true\. No flag overrides this/);
+        assert.match(result.stderr, /release guard: 1 reason\(s\) above, so nothing was built or pushed/);
+    }
+});
+
+test('ticket 53: a tree-4 or unknown category id in the channel-1 menu ids stops the push', () => {
+    for (const ids of ['298,251,1023', '9001']) {
+        const env = channelOneFixtures({ channelOne: { rf_menu_type_ids: ids, rf_menu_species_root_id: '' } });
+        const result = run([...CHANNEL_1, '--dry-run', '--first-release'], { ...env, CLAUDECODE: '1' });
+        assert.equal(result.status, 1, result.output);
+        assert.match(result.stdout, new RegExp(`FAIL {5}rf_menu_type_ids: category ${ids.split(',').pop()} isn't in channel 1's category tree`));
+    }
+    const species = channelOneFixtures({ channelOne: { rf_menu_type_ids: '', rf_menu_species_root_id: '1100' } });
+    const result = run([...CHANNEL_1, '--dry-run', '--first-release'], { ...species, CLAUDECODE: '1' });
+    assert.match(result.stdout, /FAIL {5}rf_menu_species_root_id: category 1100 isn't in channel 1's category tree/);
+});
+
+test('ticket 53: empty channel-1 menu ids pass, and the tree isn\'t read for them', () => {
+    const env = channelOneFixtures({ channelOne: { rf_menu_type_ids: '', rf_menu_species_root_id: '' } });
+    const result = run([...CHANNEL_1, '--dry-run', '--first-release'], { ...env, CLAUDECODE: '1' });
+    assert.equal(result.status, 0, result.output);
+    assert.doesNotMatch(result.stdout, /category ids from/);
+    assert.match(result.stdout, /guard: pass/);
+});
+
+test('ticket 53: the channel-1 dry run says step 5 is typed, and that step 6b leaves Lighthouse to ticket 56\'s run of channel 1\'s list', () => {
+    const result = run([...CHANNEL_1, '--dry-run'], { ...channelOneFixtures(forkLive()), CLAUDECODE: '1' });
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.stdout, /^confirm {2}typed: step 5 asks the operator to type the channel id, and stops without a terminal/m);
+    assert.match(result.stdout, /^lighthouse not run \(the gate runs on prelaunch \(1895766\), not channel 1: .*ticket 56 runs channel 1's own list in scripts\/qa\/lighthouse-urls\.json/m);
+    assert.doesNotMatch(result.stdout, /^paired /m, 'a channel-1 push is the paired release');
+});
+
+// The fixture runs above run in this checkout, on whatever branch it is; these use a clone.
+const channelOneRepo = () => gitRepo({ '.nvmrc': `${process.version.slice(1)}\n` });
+
+test('ticket 53: a push to channel 1 needs master at origin/master\'s tip, so only merged code reaches live reelflies.ca; a dry run warns', () => {
+    const repo = channelOneRepo();
+    repo.git('switch', '-q', '-c', 't99/old-ticket');
+    const result = prepareIn(repo, [...CHANNEL_1, '--dry-run'], { ...channelOneFixtures(forkLive()), CLAUDECODE: '1' });
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.stdout, /^WARNING {2}a push to channel 1 \(reelflies\.ca\), a live storefront, needs this checkout on master at origin\/master's tip, so that only merged code reaches it: this checkout is on branch t99\/old-ticket, not master: run the release from the main clone, on master.*\(a dry run goes on; a real release stops here\)$/m);
+
+    const onMaster = prepareIn(channelOneRepo(), [...CHANNEL_1, '--dry-run'], { ...channelOneFixtures(forkLive()), CLAUDECODE: '1' });
+    assert.equal(onMaster.status, 0, onMaster.output);
+    assert.match(onMaster.stdout, /^origin {3}master at origin\/master's tip [0-9a-f]{7}: only merged code goes live on reelflies\.ca$/m);
+});
+
+test('ticket 53: step 5 refuses channel 1 without an operator at a terminal, before the prompt and any capture', () => {
+    const state = {
+        channel: 1,
+        variation: 'ReelFlies CA channel 1',
+        target: {
+            id: 1, name: 'reelflies.ca', slug: 'ca-channel-1', variations: ['ReelFlies CA channel 1'], liveFile: 'config.ca-channel-1.live.json',
+        },
+        guard: { values: [], newSwitches: ['rf_rise'] },
+    };
+    for (const env of [{ CLAUDECODE: '1' }, { CLAUDECODE: null }]) {
+        const result = stepFive(state, env);
+        assert.equal(result.status, 1, result.output);
+        assert.match(result.stdout, /^ {2}target {6}channel 1 \(reelflies\.ca\)$/m);
+        assert.match(result.stderr, /channel 1 \(reelflies\.ca\) is live reelflies\.ca: only an operator typing at their own terminal releases to it.*stdin isn't a terminal.*Nothing was pushed/);
+        assert.doesNotMatch(result.output, /Type the channel id|Capturing channel/);
+    }
+    // The state file can't make channel 1 non-production: the target is read from release-targets.mjs.
+    const edited = stepFive({ ...state, target: { ...state.target, production: false, confirmation: ['typed', 'nonprod'] }, confirmNonprod: 1 }, { CLAUDECODE: '1' });
+    assert.equal(edited.status, 1, edited.output);
+    assert.doesNotMatch(edited.output, /Capturing channel/);
 });

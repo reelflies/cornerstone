@@ -5,6 +5,7 @@
 //   import {
 //       setupProblems, themeCapProblems, realReleaseStops, confirmChannel, pushGate,
 //       confirmNonprodRefusals, hasConfirmNonprod, pairedChannel1Release, pushConfirmation, LIVE_CHANNELS,
+//       isProductionTarget, operatorProblems, operatorRefusal, typedQuestion,   // ticket 53
 //   } from './release-checks.mjs';
 //
 // setupProblems and themeCapProblems return one line per problem. realReleaseStops turns them into
@@ -12,6 +13,7 @@
 // the capture and the readers of git and the zip as arguments, so no test needs a terminal or a store.
 // confirmNonprodRefusals and pairedChannel1Release take the calendar's phase (scripts/lib/
 // release-calendar.mjs phaseOn), so each date is tested with a calendar object, never the real file.
+// operatorProblems takes the streams and the environment, so no test needs a terminal (ticket 53).
 
 import readline from 'readline';
 import { describePhase } from './lib/release-calendar.mjs';
@@ -110,8 +112,9 @@ export async function pushGate({
 export const LIVE_CHANNELS = Object.freeze({ 1: 'live reelflies.ca', 1855224: 'reelflies.com' });
 
 const liveChannel = target => LIVE_CHANNELS[Number(target.id)];
-// A target that doesn't say `production: false` counts as production: deny by default.
-const isProduction = target => target.production !== false || Boolean(liveChannel(target));
+// A target that doesn't say `production: false` counts as production: deny by default. Channels 1
+// and 1855224 are production by their id, whatever their entry says.
+export const isProductionTarget = target => target.production !== false || Boolean(liveChannel(target));
 // Whether the release was given --confirm-nonprod (a state file without the key counts as typed).
 export const hasConfirmNonprod = options => options.confirmNonprod !== null && options.confirmNonprod !== undefined;
 const flipReached = phase => Boolean(phase.milestones) && phase.date >= phase.milestones['T-0'];
@@ -135,7 +138,7 @@ export function confirmNonprodRefusals({ options, target, phase }) {
     if (options.firstRelease) reasons.push('--confirm-nonprod can\'t be combined with --first-release: that choice stays with a person');
     if (liveChannel(target)) {
         reasons.push(`channel ${target.id} is ${liveChannel(target)}: its push is confirmed only by typing the channel id at the terminal, whatever release-targets.mjs declares`);
-    } else if (isProduction(target)) {
+    } else if (isProductionTarget(target)) {
         reasons.push(`channel ${target.id} (${target.name}) is a production target: its push is confirmed only by typing the channel id at the terminal`);
     } else if (!(target.confirmation || []).includes(CONFIRM_NONPROD)) {
         reasons.push(`channel ${target.id} (${target.name}) takes only the typed confirmation`);
@@ -154,7 +157,7 @@ export function confirmNonprodRefusals({ options, target, phase }) {
 // records it, and the review page lists it. Typed pushes too: from T-21 every push is typed, and
 // those P1 fixes need channel 1 as well. Returns null when none is pending.
 export function pairedChannel1Release({ target, phase }) {
-    if (isProduction(target) || !phase.limits.pairedChannel1Release) return null;
+    if (isProductionTarget(target) || !phase.limits.pairedChannel1Release) return null;
     return {
         phase: phase.phase, since: phase.since, t28: phase.milestones['T-28'], flip: phase.flip, status: phase.status,
     };
@@ -179,4 +182,43 @@ export function pushConfirmation({
         const reasons = confirmNonprodRefusals({ options, target, phase: phase() });
         if (reasons.length) throw refused(reasons);
     };
+}
+
+// --- Ticket 53: a production target is the operator's alone -----------------------------------
+
+// The variable Claude Code sets in every shell it starts, so a run inside one is an agent's.
+export const AGENT_SHELL_VARIABLE = 'CLAUDECODE';
+
+// Why this run can't release to `target`, or []. A production target (channel 1, live reelflies.ca)
+// is released only by an operator typing at their own terminal, never by an agent, dry runs
+// included (ticket 53): stdin and stdout must both be terminals, so the typed prompt is read from a
+// person and shown to one, and the shell mustn't be one Claude Code started. No terminal is how an
+// agent's run looks (Claude Code's shells have none); the variable is a second tripwire, for a run
+// given a pseudo-terminal. A non-production target has no such rule: agents push to 1895766 with
+// --confirm-nonprod (W0-1). Every reason is listed at once.
+export function operatorProblems({
+    target, stdin = process.stdin, stdout = process.stdout, env = process.env,
+}) {
+    if (!isProductionTarget(target)) return [];
+    const problems = [];
+    if (!stdin || !stdin.isTTY) problems.push('stdin isn\'t a terminal');
+    if (!stdout || !stdout.isTTY) problems.push('stdout isn\'t a terminal: don\'t pipe or redirect the release\'s output');
+    if (env[AGENT_SHELL_VARIABLE] !== undefined) problems.push(`this is an agent's shell: Claude Code set ${AGENT_SHELL_VARIABLE} in it`);
+    return problems;
+}
+
+// The refusal for operatorProblems' reasons, naming the target.
+export function operatorRefusal(target, problems) {
+    const what = liveChannel(target) || 'a production target';
+    return `channel ${target.id} (${target.name}) is ${what}: only an operator typing at their own terminal releases to it, dry runs included, never an agent (ticket 53): ${problems.join('; ')}`;
+}
+
+// Step 5's typed question. On a production target it names the storefront, the variation and the
+// rf_* values the channel has never had (the release guard's new switches: all of them at channel
+// 1's first push over Hero-2024, which has none, 53:44), so typing the channel id confirms them. A
+// non-production target's question is unchanged.
+export function typedQuestion({ target, variation, newSwitches = [] }) {
+    if (!isProductionTarget(target)) return `Type the channel id (${target.id}) to push: `;
+    const values = newSwitches.length ? ` and the ${newSwitches.length} rf_* value(s) it has never had, listed above as new switches` : '';
+    return `Type the channel id (${target.id}) to push to ${liveChannel(target) || target.name} (channel ${target.id}) with variation "${variation}"${values}: `;
 }

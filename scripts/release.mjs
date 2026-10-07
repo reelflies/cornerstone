@@ -57,11 +57,11 @@ import {
     captureLive, describeLiveTheme, getStoreHash, isThisFork, stencilApi,
 } from './release-capture.mjs';
 import {
-    confirmChannel, confirmNonprodRefusals, hasConfirmNonprod, MAX_THEMES, pairedChannel1Release, pushConfirmation, pushGate,
-    realReleaseStops, setupProblems, themeCapProblems,
+    confirmChannel, confirmNonprodRefusals, hasConfirmNonprod, isProductionTarget, MAX_THEMES, operatorProblems, operatorRefusal, pairedChannel1Release,
+    pushConfirmation, pushGate, realReleaseStops, setupProblems, themeCapProblems, typedQuestion,
 } from './release-checks.mjs';
 import {
-    acceptLiveValues, displayValue, effectiveSettings, threeWayDiff, verifyRelease,
+    acceptLiveValues, changedKeys, displayValue, effectiveSettings, hasSetting, threeWayDiff, verifyRelease,
 } from './release-diff.mjs';
 import { checkRelease, menuIdsSet } from './release-guard.mjs';
 import {
@@ -210,34 +210,75 @@ function calendarFields(options, target, phase) {
     };
 }
 
+// Why the checkout must be master at origin/master's tip, and what passing it means: for an agent
+// push (W0-1), and for a push to a production target (ticket 53).
+const ORIGIN_NONPROD = {
+    needs: '--confirm-nonprod needs this checkout on master at origin/master\'s tip, so that origin/master\'s calendar and targets judge it',
+    ok: 'the calendar and targets that judge --confirm-nonprod are origin/master\'s',
+};
+const originLive = target => ({
+    needs: `a push to channel ${target.id} (${target.name}), a live storefront, needs this checkout on master at origin/master's tip, so that only merged code reaches it`,
+    ok: `only merged code goes live on ${target.name}`,
+});
+
 // An agent push runs only from master at origin/master's tip, so the calendar and targets that judge
-// --confirm-nonprod are origin/master's, never a stale checkout's (release-origin.mjs). A real
-// release refuses otherwise, and a dry run warns. A dry run on the test-only overrides stays
-// offline: it compares with origin/master as last fetched.
-function originStep(options) {
+// --confirm-nonprod are origin/master's, never a stale checkout's (release-origin.mjs); so does a push
+// to a production target (ticket 53), so only merged code reaches live reelflies.ca. A real release
+// refuses otherwise, and a dry run warns. A dry run on the test-only overrides stays offline: it
+// compares with origin/master as last fetched.
+function originStep(options, why) {
     const offline = OVERRIDES.some(name => process.env[name]);
     if (offline) say('fixture', 'origin/master as last fetched: a dry run on the test-only overrides doesn\'t fetch');
     const checkout = readCheckout({ git: gitIn(), fetch: !offline });
     const problems = checkoutProblems(checkout);
     if (problems.length) {
-        stopOrWarn([`--confirm-nonprod needs this checkout on master at origin/master's tip, so that origin/master's calendar and targets judge it: ${problems.join('; ')}`], options.dryRun, refuse);
+        stopOrWarn([`${why.needs}: ${problems.join('; ')}`], options.dryRun, refuse);
         return;
     }
-    say('origin', `master at origin/master's tip ${checkout.head.slice(0, 7)}${offline ? '' : ', fetched just now'}: the calendar and targets that judge --confirm-nonprod are origin/master's`);
+    say('origin', `master at origin/master's tip ${checkout.head.slice(0, 7)}${offline ? '' : ', fetched just now'}: ${why.ok}`);
+}
+
+// The fixtures with which a dry run reads nothing from the store and stops before the build: the
+// theme config (which stops it before the build), the capture and the category tree.
+const OFFLINE_FIXTURES = ['RF_RELEASE_CONFIG', 'RF_RELEASE_LIVE_FIXTURE', 'RF_RELEASE_TREE_FIXTURE'];
+
+// Ticket 53: a production target (channel 1, live reelflies.ca) is released only by an operator
+// typing at their own terminal, never by an agent, dry runs included (release-checks.mjs
+// operatorProblems). The one exception is a dry run on all three offline fixtures, which reads
+// nothing from the store and stops before the build: the tests' runs. Step 5 checks again, with no
+// exception.
+function operatorStep(target) {
+    const problems = operatorProblems({ target });
+    if (!problems.length) {
+        say('operator', `an operator at a terminal: channel ${target.id} (${target.name}) is released only by a person typing, never by an agent`);
+        return;
+    }
+    if (OFFLINE_FIXTURES.every(name => process.env[name])) {
+        say('fixture', `no operator check: this dry run reads nothing from the store (${OFFLINE_FIXTURES.slice(0, -1).join(', ')} and ${OFFLINE_FIXTURES.at(-1)}) and stops before the build`);
+        return;
+    }
+    throw refuse(operatorRefusal(target, problems));
 }
 
 // Before step 1: how step 5 will be confirmed, and today's phase of the calendar. With
 // --confirm-nonprod the checkout must be master at origin/master's tip, and the flag is refused on a
 // production target and from T-21 (release-checks.mjs confirmNonprodRefusals), so a refused run
-// captures nothing; step 5 checks both again before the push.
+// captures nothing; step 5 checks both again before the push. A production target (ticket 53)
+// refuses the flag before anything is fetched, then needs an operator at a terminal, then master at
+// origin/master's tip.
 function confirmationStep(options, target) {
     heading('Confirmation and the release calendar');
     const phase = readPhase({ fixtures: true });
     const fields = calendarFields(options, target, phase);
     say('calendar', fields.calendar.line);
-    if (hasConfirmNonprod(options)) originStep(options);
+    const production = isProductionTarget(target);
+    if (hasConfirmNonprod(options) && !production) originStep(options, ORIGIN_NONPROD);
     const reasons = confirmNonprodRefusals({ options, target, phase });
     if (reasons.length) throw refuse(`--confirm-nonprod refused: ${reasons.join('; ')}`);
+    if (production) {
+        operatorStep(target);
+        originStep(options, originLive(target));
+    }
     say('confirm', hasConfirmNonprod(options)
         ? `non-interactive (agent): --confirm-nonprod ${options.confirmNonprod} replaces step 5's typed channel id; step 5's gate still captures the channel again and checks everything before the push`
         : 'typed: step 5 asks the operator to type the channel id, and stops without a terminal');
@@ -325,6 +366,22 @@ function foreignTheme(state, live, config, releases) {
     const replacing = { themeName, variationName, themeUuid };
     say('first', `first release: replacing ${describeLiveTheme(replacing)}. That theme keeps its own Theme Styles in My Themes.`);
     return replacing;
+}
+
+// A first release runs no diff, because the live theme is another one, but the push still replaces
+// the live value of every setting both themes name. They are listed, as a report that never stops
+// the release, so the operator sees them before step 5: on channel 1, the Hero-2024 values ticket
+// 53's carry-over decisions didn't keep (the first push's diff, 53:42). A setting only the live
+// theme has isn't replaced by a value: it stays with that theme in My Themes.
+function reportReplaced(state, live, config) {
+    const repo = effectiveSettings(config, state.variation);
+    const keys = changedKeys(repo, live.settings).filter(key => hasSetting(repo, key) && hasSetting(live.settings, key));
+    if (!keys.length) {
+        say('replaces', 'no setting both themes name differs');
+        return;
+    }
+    say('replaces', `${keys.length} setting(s) both themes name differ: the push replaces their live values with config.json's (a report: it never stops the release)`);
+    for (const key of keys) console.log(`  replaced   ${key}: live ${short(key, live.settings[key])}, config.json ${short(key, repo[key])}`);
 }
 
 // --- prepare: step 1's base, the channel's last release (W0-2) -------------------------------
@@ -515,6 +572,10 @@ async function guardStep(state, live, config) {
     const values = result.values.map(({ key, value }) => `${key} = ${displayValue(key, value)}`);
     say('', `rf_* values to push: ${values.length ? values.join(', ') : 'none'}`);
     result.newSwitches.forEach(key => say('', `new switch  ${key} (only in config.json: its module's first release)`));
+    // Ticket 53: a production target has no live value to hold these to, so the operator confirms them.
+    if (result.newSwitches.length && isProductionTarget(state.target)) {
+        say('confirm', `channel ${state.channel} has no live value for ${result.newSwitches.length} rf_* setting(s) above (its first push, or a module's first release there): step 5 asks you to confirm them by typing the channel id`);
+    }
     if (!result.pass) throw new Stop(`release guard: ${result.reasons.length} reason(s) above, so nothing was built or pushed`);
     say('ok', 'guard: pass');
     return { values: result.values, newSwitches: result.newSwitches };
@@ -555,6 +616,7 @@ async function prepare(argv) {
         overwritten: [], changedInRepo: [], base: null, baseNote: null,
     } : await diffStep(state, live, config, releases);
     reportLiveContrast(file, replacing);
+    if (replacing) reportReplaced(state, live, config);
     const guard = await guardStep(state, live, config);
     writeState({
         ...state,
@@ -661,11 +723,14 @@ async function prePush() {
     const { target, phase, fields } = stepFiveCalendar(readBack);
     const state = { ...readBack, ...fields };
     console.log(formatPushSummary(releaseRecord(state)));
+    // Ticket 53: a production target is the operator's alone, checked again here with no exception.
+    const notOperator = operatorProblems({ target });
+    if (notOperator.length) throw new Stop(`${operatorRefusal(target, notOperator)}. Nothing was pushed`);
     const confirm = pushConfirmation({
         options: state,
         target,
         phase: () => phase,
-        typed: () => confirmOrStop(state.channel, `Type the channel id (${state.channel}) to push: `),
+        typed: () => confirmOrStop(state.channel, typedQuestion({ target, variation: state.variation, newSwitches: state.guard.newSwitches })),
         origin: () => {
             const { problems, note } = stepFiveOrigin({ git: gitIn(), sha: state.git.sha });
             if (note) say('origin', note);
