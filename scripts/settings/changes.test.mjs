@@ -10,9 +10,11 @@
 
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { parseCalendar, phaseOn } from '../lib/release-calendar.mjs';
 import { classify } from '../store/allowlist.mjs';
@@ -20,9 +22,10 @@ import { applyPlan, lockedProblem } from '../store/apply.mjs';
 import { createClient } from '../store/client.mjs';
 import { FAKE_TOKEN, STORE_HASH, fixtureFetch } from '../store/fixtures/store.mjs';
 import { readLogRows } from '../store/log.mjs';
-import { buildPlan, checkRequests } from '../store/plan.mjs';
+import { buildPlan, checkRequests, readChanges } from '../store/plan.mjs';
 
 const DIR = new URL('../../store-settings/', import.meta.url);
+const PLAN = fileURLToPath(new URL('../store/plan.mjs', import.meta.url));
 const recorded = JSON.parse(fs.readFileSync(new URL('./fixtures/recorded-2026-10-06.json', import.meta.url), 'utf8'));
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-settings-changes-'));
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
@@ -233,14 +236,38 @@ test('CAD only and channel 1\'s logins aren\'t helper writes in either mode: the
 
 // --- Shaun's approval batch (store-wide) --------------------------------------------------------
 
-test('every store-wide changes file is refused as a lifted write and plans only in approved mode', () => {
+test('every store-wide changes file is refused as a lifted write and plans only in approved mode, once it isn\'t waiting', () => {
     const names = changesFiles('store-wide');
     assert.deepEqual(names, ['free-shipping-promotion.json', 'product-filtering.json']);
     for (const name of names) {
-        const { requests } = loadChanges('store-wide', name);
+        const file = loadChanges('store-wide', name);
+        // A file that waits keeps its draft under draft_requests, which plan.mjs never reads.
+        const requests = file._waiting ? file.draft_requests : file.requests;
+        if (file._waiting) assert.equal(file.requests, undefined, `${name} waits, so it has no requests plan.mjs would read`);
         assert.throws(() => checkRequests(requests, { mode: 'lifted', phase: unset }), error => error.name === 'Refused', name);
         assert.doesNotThrow(() => checkRequests(requests, { mode: 'approved', phase: unset }), name);
     }
+});
+
+test('plan.mjs --approved refuses a changes file that still waits, before it reads a token or the store', () => {
+    const root = newRoot();
+    fs.mkdirSync(root, { recursive: true });
+    const routesFile = path.join(root, 'routes.json');
+    fs.writeFileSync(routesFile, '{}');
+    const file = fileURLToPath(new URL('store-wide/free-shipping-promotion.json', DIR));
+    assert.ok(loadChanges('store-wide', 'free-shipping-promotion.json')._waiting, 'the promotion waits for its ids');
+    assert.equal(readChanges(file, { root }), undefined);
+    const run = spawnSync(process.execPath, [PLAN, '--ticket', '21', '--changes', file, '--approved'], {
+        encoding: 'utf8',
+        env: {
+            ...process.env, RF_STORE_ROOT: root, RF_STORE_FIXTURES: routesFile, RF_BC_READ_TOKEN: FAKE_TOKEN, RF_BC_STORE_HASH: STORE_HASH, RF_OPERATOR: 'test operator',
+        },
+    });
+    assert.equal(run.status, 1, `${run.stdout}\n${run.stderr}`);
+    assert.match(run.stderr, /REFUSED +a plan needs 1 to \d+ requests/);
+    assert.doesNotMatch(run.stdout, /Reading the snapshot/);
+    assert.ok(!fs.existsSync(path.join(root, 'fixture-calls.jsonl')), 'nothing was read');
+    assert.ok(!fs.existsSync(path.join(root, 'plans')), 'no plan was written');
 });
 
 const readFilters = recorded['search/filters'].data;
@@ -305,7 +332,7 @@ test('Product Filtering plans in approved mode from the global read alone, with 
 
 test('the free-shipping promotion is scoped to 1895766 and CAD, with ticket 13\'s wording, and waits for its ids', () => {
     const file = loadChanges('store-wide', 'free-shipping-promotion.json');
-    const [request] = file.requests;
+    const [request] = file.requests || file.draft_requests;
     assert.equal(request.method, 'POST');
     assert.equal(request.path, '/v3/promotions');
     const promotion = request.body;
@@ -325,8 +352,10 @@ test('the free-shipping promotion is scoped to 1895766 and CAD, with ticket 13\'
     const zones = rule.action.shipping.zone_ids;
     if (!categories.length || !Array.isArray(zones) || !zones.length) {
         assert.match(file._waiting, /tree-4 Fly Type ids \(refactor 13\)/, 'an unfilled promotion says what it waits for');
+        assert.equal(file.requests, undefined, 'an unfilled promotion has no requests for plan.mjs to read');
     } else {
         assert.equal(file._waiting, undefined, 'a filled promotion is ready to plan');
+        assert.equal(file.draft_requests, undefined, 'a filled promotion moves its draft to requests');
         assert.ok(categories.every(Number.isInteger) && zones.every(Number.isInteger));
     }
 });
