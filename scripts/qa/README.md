@@ -417,6 +417,8 @@ export default {
 **Helpers in `html.mjs`** read HTML the way a browser builds it:
 
 - `findTags(html, name)` returns start tags with their attributes. Anything inside comments, `<script>`, `<style>`, `<textarea>` and `<title>` doesn't count.
+- `findTags(html)`, with no name, returns every start tag, in page order (`one-main`, `rf-icon-sheet` and `rf-live-region` use it).
+- `markupOnly(html)` returns the HTML with comments removed and those text-only elements emptied, their tags kept, so a text search sees only markup (`rf-live-region` uses it).
 - `scriptsOfType(html, type)` returns script contents, such as JSON-LD.
 
 **Tests:** add a fixture page to `raw-html/fixtures/` and a case to `raw-html/raw-html.test.mjs`, or a test file of your own beside it (ticket 25's is `page-frame.test.mjs`), with a failing fixture and a passing one. Every fixture page runs every registered assertion, so a fixture of a whole page carries what every page has: the icon sheet and the live region right after `<body>`, and one `<main>`. CI runs them through `npm run test:scripts`. `raw-html/fetch.test.mjs` checks that the preview cookie reaches `QA_BASE_URL` and never a host a redirect points at.

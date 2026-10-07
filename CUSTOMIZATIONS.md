@@ -94,7 +94,7 @@ The release guard's rule 1 covers every `rf_*` key except the two menu ids, valu
 | `package.json` | `qa:lighthouse` script: runs `scripts/qa/lighthouse.mjs` | Ticket 17's Lighthouse budgets on six URLs (median of 3, mobile, the drop rule), which the host batch runs. It uses upstream's own `lighthouse` devDependency (12.8.1 in the lockfile) and `lighthouse-config.js`, both unchanged, so no dependency is added | 17 |
 | `assets/js/app.js` | Line 4 imports `theme/reelflies/page-modules`; line 56's `customClasses` is spread from it (was `{}`) | ReelFlies modules load per page template, each its own chunk, never in main.js; several on one template through one composite importer (build pipeline 6.1) | 25 |
 | `assets/js/theme/global.js` | Line 16 imports `reelflies/global`; line 31, the end of `onReady`, calls it with the page context | One place where the every-page ReelFlies modules (27, 28, 30, 52) start, after the stock globals | 25 |
-| `templates/layout/base.html` | Line 51 includes `components/reelflies/js-settings` at the end of the inject block; line 54 includes `components/reelflies/body-start` right after `<body>` | js-settings: the `rf_*` values the theme's JavaScript reads, one slot per switch ticket. body-start: the ReelFlies icon sheet and the shared polite live region, once per page (O22, O24) | 25 |
+| `templates/layout/base.html` | Line 51 includes `components/reelflies/js-settings` at the end of the inject block; line 54 includes `components/reelflies/body-start` right after `<body>`. Ticket 25's skin PR adds `lang="en-CA"` (line 2) and the fonts (line 29), and updates this row | js-settings: the `rf_*` values the theme's JavaScript reads, one slot per switch ticket. body-start: the ReelFlies icon sheet and the shared polite live region, once per page (O22, O24) | 25 |
 | `templates/components/common/body.html` | A comment line, then the wrapper's first and last lines pick `<main>` on `pages/home`, `pages/product` and `pages/cart` (`inArray` on `template`), and keep the stock `<div>` on every other template | Those three templates have no `<main>`, and many others carry their own, so an unconditional one would duplicate it (O24; axe `landmark-one-main`, `landmark-no-duplicate-main`). The id and the `.container` inside stay, for the skip link and `product-details.js:582` | 25 |
 | `assets/scss/theme.scss` | `@import "reelflies/settings"` after `settings/layouts/layouts` (line 48), and `@import "reelflies/index"` at the end | The ReelFlies style layer (ADR 0001) | 25 |
 | `config.json` | `settings`: the ReelFlies block (above), inserted before the last stock key; both variations' `settings` declare the two menu ids, empty, and ReelFlies US sets `rf_ship_free_threshold` to `""`. No stock line changed | Every switch and value section 6.3 names, pre-declared at its owner's default, so parallel tickets each change their own group | 25 |
@@ -126,7 +126,6 @@ Added by the design session (spec, "Hook count"), with the ticket that adds each
 - `templates/pages/cart.html`, `templates/components/cart/totals.html` and `cart/status-messages.html` (41)
 - `templates/components/common/footer.html` (50)
 - `templates/components/products/schema.html` (40)
-- `templates/layout/base.html`: `lang="en-CA"` and the fonts (25's skin PR; the scaffold already hooks this file)
 
 ## Upgrading to a new Cornerstone release
 
