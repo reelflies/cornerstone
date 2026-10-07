@@ -42,12 +42,13 @@ const scssColour = name => {
 };
 
 describe('config.json on the ReelFlies palette (ticket 25)', () => {
-    it('passes every pair on both variations, with no allowances left', () => {
+    it('passes every pair on every variation, with no allowances left', () => {
         assert.deepEqual(KNOWN_FAILURES, {});
         const result = run('config.json');
         assert.equal(result.status, 0, result.stdout + result.stderr);
-        assert.match(result.stdout, new RegExp(`ReelFlies CA: ${PAIRS.length}/${PAIRS.length} pass`));
-        assert.match(result.stdout, new RegExp(`ReelFlies US: ${PAIRS.length}/${PAIRS.length} pass`));
+        const names = JSON.parse(fs.readFileSync(CONFIG, 'utf8')).variations.map(({ name }) => name);
+        assert.deepEqual(names.slice(0, 2), ['ReelFlies CA', 'ReelFlies US']);
+        for (const name of names) assert.ok(result.stdout.includes(`· ${name}: ${PAIRS.length}/${PAIRS.length} pass`), name);
         assert.doesNotMatch(result.stdout, /known|FAIL|FIXED/);
     });
 
@@ -96,7 +97,8 @@ describe('a failing pair', () => {
         const log = console.log;
         console.log = () => {};
         try {
-            assert.deepEqual(checkContrast(file), { unexpected: 4, unreadable: 0 }); // body-text and quick-search-text, on both variations
+            const { variations } = JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
+            assert.deepEqual(checkContrast(file), { unexpected: 2 * variations.length, unreadable: 0 }); // body-text and quick-search-text, on every variation
         } finally {
             console.log = log;
         }

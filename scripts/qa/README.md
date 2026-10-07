@@ -35,7 +35,7 @@ CI has no store credentials, so anything that renders the storefront runs locall
 | Variable | Default | Meaning |
 |---|---|---|
 | `QA_CHANNEL` | `1895766` | Channel to render (ReelFlies_CA) |
-| `QA_VARIATION` | `ReelFlies CA` | Theme variation; it must exist in `config.json` |
+| `QA_VARIATION` | the channel's own: `ReelFlies CA channel 1` on channel 1 (ticket 53), `ReelFlies CA` on every other | Theme variation; it must exist in `config.json`. The default comes from the channel's `variation` in `pages.mjs` (`defaultVariation`); a value you set always wins |
 | `QA_BASE_URL` | none | Test this host (for example the prelaunch host) instead of a local `stencil start` |
 | `QA_PREVIEW_COOKIE` | none | Cookie for the prelaunch host, as `name=value; name2=value2`. It goes only to `QA_BASE_URL` and is never printed. A run that sends it keeps no Playwright traces, because a trace records every request's Cookie header. |
 | `QA_FRESH_SERVER` | none | `1` (`release.sh` sets it): never reuse a running server. Each gate starts its own, and the run stops if anything already answers on its ports. |
@@ -88,6 +88,7 @@ Agents build tickets in parallel, each in its own worktree, and each worktree's 
 
   ```sh
   QA_PORT=3400 node scripts/qa/serve.mjs                                                  # ReelFlies_CA
+  QA_PORT=3400 QA_CHANNEL=1 node scripts/qa/serve.mjs                                     # reelflies.ca's data as "ReelFlies CA channel 1" (read-only)
   QA_PORT=3400 QA_CHANNEL=1855224 QA_VARIATION="ReelFlies US" node scripts/qa/serve.mjs   # .com's data (read-only)
   ```
 
@@ -120,6 +121,9 @@ Agents build tickets in parallel, each in its own worktree, and each worktree's 
 4. **Once no worktree from before W0-7 is left,** nothing takes `.locks/stencil` any more, and the orchestrator deletes it.
 
 **The channel-1 fallback.** ReelFlies_CA has no products and no tree-4 categories yet, so its product and category pages 404. Until they exist, `QA_CHANNEL=1` renders this repo's templates with live reelflies.ca data. It is read-only: stencil start passes every request through to the live store, so the gates refuse every write on channel 1 and 1855224 ([Analytics and live-store writes](#analytics-and-live-store-writes-network-guardmjs)). Channel 1 has only a product page and a category page pinned.
+
+- **It renders channel 1's own variation,** "ReelFlies CA channel 1" (ticket 53, decision 10's interim name), which holds tree 1's menu ids. `QA_CHANNEL=1` picks it without `QA_VARIATION`, and its baselines are in `baselines/1-reelflies-ca-channel-1/`, with the widget shots in `baselines/widgets/reelflies-ca-channel-1/`. Before ticket 53, channel-1 runs rendered ReelFlies CA into `1-reelflies-ca/`; that set moved, unchanged, and isn't kept.
+- If Shaun renames the variation, one PR renames it in `config.json` and `pages.mjs` and moves both baseline folders.
 
 ## Analytics and live-store writes (`network-guard.mjs`)
 
@@ -491,7 +495,7 @@ It also tries channel 1's product-page stylesheet on a product page in miniature
 3. Review the new PNGs and commit them with the template.
 4. If the page shows new live data, add its selector to `LIVE_DATA`. If part of the page can't be pinned, leave it out for that page only: in its channel's `mask` if its size holds still, or in its channel's `hold` if it can change the page's height.
 
-**Per variation:** run with `QA_VARIATION="ReelFlies US"` to make or check that variation's set. Only the ReelFlies CA sets exist today, so a release with ReelFlies US fails at the screenshots until its set is made. Both variations still have empty settings, so a US set would be identical.
+**Per variation:** run with `QA_VARIATION="ReelFlies US"` to make or check that variation's set. The sets today are ReelFlies CA's on 1895766 and the channel-1 variation's on channel 1 (above), so a release with ReelFlies US fails at the screenshots until its set is made. Both variations still have empty settings, so a US set would be identical.
 
 **After an upstream merge**, run `npm run qa:screens` and `QA_CHANNEL=1 npm run qa:screens`, as in CUSTOMIZATIONS.md, "Upgrading".
 
