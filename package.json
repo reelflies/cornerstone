@@ -83,6 +83,7 @@
     "qa:raw-html": "node scripts/qa/raw-html.mjs",
     "qa:prepush": "node scripts/qa/prepush.mjs",
     "qa:prelaunch": "node scripts/qa/prelaunch.mjs",
+    "qa:lighthouse": "node scripts/qa/lighthouse.mjs",
     "stylelint": "npx stylelint **/*.scss",
     "stylelint:fix": "npx stylelint --fix **/*.scss"
   }
