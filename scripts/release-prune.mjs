@@ -6,7 +6,6 @@
 //
 //   import { planPrune, describePlan, runPrune, describeRunProblems } from './release-prune.mjs';
 //   import { uncommittedProblems, releasesEditProblems, dryRunRecord, dryRunProblems } from './release-prune.mjs';
-//   import { isPruneName } from './release-prune.mjs';             // "ReelFlies" or "ReelFlies (n)" (W0-3b)
 //   const plan = planPrune({ themes, activeByChannel, markdown });   // markdown: RELEASES.md
 //   describePlan(plan).forEach(line => console.log(line));
 //   const result = await runPrune({ plan, deleteTheme, readThemes, record }); // a real prune only; never throws
@@ -39,7 +38,7 @@ import { releaseBuilds } from './release-log.mjs';
 export const PRUNE_NAME = 'ReelFlies';
 // A ReelFlies build is a theme My Themes names PRUNE_NAME, or PRUNE_NAME followed by " (n)", the
 // name the store gives a repeat upload while My Themes holds a "ReelFlies" (W0-3b).
-export const isPruneName = name => isStoreNameFor(name, PRUNE_NAME);
+const isPruneName = name => isStoreNameFor(name, PRUNE_NAME);
 // How the plan's text names them.
 const PRUNE_NAMES = `${PRUNE_NAME} or "${PRUNE_NAME} (n)"`;
 export const KEEP_NEWEST = 3;
