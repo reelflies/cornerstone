@@ -14,7 +14,7 @@ The sync never writes to the store itself. It reads the channel with GETs only a
 | `widgets/<name>/channels/<channel>.json` | The widget on one channel: `channel_id`, its `configuration` (every schema setting's value there, and nothing else), its `placement` (`template_file`, `region`, `sort_order`, `status`) and the `uuids` the store gave its template, widget and placement (`null` until it makes them). |
 | `widgets/<name>/fixtures/` | Its fixture renders and element shots (W0-9, [scripts/qa/README.md](../scripts/qa/README.md#widgets)). Never synced. |
 
-Styles go in the theme's ReelFlies layer, `assets/scss/reelflies/_<name>.scss`, with `rf-` classes and no inline CSS (build pipeline, decision 6), so every channel's copy looks the same.
+Styles go in the theme's ReelFlies layer, `assets/scss/reelflies/_<name>.scss`, with `rf-` classes and no inline CSS (build pipeline, decision 6), so every channel's copy looks the same. The partial is imported from your ticket's own slot line in `assets/scss/reelflies/_index.scss` (ticket 25's scaffold): uncomment it and point it at `_<name>.scss`, as 46's line, `@import "home-lead"; // 46 home hero`, does.
 
 Words and links are widget fields, never typed into the template, so a channel's copy can differ: channel 1 carries tree-1 paths (ticket 53).
 
