@@ -2,6 +2,7 @@
 // the settings its last release pushed (ticket 05, step 1; W0-2). Pure: no network, no files.
 //
 //   import { effectiveSettings, diffSettings, changedKeys, hasSetting, blockingDifferences, threeWayDiff, acceptLiveValues } from './release-diff.mjs';
+//   import { verifyRelease, isStoreNameFor } from './release-diff.mjs';   // step 6; W0-3b's " (n)" names
 
 import { isDeepStrictEqual } from 'util';
 
@@ -108,6 +109,17 @@ export function acceptLiveValues(configText, variationName, entries) {
     return `${JSON.stringify(config, null, 2)}\n`;
 }
 
+// W0-3b: whether My Themes' name for a theme is `name`, or `name` followed by " (n)". The store gives
+// a new upload that suffix when My Themes already holds a theme of that name: the first agent push
+// went live as "ReelFlies (1)" (RELEASES.md, 2026-10-07 03:07 UTC). n is a whole number from 1,
+// written without leading zeros, and only one suffix counts. `name` is matched as text, never as a
+// pattern. Verify (below) and the prune (release-prune.mjs) both use it.
+export function isStoreNameFor(storeName, name) {
+    if (typeof storeName !== 'string' || typeof name !== 'string') return false;
+    if (storeName === name) return true;
+    return storeName.startsWith(`${name} (`) && /^\([1-9][0-9]*\)$/.test(storeName.slice(name.length + 1));
+}
+
 // Step 6: after a push, the channel runs a new theme or version with the target variation, and its
 // saved settings are the repo's effective settings. `before` is the capture taken just before the push.
 export function verifyRelease({
@@ -118,7 +130,7 @@ export function verifyRelease({
     if (live.themeUuid === before.themeUuid && live.themeVersionUuid === before.themeVersionUuid) {
         problems.push(`the channel still runs theme ${live.themeUuid} (version ${live.themeVersionUuid}): the push didn't change the active theme`);
     }
-    if (live.themeName !== config.name) problems.push(`the live theme is "${live.themeName}", not "${config.name}"`);
+    if (!isStoreNameFor(live.themeName, config.name)) problems.push(`the live theme is "${live.themeName}", not "${config.name}" or "${config.name} (n)"`);
     if (live.variationName !== variation) problems.push(`the live variation is "${live.variationName}", not "${variation}"`);
     const diff = diffSettings(effectiveSettings(config, variation), after.settings);
     for (const entry of diff.changed) problems.push(`${entry.key}: live ${displayValue(entry.key, entry.live)}, config.json ${displayValue(entry.key, entry.repo)}`);
