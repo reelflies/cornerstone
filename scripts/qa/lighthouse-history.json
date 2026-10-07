@@ -1,0 +1,5 @@
+{
+    "version": 1,
+    "about": "Ticket 17's drop rule: each URL's accepted runs, per channel, newest last. A run is accepted when a run on a host with the analytics tags blocked passes every budget and the drop rule; `npm run qa:lighthouse -- --baseline \"ticket 11\"` records ticket 11's baseline whatever the budgets say. Written by scripts/qa/lighthouse.mjs only; commit it through the next release-log PR (build pipeline, section 6.5).",
+    "channels": {}
+}

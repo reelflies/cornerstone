@@ -13,6 +13,7 @@ import lazyQuickView from './reelflies/lazy-quick-view'; // ReelFlies hook (tick
 import cartPreview from './global/cart-preview';
 import carousel from './common/carousel';
 import svgInjector from './global/svg-injector';
+import reelfliesGlobal from './reelflies/global'; // ReelFlies hook (ticket 25): ReelFlies modules on every page
 
 export default class Global extends PageManager {
     onReady() {
@@ -27,5 +28,6 @@ export default class Global extends PageManager {
         menu();
         mobileMenuToggle();
         svgInjector();
+        reelfliesGlobal(this.context); // ReelFlies hook (ticket 25): after the stock globals
     }
 }

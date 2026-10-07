@@ -1,0 +1,28 @@
+{
+    "version": 1,
+    "about": "Ticket 17's Lighthouse URLs: one list per channel, covering the six page kinds (home, species, fly-type, product, cart, search). A key is a kind, or kind@name for a second page of one kind. A kind a channel can't pin yet goes in notPinnedYet with the reason, and is reported on every run; pin it and delete the reason when it can. budget \"self\" holds a page to its own last accepted run only. Ticket 53 adds channel 1's tree-1 list (Option A). scripts/qa/README.md, \"Lighthouse\".",
+    "channels": {
+        "1895766": {
+            "urls": {
+                "home": {
+                    "path": "/",
+                    "budget": "self",
+                    "note": "SEO-8: held to the full budget only once every home section is populated. Until tickets 46-49 land it is measured and compared only with itself; ticket 49 deletes the budget line."
+                },
+                "cart": {
+                    "path": "/cart.php",
+                    "note": "The empty cart: a cart with lines needs a cart write first, which a Lighthouse run doesn't make (revisitable, tickets 41 and 45)."
+                },
+                "search": {
+                    "path": "/search.php?search_query=adams",
+                    "note": "Adams, the reference design's product (revisitable). ReelFlies_CA lists no products until refactor 14, so it shows no results until then."
+                }
+            },
+            "notPinnedYet": {
+                "species": "ReelFlies_CA has no tree-4 categories until refactor 13 (wave R1)",
+                "fly-type": "ReelFlies_CA has no tree-4 categories until refactor 13 (wave R1)",
+                "product": "ReelFlies_CA has no products until refactor 14 (wave R2); pin one with Fly Sizes then"
+            }
+        }
+    }
+}
