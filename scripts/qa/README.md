@@ -326,9 +326,10 @@ The module switches are config.json's boolean `rf_*` settings: `rf_rise` (27), `
 | `ticket`, `module` | who owns the switch, and what it switches |
 | `markers` | the `data-rf-*` attributes the module's markup carries. With the switch off, no element on the page may carry one. |
 | `chunks` | the `webpackChunkName` of each script the module loads, such as `rf-quick-add`. With the switch off, the page may not load one. |
+| `stock` (optional) | the stock markup the module replaces or guards, as page kind → CSS selectors. With the switch off, each must match on every pin of that kind, so a module that changes stock markup while off fails even with its markers and chunks gone. Quick add (43), for example, would name the stock card's Quick view button (`card.html:80-84`) on the kinds that list cards. |
 
 - **A switch is in the matrix once a template reads it** (`theme_settings.<switch>`, outside a Handlebars comment). Until then its module hasn't landed: the scaffold pre-declares every switch, and flipping one that nothing reads renders the same page.
-- **When your module lands, fill in your entry's `markers` or `chunks`, or both.** `switches.test.mjs` fails, naming your switch, while a template reads it and its entry names neither. It also fails a marker or chunk that no template, and no script under `assets/js`, has. A script may write a marker as `data-rf-…` or through `dataset`. `rf_region_prompt`'s marker is already there: the prompt's root, `data-rf-region-prompt`.
+- **When your module lands, fill in your entry's `markers` or `chunks`, or both, and `stock` if it replaces or guards stock markup.** `switches.test.mjs` fails, naming your switch, while a template reads it and its entry names neither. It also fails a marker or chunk that no template, and no script under `assets/js`, has. A script may write a marker as `data-rf-…` or through `dataset`. `rf_region_prompt`'s marker is already there: the prompt's root, `data-rf-region-prompt`.
 - **Each switch has an overlay that flips its base value:** `rf_rise-off`, `rf_cart_state-off`, `rf_quick_add-off` and `rf_region_prompt-on` (off everywhere by default). `switches.test.mjs` checks that every switch has one, so a new switch adds its own.
 - **Record your overlay's baselines with your module,** as for any overlay ([Render modes](#render-modes-w0-8)). The matrix's screenshot gate fails a row whose overlay has none.
 
@@ -353,10 +354,11 @@ npm run qa:matrix              # every row
 - **It refuses** `QA_OVERLAY` (it sets that itself, row by row), `QA_BASE_URL` and `QA_FRESH_SERVER=1`: an overlay renders only on a local stencil start, and never in a release.
 - **One switch by hand:** `QA_OVERLAY=rf_quick_add-off npx playwright test --config scripts/qa/playwright.config.mjs switch-stock`, and `npm run qa:screens`, `qa:axe` and the rest with the same `QA_OVERLAY`.
 
-**Stock markup with a switch off** (`switch-stock.spec.mjs`; stories 35 and 73). On every pinned page, at 375 and 1280, once the page has loaded, no element carries a marker of a switch that is off in the run, and the page requested no chunk of one.
+**Stock markup with a switch off** (`switch-stock.spec.mjs`; stories 35 and 73). On every pinned page, at 375 and 1280, once the page has loaded, no element carries a marker of a switch that is off in the run, the page requested no chunk of one, and each `stock` selector its entry names for the page's kind matches.
 
 - The run's switches are config.json's for `QA_VARIATION`, with `QA_OVERLAY`'s on top. So the plain run checks what its variation turns off (`rf_region_prompt` in ReelFlies CA), and each matrix row checks the switch its overlay turns off.
-- A test whose switched-off modules name no markers or chunks yet is skipped, with the reason.
+- A test whose switched-off modules name no markers, chunks or stock markup yet is skipped, with the reason.
+- **What it doesn't prove alone:** that the rest of the page is stock. The off row's screenshots do that, against baselines its module ticket records, so a reviewer compares those PNGs with `master`'s plain ones from before the module's PR; `stock` makes the part that matters most a check.
 
 ### Reflow, reduced motion and focus
 

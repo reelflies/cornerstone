@@ -16,9 +16,10 @@ import path from 'path';
 import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { listOverlays, readOverlay } from './overlays.mjs';
+import { PAGE_KEY } from './pages.mjs';
 import {
     SWITCHES, TEMPLATES_DIR, chunkRequested, datasetName, describeValues, flippingOverlays, moduleSwitches, offSwitches, readSwitchValues, sourceText,
-    stripHandlebarsComments, switchValues, templatesReading,
+    stockSelectors, stripHandlebarsComments, switchValues, templatesReading,
 } from './switches.mjs';
 
 const CONFIG = JSON.parse(fs.readFileSync(path.resolve('config.json'), 'utf8'));
@@ -62,6 +63,10 @@ describe('the module switches', () => {
             assert.ok(Array.isArray(entry.markers) && Array.isArray(entry.chunks), `${key} lists its markers and chunks`);
             for (const marker of entry.markers) assert.match(marker, /^data-rf-[a-z0-9-]+$/, `${key}'s marker ${marker} is a data-rf-* attribute`);
             for (const chunk of entry.chunks) assert.match(chunk, /^rf-[a-z0-9-]+$/, `${key}'s chunk ${chunk} is a webpackChunkName`);
+            for (const [kind, selectors] of Object.entries(entry.stock || {})) {
+                assert.ok(PAGE_KEY.test(kind) && !kind.includes('@'), `${key}'s stock markup is keyed by page kind, and "${kind}" isn't one`);
+                assert.ok(Array.isArray(selectors) && selectors.length && selectors.every(selector => typeof selector === 'string' && selector.trim()), `${key}'s stock markup on ${kind} is a list of CSS selectors`);
+            }
         }
     });
 
@@ -189,6 +194,26 @@ describe('a run\'s switch values', () => {
         assert.deepEqual(readSwitchValues({ variation: 'ReelFlies CA' }), switchValues({ config: CONFIG, variation: 'ReelFlies CA' }));
         assert.equal(readSwitchValues({ variation: 'ReelFlies CA', overlay: 'rf_rise-off' }).rf_rise, false);
         assert.throws(() => readSwitchValues({ variation: 'ReelFlies CA', overlay: 'rf-rise-off' }), /isn't an overlay/);
+    });
+});
+
+describe('the stock markup a switched-off module must leave', () => {
+    it('is named per page kind, and a kind it doesn\'t name has none', () => {
+        const entry = { stock: { category: ['.card .quickview'], brand: ['.card .quickview'] } };
+        assert.deepEqual(stockSelectors(entry, 'category'), ['.card .quickview']);
+        assert.deepEqual(stockSelectors(entry, 'cart'), []);
+        assert.deepEqual(stockSelectors({}, 'category'), []);
+    });
+
+    it('comes with each switched-off entry, empty until its ticket names it', () => {
+        const switches = {
+            rf_quick_add: {
+                ticket: '43', module: 'quick add', markers: [], chunks: [], stock: { category: ['.quickview'] },
+            },
+        };
+        const [off] = offSwitches({ rf_quick_add: false }, switches);
+        assert.deepEqual(off.stock, { category: ['.quickview'] });
+        assert.deepEqual(offSwitches({ rf_rise: false })[0].stock, {});
     });
 });
 

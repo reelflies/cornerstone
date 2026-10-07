@@ -13,6 +13,11 @@
 //            element on the page may carry one (switch-stock.spec.mjs).
 //   chunks   the webpackChunkName of each script the module loads (as check-bundle.mjs names
 //            them). With the switch off, the page may not load one.
+//   stock    optional: the stock markup the module replaces or guards, as page kind -> CSS
+//            selectors. With the switch off, each must match on every pinned page of that kind
+//            (switch-stock.spec.mjs), so a module that changes stock markup while it is off fails
+//            even with its markers and chunks gone. Quick add (43) would name the stock card's
+//            Quick view button, for example, on the kinds that list cards.
 // The owning ticket fills in its markers and chunks when its module lands: once a template
 // reads theme_settings.<switch>, switches.test.mjs fails until the entry names at least one.
 //
@@ -86,8 +91,11 @@ export function readSwitchValues({ variation, overlay = '', root = ROOT }) {
 export const offSwitches = (values, switches = SWITCHES) => Object.entries(values)
     .filter(([, value]) => value === false)
     .map(([key]) => ({
-        key, ticket: null, module: key, markers: [], chunks: [], ...switches[key],
+        key, ticket: null, module: key, markers: [], chunks: [], stock: {}, ...switches[key],
     }));
+
+// The stock markup `entry` must leave on a page of `kind` with its switch off.
+export const stockSelectors = (entry, kind) => entry.stock?.[kind] || [];
 
 export const describeValues = values => Object.entries(values).map(([key, value]) => `${key} ${value ? 'on' : 'off'}`).join(', ');
 
