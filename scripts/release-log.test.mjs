@@ -346,6 +346,10 @@ test('W0-3: a My Themes row records the time, the action, the theme uuid, name a
     };
     assert.match(formatMyThemesRow(unknown), /\| unknown \| unknown \| a \\\| b \|$/);
     assert.equal(myThemesRows(addMyThemesRow(null, formatMyThemesRow(unknown)))[0].operator, 'a | b', 'and reads back');
+    // Without a terminal (an agent's run, say), the operator cell says so: git's user.name is the
+    // same for Shaun and for an agent in the main clone.
+    assert.match(formatMyThemesRow({ ...deletion, terminal: false }), /\| Shaun Bathgate \(no terminal\) \|$/);
+    assert.match(formatMyThemesRow({ ...deletion, terminal: true }), /\| Shaun Bathgate \|$/);
 });
 
 const MY_THEMES_TABLE = `\n${MY_THEMES_HEADER}\n|---|---|---|---|---|---|---|\n`;

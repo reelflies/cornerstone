@@ -4,10 +4,12 @@
 // reads the store and deletes, and scripts/release.mjs runs the two (`release.sh --prune-only
 // [--dry-run]`, and after each push).
 //
-//   import { planPrune, describePlan, runPrune } from './release-prune.mjs';
+//   import { planPrune, describePlan, runPrune, describeRunProblems } from './release-prune.mjs';
+//   import { uncommittedProblems } from './release-prune.mjs';
 //   const plan = planPrune({ themes, activeByChannel, markdown });   // markdown: RELEASES.md
 //   describePlan(plan).forEach(line => console.log(line));
-//   await runPrune({ plan, deleteTheme, readThemes, record });       // a real prune only
+//   const result = await runPrune({ plan, deleteTheme, readThemes, record }); // a real prune only; never throws
+//   const stop = describeRunProblems(result);                        // null, or why the prune stops
 //
 // A theme is deleted only when every rule below lets it go. Each rule keeps a theme on its own:
 //   - its name in My Themes is exactly "ReelFlies" (no other theme is ever a candidate: not
@@ -145,30 +147,68 @@ export function describePlan(plan) {
     return lines;
 }
 
+// Only an error's message leaves runPrune: the store's theme API client rejects with axios's
+// error, whose config and request hold the Stencil-CLI token in a header.
+const messageOf = error => String((error && error.message) || error);
+
 // Deletes the plan's themes one at a time, oldest first, and calls record(build) right after each
 // deletion answers, so the log keeps every theme deleted even if a later one fails. The first
-// failure stops the run. Then My Themes is read again: a theme still there is reported in
-// stillThere. Returns { deleted: [uuid], failed: { uuid, message } | null, stillThere: [uuid] }.
+// failure stops the run: a deletion the store refused (failed), or a row record() couldn't write
+// (unlogged: the store deleted that theme, but the log doesn't say so). Then My Themes is read
+// again: a theme still there is reported in stillThere, and a read that fails in rereadFailed.
+// Never throws for the store or the log; each failure comes back as its message only. Returns
+// { deleted: [uuid], failed: { uuid, message } | null, unlogged: { uuid, message } | null,
+// stillThere: [uuid], rereadFailed: message | null }.
 export async function runPrune({
     plan, deleteTheme, readThemes, record,
 }) {
     const deleted = [];
     let failed = null;
+    let unlogged = null;
     for (const build of plan.toDelete) {
         try {
             // One at a time, so a failure stops the rest.
             // eslint-disable-next-line no-await-in-loop
             await deleteTheme(build.uuid);
         } catch (error) {
-            failed = { uuid: build.uuid, message: error.message };
+            failed = { uuid: build.uuid, message: messageOf(error) };
             break;
         }
-        record(build);
         deleted.push(build.uuid);
+        try {
+            record(build);
+        } catch (error) {
+            unlogged = { uuid: build.uuid, message: messageOf(error) };
+            break;
+        }
     }
-    if (!deleted.length) return { deleted, failed, stillThere: [] };
-    const after = new Set((await readThemes()).map(item => item.uuid));
-    return { deleted, failed, stillThere: deleted.filter(id => after.has(id)) };
+    const result = {
+        deleted, failed, unlogged, stillThere: [], rereadFailed: null,
+    };
+    if (!deleted.length) return result;
+    try {
+        const after = new Set((await readThemes()).map(item => item.uuid));
+        result.stillThere = deleted.filter(id => after.has(id));
+    } catch (error) {
+        result.rereadFailed = messageOf(error);
+    }
+    return result;
+}
+
+// A real prune's stop after runPrune: every deletion the log misses, a failed deletion, a failed
+// re-read and a theme still listed, then the deletions that are logged. null when there is no
+// problem.
+export function describeRunProblems({
+    deleted, failed, unlogged, stillThere, rereadFailed,
+}) {
+    const problems = [];
+    if (unlogged) problems.push(`the store deleted ${unlogged.uuid}, but its row couldn't be written in RELEASES.md (${unlogged.message}): add the row to RELEASES.md by hand; nothing after it was tried`);
+    if (failed) problems.push(`deleting ${failed.uuid} failed: ${failed.message}; nothing after it was tried`);
+    if (rereadFailed) problems.push(`My Themes couldn't be read again to check the deletions (${rereadFailed}): check My Themes by hand`);
+    if (stillThere.length) problems.push(`My Themes still lists ${stillThere.join(', ')} after the store answered its deletion: check My Themes by hand`);
+    if (!problems.length) return null;
+    const logged = deleted.filter(id => !unlogged || id !== unlogged.uuid);
+    return `${problems.join('; ')}. Say so in the release-log PR. ${logged.length} deleted theme(s) logged in RELEASES.md${logged.length ? `: ${logged.join(', ')}` : ''}`;
 }
 
 // A real --prune-only may leave only RELEASES.md uncommitted (git status --porcelain), so no edited

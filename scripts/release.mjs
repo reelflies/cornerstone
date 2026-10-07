@@ -68,7 +68,7 @@ import {
     checkoutProblems, gitIn, readCheckout, stepFiveOrigin,
 } from './release-origin.mjs';
 import {
-    describePlan, planPrune, REQUIRED_CHANNELS, runPrune, uncommittedProblems,
+    describePlan, describeRunProblems, planPrune, REQUIRED_CHANNELS, runPrune, uncommittedProblems,
 } from './release-prune.mjs';
 import { redact } from './release-redact.mjs';
 import { validateThemeConfig } from './release-schema.mjs';
@@ -776,7 +776,8 @@ async function readStoreThemes(releases, deleting) {
     }
 }
 
-// Logs one deletion in RELEASES.md's My Themes section, right after the store answered it.
+// Logs one deletion in RELEASES.md's My Themes section, right after the store answered it. The
+// operator cell says "(no terminal)" when stdin isn't one, as for an agent's run.
 function logDeletion(build, action) {
     const row = formatMyThemesRow({
         timestamp: new Date().toISOString(),
@@ -787,14 +788,19 @@ function logDeletion(build, action) {
         sha: build.record.sha,
         zipSha256: build.record.zipSha256,
         operator: operator(),
+        terminal: Boolean(process.stdin.isTTY),
     });
-    fs.writeFileSync(RELEASES, addMyThemesRow(readReleases(), row));
+    try {
+        fs.writeFileSync(RELEASES, addMyThemesRow(readReleases(), row));
+    } catch (error) {
+        throw new Error(`${error.message}; the row is ${row}`);
+    }
     say('deleted', `${build.uuid}, released ${build.record.timestamp} UTC: logged in ${RELEASES}`);
 }
 
 // Reads the store, plans (scripts/release-prune.mjs) and, when `deleting`, deletes the plan's
 // themes one at a time, logging each. `releases` is RELEASES.md, or the fixture in a dry run.
-async function prune({ releases, deleting, action }) {
+async function pruneSteps({ releases, deleting, action }) {
     const store = await readStoreThemes(releases, deleting);
     let plan;
     try {
@@ -814,13 +820,20 @@ async function prune({ releases, deleting, action }) {
     const result = await runPrune({
         plan, deleteTheme: store.deleteTheme, readThemes: store.readThemes, record: build => logDeletion(build, action),
     });
-    if (result.failed) {
-        throw new Stop(`deleting ${result.failed.uuid} failed: ${redact(result.failed.message, knownSecrets())}. ${result.deleted.length} theme(s) deleted before it are logged in ${RELEASES}; nothing after it was tried`);
-    }
-    if (result.stillThere.length) {
-        throw new Stop(`My Themes still lists ${result.stillThere.join(', ')} after the store answered its deletion. Its row is in ${RELEASES}: check My Themes by hand, and say so in the release-log PR`);
-    }
+    const problems = describeRunProblems(result);
+    if (problems) throw new Stop(redact(problems, knownSecrets()));
     say('ok', `deleted ${result.deleted.length} theme(s), each logged in ${RELEASES}'s My Themes section: commit it`);
+}
+
+// Any error that isn't a Stop goes on as a Stop with its message only, the tokens taken out: Node
+// prints an uncaught error whole, and a store error's request holds the token.
+async function prune(options) {
+    try {
+        await pruneSteps(options);
+    } catch (error) {
+        if (error instanceof Stop) throw error;
+        throw new Stop(`the prune stopped: ${redact(String((error && error.message) || error), knownSecrets())}`);
+    }
 }
 
 // A real --prune-only runs from master at origin/master's tip, with nothing uncommitted but

@@ -5,8 +5,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { inspect } from 'node:util';
 import {
-    KEEP_NEWEST, PRUNE_NAME, REQUIRED_CHANNELS, describePlan, planPrune, runPrune, uncommittedProblems,
+    KEEP_NEWEST, PRUNE_NAME, REQUIRED_CHANNELS, describePlan, describeRunProblems, planPrune, runPrune, uncommittedProblems,
 } from './release-prune.mjs';
 import {
     addMyThemesRow, addReleaseEntry, formatMyThemesRow, formatReleaseEntry, myThemesRows, RELEASES_TEMPLATE,
@@ -242,7 +243,9 @@ test('W0-3: a real prune deletes the planned themes oldest first, logs a row aft
         },
     });
     assert.deepEqual(store.calls, [uuid(1), uuid(2), uuid(3)]);
-    assert.deepEqual(result, { deleted: [uuid(1), uuid(2), uuid(3)], failed: null, stillThere: [] });
+    assert.deepEqual(result, {
+        deleted: [uuid(1), uuid(2), uuid(3)], failed: null, unlogged: null, stillThere: [], rereadFailed: null,
+    });
     assert.deepEqual(myThemesRows(markdown).map(row => [row.uuid, row.sha, row.zipSha256]), [1, 2, 3].map(n => [uuid(n), sha(n), zip(n)]));
 });
 
@@ -274,8 +277,83 @@ test('W0-3: a plan with nothing to delete calls nothing', async () => {
     const store = stubStore([]);
     assert.deepEqual(await runPrune({
         plan, deleteTheme: store.deleteTheme, readThemes: store.readThemes, record: () => assert.fail('nothing to record'),
-    }), { deleted: [], failed: null, stillThere: [] });
+    }), {
+        deleted: [], failed: null, unlogged: null, stillThere: [], rereadFailed: null,
+    });
     assert.deepEqual(store.calls, []);
+});
+
+// stencil-cli's client rejects with axios's error, whose config and request hold the Stencil-CLI
+// token in a header. Node prints all of that for an error nobody catches.
+const FAKE = 'faketoken0123456789abcdefghijkl';
+function axiosError(message, status) {
+    const config = { method: 'get', url: 'https://api.bigcommerce.com/stores/abc123/v3/themes', headers: { Accept: 'application/json', 'x-auth-token': FAKE } };
+    return Object.assign(new Error(message), {
+        name: 'AxiosError', code: 'ERR_BAD_RESPONSE', config, request: { _header: `GET /stores/abc123/v3/themes HTTP/1.1\r\nx-auth-token: ${FAKE}\r\n` }, response: { status, config },
+    });
+}
+const shows = value => inspect(value, { depth: 10, showHidden: true });
+
+test('W0-3: a failed re-read of My Themes after a deletion comes back as its message only: the error, with the token in its request, never leaves runPrune', async () => {
+    const plan = planPrune({ themes: sixThemes(), activeByChannel: active(), markdown: SIX });
+    const store = stubStore(sixThemes());
+    const recorded = [];
+    const result = await runPrune({
+        plan,
+        deleteTheme: store.deleteTheme,
+        readThemes: async () => { throw axiosError('Request failed with status code 502', 502); },
+        record: build => recorded.push(build.uuid),
+    });
+    assert.deepEqual(recorded, [uuid(1), uuid(2), uuid(3)], 'every deletion is still logged');
+    assert.deepEqual(result, {
+        deleted: [uuid(1), uuid(2), uuid(3)], failed: null, unlogged: null, stillThere: [], rereadFailed: 'Request failed with status code 502',
+    });
+    assert.ok(!shows(result).includes(FAKE));
+});
+
+test('W0-3: a failed deletion keeps only its message too', async () => {
+    const plan = planPrune({ themes: sixThemes(), activeByChannel: active(), markdown: SIX });
+    const result = await runPrune({
+        plan, deleteTheme: async () => { throw axiosError('Request failed with status code 429', 429); }, readThemes: async () => assert.fail('nothing was deleted, so nothing is read again'), record: () => assert.fail('nothing to record'),
+    });
+    assert.deepEqual(result.failed, { uuid: uuid(1), message: 'Request failed with status code 429' });
+    assert.ok(!shows(result).includes(FAKE));
+});
+
+test('W0-3: a deletion whose log row can\'t be written stops the prune, naming the uuid the store deleted', async () => {
+    const plan = planPrune({ themes: sixThemes(), activeByChannel: active(), markdown: SIX });
+    const store = stubStore(sixThemes());
+    const result = await runPrune({
+        plan,
+        deleteTheme: store.deleteTheme,
+        readThemes: store.readThemes,
+        record: build => {
+            if (build.uuid === uuid(2)) throw new Error('ENOSPC: no space left on device, write');
+        },
+    });
+    assert.deepEqual(store.calls, [uuid(1), uuid(2)], 'nothing after it is tried');
+    assert.deepEqual(result.deleted, [uuid(1), uuid(2)], 'the store deleted both');
+    assert.deepEqual(result.unlogged, { uuid: uuid(2), message: 'ENOSPC: no space left on device, write' });
+    assert.equal(result.failed, null);
+    assert.deepEqual(result.stillThere, [], 'My Themes is still read again');
+});
+
+test('W0-3: a real prune\'s stop names every deletion the log misses, a failed re-read and a theme still listed, and what is logged', () => {
+    const none = {
+        deleted: [], failed: null, unlogged: null, stillThere: [], rereadFailed: null,
+    };
+    assert.equal(describeRunProblems({ ...none, deleted: [uuid(1)] }), null, 'no problem, no stop');
+    const unlogged = describeRunProblems({ ...none, deleted: [uuid(1), uuid(2)], unlogged: { uuid: uuid(2), message: 'ENOSPC: no space left on device' } });
+    assert.match(unlogged, new RegExp(`the store deleted ${uuid(2)}, but its row couldn't be written in RELEASES\\.md \\(ENOSPC: no space left on device\\): add the row to RELEASES\\.md by hand; nothing after it was tried`));
+    assert.match(unlogged, new RegExp(`1 deleted theme\\(s\\) logged in RELEASES\\.md: ${uuid(1)}`));
+    const failed = describeRunProblems({ ...none, deleted: [uuid(1)], failed: { uuid: uuid(2), message: 'Request failed with status code 500' } });
+    assert.match(failed, new RegExp(`deleting ${uuid(2)} failed: Request failed with status code 500; nothing after it was tried`));
+    const reread = describeRunProblems({ ...none, deleted: [uuid(1)], rereadFailed: 'GET /v3/themes failed: Request failed with status code 502' });
+    assert.match(reread, /My Themes couldn't be read again to check the deletions \(GET \/v3\/themes failed: Request failed with status code 502\): check My Themes by hand/);
+    const still = describeRunProblems({ ...none, deleted: [uuid(1), uuid(3)], stillThere: [uuid(3)] });
+    assert.match(still, new RegExp(`My Themes still lists ${uuid(3)} after the store answered its deletion: check My Themes by hand`));
+    assert.match(still, /2 deleted theme\(s\) logged in RELEASES\.md/);
+    assert.match(describeRunProblems({ ...none, failed: { uuid: uuid(1), message: 'x' } }), /0 deleted theme\(s\) logged in RELEASES\.md$/);
 });
 
 // --- What a real --prune-only may run from ------------------------------------------------------

@@ -30,7 +30,7 @@ export const MY_THEMES_HEADER = '| Time (UTC) | Action | Theme uuid | Name and v
 const MY_THEMES_SECTION = `
 ## My Themes
 
-Every theme the release tooling deletes from My Themes, one row each, written by \`scripts/release.sh\`'s prune right after the deletion (W0-3, [docs/releasing.md](docs/releasing.md#pruning-my-themes)). The prune runs after each push, and on its own with \`--prune-only\`. It deletes only themes named ReelFlies that this file records as a release, active on no channel and not flagged \`is_active\` in My Themes, never the latest or previous release on 1895766 or channel 1, and always keeps the newest three. The commit and zip sha256 are the deleted build's, from its release entry. Don't edit the rows by hand.
+Every theme the release tooling deletes from My Themes, one row each, written by \`scripts/release.sh\`'s prune right after the deletion (W0-3, [docs/releasing.md](docs/releasing.md#pruning-my-themes)). The prune runs after each push, and on its own with \`--prune-only\`. It deletes only themes named ReelFlies that this file records as a release, active on no channel and not flagged \`is_active\` in My Themes, never the latest or previous release on 1895766 or channel 1, and always keeps the newest three. The commit and zip sha256 are the deleted build's, from its release entry. The operator is \`git config user.name\`, with "(no terminal)" when the prune ran without one, as an agent's does. Don't edit the rows by hand.
 
 ${MY_THEMES_HEADER}
 |---|---|---|---|---|---|---|
@@ -214,11 +214,14 @@ export function releaseBuilds(markdown) {
 const cell = text => String(text).replace(/\|/g, '\\|').replace(/\n/g, ' ');
 const codeCell = text => (text ? `\`${text}\`` : 'unknown');
 
-// One row: { timestamp (ISO), action, uuid, name, version, sha, zipSha256, operator }.
+// One row: { timestamp (ISO), action, uuid, name, version, sha, zipSha256, operator, terminal }.
+// terminal false (stdin wasn't one, as for an agent's run) adds "(no terminal)" to the operator,
+// whose git user.name is the same for Shaun and an agent in the main clone.
 export function formatMyThemesRow({
-    timestamp, action, uuid, name, version, sha, zipSha256, operator,
+    timestamp, action, uuid, name, version, sha, zipSha256, operator, terminal = true,
 }) {
-    return `| ${timestamp.slice(0, 10)} ${timestamp.slice(11, 16)} | ${cell(action)} | ${codeCell(uuid)} | ${cell(`${name} ${version}`)} | ${codeCell(sha)} | ${codeCell(zipSha256)} | ${cell(operator)} |`;
+    const who = terminal ? operator : `${operator} (no terminal)`;
+    return `| ${timestamp.slice(0, 10)} ${timestamp.slice(11, 16)} | ${cell(action)} | ${codeCell(uuid)} | ${cell(`${name} ${version}`)} | ${codeCell(sha)} | ${codeCell(zipSha256)} | ${cell(who)} |`;
 }
 
 // Adds a row at the end of the My Themes table, adding the section at the end of the file when a

@@ -258,7 +258,13 @@ scripts/release.sh --prune-only              # deletes the plan's themes, loggin
 
 The plan names the theme each channel runs, then lists every ReelFlies theme with "keep" or "delete" and its reasons, then the other themes, which it never touches, each with its uuid and the `is_active` flag. On 2026-10-06 it found a fourth storefront channel, 1861300, with no site, so the store's site list alone would have missed it.
 
-**Deleting.** A real prune deletes the plan's themes one at a time, oldest first, with `DELETE /v3/themes/<uuid>`, which the store refuses for a theme active on a channel. Right after each deletion it adds a row to `RELEASES.md`'s "My Themes" section: the time (UTC), the action (`deleted (--prune-only)` or `deleted (prune after a release)`), the theme's uuid, name and version, the commit and zip sha256 of its release entry, and the operator (`git config user.name`). The first failure stops the run, and the rows already written stay. Then it reads My Themes again, and names any theme still there. Commit the rows through a `release/log-…` PR, as for a release entry. A dry run makes no deleter at all, and writes nothing.
+**Deleting.** A real prune deletes the plan's themes one at a time, oldest first, with `DELETE /v3/themes/<uuid>`, which the store refuses for a theme active on a channel. Right after each deletion it adds a row to `RELEASES.md`'s "My Themes" section: the time (UTC), the action (`deleted (--prune-only)` or `deleted (prune after a release)`), the theme's uuid, name and version, the commit and zip sha256 of its release entry, and the operator (`git config user.name`, with "(no terminal)" when stdin isn't one, as in an agent's run: in the main clone both are "Shaun Bathgate"). Then it reads My Themes again.
+
+- **The first failure stops the run,** and the rows already written stay: a deletion the store refuses, or a row that can't be written. For the latter the stop names the uuid the store deleted and the row it couldn't write, so you can add it by hand.
+- **The read after it** names any theme still listed. If that read fails, the stop says so, and the rows are still written.
+- Every stop says how many deletions are logged. Commit the rows through a `release/log-…` PR, as for a release entry, and name any stop in it.
+
+A dry run makes no deleter at all, and writes nothing to `RELEASES.md`.
 
 **Where a real prune runs from.** Deleting a theme can't be undone, so the rules that decide are always `origin/master`'s:
 
@@ -276,7 +282,10 @@ W0-3 adds `scripts/release.sh --upload-only` (uploading the newest 1895766 relea
 ## Safety notes
 
 - **Why not `stencil pull`:** it crashes when `config.json` has no variation named like the live one (Cavio's "Natural"), and it silently skips live keys that `config.json` lacks. The capture in `scripts/release-capture.mjs` has neither problem.
-- **Tokens:** when a request fails, stencil-cli 9.1.0 prints the whole request, including its `x-auth-token` header. The release pipes the push through a filter that replaces the Stencil-CLI token, `RF_BC_API_TOKEN`, `RF_BC_READ_TOKEN` and any `x-auth-token` value with `[redacted]`, and passes the prune's store errors through the same filter. Values of settings named like credentials (`token`, `secret`, `password`, `api key`) are hidden in the release's output.
+- **Tokens:** when a request fails, stencil-cli 9.1.0 prints the whole request, including its `x-auth-token` header. The release pipes the push through a filter that replaces the Stencil-CLI token, `RF_BC_API_TOKEN`, `RF_BC_READ_TOKEN` and any `x-auth-token` value with `[redacted]`. Values of settings named like credentials (`token`, `secret`, `password`, `api key`) are hidden in the release's output.
+  - The prune never prints a store error whole. `release-themes.mjs` turns every store call's error into a new one naming the call, with only its message and the token taken out (axios's error carries the request, header and all). The prune's stops pass through the same filter, and any other error in it becomes a stop with its message only.
+  - The guard's catalogue errors are filtered with its read-only token, which may come from the Keychain.
+  - The prune's and the guard's `fetch` calls refuse redirects (`redirect: 'error'`), because `fetch` would send the `X-Auth-Token` header on to another origin.
 - **The capture file** `config.<slug>.live.json` is gitignored. Cavio's capture holds a non-empty `instagram-access-token`, so never commit or share it.
 - **If the push seems to hang,** stencil-cli is probably waiting at its theme-deletion prompt, which means My Themes filled up after the release checked it. Press Ctrl-C, then run `scripts/release.sh --prune-only --dry-run` and `--prune-only`, or delete a theme by hand.
 
