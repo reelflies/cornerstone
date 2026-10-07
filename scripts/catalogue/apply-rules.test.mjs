@@ -99,7 +99,7 @@ test('a plan writes each object once, and every problem is named at once', () =>
 
 test('a plan file is read only with its format, ticket, job and an untouched digest', () => {
     const plan = {
-        format: PLAN_FORMAT, ticket: '18', job: 'fly-sizes', requests: [optionRequest()], digest: null,
+        format: PLAN_FORMAT, ticket: '18', job: 'fly-sizes', store_hash: 'abc123', requests: [optionRequest()], digest: null,
     };
     plan.digest = planDigest(plan);
     assert.equal(readPlan(JSON.stringify(plan)).items.length, 1);
@@ -152,14 +152,14 @@ test('an option whose values were added or removed is stale, so a write can neve
 test('the diff is derived from the store as read, one line per object', () => {
     const items = judge(checkRequests([optionRequest(), imageRequest, altRequest, brandRequest, brandFields]), store());
     assert.deepEqual(items.map(item => diffLine(item, item.now, 'Adams Dry Fly')), [
-        'product 101 "Adams Dry Fly", option 50: values 12, 2-0 -> 2/0, 12',
+        'product 101 "Adams Dry Fly", option 50: order 12 #1, 2-0 #2 -> 2/0 #2, 12 #1; value 2 "2-0" -> "2/0"',
         'product 101 "Adams Dry Fly", image 7: thumbnail image 6 -> 7',
         'product 101 "Adams Dry Fly", image 6: description "" -> "Adams Dry Fly"',
         'product 102 "Adams Dry Fly": brand_id 0 -> 411',
         'brand 411: page_title "" -> "ReelFlies flies"',
     ]);
     const defaults = judge(checkRequests([optionRequest([value(1, '12', 0, false), value(2, '2-0', 1)])]), store());
-    assert.equal(diffLine(defaults[0], defaults[0].now), 'product 101, option 50: default 12 -> none');
+    assert.equal(diffLine(defaults[0], defaults[0].now), 'product 101, option 50: default 12 #1 -> none');
 });
 
 test('after a write, the re-read must show what was planned', () => {
@@ -207,7 +207,59 @@ test('the diff lists the values in the order the write leaves them, so a reorder
     const request = { ...optionRequest(turned), before: { display_name: 'Fly Sizes', option_values: now } };
     const [item] = judge(checkRequests([request]), store({ values: now }));
     assert.equal(item.status, 'pending');
-    assert.equal(diffLine(item, item.now), 'product 101, option 50: values 6/0, 2, 4 -> 4, 6/0, 2');
+    assert.equal(diffLine(item, item.now), 'product 101, option 50: order 6/0 #1, 2 #2, 4 #3 -> 4 #3, 6/0 #1, 2 #2');
+});
+
+// The store holds 11 = "4", 12 = "2" and 13 = "6-0", in that order. Each value id carries its
+// variants' SKU, price and stock, so a label may change only on its own value.
+const SIZES = [value(11, '4', 0), value(12, '2', 1), value(13, '6-0', 2)];
+const sizesRequest = values => ({
+    method: 'PUT', path: '/v3/catalog/products/101/options/50', body: { option_values: values }, before: { display_name: 'Fly Sizes', option_values: SIZES }, product_id: 101,
+});
+
+test('the diff ties each label to its value id: a reorder names only the value it renames', () => {
+    const [item] = judge(checkRequests([sizesRequest([value(11, '4', 2), value(12, '2', 1), value(13, '6/0', 0)])]), store({ values: SIZES }));
+    assert.equal(item.status, 'pending');
+    assert.equal(diffLine(item, item.now), 'product 101, option 50: order 4 #11, 2 #12, 6-0 #13 -> 6/0 #13, 2 #12, 4 #11; value 13 "6-0" -> "6/0"');
+    const renamed = judge(checkRequests([optionRequest([value(1, '12', 0, true), value(2, '2/0', 1)])]), store())[0];
+    assert.equal(diffLine(renamed, renamed.now), 'product 101, option 50: value 2 "2-0" -> "2/0"', 'a rename in place keeps the order, so only the rename shows');
+    const renumbered = judge(checkRequests([optionRequest([value(1, '12', 1, true), value(2, '2-0', 2)])]), store())[0];
+    assert.equal(diffLine(renumbered, renumbered.now), 'product 101, option 50: sort_order 0, 1 -> 1, 2 (same order)', 'new sort_order numbers in the same order still show');
+});
+
+test('a plan may not move a label onto another value id, or give two values the same label; a restore may put back what it read', () => {
+    const refused = (values, pattern) => assert.throws(() => checkRequests([sizesRequest(values)]), error => error.name === 'Refused' && pattern.test(error.message));
+    // The labels written back by position: 11 becomes "6/0" and 13 becomes "4". The order the
+    // store shows is the same as the right plan's, so only the ids can tell them apart.
+    refused([value(11, '6/0', 0), value(12, '2', 1), value(13, '4', 2)], /moves the label "4" from value 11 to value 13/);
+    // A swap of labels and sort orders together: the order of labels doesn't change at all.
+    refused([value(11, '2', 1), value(12, '4', 0), value(13, '6/0', 2)], /moves the label "2" from value 12 to value 11[\s\S]*moves the label "4" from value 11 to value 12/);
+    // 6-0 and 6/0 are one size: 6/0 put on 11, with 13 renamed to anything, still moves it.
+    refused([value(11, '6/0', 0), value(12, '2', 1), value(13, '8', 2)], /moves the label "6\/0" from value 13 \(now "6-0"\) to value 11/);
+    refused([value(11, '4', 0), value(12, '4 ', 1), value(13, '6/0', 2)], /gives values 11 and 12 the same label/);
+    refused([value(11, '4', 0), value(12, '2', 1)], /must name exactly the values the "before" read holds \(11, 12, 13\), not 11, 12/);
+    assert.throws(() => classify({ ...sizesRequest(SIZES), before: { display_name: 'Fly Sizes' } }), /the "before" read has no option_values/);
+    const swapped = { ...sizesRequest([value(11, '2', 1), value(12, '4', 0), value(13, '6-0', 2)]) };
+    assert.equal(classify(swapped, { mode: 'restore' }).key, 'option 101/50');
+    // The real Fly Sizes plan: renames in place and a new order, never a label moved.
+    assert.equal(checkRequests([sizesRequest([value(11, '4', 2), value(12, '2', 1), value(13, '6/0', 0)])]).length, 1);
+});
+
+test('a plan makes at most one image the thumbnail of each product', () => {
+    const second = { ...imageRequest, path: '/v3/catalog/products/101/images/8' };
+    assert.throws(() => checkRequests([imageRequest, second]), error => error.name === 'Refused' && /request 2: product 101 already gets a new thumbnail from request 1: one per product, or the second clears the first/.test(error.message));
+    assert.equal(checkRequests([imageRequest, { ...altRequest }]).length, 2, 'a description on another image of the product is fine');
+});
+
+test('a plan names the store it was made for', () => {
+    const plan = {
+        format: PLAN_FORMAT, ticket: '18', job: 'fly-sizes', requests: [optionRequest()], digest: null,
+    };
+    plan.digest = planDigest(plan);
+    assert.throws(() => readPlan(JSON.stringify(plan)), error => error.name === 'Refused' && /the plan names no store \(store_hash\)/.test(error.message));
+    const blank = { ...plan, store_hash: ' ' };
+    blank.digest = planDigest(blank);
+    assert.throws(() => readPlan(JSON.stringify(blank)), /names no store/);
 });
 
 test('a plan may not give two values the same sort_order; a restore may put back what it read', () => {

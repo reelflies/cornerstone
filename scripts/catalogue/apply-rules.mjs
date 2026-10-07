@@ -17,7 +17,10 @@
 // Never: a POST or a DELETE, variants, prices, inventory, categories, channels, or any other
 // field of these objects. A restore may write the empty values the snapshot read (an empty
 // description, no brand, no category); a plan may not. A plan may only add categories (it never
-// drops a product from a category), and gives each option value its own sort_order.
+// drops a product from a category), gives each option value its own sort_order, sends exactly the
+// value ids its `before` read holds, never puts one value's label on another value id or two
+// values under one label, makes at most one image per product the thumbnail, and names the store
+// it was made for. The diff names each value by its id, so Shaun sees which value each label is on.
 //
 // A request may carry `prior: { job, before }`: it is planned on the result of that job's plan
 // (two jobs that write the same option, such as Fly Sizes and the single-size defaults), and the
@@ -73,6 +76,34 @@ function optionValuesProblems(values, mode) {
     return problems;
 }
 
+// A label as a size: case and spaces aside, and the aught spellings 6-0 and 6/0 as one.
+const labelKey = label => String(label).trim().toLowerCase().replace(/^(\d+)\s*[-/]\s*0$/, '$1/0');
+
+// A plan's option_values against its `before` read. Each value id carries its variants' SKU,
+// price and stock, so a plan may rename a value or move it in the order, but never put one
+// value's label on another: the order the store shows would read the same, and customers would
+// buy another variant under that size. Two values with one label are refused too.
+function labelProblems(values, before) {
+    if (!isObject(before) || !Array.isArray(before.option_values)) return ['the "before" read has no option_values, so the plan can\'t show which value each label is on'];
+    const problems = [];
+    const sent = values.map(value => value.id).sort((a, b) => a - b);
+    const held = before.option_values.map(value => value.id).sort((a, b) => a - b);
+    if (!isDeepStrictEqual(sent, held)) problems.push(`option_values must name exactly the values the "before" read holds (${held.join(', ')}), not ${sent.join(', ')}`);
+    const owners = new Map();
+    values.forEach(value => {
+        const key = labelKey(value.label);
+        if (owners.has(key)) problems.push(`option_values gives values ${owners.get(key)} and ${value.id} the same label "${value.label.trim()}"`);
+        else owners.set(key, value.id);
+    });
+    const was = new Map(before.option_values.map(value => [value.id, value]));
+    const relabelled = values.filter(value => was.has(value.id) && labelKey(was.get(value.id).label) !== labelKey(value.label));
+    relabelled.forEach(value => {
+        const owner = before.option_values.find(other => other.id !== value.id && labelKey(other.label) === labelKey(value.label));
+        if (owner) problems.push(`option_values moves the label "${value.label}" from value ${owner.id}${owner.label === value.label ? '' : ` (now "${owner.label}")`} to value ${value.id}: a plan may rename a value, but never give it another value's label`);
+    });
+    return problems;
+}
+
 function bodyProblems(body, mode) {
     const empty = mode === 'restore';
     const problems = [];
@@ -111,6 +142,10 @@ export function classify(request, { mode = 'apply' } = {}) {
     if ('prior' in request && !(isObject(request.prior) && sameKeys(request.prior, ['before', 'job']) && JOB.test(request.prior.job) && isObject(request.prior.before))) {
         throw new Refused(`PUT ${request.path}: prior must be { job, before }: the job whose plan this one is planned on, and the object as it reads before that plan`);
     }
+    if (mode === 'apply' && 'option_values' in request.body) {
+        const labels = labelProblems(request.body.option_values, request.before);
+        if (labels.length) throw new Refused(`PUT ${request.path}: ${labels.join('; ')}`);
+    }
     if (mode === 'apply' && 'categories' in request.body) {
         if (!Array.isArray(request.before.categories)) throw new Refused(`PUT ${request.path}: the "before" read has no categories list, so the plan can't show it only adds`);
         const dropped = request.before.categories.filter(id => !request.body.categories.includes(id));
@@ -138,17 +173,24 @@ export function classify(request, { mode = 'apply' } = {}) {
     return { ...what, productId, key: `product ${productId}` };
 }
 
-// Every request checked, or Refused listing every problem. One request per object.
+// Every request checked, or Refused listing every problem. One request per object, and one new
+// thumbnail per product: making an image the thumbnail clears the one before, so a second request
+// for the same product would quietly undo the first.
 export function checkRequests(requests, { mode = 'apply' } = {}) {
     if (!Array.isArray(requests) || !requests.length || requests.length > MAX_REQUESTS) throw new Refused(`a plan needs 1 to ${MAX_REQUESTS} requests`);
     const problems = [];
     const items = [];
     const seen = new Map();
+    const thumbnails = new Map();
     requests.forEach((request, index) => {
         try {
             const what = classify(request, { mode });
             if (seen.has(what.key)) problems.push(`request ${index + 1}: ${what.key} is already written by request ${seen.get(what.key) + 1}: one request per object`);
             else seen.set(what.key, index);
+            if (what.kind === 'image' && request.body.is_thumbnail === true) {
+                if (thumbnails.has(what.productId)) problems.push(`request ${index + 1}: product ${what.productId} already gets a new thumbnail from request ${thumbnails.get(what.productId) + 1}: one per product, or the second clears the first`);
+                else thumbnails.set(what.productId, index);
+            }
             items.push({ index, request, what });
         } catch (error) {
             if (error.name !== 'Refused') throw error;
@@ -173,6 +215,7 @@ export function readPlan(textContent) {
     if (plan.digest !== planDigest(plan)) throw new Refused('the plan\'s digest doesn\'t match its contents: it was edited after the dry run made it. Run the dry run again');
     if (plan.ticket !== TICKET) throw new Refused(`the plan's ticket is ${JSON.stringify(plan.ticket)}, not ${TICKET}`);
     if (typeof plan.job !== 'string' || !JOB.test(plan.job)) throw new Refused(`the plan's job ${JSON.stringify(plan.job)} isn't a job name`);
+    if (typeof plan.store_hash !== 'string' || !plan.store_hash.trim()) throw new Refused('the plan names no store (store_hash), so apply can\'t check it was made for this one. Run the dry run again');
     return { plan, items: checkRequests(plan.requests) };
 }
 
@@ -319,19 +362,33 @@ export function judge(items, store) {
 // One line per change, derived from the store as read now (never from the plan's own copy).
 const quote = value => JSON.stringify(value ?? '');
 // In the store's order (sort_order, then id), as stateOf reads it: a request lists its values in
-// any order, and only their sort_order says where the store shows them.
-const labels = state => [...state.option_values].sort(byOrder).map(value => value.label).join(', ');
-const defaults = state => [...state.option_values].sort(byOrder).filter(value => value.is_default).map(value => value.label).join(', ') || 'none';
+// any order, and only their sort_order says where the store shows them. Each label carries its
+// value id ("6/0 #13"), because a value's variants hang on the id: a reorder and a relabel that
+// leave the same labels in the same order still read differently.
+const ordered = state => [...state.option_values].sort(byOrder);
+const tagged = values => values.map(value => `${value.label} #${value.id}`).join(', ');
+const defaults = state => tagged(ordered(state).filter(value => value.is_default)) || 'none';
+
+function valueChanges(now, after) {
+    const was = ordered(now);
+    const will = ordered(after);
+    const changes = [];
+    const orders = values => values.map(value => value.sort_order).join(', ');
+    if (!isDeepStrictEqual(was.map(value => value.id), will.map(value => value.id))) changes.push(`order ${tagged(was)} -> ${tagged(will)}`);
+    else if (orders(was) !== orders(will)) changes.push(`sort_order ${orders(was)} -> ${orders(will)} (same order)`);
+    const labelOf = new Map(was.map(value => [value.id, value.label]));
+    will.filter(value => labelOf.get(value.id) !== value.label).forEach(value => changes.push(`value ${value.id} ${quote(labelOf.get(value.id))} -> ${quote(value.label)}`));
+    if (defaults(now) !== defaults(after)) changes.push(`default ${defaults(now)} -> ${defaults(after)}`);
+    return changes;
+}
 
 export function diffLine({ what, request }, now, productName = '') {
     const after = stateAfter({ what, request });
     const name = productName ? ` ${quote(productName)}` : '';
     const changes = [];
     for (const key of Object.keys(request.body).sort()) {
-        if (key === 'option_values') {
-            if (labels(now) !== labels(after)) changes.push(`values ${labels(now)} -> ${labels(after)}`);
-            if (defaults(now) !== defaults(after)) changes.push(`default ${defaults(now)} -> ${defaults(after)}`);
-        } else if (key === 'is_thumbnail') changes.push(`thumbnail image ${now.thumbnail_id ?? 'none'} -> ${what.imageId}`);
+        if (key === 'option_values') changes.push(...valueChanges(now, after));
+        else if (key === 'is_thumbnail') changes.push(`thumbnail image ${now.thumbnail_id ?? 'none'} -> ${what.imageId}`);
         else if (key === 'categories') changes.push(`categories [${now.categories.join(', ')}] -> [${after.categories.join(', ')}]`);
         else if (key === 'brand_id') changes.push(`brand_id ${now.brand_id} -> ${after.brand_id}`);
         else changes.push(`${key} ${quote(now[key])} -> ${quote(after[key])}`);

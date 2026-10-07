@@ -97,6 +97,7 @@ async function run({
         job,
         sourceFile,
         sourceSha,
+        storeHash: STORE_HASH,
         root,
         logRoot: root,
         operator: 'test',
@@ -185,7 +186,7 @@ test('an apply sends exactly the plan after the go-ahead, logging before and aft
     assert.deepEqual(store.product(101).options[0].option_values.map(item => item.label), ['2/0', '12']);
     assert.deepEqual(store.product(101).images.map(image => image.is_thumbnail), [false, true]);
     assert.equal(store.product(102).brand_id, 411);
-    assert.ok(lines.includes('  product 101 "Adams Dry Fly", option 50: values 12, 2-0 -> 2/0, 12'));
+    assert.ok(lines.includes('  product 101 "Adams Dry Fly", option 50: order 12 #1, 2-0 #2 -> 2/0 #2, 12 #1; value 2 "2-0" -> "2/0"'));
     assert.ok(lines.some(line => /^To put it back: node scripts\/catalogue\/apply\.mjs --restore .*-18-mixed-before\.json$/.test(line)));
     assert.ok(lines.some(line => /Same-day smoke tests/.test(line)));
     const rows = readLogRows(root);
@@ -196,6 +197,7 @@ test('an apply sends exactly the plan after the go-ahead, logging before and aft
     assert.ok(rows.every(row => row.channel === 'store-wide' && row.mode === 'approved' && row.ticket === '18' && row.action === 'update'));
     const snapshot = JSON.parse(fs.readFileSync(result.snapshot, 'utf8'));
     assert.deepEqual(snapshot.items.map(item => item.before), REQUESTS.map(request => request.before));
+    assert.equal(snapshot.store_hash, STORE_HASH, 'the before-snapshot names the store, so a restore can check it');
 });
 
 test('a stale plan is refused whole, before the go-ahead, and nothing is written', async () => {
@@ -329,10 +331,20 @@ test('the restore trial: one product applied, then restored from its snapshot to
     assert.equal(rest.result.written, 3, 'once restored, the whole plan is pending again, not stale');
 });
 
-test('a restore leaves alone an object someone changed since the apply', async () => {
+// An apply of a real plan file, so a restore can find the plan its snapshot names.
+async function applyPlan(root, store, requests = REQUESTS, job = 'mixed', product = null) {
+    const source = loadSource({
+        mode: 'apply', file: writePlan(root, requests, job), product, root,
+    });
+    return run({
+        root, store, items: source.items, job, product, sourceFile: source.file, sourceSha: source.sourceSha,
+    });
+}
+
+test('a restore is refused whole when someone changed one of its objects since the apply', async () => {
     const root = freshRoot();
     const store = fakeCatalogue({ products: PRODUCTS, brands: BRANDS });
-    const first = await run({ root, store, items: checkRequests([REQUESTS[2]]) });
+    const first = await applyPlan(root, store, [REQUESTS[2]], 'brand');
     await store.fetch(`https://api.bigcommerce.com/stores/${STORE_HASH}/v3/catalog/products/102`, { method: 'PUT', body: JSON.stringify({ brand_id: 361 }) });
     const restore = loadSource({
         mode: 'restore', file: first.result.snapshot, product: null, root, logRoot: root,
@@ -556,7 +568,7 @@ test('a plan planned on another plan\'s result waits, writing nothing, until tha
         root, store, items: checkRequests([DEFAULT_ON_TOP]), job: 'single-size-defaults',
     });
     assert.equal(result.written, 1);
-    assert.ok(lines.includes('  product 103 "Inferno Popper", option 60: default none -> 2/0'));
+    assert.ok(lines.includes('  product 103 "Inferno Popper", option 60: default none -> 2/0 #9'));
     assert.deepEqual(store.product(103).options[0].option_values, [value(9, '2/0', 0, true)]);
 });
 
@@ -580,16 +592,76 @@ test('--check counts the requests that wait for another plan apart from the stal
 
 // --- A restore is tied to a real apply: its snapshot's sha256 is in log.jsonl ------------------
 
-function writeSnapshot(root, items) {
+function writeSnapshot(root, items, { storeHash = STORE_HASH, planSha = 'a'.repeat(64) } = {}) {
     const folder = path.join(root, 'snapshots');
     fs.mkdirSync(folder, { recursive: true });
     const file = path.join(folder, `2026-10-06T12-00-00-18-forged-${++count}-before.json`);
     const textContent = `${JSON.stringify({
-        format: SNAPSHOT_FORMAT, ticket: '18', job: 'mixed', mode: 'apply', items,
+        format: SNAPSHOT_FORMAT, ticket: '18', job: 'mixed', mode: 'apply', source_sha256: planSha, ...(storeHash === null ? {} : { store_hash: storeHash }), items,
     }, null, 2)}\n`;
     fs.writeFileSync(file, textContent);
     return { file, sha: sha256(textContent) };
 }
+
+// An intent row for `request`, as apply logs it before it sends.
+function logIntent(root, request, { snapshotSha, planSha }) {
+    appendLogRow(root, logRow({
+        row: 'intent', date: '2026-10-06T12:00:00.000Z', channel: 'store-wide', object: 'catalog/product', id: 'x', action: 'update', snapshot_sha256: snapshotSha, ticket: '18', operator: 'test', mode: 'approved', plan_sha256: planSha, request: 0, method: request.method, path: request.path,
+    }));
+}
+
+// A plan file on disk, and its sha256 as apply reads it.
+function planOnDisk(root, requests, job, folder = 'plans') {
+    const file = writePlan(root, requests, job);
+    const moved = path.join(root, folder, path.basename(file));
+    if (folder !== 'plans') {
+        fs.mkdirSync(path.join(root, folder), { recursive: true });
+        fs.renameSync(file, moved);
+    }
+    return sha256(fs.readFileSync(moved, 'utf8'));
+}
+
+test('a restore refuses a snapshot that names no store, and one taken on another store before it asks for a token', async () => {
+    const root = freshRoot();
+    const planSha = planOnDisk(root, [REQUESTS[2]], 'brand');
+    const nameless = writeSnapshot(root, [{ request: REQUESTS[2], before: { brand_id: 0, categories: [434] } }], { storeHash: null, planSha });
+    logIntent(root, REQUESTS[2], { snapshotSha: nameless.sha, planSha });
+    assert.throws(() => loadSource({
+        mode: 'restore', file: nameless.file, product: null, root, logRoot: root,
+    }), error => error.name === 'Refused' && /this snapshot names no store \(store_hash\)/.test(error.message));
+    const elsewhere = writeSnapshot(root, [{ request: REQUESTS[2], before: { brand_id: 0, categories: [434] } }], { storeHash: 'zz99yy88', planSha });
+    logIntent(root, REQUESTS[2], { snapshotSha: elsewhere.sha, planSha });
+    const { attempt, events } = prepare(root, { mode: 'restore', file: elsewhere.file, product: null });
+    await assert.rejects(attempt, error => error.name === 'Refused' && new RegExp(`the snapshot was taken on store zz99yy88, and this is ${STORE_HASH}`).test(error.message));
+    assert.deepEqual(events, ['tooling', 'store hash'], 'no token asked for');
+});
+
+test('a restore is tied to the plan its apply ran: the log rows name it, it is on disk, and it sent every request the snapshot holds', () => {
+    const root = freshRoot();
+    const planSha = planOnDisk(root, [{ ...REQUESTS[2], body: { categories: [434, 999] } }], 'uncategorised');
+    const load = file => () => loadSource({
+        mode: 'restore', file, product: null, root, logRoot: root,
+    });
+    // A planted snapshot whose request also writes brand_id, which the plan never wrote.
+    const widened = { ...REQUESTS[2], body: { categories: [434, 999], brand_id: 411 } };
+    const planted = writeSnapshot(root, [{ request: widened, before: { brand_id: 0, categories: [434] } }], { planSha });
+    logIntent(root, widened, { snapshotSha: planted.sha, planSha });
+    assert.throws(load(planted.file), error => error.name === 'Refused' && /the snapshot holds requests its plan doesn't send \(product 102\)/.test(error.message));
+    // Log rows that name another plan than the snapshot does.
+    const honest = { ...REQUESTS[2], body: { categories: [434, 999] } };
+    const crossed = writeSnapshot(root, [{ request: honest, before: { brand_id: 0, categories: [434] } }], { planSha });
+    logIntent(root, honest, { snapshotSha: crossed.sha, planSha: 'b'.repeat(64) });
+    assert.throws(load(crossed.file), /log\.jsonl ties this snapshot's writes to plan bbbbbbbb…, not the plan it names \([0-9a-f]{8}…\)/);
+    // A plan that isn't on disk.
+    const lost = writeSnapshot(root, [{ request: honest, before: { brand_id: 0, categories: [434] } }], { planSha: 'c'.repeat(64) });
+    logIntent(root, honest, { snapshotSha: lost.sha, planSha: 'c'.repeat(64) });
+    assert.throws(load(lost.file), /the plan this snapshot was applied from \(sha256 cccccccc…\) isn't in .*plans or superseded/);
+    // The real thing: the plan, moved to superseded/ since, is still found.
+    const kept = planOnDisk(root, [honest], 'kept', 'superseded');
+    const real = writeSnapshot(root, [{ request: honest, before: { brand_id: 0, categories: [434] } }], { planSha: kept });
+    logIntent(root, honest, { snapshotSha: real.sha, planSha: kept });
+    assert.deepEqual(load(real.file)().items.map(item => [item.what.key, item.request.body]), [['product 102', { categories: [434] }]]);
+});
 
 test('a restore refuses a snapshot no apply logged, so a planted one can\'t write', () => {
     const root = freshRoot();
@@ -613,7 +685,7 @@ test('a restore refuses a snapshot whose logged writes it doesn\'t hold', () => 
 test('a restore puts back only what the apply sent; what it never sent is listed', async () => {
     const root = freshRoot();
     const store = fakeCatalogue({ products: PRODUCTS, brands: BRANDS }, { answers: { 'PUT /v3/catalog/products/101/images/7': [{ status: 422, body: { title: 'Invalid' } }] } });
-    const first = await run({ root, store, items: checkRequests(REQUESTS) });
+    const first = await applyPlan(root, store);
     assert.match(first.result.halted, /image 101\/7 got 422/);
     const restore = loadSource({
         mode: 'restore', file: first.result.snapshot, product: null, root, logRoot: root,

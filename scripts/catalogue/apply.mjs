@@ -20,9 +20,10 @@
 //    release calendar, with a warning from T-14 (the jobs were meant to run before the freeze)
 // 2. reads the plan and checks its digest and every request (apply-rules.mjs: four PUTs, each
 //    with its own fields; no creates, no deletes), and writes the exact requests to a file. A
-//    restore reads only a before-snapshot whose sha256 log.jsonl ties to that apply's writes
+//    restore reads only a before-snapshot whose sha256 log.jsonl ties to that apply's writes,
+//    and whose requests are all in the plan those log rows name (found by its sha256)
 // 3. refuses unless this checkout's store and catalogue tooling are origin/master's
-//    (apply-tooling.mjs), and unless the plan was made for this store
+//    (apply-tooling.mjs), and unless the plan (or the snapshot) was made on this store
 // 4. asks for the token at a hidden prompt (used for this run, never stored), and takes the
 //    store-write lock (one store or catalogue write at a time on this Mac)
 // 5. reads every object the plan writes, fresh, and refuses the whole plan if any of them changed
@@ -31,15 +32,16 @@
 //    is skipped
 // 6. prints the diff it derived from that read (never the plan's own copy), and asks Shaun to
 //    type the first 8 characters of the plan's sha256 (confirmSourceSha)
-// 7. writes the before-snapshot (~/reelflies/catalog/snapshots/), then sends the requests in
-//    batches of 50: an intent row in ~/reelflies/store-snapshots/log.jsonl before each, then a
+// 7. writes the before-snapshot (~/reelflies/catalog/snapshots/, naming the store), then sends
+//    the requests in batches of 50: an intent row in ~/reelflies/store-snapshots/log.jsonl before each, then a
 //    re-read of the batch and a result row for each. Nothing more is sent after an answer that
 //    isn't a success; a request that doesn't read back as planned stops the run after its batch
 // 8. writes the after-snapshot, and prints the restore command and the same-day smoke tests.
 //
-// A restore runs the same steps, from a before-snapshot: each object the apply sent goes back to
-// what that snapshot read. If someone changed any of them again since, the whole restore is
-// refused and nothing is sent; the other products are then restored one at a time with --product.
+// A restore runs the same steps, store check included, from a before-snapshot: each object the
+// apply sent goes back to what that snapshot read, and only the fields its plan wrote. If someone
+// changed any of them again since, the whole restore is refused and nothing is sent; the other
+// products are then restored one at a time with --product.
 
 import fs from 'fs';
 import os from 'os';
@@ -196,8 +198,9 @@ export function showRequests({
 }
 
 // Steps 5 to 8, once the token is in hand and the lock taken. `confirm()` asks for the go-ahead.
+// The before-snapshot records `storeHash`, so a restore from it can check it is for this store.
 export async function runWrites({
-    items, client, tap, mode, job, sourceFile, sourceSha, root, logRoot, operator, confirm, say, now = new Date(), wait, product = null,
+    items, client, tap, mode, job, sourceFile, sourceSha, storeHash, root, logRoot, operator, confirm, say, now = new Date(), wait, product = null,
 }) {
     const action = mode === 'restore' ? 'restore' : 'update';
     const store = await readStore(client, tap, items, { wait });
@@ -233,6 +236,7 @@ export async function runWrites({
         mode,
         source: sourceFile,
         source_sha256: sourceSha,
+        store_hash: storeHash,
         product,
         taken_at: now.toISOString(),
         reads_sha256: store.sha256,
@@ -313,19 +317,29 @@ export async function runWrites({
     };
 }
 
-// The writes log.jsonl holds for a before-snapshot: "METHOD path" of each ticket-18 intent row
-// whose snapshot_sha256 is the snapshot's.
-function loggedWrites(logRoot, snapshotSha) {
-    const rows = readLogRows(logRoot).filter(row => row.row === 'intent' && row.ticket === TICKET && row.action === 'update' && row.snapshot_sha256 === snapshotSha);
-    return new Set(rows.map(row => `${row.method} ${row.path}`));
-}
+// The ticket-18 intent rows log.jsonl holds for a before-snapshot: those whose snapshot_sha256 is
+// the snapshot's.
+const loggedRows = (logRoot, snapshotSha) => readLogRows(logRoot).filter(row => row.row === 'intent' && row.ticket === TICKET && row.action === 'update' && row.snapshot_sha256 === snapshotSha);
 
 const writeKey = request => `${request?.method} ${request?.path}`;
+const short = sha => `${String(sha).slice(0, 8)}…`;
+
+// The plan a before-snapshot was applied from: the file in plans/ (or superseded/, where an
+// older plan is moved) whose sha256 is the snapshot's source_sha256. null when there is none.
+function planBySha(root, sha) {
+    const files = ['plans', 'superseded']
+        .map(folder => path.join(root, folder))
+        .filter(folder => fs.existsSync(folder))
+        .flatMap(folder => fs.readdirSync(folder).filter(name => name.endsWith('.json')).map(name => path.join(folder, name)));
+    const found = files.map(candidate => fs.readFileSync(candidate, 'utf8')).find(textContent => sha256(textContent) === sha);
+    return found ? readPlan(found).plan : null;
+}
 
 // The requests a run sends, from a plan or a before-snapshot. Returns { items, job, sourceSha,
-// storeHash }. A restore is tied to a real apply: the snapshot's sha256 must be the one log.jsonl
-// recorded for that apply's writes, it must hold every write logged under it, and only what was
-// sent is put back.
+// storeHash }. A restore is tied to a real apply: the snapshot names its store, its sha256 must be
+// the one log.jsonl recorded for that apply's writes, those rows must name the plan the snapshot
+// names, that plan must be on disk and send every request the snapshot holds, the snapshot must
+// hold every write logged under it, and only what was sent is put back.
 export function loadSource({
     mode, file, product, root, logRoot,
 }) {
@@ -339,12 +353,21 @@ export function loadSource({
             throw new Refused('this file isn\'t a catalogue snapshot: it isn\'t JSON');
         }
         if (snapshot?.format !== SNAPSHOT_FORMAT || !Array.isArray(snapshot.items) || snapshot.mode !== 'apply') throw new Refused(`this file isn't a catalogue before-snapshot of an apply (format ${SNAPSHOT_FORMAT})`);
+        if (typeof snapshot.store_hash !== 'string' || !snapshot.store_hash.trim()) throw new Refused('this snapshot names no store (store_hash), so a restore can\'t check it is for this one');
         const sourceSha = sha256(textContent);
-        const sent = loggedWrites(logRoot, sourceSha);
-        if (!sent.size) throw new Refused(`log.jsonl has no ticket ${TICKET} write from this snapshot (sha256 ${sourceSha.slice(0, 8)}…): a restore puts back only what an apply wrote, and an apply logs each write before it sends it`);
+        const rows = loggedRows(logRoot, sourceSha);
+        if (!rows.length) throw new Refused(`log.jsonl has no ticket ${TICKET} write from this snapshot (sha256 ${short(sourceSha)}): a restore puts back only what an apply wrote, and an apply logs each write before it sends it`);
+        const sent = new Set(rows.map(writeKey));
         const held = new Set(snapshot.items.map(entry => writeKey(entry.request)));
         const missing = [...sent].filter(key => !held.has(key));
         if (missing.length) throw new Refused(`log.jsonl names a write this snapshot doesn't hold (${missing.join(', ')}), so it isn't the snapshot that apply wrote`);
+        const crossed = [...new Set(rows.map(row => row.plan_sha256).filter(sha => sha !== snapshot.source_sha256))];
+        if (crossed.length) throw new Refused(`log.jsonl ties this snapshot's writes to plan ${crossed.map(short).join(', ')}, not the plan it names (${short(snapshot.source_sha256)}), so it isn't the snapshot that apply wrote`);
+        const plan = planBySha(root, snapshot.source_sha256);
+        if (!plan) throw new Refused(`the plan this snapshot was applied from (sha256 ${short(snapshot.source_sha256)}) isn't in ${path.join(root, 'plans')} or superseded/, so a restore can't check it puts back only what that plan wrote`);
+        const planned = new Set(plan.requests.map(request => canonicalJson(request)));
+        const unplanned = snapshot.items.filter(entry => !planned.has(canonicalJson(entry.request)));
+        if (unplanned.length) throw new Refused(`the snapshot holds requests its plan doesn't send (${unplanned.map(entry => classify(entry.request).key).join(', ')}), so it isn't the snapshot that apply wrote`);
         const restored = restoreRequests({ ...snapshot, items: snapshot.items.filter(entry => sent.has(writeKey(entry.request))) }, { productId: product });
         const neverSent = snapshot.items.filter(entry => !sent.has(writeKey(entry.request))).map(entry => classify(entry.request))
             .filter(what => product === null || what.productId === product)
@@ -356,7 +379,7 @@ export function loadSource({
             throw new Refused(`nothing to restore${skipped.length ? `: ${skipped.join('; ')}` : why}`);
         }
         return {
-            items: checkRequests(requests, { mode: 'restore' }), job: `restore-${snapshot.job}`, sourceSha, file: real, skipped, storeHash: null,
+            items: checkRequests(requests, { mode: 'restore' }), job: `restore-${snapshot.job}`, sourceSha, file: real, skipped, storeHash: snapshot.store_hash,
         };
     }
     const real = fileInside(file, path.join(root, 'plans'), 'a plan');
@@ -369,6 +392,11 @@ export function loadSource({
     };
 }
 
+// Why a plan or snapshot from another store is refused.
+const storeMismatch = (mode, theirs, ours) => (mode === 'restore'
+    ? `the snapshot was taken on store ${theirs}, and this is ${ours}`
+    : `the plan was made for store ${theirs}, and this is ${ours}`);
+
 // --check: GETs only, with the read-only token. Exits 1 if any request is stale. A request that
 // waits for the plan it is planned on isn't stale: that plan applies first, and this one as it is.
 async function check({
@@ -378,7 +406,7 @@ async function check({
         mode: 'apply', file, product, root,
     });
     const storeHash = await commandStoreHash();
-    if (source.storeHash && source.storeHash !== storeHash) throw new Refused(`the plan was made for store ${source.storeHash}, and this is ${storeHash}`);
+    if (source.storeHash !== storeHash) throw new Refused(storeMismatch('apply', source.storeHash, storeHash));
     const { token, source: from } = readStoreToken('read');
     secrets.push(token);
     say(`Reading with ${from} (GET only)…`);
@@ -431,7 +459,7 @@ export async function prepareWrite({
     const problem = toolingProblem();
     if (problem) throw new Refused(problem);
     const storeHash = await lookUpStoreHash();
-    if (source.storeHash && source.storeHash !== storeHash) throw new Refused(`the plan was made for store ${source.storeHash}, and this is ${storeHash}`);
+    if (source.storeHash !== storeHash) throw new Refused(storeMismatch(options.mode, source.storeHash, storeHash));
     const token = await askToken();
     secrets.push(token);
     const lock = takeLock(`scripts/catalogue/apply.mjs ${path.basename(source.file)}`);
@@ -482,6 +510,7 @@ async function main(argv) {
             job: source.job,
             sourceFile: source.file,
             sourceSha: source.sourceSha,
+            storeHash: prepared.storeHash,
             root,
             logRoot,
             operator: operatorName(),
