@@ -12,8 +12,10 @@
 //   const stop = describeRunProblems(result);                        // null, or why the prune stops
 //
 // A theme is deleted only when every rule below lets it go. Each rule keeps a theme on its own:
-//   - its name in My Themes is exactly "ReelFlies" (no other theme is ever a candidate: not
-//     Hero-2024, Cavio or the Marketplace Cornerstone, whatever RELEASES.md says)
+//   - its name in My Themes is exactly "ReelFlies", or "ReelFlies (n)": the store names an upload
+//     that way while My Themes already holds a "ReelFlies", as it did the first agent push (W0-3b;
+//     release-diff.mjs isStoreNameFor). No other theme is ever a candidate: not Hero-2024, Cavio
+//     or the Marketplace Cornerstone, whatever RELEASES.md says
 //   - RELEASES.md records its uuid as a release (an unknown ReelFlies uuid is kept)
 //   - it is active on no channel: every channel's active theme was read (activeByChannel), and
 //     channels 1, 1855224, 1895766 and every channel RELEASES.md names must be among them
@@ -25,13 +27,20 @@
 //   - it isn't the latest or the previous release on 1895766 or channel 1, nor the theme either
 //     ran before its latest release: those are the rollback (ticket 53 reader)
 //   - it isn't one of the newest three, ranked by its newest entry's time in RELEASES.md (the file's
-//     order for two in the same minute, as W0-2's lastRelease), never by name, version or the
-//     store's updated_at: every build is "ReelFlies" 6.22.0 today (decision 9)
+//     order for two in the same minute, as W0-2's lastRelease), never by name (nor the n in
+//     "ReelFlies (n)"), version or the store's updated_at: every build is "ReelFlies" 6.22.0
+//     today (decision 9)
 
 import { LIVE_CHANNELS, MAX_THEMES } from './release-checks.mjs';
+import { isStoreNameFor } from './release-diff.mjs';
 import { releaseBuilds } from './release-log.mjs';
 
 export const PRUNE_NAME = 'ReelFlies';
+// A ReelFlies build is a theme My Themes names PRUNE_NAME, or PRUNE_NAME followed by " (n)", the
+// name the store gives a repeat upload while My Themes holds a "ReelFlies" (W0-3b).
+const isPruneName = name => isStoreNameFor(name, PRUNE_NAME);
+// How the plan's text names them.
+const PRUNE_NAMES = `${PRUNE_NAME} or "${PRUNE_NAME} (n)"`;
 export const KEEP_NEWEST = 3;
 // The channels whose previous release is the rollback (ticket 53 reader).
 export const ROLLBACK_CHANNELS = Object.freeze([1895766, 1]);
@@ -80,7 +89,7 @@ function requiredChannels(markdown) {
 // channel read. markdown: RELEASES.md. Returns { themeCount, channels, running, builds, toDelete, others }:
 // builds are the ReelFlies themes, recorded ones newest first and then the unknown ones, each
 // { uuid, name, record, action: 'keep' | 'delete', reasons }; toDelete lists the ones to delete,
-// oldest first; others are the themes not named ReelFlies, which the prune never touches, each
+// oldest first; others are the themes not named ReelFlies or "ReelFlies (n)", which the prune never touches, each
 // { uuid, name, flaggedActive }; running is each channel's active theme, { channel, uuid, name },
 // for the plan's text.
 // Throws when a required channel wasn't read, or a channel read has no active theme: the prune
@@ -96,7 +105,7 @@ export function planPrune({ themes, activeByChannel, markdown }) {
     const activeOn = id => channels.filter(channel => activeByChannel[channel] === id);
     const records = newestRecords(markdown);
     const rollback = rollbackReasons(markdown);
-    const candidates = themes.filter(item => item.name === PRUNE_NAME);
+    const candidates = themes.filter(item => isPruneName(item.name));
     const recorded = candidates.filter(item => records.has(item.uuid)).sort((a, b) => newerFirst(records.get(a.uuid), records.get(b.uuid)));
     const unknown = candidates.filter(item => !records.has(item.uuid));
     const builds = [...recorded, ...unknown].map(item => {
@@ -119,7 +128,7 @@ export function planPrune({ themes, activeByChannel, markdown }) {
         running: channels.map(channel => ({ channel, uuid: activeByChannel[channel], name: names.get(activeByChannel[channel]) || null })),
         builds,
         toDelete: builds.filter(build => build.action === 'delete').reverse(),
-        others: themes.filter(item => item.name !== PRUNE_NAME).map(item => ({ uuid: item.uuid, name: item.name, flaggedActive: item.is_active === true })),
+        others: themes.filter(item => !isPruneName(item.name)).map(item => ({ uuid: item.uuid, name: item.name, flaggedActive: item.is_active === true })),
     };
 }
 
@@ -130,7 +139,7 @@ const describeBuild = ({ uuid, name, record }) => (record
 // The plan as lines for the terminal: one per ReelFlies theme, then the others and the count.
 export function describePlan(plan) {
     const lines = [
-        `My Themes holds ${plan.themeCount} of ${MAX_THEMES} themes; ${plan.builds.length} named ${PRUNE_NAME}; channels checked: ${plan.channels.join(', ')}`,
+        `My Themes holds ${plan.themeCount} of ${MAX_THEMES} themes; ${plan.builds.length} named ${PRUNE_NAMES}; channels checked: ${plan.channels.join(', ')}`,
         `  each channel runs: ${plan.running.map(({ channel, uuid, name }) => `${channel} ${name || 'a theme not in My Themes'} (${uuid.slice(0, 8)})`).join(', ')}`,
     ];
     for (const build of plan.builds) {
@@ -141,7 +150,7 @@ export function describePlan(plan) {
     }
     if (plan.others.length) {
         const others = plan.others.map(other => `${other.name} (${other.uuid.slice(0, 8)}${other.flaggedActive ? ', flagged is_active' : ''})`);
-        lines.push(`  ${plan.others.length} other theme(s) aren't named ${PRUNE_NAME}, so the prune never touches them: ${others.join(', ')}`);
+        lines.push(`  ${plan.others.length} other theme(s) aren't named ${PRUNE_NAMES}, so the prune never touches them: ${others.join(', ')}`);
     }
     lines.push(`  ${plan.toDelete.length} to delete, ${plan.builds.length - plan.toDelete.length} ${PRUNE_NAME} theme(s) kept`);
     return lines;
