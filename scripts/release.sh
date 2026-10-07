@@ -53,8 +53,9 @@ export RF_RELEASE_STATE="$STATE_DIR/state.json"
 release() { node scripts/release.mjs "$@"; }
 step() { printf '\n== %s\n' "$1"; }
 
-# W0-3: --prune-only prunes My Themes and nothing else. release.mjs refuses any other argument but
-# --dry-run with it, and a release refuses it among its own arguments.
+# W0-3: --prune-only prunes My Themes and nothing else. Any argument that is the flag, with or
+# without a value, sends every argument to `release prune`, which refuses a value and any other
+# argument but --dry-run; a release refuses the flag among its own arguments.
 prune_only=false
 for arg in "$@"; do
     case "$arg" in --prune-only | --prune-only=*) prune_only=true ;; esac
@@ -132,7 +133,7 @@ if [ "${#push_args[@]}" -ne 7 ]; then
 fi
 # stdin is /dev/null: with -a and -c the push asks nothing, unless My Themes is full, when stencil-cli
 # asks which theme(s) to delete. That prompt then fails closed instead of reading an agent's piped
-# input or a key pressed at the terminal: the release never deletes a theme.
+# input or a key pressed at the terminal: the push never deletes a theme (only the prune below does).
 npx stencil "${push_args[@]}" </dev/null 2>&1 | release redact
 
 release verify

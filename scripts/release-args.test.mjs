@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    isPruneOnly, parsePruneArgs, parseReleaseArgs, PRUNE_USAGE, USAGE,
+    parsePruneArgs, parseReleaseArgs, PRUNE_USAGE, USAGE,
 } from './release-args.mjs';
 
 const CA = ['--channel', '1895766', '--variation', 'ReelFlies CA'];
@@ -50,9 +50,6 @@ test('W0-1: the usage line names --confirm-nonprod', () => {
 test('W0-3: --prune-only runs on its own, with or without --dry-run', () => {
     assert.deepEqual(parsePruneArgs(['--prune-only']), { pruneOnly: true, dryRun: false });
     assert.deepEqual(parsePruneArgs(['--dry-run', '--prune-only']), { pruneOnly: true, dryRun: true });
-    assert.equal(isPruneOnly(['--prune-only', '--dry-run']), true);
-    assert.equal(isPruneOnly([...CA, '--dry-run']), false);
-    assert.equal(isPruneOnly([...CA, '--variation=--prune-only']), false, 'only the flag itself, not a value');
     assert.match(PRUNE_USAGE, /^scripts\/release\.sh --prune-only \[--dry-run\]$/);
 });
 

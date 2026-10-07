@@ -5,7 +5,7 @@
 // --dry-run (parsePruneArgs).
 //
 //   import { parseReleaseArgs, resolveTarget, USAGE } from './release-args.mjs';
-//   import { isPruneOnly, parsePruneArgs, PRUNE_USAGE } from './release-args.mjs'; // W0-3
+//   import { parsePruneArgs, PRUNE_USAGE } from './release-args.mjs'; // W0-3
 //
 // Each refusal throws an Error whose message is the one-line reason the operator sees.
 
@@ -127,10 +127,6 @@ export function parseReleaseArgs(argv) {
 }
 
 // --- W0-3: --prune-only --------------------------------------------------------------------
-
-// Whether release.sh runs the prune on its own: any argument that is the flag, with or without a
-// value (parsePruneArgs then refuses a value). A value of another flag never counts.
-export const isPruneOnly = argv => argv.some(arg => splitFlag(arg)[0] === '--prune-only');
 
 // `--prune-only [--dry-run]`, and nothing else: the prune is store-wide, so it names no channel or
 // variation. Returns { pruneOnly: true, dryRun }.
