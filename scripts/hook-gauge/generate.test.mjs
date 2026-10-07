@@ -97,7 +97,7 @@ describe('generate.mjs', () => {
         assert.equal(run('--check', '--file', file).status, 1, 'the committed calibration draws a different partial');
     });
 
-    it('ends in one line naming the problem, not a stack trace, when the calibration can\'t be read or drawn', () => {
+    it('ends in one message naming the problem, not a stack trace, when the calibration can\'t be read or drawn', () => {
         const dir = scratch();
         const calibration = readCalibration();
         const bad = path.join(dir, 'bad.json');

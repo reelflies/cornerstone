@@ -11,6 +11,7 @@
 //   18's names for the aught sizes, for example Fly+Sizes=2%2F0.
 // - normalizeSize(value): a catalogue value in chart spelling. Before ticket 18's rename the
 //   aught values read "1-0" … "6-0", so both spellings are read.
+// - isHyphenAught(value): whether a catalogue value is an aught size still spelled "2-0".
 
 export const CHART_SIZES = Object.freeze([
     '6/0', '5/0', '4/0', '3/0', '2/0', '1/0', '1', '2', '4', '6', '8', '10', '12', '14', '16', '18', '20', '22', '24',
@@ -36,6 +37,14 @@ export function normalizeSize(value) {
     const aught = text.match(AUGHT);
     if (aught) return `${aught[1]}/0`;
     return NUMBER.test(text) ? text : null;
+}
+
+// True for an aught size still spelled with a hyphen ("2-0", "#6-0"), as the catalogue writes it
+// until ticket 18's rename to "2/0". It reads the value as normalizeSize does, so a value that
+// is no hook size ("0-0", "100-0") is never one.
+export function isHyphenAught(value) {
+    const size = normalizeSize(value);
+    return Boolean(size) && size.endsWith('/0') && String(value).includes('-');
 }
 
 export function anchorId(size) {

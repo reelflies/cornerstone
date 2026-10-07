@@ -5,7 +5,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    CHART_SIZES, CHART_URL, FACET_NAME, anchorId, facetParam, isChartSize, normalizeSize,
+    CHART_SIZES, CHART_URL, FACET_NAME, anchorId, facetParam, isChartSize, isHyphenAught, normalizeSize,
 } from './sizes.mjs';
 
 describe('the chart sizes', () => {
@@ -67,6 +67,18 @@ describe('normalizeSize', () => {
     it('returns null for a value that is no hook size', () => {
         for (const value of ['', 'Large', '14mm', '0', '014', '7/0x', '1/2', null, undefined]) {
             assert.equal(normalizeSize(value), null, String(value));
+        }
+    });
+});
+
+describe('isHyphenAught', () => {
+    it('finds the aught sizes still spelled with a hyphen, before ticket 18\'s rename', () => {
+        for (const value of ['2-0', '6-0', ' 1 - 0 ', '#4-0']) assert.equal(isHyphenAught(value), true, value);
+    });
+
+    it('reads values as normalizeSize does, so a value that is no hook size never counts', () => {
+        for (const value of ['2/0', '14', '0-0', '100-0', '2-1', 'Large', '', null, undefined]) {
+            assert.equal(isHyphenAught(value), false, String(value));
         }
     });
 });
