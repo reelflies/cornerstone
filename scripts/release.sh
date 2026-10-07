@@ -16,7 +16,8 @@
 #   then prune old ReelFlies builds from My Themes (W0-3), logging each deletion in RELEASES.md: a
 #   plan only in a dry run, and until a --prune-only has deleted a theme
 #
-# --prune-only runs the prune on its own, holding the same lock; with --dry-run it deletes nothing.
+# --prune-only runs the prune on its own, holding the same lock; with --dry-run it deletes nothing
+# and records its plan, which a real --prune-only needs (within 60 minutes) and deletes no more than.
 #
 # docs/releasing.md explains each step, flag and refusal. The node steps are in scripts/release.mjs.
 # Every failed step stops the release, and only one release or dry run runs at a time on this Mac.

@@ -7,7 +7,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { inspect } from 'node:util';
 import {
-    KEEP_NEWEST, PRUNE_NAME, REQUIRED_CHANNELS, describePlan, describeRunProblems, planPrune, runPrune, uncommittedProblems,
+    DRY_RUN_MINUTES, KEEP_NEWEST, PRUNE_NAME, REQUIRED_CHANNELS, describePlan, describeRunProblems, dryRunProblems, dryRunRecord, planPrune, releasesEditProblems, runPrune,
+    uncommittedProblems,
 } from './release-prune.mjs';
 import {
     addMyThemesRow, addReleaseEntry, formatMyThemesRow, formatReleaseEntry, myThemesRows, RELEASES_TEMPLATE,
@@ -364,6 +365,55 @@ test('W0-3: a real --prune-only may leave only RELEASES.md uncommitted, so no ed
     assert.deepEqual(uncommittedProblems(' M RELEASES.md\n M scripts/release-prune.mjs\n?? notes.txt\n'), [
         'uncommitted changes besides RELEASES.md: scripts/release-prune.mjs, notes.txt',
     ]);
+});
+
+test('W0-3: a real prune lets RELEASES.md only gain lines since HEAD (a release\'s new entry, the prune\'s own rows), so an edited or removed line never decides what is deleted', () => {
+    // `git diff --numstat HEAD -- RELEASES.md`
+    assert.deepEqual(releasesEditProblems(''), []);
+    assert.deepEqual(releasesEditProblems('16\t0\tRELEASES.md\n'), []);
+    assert.deepEqual(releasesEditProblems('1\t1\tRELEASES.md\n'), [
+        'RELEASES.md has uncommitted edits that change or remove 1 line(s) since HEAD: a real prune lets it only gain lines, such as a release\'s new entry',
+    ]);
+    assert.deepEqual(releasesEditProblems('-\t-\tRELEASES.md\n'), ['RELEASES.md has uncommitted edits git can\'t count: a real prune lets it only gain lines, such as a release\'s new entry']);
+});
+
+test('W0-3: a real --prune-only needs a dry --prune-only from this checkout, at the same commit, within the hour, and deletes only what it planned', () => {
+    assert.equal(DRY_RUN_MINUTES, 60);
+    const plan = planPrune({ themes: sixThemes(), activeByChannel: active(), markdown: SIX });
+    const head = sha(9);
+    const record = dryRunRecord({
+        plan, head, source: 'store', now: new Date('2026-10-07T10:00:00Z'),
+    });
+    assert.deepEqual(record, {
+        head, toDelete: [uuid(1), uuid(2), uuid(3)], plannedAt: '2026-10-07T10:00:00.000Z', source: 'store',
+    });
+    const later = new Date('2026-10-07T10:59:00Z');
+    // Before the store is read (no plan yet), and after.
+    assert.deepEqual(dryRunProblems({ record, head, now: later }), []);
+    assert.deepEqual(dryRunProblems({
+        record, head, plan, now: later,
+    }), []);
+    const problems = changes => dryRunProblems({
+        record, head, plan, now: later, ...changes,
+    }).join('\n');
+    assert.match(problems({ record: null }), /no --prune-only --dry-run has run in this checkout since the last real one/);
+    assert.match(problems({ record: null, plan: null }), /no --prune-only --dry-run/, 'checked before the store is read');
+    assert.match(problems({ record: { unreadable: 'Unexpected token' } }), /the dry run's record can't be read \(Unexpected token\)/);
+    assert.match(problems({ record: { ...record, source: 'fixture' } }), /the dry run read RF_RELEASE_THEMES_FIXTURE, not the store/);
+    assert.match(problems({ head: sha(8) }), new RegExp(`the dry run ran at ${sha(9).slice(0, 7)}, and this checkout is at ${sha(8).slice(0, 7)}`));
+    assert.match(problems({ now: new Date('2026-10-07T11:00:00Z') }), /the dry run planned this 60 minutes ago or more/);
+    assert.match(problems({ now: new Date('2026-10-07T09:59:00Z') }), /the dry run's time is later than now/);
+    assert.match(problems({ record: { ...record, plannedAt: 'soon' } }), /can't be read/);
+    assert.deepEqual(dryRunProblems({ record: { ...record, toDelete: undefined }, head, now: later }), ['the dry run\'s record holds no plan']);
+    // The store changed since: build 2 runs on a channel now, so this plan deletes 1 and 3 only.
+    const fewer = planPrune({ themes: sixThemes(), activeByChannel: active(uuid(6), { 2000001: uuid(2) }), markdown: SIX });
+    assert.match(problems({ plan: fewer }), new RegExp(`the dry run planned to delete ${uuid(1)}, ${uuid(2)}, ${uuid(3)}, and this plan deletes ${uuid(1)}, ${uuid(3)}`));
+    assert.match(problems({ record: { ...record, toDelete: [] } }), /the dry run planned to delete nothing, and this plan deletes/);
+    // A plan that deletes nothing matches any record.
+    const nothing = planPrune({ themes: sixThemes().slice(0, 7), activeByChannel: active(uuid(3)), markdown: log(...[1, 2, 3].map(n => entry(n, day(n)))) });
+    assert.deepEqual(dryRunProblems({
+        record, head, plan: nothing, now: later,
+    }), []);
 });
 
 // --- What the prune modules may call ----------------------------------------------------------

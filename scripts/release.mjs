@@ -68,7 +68,7 @@ import {
     checkoutProblems, gitIn, readCheckout, stepFiveOrigin,
 } from './release-origin.mjs';
 import {
-    describePlan, describeRunProblems, planPrune, REQUIRED_CHANNELS, runPrune, uncommittedProblems,
+    describePlan, describeRunProblems, DRY_RUN_MINUTES, dryRunProblems, dryRunRecord, planPrune, releasesEditProblems, REQUIRED_CHANNELS, runPrune, uncommittedProblems,
 } from './release-prune.mjs';
 import { redact } from './release-redact.mjs';
 import { validateThemeConfig } from './release-schema.mjs';
@@ -800,7 +800,10 @@ function logDeletion(build, action) {
 
 // Reads the store, plans (scripts/release-prune.mjs) and, when `deleting`, deletes the plan's
 // themes one at a time, logging each. `releases` is RELEASES.md, or the fixture in a dry run.
-async function pruneSteps({ releases, deleting, action }) {
+// beforeDeleting(plan) runs once the plan is shown, before the first deletion. Returns the plan.
+async function pruneSteps({
+    releases, deleting, action, beforeDeleting,
+}) {
     const store = await readStoreThemes(releases, deleting);
     let plan;
     try {
@@ -811,50 +814,84 @@ async function pruneSteps({ releases, deleting, action }) {
     describePlan(plan).forEach(line => console.log(line));
     if (!plan.toDelete.length) {
         say('ok', 'nothing to delete');
-        return;
+        return plan;
     }
     if (!deleting) {
         say('dry run', `would delete ${plan.toDelete.length} theme(s); nothing was deleted, and ${RELEASES} is unchanged`);
-        return;
+        return plan;
     }
+    beforeDeleting(plan);
     const result = await runPrune({
         plan, deleteTheme: store.deleteTheme, readThemes: store.readThemes, record: build => logDeletion(build, action),
     });
     const problems = describeRunProblems(result);
     if (problems) throw new Stop(redact(problems, knownSecrets()));
     say('ok', `deleted ${result.deleted.length} theme(s), each logged in ${RELEASES}'s My Themes section: commit it`);
+    return plan;
 }
 
 // Any error that isn't a Stop goes on as a Stop with its message only, the tokens taken out: Node
 // prints an uncaught error whole, and a store error's request holds the token.
-async function prune(options) {
+async function prune({
+    releases, deleting, action, beforeDeleting = () => {},
+}) {
     try {
-        await pruneSteps(options);
+        return await pruneSteps({
+            releases, deleting, action, beforeDeleting,
+        });
     } catch (error) {
         if (error instanceof Stop) throw error;
         throw new Stop(`the prune stopped: ${redact(String((error && error.message) || error), knownSecrets())}`);
     }
 }
 
-// A real --prune-only runs from master at origin/master's tip, with nothing uncommitted but
-// RELEASES.md, so origin/master's rules decide what is deleted (as for W0-1's agent push). A dry
-// run warns instead; on the test-only overrides it doesn't fetch.
+// Why this checkout's own state shouldn't decide a real prune, or []: an uncommitted file besides
+// RELEASES.md, or a line of RELEASES.md changed or removed since HEAD (only new lines, such as a
+// release's entry or the prune's rows, are allowed).
+function uncommittedPruneProblems() {
+    const porcelain = execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' });
+    const numstat = execFileSync('git', ['diff', '--numstat', 'HEAD', '--', RELEASES], { encoding: 'utf8' });
+    return [...uncommittedProblems(porcelain), ...releasesEditProblems(numstat)];
+}
+
+// A real --prune-only runs from master at origin/master's tip, with nothing uncommitted but new
+// lines in RELEASES.md, so origin/master's rules decide what is deleted (as for W0-1's agent push).
+// A dry run warns instead; on the test-only overrides it doesn't fetch. Returns HEAD's sha.
 function pruneCheckout(dryRun) {
     const offline = OVERRIDES.some(name => process.env[name]);
     if (offline) say('fixture', 'origin/master as last fetched: a dry run on the test-only overrides doesn\'t fetch');
     const checkout = readCheckout({ git: gitIn(), fetch: !offline });
-    const porcelain = execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' });
-    const problems = [...checkoutProblems(checkout), ...uncommittedProblems(porcelain)];
+    const problems = [...checkoutProblems(checkout), ...uncommittedPruneProblems()];
     if (!problems.length) {
         say('origin', `master at origin/master's tip ${checkout.head.slice(0, 7)}${offline ? '' : ', fetched just now'}: origin/master's rules decide what the prune deletes`);
-        return;
+        return checkout.head;
     }
-    const message = `a real prune needs this checkout on master at origin/master's tip, with nothing uncommitted but ${RELEASES}, so that origin/master's rules decide what is deleted: ${problems.join('; ')}`;
+    const message = `a real prune needs this checkout on master at origin/master's tip, with nothing uncommitted but new lines in ${RELEASES}, so that origin/master's rules decide what is deleted: ${problems.join('; ')}`;
     if (!dryRun) throw refuse(message);
     warn(`${message} (a dry run goes on; a real prune stops here)`);
+    return checkout.head;
 }
 
-// release.sh --prune-only [--dry-run]: the prune on its own (W0-3).
+// The record of this checkout's last dry --prune-only, in its git folder (never in the tree, so the
+// checkout stays clean). See release-prune.mjs, "The dry run before a real --prune-only".
+const dryRunFile = () => git('rev-parse', '--git-path', 'rf-prune-dry-run.json');
+
+function readDryRun(file) {
+    if (!fs.existsSync(file)) return null;
+    try {
+        return JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch (error) {
+        return { unreadable: error.message };
+    }
+}
+
+function refuseWithoutDryRun(problems) {
+    if (!problems.length) return;
+    throw refuse(`a real --prune-only deletes only what a --prune-only --dry-run in this checkout planned, from the same commit, within ${DRY_RUN_MINUTES} minutes: ${problems.join('; ')}. Run ${PRUNE_USAGE.replace('[--dry-run]', '--dry-run')}, check its plan, then run this again`);
+}
+
+// release.sh --prune-only [--dry-run]: the prune on its own (W0-3). A dry run records its plan; a
+// real run needs that record, uses it up before it reads the store, and deletes only that plan.
 async function pruneOnly(argv) {
     let options;
     try {
@@ -864,16 +901,47 @@ async function pruneOnly(argv) {
     }
     refuseOverrides(options.dryRun, 'a real prune always reads the store, git and RELEASES.md');
     heading(`My Themes: prune${options.dryRun ? ' (dry run: nothing is deleted)' : ''}`);
-    pruneCheckout(options.dryRun);
-    await prune({ releases: readReleaseLog(), deleting: !options.dryRun, action: 'deleted (--prune-only)' });
+    const head = pruneCheckout(options.dryRun);
+    const file = dryRunFile();
+    if (options.dryRun) {
+        const plan = await prune({ releases: readReleaseLog(), deleting: false, action: null });
+        const source = process.env.RF_RELEASE_THEMES_FIXTURE ? 'fixture' : 'store';
+        fs.writeFileSync(file, `${JSON.stringify(dryRunRecord({ plan, head, source }), null, 2)}\n`);
+        say('recorded', `this plan, for the real --prune-only: it deletes only what this dry run planned, from this commit, within ${DRY_RUN_MINUTES} minutes${source === 'fixture' ? ' (a fixture\'s plan, which no real run accepts)' : ''}`);
+        return;
+    }
+    const record = readDryRun(file);
+    refuseWithoutDryRun(dryRunProblems({ record, head }));
+    fs.rmSync(file, { force: true });
+    say('dry run', `this checkout's dry run at ${record.plannedAt} planned to delete ${record.toDelete.length ? record.toDelete.join(', ') : 'nothing'}: this run deletes only that`);
+    await prune({
+        releases: readReleaseLog(),
+        deleting: true,
+        action: 'deleted (--prune-only)',
+        beforeDeleting: plan => refuseWithoutDryRun(dryRunProblems({ record, head, plan })),
+    });
 }
 
 const hasLoggedDeletion = releases => myThemesRows(releases).some(row => row.action.startsWith('deleted'));
 
+// Why the prune after a real push only shows its plan, or []: the commit it pushed is no longer
+// judged by origin/master's rules (release-origin.mjs stepFiveOrigin), this checkout isn't at that
+// commit, or anything but new lines in RELEASES.md is uncommitted. Prints stepFiveOrigin's note.
+function afterPushProblems(state) {
+    const { problems, note } = stepFiveOrigin({ git: gitIn(), sha: state.git.sha });
+    if (problems.length) return problems;
+    const head = git('rev-parse', 'HEAD');
+    const moved = head === state.git.sha ? [] : [`this checkout is at ${head.slice(0, 7)}, not ${state.git.sha.slice(0, 7)}, the commit this release pushed`];
+    const all = [...moved, ...uncommittedPruneProblems()];
+    if (!all.length && note) say('origin', note);
+    return all;
+}
+
 // After step 7, or at the end of a dry run. A real release deletes only once RELEASES.md logs a
-// deletion, so the first real prune is a --prune-only run dry first (W0-3), and only when the
-// commit it pushed is still judged by origin/master's rules (release-origin.mjs stepFiveOrigin).
-// Otherwise it shows the plan. Verify's problems stop release.sh at step 7, before this.
+// deletion, so the first real prune is a --prune-only, which needs its dry run first (W0-3), and
+// only from the commit it pushed, still judged by origin/master's rules, with nothing uncommitted
+// but new lines in RELEASES.md. Otherwise it shows the plan. Verify's problems stop release.sh at
+// step 7, before this.
 async function pruneAfterPush() {
     const state = readState();
     refuseOverrides(state.dryRun, 'a real release always reads the store and RELEASES.md');
@@ -885,11 +953,10 @@ async function pruneAfterPush() {
     } else if (!hasLoggedDeletion(releases)) {
         say('first', `${RELEASES} records no theme deleted from My Themes yet, so this prune only shows its plan: the first real prune is ${PRUNE_USAGE.replace(' [--dry-run]', '')}, run with --dry-run first (W0-3)`);
     } else {
-        const { problems, note } = stepFiveOrigin({ git: gitIn(), sha: state.git.sha });
+        const problems = afterPushProblems(state);
         if (problems.length) {
             warn(`this prune only shows its plan: ${problems.join('; ')}. Prune from the main clone, on master, with ${PRUNE_USAGE}`);
         } else {
-            if (note) say('origin', note);
             say('prune', `deletes what the plan below marks "delete", and logs each in ${RELEASES}'s My Themes section`);
             deleting = true;
         }

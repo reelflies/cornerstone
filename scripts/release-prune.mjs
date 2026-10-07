@@ -5,7 +5,7 @@
 // [--dry-run]`, and after each push).
 //
 //   import { planPrune, describePlan, runPrune, describeRunProblems } from './release-prune.mjs';
-//   import { uncommittedProblems } from './release-prune.mjs';
+//   import { uncommittedProblems, releasesEditProblems, dryRunRecord, dryRunProblems } from './release-prune.mjs';
 //   const plan = planPrune({ themes, activeByChannel, markdown });   // markdown: RELEASES.md
 //   describePlan(plan).forEach(line => console.log(line));
 //   const result = await runPrune({ plan, deleteTheme, readThemes, record }); // a real prune only; never throws
@@ -216,4 +216,57 @@ export function describeRunProblems({
 export function uncommittedProblems(porcelain) {
     const files = porcelain.split('\n').filter(Boolean).map(line => line.slice(3).replace(/^"|"$/g, '')).filter(file => file !== 'RELEASES.md');
     return files.length ? [`uncommitted changes besides RELEASES.md: ${files.join(', ')}`] : [];
+}
+
+// And RELEASES.md may only gain lines since HEAD (`git diff --numstat HEAD -- RELEASES.md`): a
+// release's new entry, or the prune's own rows. An edited or removed line, such as an entry's time
+// moved, would change what is recorded, the rollback or the ranking. Returns one line, or [].
+export function releasesEditProblems(numstat) {
+    const why = 'a real prune lets it only gain lines, such as a release\'s new entry';
+    const [added, removed] = numstat.trim().split('\t');
+    if (!numstat.trim()) return [];
+    if (!/^\d+$/.test(added) || !/^\d+$/.test(removed)) return [`RELEASES.md has uncommitted edits git can't count: ${why}`];
+    return Number(removed) ? [`RELEASES.md has uncommitted edits that change or remove ${removed} line(s) since HEAD: ${why}`] : [];
+}
+
+// --- The dry run before a real --prune-only ------------------------------------------------------
+//
+// Each real --prune-only needs a --prune-only --dry-run first, from the same checkout and commit,
+// within DRY_RUN_MINUTES, and deletes only what that dry run planned. The dry run records its plan
+// (dryRunRecord) in the checkout's git folder; the real run checks the record before it reads the
+// store, then its plan against the record's (dryRunProblems), and uses the record up. So the first
+// deletion, and every one after it from --prune-only, is shown dry before it runs (W0-3).
+
+export const DRY_RUN_MINUTES = 60;
+
+// What a dry --prune-only records: { head, toDelete: [uuid], plannedAt, source: 'store' | 'fixture' }.
+export function dryRunRecord({
+    plan, head, source, now = new Date(),
+}) {
+    return {
+        head, toDelete: plan.toDelete.map(build => build.uuid), plannedAt: now.toISOString(), source,
+    };
+}
+
+// Why a real --prune-only may not go on, or []. record is the dry run's, null when there is none,
+// or { unreadable: message }. Without `plan`, it checks the record alone (before the store is
+// read); with it, also that the plan deletes what the dry run planned. A plan that deletes nothing
+// matches any record.
+export function dryRunProblems({
+    record, head, plan = null, now = new Date(),
+}) {
+    if (!record) return ['no --prune-only --dry-run has run in this checkout since the last real one'];
+    if (record.unreadable) return [`the dry run's record can't be read (${record.unreadable})`];
+    if (!Array.isArray(record.toDelete)) return ['the dry run\'s record holds no plan'];
+    const problems = [];
+    if (record.source !== 'store') problems.push('the dry run read RF_RELEASE_THEMES_FIXTURE, not the store');
+    if (record.head !== head) problems.push(`the dry run ran at ${String(record.head).slice(0, 7)}, and this checkout is at ${String(head).slice(0, 7)}`);
+    const age = now.getTime() - Date.parse(record.plannedAt);
+    if (Number.isNaN(age) || age < 0) problems.push('the dry run\'s time is later than now, or can\'t be read');
+    else if (age >= DRY_RUN_MINUTES * 60000) problems.push(`the dry run planned this ${DRY_RUN_MINUTES} minutes ago or more`);
+    if (plan && plan.toDelete.length) {
+        const real = plan.toDelete.map(build => build.uuid);
+        if (record.toDelete.join() !== real.join()) problems.push(`the dry run planned to delete ${record.toDelete.join(', ') || 'nothing'}, and this plan deletes ${real.join(', ')}`);
+    }
+    return problems;
 }
