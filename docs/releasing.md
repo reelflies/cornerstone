@@ -122,13 +122,6 @@ scripts/release.sh --channel 1895766 --variation 'ReelFlies CA' --confirm-nonpro
 
 Step 5 asks a person to type the channel id, and stops when stdin isn't a terminal, so an agent can't answer it (Claude Code's auto mode blocks that). Agents may push to 1895766 while it is prelaunch (HANDOFF, "Rules for every session"), so W0-1 gives them a confirmation of their own instead of a way round the prompt: `--confirm-nonprod <channel>` replaces the typed channel id at step 5, and only there.
 
-**How an agent runs it.** Shaun's Claude Code allow rules name exactly two commands, each run from the main clone: `scripts/release.sh --channel 1895766 --variation 'ReelFlies CA' --confirm-nonprod 1895766` and `scripts/release.sh --prune-only`. Claude Code matches a rule against the whole command, so make two Bash calls:
-
-1. `cd /Users/rook/reelflies/theme/cornerstone`, on its own.
-2. The exact command, bare: nothing before or after it. No `source ~/.nvm/nvm.sh && nvm use …` (`release.sh` selects `.nvmrc`'s Node itself, [Before you start](#before-you-start)), no `cd … &&`, no variable assignments, pipe or redirect.
-
-Before W0-1b agents put the nvm prefix in front, and Claude Code judged the compound command instead of matching the rule: it denied the push as a production deploy and the prune as a deletion of unverifiable scope.
-
 - **It is taken only when** the target is non-production and lists the non-interactive mode (today only 1895766), and the flag's value equals `--channel`. Everything else in the release runs as without it: step 1's diff, the guard, the clean build, the checks, the bundle, the storefront gates, and step 5's re-capture and checks of the commit, the tree, the zip's sha256, the live theme and variation, and the saved and published Theme Styles.
 - **It is refused** before anything runs:
   - on channels 1 and 1855224 by their id, whatever `release-targets.mjs` declares, and on any other production target, so channel 1 keeps its typed prompt today and after ticket 53
@@ -149,6 +142,16 @@ Before W0-1b agents put the nvm prefix in front, and Claude Code judged the comp
   - Its `RELEASES.md` entry's `New uuid` line records whether the push made a new theme uuid or a new version of the theme the channel ran before it (decision 9). It compares step 5's capture with verify's.
   - The review page asks Shaun whether that uuid previews on ReelFlies.com (1855224), and with which variation. The entry is written at the push, before he answers, so the orchestrator records his answer as a dated comment on ticket 05, where W0-3 reads it: if it previews there, W0-3 needs no upload mode.
   - If Claude Code's auto mode still blocks the command, Shaun runs that checkpoint's push in his terminal.
+
+**How an agent runs it.** Make one Bash call that holds exactly one of these commands, by the main clone's full path, with nothing before or after it:
+
+```sh
+/Users/rook/reelflies/theme/cornerstone/scripts/release.sh --channel 1895766 --variation 'ReelFlies CA' --confirm-nonprod 1895766
+/Users/rook/reelflies/theme/cornerstone/scripts/release.sh --prune-only
+```
+
+- Shaun's Claude Code allow rules name these exact commands, spelled this way or from `~/reelflies/theme/cornerstone/…`, and Claude Code matches a rule against the whole command. So add nothing: no `source ~/.nvm/nvm.sh && nvm use …` (`release.sh` selects `.nvmrc`'s Node itself, [Before you start](#before-you-start)), no `cd … &&`, and no variable assignment, pipe or redirect. Before W0-1b agents put the nvm prefix in front, and Claude Code judged the compound command instead of matching the rule: it denied the push as a production deploy and the prune as a deletion of unverifiable scope.
+- Use the full path, not a `cd` to the main clone in one call and the relative command in the next. `release.sh` moves to its own checkout's root, so the full path runs the main clone's copy from any working folder. A subagent's working folder goes back to where the subagent started after every Bash call, so the `cd` is gone by the next call. The relative command then finds no `release.sh` there, or, in a subagent started in a PR worktree, runs that worktree's copy, which Shaun's rules for the relative spelling also let through without a prompt.
 
 ### The release calendar
 
@@ -289,7 +292,7 @@ A dry run makes no deleter at all, and writes nothing to `RELEASES.md`.
 
 Whoever runs a real `--prune-only` puts its output and its dry run's on the next review page (the orchestrator, per the runbook). A real `--prune-only` that finds nothing to delete logs nothing, so the prune after a push stays a plan until a `--prune-only` has deleted a theme: with one ReelFlies build in My Themes today, that is a few pushes away.
 
-**Permission rules.** The drafted Claude Code rules ([permissions.md](permissions.md)) pre-approve `scripts/release.sh … --dry-run` from any checkout, so `--prune-only --dry-run` runs anywhere without a prompt; a real `--prune-only` is pre-approved only as the main clone's `release.sh`, by its full path, and asks first anywhere else. Shaun's allow rule for an agent's real prune is the bare `scripts/release.sh --prune-only` from the main clone: `cd` there in one call, then run exactly that in the next, with no nvm prefix ([How an agent runs it](#agent-pushes---confirm-nonprod)).
+**Permission rules.** The drafted Claude Code rules ([permissions.md](permissions.md)) pre-approve `scripts/release.sh … --dry-run` from any checkout, so `--prune-only --dry-run` runs anywhere without a prompt; a real `--prune-only` is pre-approved only as the main clone's `release.sh`, by its full path, and asks first anywhere else. Shaun's allow rules also name an agent's real prune exactly: run it as [How an agent runs it](#agent-pushes---confirm-nonprod) says, as the main clone's `release.sh` by its full path, in one Bash call with nothing added (no nvm prefix, no `cd`).
 
 ### No upload mode
 

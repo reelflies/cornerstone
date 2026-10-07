@@ -252,3 +252,36 @@ test('the allow rules cover the main clone\'s release, merge, store and status e
     }
     for (const rule of allow) assert.equal(rule.tool, 'Bash');
 });
+
+// docs/releasing.md's "How an agent runs it" (W0-1b): the real push and prune agents run. Shaun's
+// allow rules name these exact commands, so the doc gives them character for character, each as
+// the main clone's release.sh by its full path. A relative scripts/release.sh depends on the
+// working folder, which in a subagent goes back to where it started after every Bash call: it finds
+// no release.sh there, or runs a PR worktree's copy.
+const RELEASING_DOC = fs.readFileSync(path.join(ROOT, 'docs', 'releasing.md'), 'utf8');
+const AGENT_RELEASES = [
+    `${MAIN}/scripts/release.sh --channel 1895766 --variation 'ReelFlies CA' --confirm-nonprod 1895766`,
+    `${MAIN}/scripts/release.sh --prune-only`,
+];
+
+function agentReleaseCommands() {
+    const start = RELEASING_DOC.indexOf('**How an agent runs it.**');
+    assert.ok(start >= 0, 'docs/releasing.md has no "How an agent runs it"');
+    const rest = RELEASING_DOC.slice(start);
+    const end = rest.slice(1).search(/^(#{1,6} |\*\*|- \*\*)/m);
+    const block = end < 0 ? rest : rest.slice(0, end + 1);
+    const fences = [...block.matchAll(/^```sh\n([\s\S]*?)^```$/gm)];
+    const fenced = fences.flatMap(([, body]) => body.split('\n').filter(Boolean));
+    const prose = fences.reduce((text, [fence]) => text.replace(fence, ''), block);
+    const inline = [...prose.matchAll(/`([^`\n]+)`/g)].map(([, text]) => text);
+    return [...fenced, ...inline].filter(text => /^\S*scripts\/release\.sh\s/.test(text));
+}
+
+test('docs/releasing.md has agents run a real push and prune by the main clone\'s full path, as the rules allow', () => {
+    const commands = agentReleaseCommands();
+    assert.deepEqual(commands, AGENT_RELEASES);
+    for (const command of commands) {
+        assert.ok(firing(allow, bash(command)).length, `no allow rule pre-approves ${command}`);
+        assert.deepEqual(firing(deny, bash(command)).map(rule => rule.rule), [], command);
+    }
+});
