@@ -11,6 +11,9 @@
 //   node scripts/release.mjs push-args                        step 5: the push arguments, NUL-separated, once the gate passed
 //   node scripts/release.mjs redact                           step 5: filters tokens out of the push output
 //   node scripts/release.mjs verify                           step 6: capture again and compare
+//   node scripts/release.mjs lighthouse                       step 6b (ticket 17): Lighthouse on the prelaunch
+//                                                             host with the shell's preview cookie, or "pending
+//                                                             host batch" without it; never stops the release
 //   node scripts/release.mjs write-log                        step 7: appends the entry to RELEASES.md
 //   node scripts/release.mjs prune-after-push                 after step 7, or at the end of a dry run: prunes
 //                                                             My Themes (W0-3; a plan only, until a --prune-only
@@ -40,6 +43,7 @@
 import { execFileSync } from 'child_process';
 import crypto from 'crypto';
 import fs from 'fs';
+import path from 'path';
 import { checkContrast } from './check-contrast.mjs';
 import { formatBytes } from './lib/format.mjs';
 import { isMain } from './lib/is-main.mjs';
@@ -60,6 +64,9 @@ import {
     acceptLiveValues, displayValue, effectiveSettings, threeWayDiff, verifyRelease,
 } from './release-diff.mjs';
 import { checkRelease, menuIdsSet } from './release-guard.mjs';
+import {
+    describeLighthouse, lighthouseEnv, lighthouseOutcome, lighthousePlan, resultsDirFor, runCommand, stopReason,
+} from './release-lighthouse.mjs';
 import {
     addMyThemesRow, addReleaseEntry, describePairedRelease, formatMyThemesRow, formatPushSummary, formatReleaseEntry, lastRelease, myThemesRows,
     releasedThemeUuids, releaseEntries,
@@ -190,7 +197,8 @@ function readPhase({ fixtures }) {
 }
 
 // What the push summary and the RELEASES.md entry say about step 5's confirmation, the calendar
-// and the paired channel-1 release (ticket 56).
+// and the paired channel-1 release (ticket 56), and what step 6b will do about Lighthouse after the
+// push (ticket 17), from the target, today's phase and the shell's preview cookie.
 function calendarFields(options, target, phase) {
     return {
         confirmation: hasConfirmNonprod(options) ? { mode: 'nonprod', channel: options.confirmNonprod } : { mode: 'typed' },
@@ -198,6 +206,7 @@ function calendarFields(options, target, phase) {
             line: describePhase(phase), phase: phase.phase, flip: phase.flip, status: phase.status,
         },
         pairedChannel1: pairedChannel1Release({ target, phase }),
+        lighthouse: lighthousePlan({ channel: target.id, phase: phase.phase, cookie: process.env.QA_PREVIEW_COOKIE }),
     };
 }
 
@@ -235,6 +244,7 @@ function confirmationStep(options, target) {
     if (fields.pairedChannel1) {
         say('paired', `a paired channel-1 release is ${describePairedRelease(fields.pairedChannel1)}. The ${RELEASES} entry records it for Shaun.`);
     }
+    say('lighthouse', describeLighthouse(fields.lighthouse));
     return fields;
 }
 
@@ -608,6 +618,7 @@ function releaseRecord(state, { themeUuid = null, verified = null } = {}) {
         confirmation: state.confirmation,
         calendar: state.calendar,
         pairedChannel1: state.pairedChannel1,
+        lighthouse: state.lighthouse,
     };
 }
 
@@ -739,15 +750,90 @@ async function verify() {
     writeState({ ...state, verify: { problems, themeUuid } });
 }
 
+// --- Step 6b: Lighthouse on the prelaunch host (ticket 17) ----------------------------------
+
+const LIGHTHOUSE_HISTORY = 'scripts/qa/lighthouse-history.json';
+
+// The values the runner's output must never show: the tokens, and the preview cookie whole and
+// each of its values.
+function lighthouseSecrets(cookie) {
+    const values = (cookie || '').split(';').map(part => part.slice(part.indexOf('=') + 1).trim());
+    return [cookie, ...values, ...knownSecrets()];
+}
+
+function readLighthouseSummary(file) {
+    try {
+        return JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch {
+        return null;
+    }
+}
+
+// What the step does (release-lighthouse.mjs lighthousePlan), and, when it runs the gate, what it
+// measured. The runner is `npm run qa:lighthouse` (scripts/qa/lighthouse.mjs) on the prelaunch host,
+// filing its results under the pushed theme's uuid.
+async function measureLighthouse(state) {
+    const cookie = process.env.QA_PREVIEW_COOKIE;
+    const plan = lighthousePlan({
+        channel: state.channel, phase: state.calendar.phase, cookie, verify: state.verify,
+    });
+    say('lighthouse', describeLighthouse(plan));
+    if (plan.result !== 'run') return plan;
+    const uuid = state.verify.themeUuid;
+    const startedAt = new Date().toISOString();
+    const run = await runCommand({
+        command: 'npm',
+        args: ['run', 'qa:lighthouse'],
+        cwd: process.cwd(),
+        env: lighthouseEnv({
+            env: process.env, variation: state.variation, uuid, commit: state.git.sha,
+        }),
+        secrets: lighthouseSecrets(cookie),
+    });
+    const summary = readLighthouseSummary(path.join(resultsDirFor(uuid), 'lighthouse', 'summary.json'));
+    const outcome = lighthouseOutcome({
+        ...run, summary, startedAt, uuid,
+    });
+    if (outcome.result === 'pending') {
+        say('pending', outcome.reason);
+        return outcome;
+    }
+    say(outcome.result === 'pass' ? 'ok' : 'FAIL', describeLighthouse(outcome));
+    if (outcome.result === 'fail') say('', `the ${RELEASES} entry records the failure, and the release stops once it is written`);
+    if (outcome.accepted) say('NOTE', `${LIGHTHOUSE_HISTORY} changed: commit it with ${RELEASES} through the release-log PR. Until it is committed, the prune after this push only shows its plan.`);
+    return outcome;
+}
+
+// Step 6b, between verify and the log entry, so the entry records Lighthouse. The push is done and
+// RELEASES.md has no entry yet, so this step never stops the release: whatever goes wrong here
+// (Ctrl-C included, which stops only the runner) is recorded as "pending host batch", and a failed
+// gate stops the release only once step 7 has written its entry.
+async function lighthouseStep() {
+    const state = readState();
+    heading('Step 6b · Lighthouse on the prelaunch host (ticket 17)');
+    let lighthouse;
+    try {
+        lighthouse = await measureLighthouse(state);
+    } catch (error) {
+        lighthouse = { result: 'pending', reason: `the Lighthouse step couldn't run (${redact(String((error && error.message) || error), lighthouseSecrets(process.env.QA_PREVIEW_COOKIE))}). The next host batch of this build (npm run qa:prelaunch) measures it` };
+        say('pending', lighthouse.reason);
+    }
+    writeState({ ...state, lighthouse });
+}
+
 function writeReleaseLog() {
     const state = readState();
     heading('Step 7 · Log');
-    const record = releaseRecord(state, { themeUuid: state.verify.themeUuid || 'unknown', verified: { problems: state.verify.problems } });
+    // Step 6b replaces the plan with what it did; without it, Lighthouse is still owed.
+    const lighthouse = state.lighthouse && state.lighthouse.result !== 'run' ? state.lighthouse : { result: 'pending', reason: 'step 6b recorded nothing' };
+    const record = releaseRecord({ ...state, lighthouse }, { themeUuid: state.verify.themeUuid || 'unknown', verified: { problems: state.verify.problems } });
     fs.writeFileSync(RELEASES, addReleaseEntry(readReleases(), formatReleaseEntry(record)));
     say('ok', `appended this release to ${RELEASES}: commit it`);
-    if (state.verify.problems.length) {
-        throw new Stop(`the push went through, but verify found ${state.verify.problems.length} problem(s), listed above and in ${RELEASES}`);
-    }
+    const stops = [
+        state.verify.problems.length ? `the push went through, but verify found ${state.verify.problems.length} problem(s), listed above and in ${RELEASES}` : null,
+        stopReason(lighthouse),
+    ].filter(Boolean);
+    if (stops.length) throw new Stop(stops.join('. '));
 }
 
 // --- W0-3: pruning My Themes ------------------------------------------------------------------
@@ -979,6 +1065,7 @@ const STEPS = {
     'push-args': printPushArgs,
     redact: redactStream,
     verify,
+    lighthouse: lighthouseStep,
     'write-log': writeReleaseLog,
     'prune-after-push': pruneAfterPush,
     prune: pruneOnly,

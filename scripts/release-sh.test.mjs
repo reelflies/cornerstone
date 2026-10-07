@@ -6,7 +6,7 @@
 
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -706,7 +706,7 @@ function runReleaseMjs(step, args, { cwd, env = {}, state = null }) {
         cwd, encoding: 'utf8', input: '', env: cleanEnv({ ...env, RF_RELEASE_STATE: statePath }), timeout: 60000,
     });
     return {
-        status: result.status, stdout: result.stdout, stderr: result.stderr, output: `${result.stdout}\n${result.stderr}`,
+        status: result.status, stdout: result.stdout, stderr: result.stderr, output: `${result.stdout}\n${result.stderr}`, statePath,
     };
 }
 
@@ -1570,4 +1570,234 @@ test('W0-1b: release.sh selects the Node before it runs node at all, the lock in
     assert.match(before, /^set -euo pipefail$/m);
     assert.match(before, /^cd "\$\(dirname "\$\{BASH_SOURCE\[0\]\}"\)\/\.\."$/m);
     assert.doesNotMatch(before.replace(/^select_nvmrc_node\(\) \{[\s\S]*?^\}$/m, ''), /\bnode\b/, 'no node runs before the selection');
+});
+
+// --- Ticket 17: Lighthouse on the prelaunch host after the push (step 6b) ------------------------
+//
+// release.sh runs `release lighthouse` between verify and the log entry. These runs give it a state
+// file as step 6 leaves it, in an empty folder, with a fake npm first on PATH: it logs what it was
+// run with, prints the cookie (which the release must take out of its output), writes a summary.json
+// as `npm run qa:lighthouse` would, and exits with FAKE_LH_STATUS. Nothing reaches a browser or the
+// store.
+
+const PUSHED_UUID = '00000000-0000-0000-0000-00000000ffff';
+const LH_COOKIE = 'STORESUITE_CP_TOKEN=rf-secret-cp-token-value; SHOP_SESSION_TOKEN=rf-secret-session-value';
+const LH_PRELAUNCH = 'https://reelflies_ca-1895766.mybigcommerce.com';
+const LH_CALENDAR = { line: 'Release calendar: no Flip date yet (provisional; test), so nothing is limited.', phase: 'unset' };
+const lhSummary = fields => JSON.stringify({
+    target: 'host',
+    baseUrl: LH_PRELAUNCH,
+    channel: '1895766',
+    theme: { uuid: PUSHED_UUID, name: 'ReelFlies', variation: 'ReelFlies CA' },
+    analyticsBlocked: 'yes',
+    ok: true,
+    accepted: true,
+    recorded: 'run',
+    releaseLines: ['  - home `/`: performance 95, LCP 2.10 s, CLS 0.010, TBT 120 ms, accessibility 100; JS 474,688 B, CSS 93,760 B'],
+    ...fields,
+});
+
+function lighthouseFolder() {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-release-lighthouse-'));
+    tempDirs.push(dir);
+    const bin = path.join(dir, 'bin');
+    fs.mkdirSync(bin);
+    fs.writeFileSync(path.join(bin, 'npm'), `#!${process.execPath}
+const fs = require('fs');
+const path = require('path');
+const env = process.env;
+const seen = ['QA_BASE_URL', 'QA_CHANNEL', 'QA_VARIATION', 'QA_PORT', 'QA_RESULTS_DIR', 'QA_RELEASE_COMMIT', 'QA_ANALYTICS', 'QA_OVERLAY', 'QA_MANIFEST'];
+fs.writeFileSync(env.FAKE_LH_LOG, JSON.stringify({ args: process.argv.slice(2), cwd: process.cwd(), cookie: env.QA_PREVIEW_COOKIE === ${JSON.stringify(LH_COOKIE)}, ...Object.fromEntries(seen.map(name => [name, env[name] ?? null])) }));
+console.log('the runner printed ' + env.QA_PREVIEW_COOKIE);
+if (env.FAKE_LH_SUMMARY) {
+    const dir = path.join(env.QA_RESULTS_DIR, 'lighthouse');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'summary.json'), JSON.stringify({ ...JSON.parse(env.FAKE_LH_SUMMARY), startedAt: new Date().toISOString() }));
+}
+setTimeout(() => process.exit(Number(env.FAKE_LH_STATUS || 0)), Number(env.FAKE_LH_SLEEP || 0));
+`, { mode: 0o755 });
+    return { dir, log: path.join(dir, 'npm.json'), PATH: `${bin}${path.delimiter}${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH}` };
+}
+
+const lighthouseState = changes => ({
+    ...stepFiveState({ head: RELEASED_SHA }, {}),
+    confirmation: { mode: 'typed' },
+    calendar: LH_CALENDAR,
+    pairedChannel1: null,
+    beforePush: { themeUuid: LIVE_THEME_UUID },
+    verify: { problems: [], themeUuid: PUSHED_UUID },
+    ...changes,
+});
+
+function lighthouseRun({ state = {}, env = {} } = {}) {
+    const folder = lighthouseFolder();
+    const result = runReleaseMjs('lighthouse', [], {
+        cwd: folder.dir,
+        env: {
+            PATH: folder.PATH, FAKE_LH_LOG: folder.log, QA_PREVIEW_COOKIE: '', ...env,
+        },
+        state: lighthouseState(state),
+    });
+    return {
+        ...result,
+        folder,
+        npm: fs.existsSync(folder.log) ? JSON.parse(fs.readFileSync(folder.log, 'utf8')) : null,
+        after: JSON.parse(fs.readFileSync(result.statePath, 'utf8')),
+    };
+}
+
+test('ticket 17: an agent\'s push has no preview cookie, so step 6b runs nothing and the entry will record "pending host batch"', () => {
+    const step = lighthouseRun();
+    assert.equal(step.status, 0, step.output);
+    assert.match(step.stdout, /^== Step 6b · Lighthouse on the prelaunch host \(ticket 17\)$/m);
+    assert.match(step.stdout, /after the push: pending host batch \(no QA_PREVIEW_COOKIE in this shell/);
+    assert.equal(step.npm, null, 'npm run qa:lighthouse didn\'t run');
+    assert.equal(step.after.lighthouse.result, 'pending');
+});
+
+test('ticket 17: with the cookie, step 6b runs npm run qa:lighthouse on the prelaunch host for the pushed build, with none of the shell\'s own QA_ settings', () => {
+    const step = lighthouseRun({
+        env: {
+            QA_PREVIEW_COOKIE: LH_COOKIE, FAKE_LH_SUMMARY: lhSummary(), QA_ANALYTICS: 'allow', QA_OVERLAY: 'rf_rise-off', QA_MANIFEST: '/tmp/x.json',
+        },
+    });
+    assert.equal(step.status, 0, step.output);
+    assert.deepEqual(step.npm, {
+        args: ['run', 'qa:lighthouse'],
+        cwd: fs.realpathSync(step.folder.dir),
+        cookie: true,
+        QA_BASE_URL: LH_PRELAUNCH,
+        QA_CHANNEL: '1895766',
+        QA_VARIATION: 'ReelFlies CA',
+        QA_PORT: '3300',
+        QA_RESULTS_DIR: `scripts/qa/results/host/${PUSHED_UUID}`,
+        QA_RELEASE_COMMIT: RELEASED_SHA,
+        QA_ANALYTICS: null,
+        QA_OVERLAY: null,
+        QA_MANIFEST: null,
+    });
+    assert.equal(step.after.lighthouse.result, 'pass');
+    assert.equal(step.after.lighthouse.accepted, true);
+    assert.deepEqual(step.after.lighthouse.lines, JSON.parse(lhSummary()).releaseLines);
+    assert.match(step.stdout, /the runner printed \[redacted\]/);
+    assert.doesNotMatch(step.output, /rf-secret/, 'the cookie never reaches the release\'s output');
+    assert.match(step.stdout, /lighthouse-history\.json/, 'an accepted run says to commit the history');
+});
+
+test('ticket 17: a failed gate is recorded as fail, and step 7 writes the entry, then stops the release before the prune', () => {
+    const step = lighthouseRun({ env: { QA_PREVIEW_COOKIE: LH_COOKIE, FAKE_LH_SUMMARY: lhSummary({ ok: false, accepted: false, recorded: null }), FAKE_LH_STATUS: '1' } });
+    assert.equal(step.status, 0, 'step 6b itself never stops the release: the push is done and the entry not yet written');
+    assert.equal(step.after.lighthouse.result, 'fail');
+    const log = runReleaseMjs('write-log', [], { cwd: step.folder.dir, state: step.after });
+    assert.equal(log.status, 1, log.output);
+    assert.match(log.stderr, /^STOP {5}Lighthouse failed on the prelaunch host .*ticket 56.*The prune didn't run/m);
+    const entry = fs.readFileSync(path.join(step.folder.dir, 'RELEASES.md'), 'utf8');
+    assert.match(entry, new RegExp(`\\n- Verify: the live saved settings match config\\.json\\n- Lighthouse: fail, measured after the push, [^\\n]+ \\(analytics blocked: yes; not accepted; results in scripts/qa/results/host/${PUSHED_UUID}/\\)\\n {2}- home \`/\``));
+});
+
+test('ticket 17: a run that measured nothing, or was of another build, leaves "pending host batch" for the next host batch', () => {
+    const stopped = lighthouseRun({ env: { QA_PREVIEW_COOKIE: LH_COOKIE, FAKE_LH_STATUS: '2' } });
+    assert.equal(stopped.status, 0, stopped.output);
+    assert.ok(stopped.npm, 'it ran');
+    assert.equal(stopped.after.lighthouse.result, 'pending');
+    assert.match(stopped.stdout, /exited 2 and left no summary/);
+    const other = lighthouseRun({ env: { QA_PREVIEW_COOKIE: LH_COOKIE, FAKE_LH_SUMMARY: lhSummary({ theme: { uuid: LIVE_THEME_UUID } }) } });
+    assert.equal(other.after.lighthouse.result, 'pending');
+    assert.match(other.stdout, new RegExp(`measured theme ${LIVE_THEME_UUID}, not ${PUSHED_UUID}`));
+});
+
+test('ticket 17: from the Flip the gate is skipped, and after a verify problem nothing is measured', () => {
+    const flip = lighthouseRun({ state: { calendar: { ...LH_CALENDAR, phase: 'T-0' } }, env: { QA_PREVIEW_COOKIE: LH_COOKIE } });
+    assert.equal(flip.status, 0, flip.output);
+    assert.equal(flip.npm, null);
+    assert.equal(flip.after.lighthouse.result, 'skipped');
+    const broken = lighthouseRun({ state: { verify: { problems: ['the channel runs another theme'], themeUuid: LIVE_THEME_UUID } }, env: { QA_PREVIEW_COOKIE: LH_COOKIE } });
+    assert.equal(broken.npm, null);
+    assert.equal(broken.after.lighthouse.result, 'pending');
+    assert.match(broken.stdout, /verify found 1 problem/);
+});
+
+test('ticket 17: a state step 6b can\'t read still lets the release go on to write its entry, with "pending host batch"', () => {
+    const step = lighthouseRun({ state: { calendar: undefined }, env: { QA_PREVIEW_COOKIE: LH_COOKIE } });
+    assert.equal(step.status, 0, step.output);
+    assert.equal(step.npm, null);
+    assert.equal(step.after.lighthouse.result, 'pending');
+    assert.match(step.stdout, /the Lighthouse step couldn't run/);
+});
+
+test('ticket 17: Ctrl-C during the run stops Lighthouse, not the release: step 6b records "pending host batch" and exits 0, so step 7 still runs', async () => {
+    const folder = lighthouseFolder();
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-release-state-'));
+    tempDirs.push(dir);
+    const statePath = path.join(dir, 'state.json');
+    fs.writeFileSync(statePath, JSON.stringify(lighthouseState({})));
+    const child = spawn(process.execPath, [RELEASE_MJS, 'lighthouse'], {
+        cwd: folder.dir,
+        env: cleanEnv({
+            PATH: folder.PATH, FAKE_LH_LOG: folder.log, FAKE_LH_SLEEP: '30000', QA_PREVIEW_COOKIE: LH_COOKIE, RF_RELEASE_STATE: statePath,
+        }),
+        stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let output = '';
+    child.stdout.on('data', chunk => { output += chunk; });
+    child.stderr.on('data', chunk => { output += chunk; });
+    for (let waited = 0; !fs.existsSync(folder.log) && waited < 20000; waited += 100) await new Promise(resolve => { setTimeout(resolve, 100); }); // eslint-disable-line no-await-in-loop
+    assert.ok(fs.existsSync(folder.log), 'the fake runner started');
+    child.kill('SIGINT');
+    const [code, signal] = await new Promise(resolve => { child.on('close', (...args) => resolve(args)); });
+    assert.equal(signal, null, output);
+    assert.equal(code, 0, output);
+    const saved = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+    assert.equal(saved.lighthouse.result, 'pending');
+    assert.match(saved.lighthouse.reason, /stopped by SIGINT \(Ctrl-C\)/);
+});
+
+test('ticket 17: step 7 always writes a Lighthouse line: "pending host batch" when step 6b recorded nothing', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-release-step7-'));
+    tempDirs.push(dir);
+    const { lighthouse, ...state } = lighthouseState({});
+    assert.equal(lighthouse, undefined);
+    const result = runReleaseMjs('write-log', [], { cwd: dir, state });
+    assert.equal(result.status, 0, result.output);
+    assert.match(fs.readFileSync(path.join(dir, 'RELEASES.md'), 'utf8'), /\n- Verify: the live saved settings match config\.json\n- Lighthouse: pending host batch\n- Operator: /);
+});
+
+test('ticket 17: the push summary and a dry run\'s entry say what Lighthouse does after the push', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-release-dry-'));
+    tempDirs.push(dir);
+    const report = runReleaseMjs('dry-run-report', [], {
+        cwd: dir,
+        state: lighthouseState({ dryRun: true, verify: undefined, lighthouse: { result: 'run', reason: 'npm run qa:lighthouse on the prelaunch host, with the preview cookie' } }),
+    });
+    assert.equal(report.status, 0, report.output);
+    assert.match(report.stdout, /\n {2}lighthouse {2}after the push: npm run qa:lighthouse on the prelaunch host, with the preview cookie\n/);
+    assert.match(report.stdout, /\n- Verify: not run \(dry run\)\n- Lighthouse: measured on the prelaunch host after the push \(a dry run pushes nothing, so it measures nothing\)\n/);
+    const typed = stepFive({}, { QA_PREVIEW_COOKIE: '' });
+    assert.match(typed.stdout, /\n {2}lighthouse {2}after the push: pending host batch \(no QA_PREVIEW_COOKIE in this shell/);
+});
+
+test('ticket 17: before step 1 the release says what Lighthouse will do after the push, and never shows the cookie', () => {
+    const { env } = fixtures();
+    const without = run([...CA, '--dry-run'], { ...env, QA_PREVIEW_COOKIE: '' });
+    assert.equal(without.status, 0, without.output);
+    assert.match(without.stdout, /^lighthouse after the push: pending host batch \(no QA_PREVIEW_COOKIE in this shell/m);
+    const withCookie = run([...CA, '--dry-run'], { ...env, QA_PREVIEW_COOKIE: LH_COOKIE });
+    assert.equal(withCookie.status, 0, withCookie.output);
+    assert.match(withCookie.stdout, /^lighthouse after the push: npm run qa:lighthouse on the prelaunch host/m);
+    assert.doesNotMatch(withCookie.output, /rf-secret/);
+    const flip = run([...CA, '--dry-run'], { ...onDate('2027-03-01'), QA_PREVIEW_COOKIE: LH_COOKIE });
+    assert.equal(flip.status, 0, flip.output);
+    assert.match(flip.stdout, /^lighthouse skipped \(after the Flip 1895766 is live reelflies\.ca/m);
+});
+
+test('ticket 17: release.sh runs Lighthouse after verify and before the log entry, and only after a real push', () => {
+    const lines = fs.readFileSync(SCRIPT, 'utf8').split('\n').filter(line => !/^\s*#/.test(line));
+    const at = pattern => lines.findIndex(line => pattern.test(line));
+    const verify = at(/^release verify$/);
+    assert.notEqual(verify, -1);
+    // The push is done by then, so not even a failure of the step itself may keep step 7 from running.
+    assert.match(lines[verify + 1], /^release lighthouse \|\| echo "WARNING {2}step 6b stopped \(above\), so step 7 records Lighthouse as pending host batch" >&2$/);
+    assert.match(lines[verify + 2], /^release write-log$/);
+    assert.equal(lines.filter(line => /release lighthouse/.test(line)).length, 1);
+    assert.ok(at(/release dry-run-report/) < verify, 'a dry run exits before the push, so it never runs Lighthouse');
 });

@@ -14,7 +14,10 @@
 #     colours' contrast, then the release guard: rf_* module switches and menu ids
 #   2 clean build      3 checks      4 bundle, check the zip, then axe, raw HTML and screenshots
 #   5 push (never in a dry run: a dry run prints the push command and the log entry, then stops)
-#   6 verify           7 log the release in RELEASES.md
+#   6 verify           6b Lighthouse on the prelaunch host (ticket 17): with the operator's preview
+#                         cookie it runs the gate; without it, as on an agent's push, the entry
+#                         records "pending host batch" for the next host batch (W0-6)
+#   7 log the release in RELEASES.md
 #   then prune old ReelFlies builds from My Themes (W0-3), logging each deletion in RELEASES.md: a
 #   plan only in a dry run, and until a --prune-only has deleted a theme
 #
@@ -170,6 +173,12 @@ fi
 npx stencil "${push_args[@]}" </dev/null 2>&1 | release redact
 
 release verify
+# Step 6b (ticket 17): Lighthouse needs the theme live, so it runs after the push, and before step 7
+# so the entry records the scores and pass or fail. It never stops the release itself (Ctrl-C stops
+# only Lighthouse, and if the step fails anyway step 7 records "pending host batch"): the push is
+# done, so step 7 must write its entry. A failed gate stops the release once the entry is written,
+# before the prune.
+release lighthouse || echo "WARNING  step 6b stopped (above), so step 7 records Lighthouse as pending host batch" >&2
 release write-log
 # W0-3: after the log entry, so the prune counts this release. write-log stops the release when
 # verify found a problem, so nothing is pruned then.
