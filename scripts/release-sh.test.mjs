@@ -335,15 +335,24 @@ test('a first release doesn\'t check the live colours, because they belong to an
 
 // --- The release guard (ticket 15) ----------------------------------------------------------
 
+test('a config.json with no rf_* keys pushes none, and the guard passes', () => {
+    const { env } = fixtures();
+    const result = run([...CA, '--dry-run'], env);
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.stdout, /rf_\* values to push: none/);
+    assert.doesNotMatch(result.stdout, /new switch/);
+    assert.match(result.stdout, /guard: pass/);
+});
+
 // Ticket 25's scaffold pre-declares the rf_* keys (build pipeline 6.1), with empty menu ids.
-test('with today\'s config.json, and the same values live, the guard passes', () => {
+test('with today\'s config.json, and the same values live, the guard passes and lists every rf_* value', () => {
     const config = JSON.parse(fs.readFileSync(new URL('../config.json', import.meta.url), 'utf8'));
     const ca = config.variations.find(variation => variation.name === 'ReelFlies CA');
     const { env } = fixtures({ live: { ...config.settings, ...ca.settings } });
     const result = run([...CA, '--dry-run'], { ...env, RF_RELEASE_CONFIG: fileURLToPath(new URL('../config.json', import.meta.url)) });
     assert.equal(result.status, 0, result.output);
     const rf = Object.keys({ ...config.settings, ...ca.settings }).filter(key => key.startsWith('rf_'));
-    if (!rf.length) assert.match(result.stdout, /rf_\* values to push: none/);
+    assert.ok(rf.length >= 12, `config.json has the scaffold's rf_* keys (${rf.length})`);
     for (const key of rf) assert.match(result.stdout, new RegExp(`rf_\\* values to push: [^\\n]*\\b${key} = `));
     assert.doesNotMatch(result.stdout, /new switch/);
     assert.match(result.stdout, /guard: pass/);
