@@ -16,6 +16,9 @@ The checks every theme change is held to (ticket 16; spec "Testing Decisions", s
 | Host batch on the prelaunch host | `npm run qa:prelaunch` | no | no: once per checkpoint, in the operator's shell with the preview cookie ([Host batch](#host-batch-qaprelaunch)) |
 | UI states (drawer, panel) and kind@name pins | with `qa:axe` and `qa:screens` | no | yes (release.sh, through `qa:prepush`) |
 | Overlays | `QA_OVERLAY=<name> npm run qa:screens` (and `qa:axe`, `qa:raw-html`) | no | no: refused with `QA_FRESH_SERVER=1` ([Render modes](#render-modes-w0-8)) |
+| Switch matrix: every pinned page with each module switch on and off (ticket 54a) | `npm run qa:matrix` | no | no: ticket 54's full pass, and each switch ticket for its own switch ([Switch matrix](#switch-matrix-and-the-extra-checks-ticket-54a)) |
+| Reflow at 320, reduced motion, the focus tab-through (ticket 54a) | `npm run qa:reflow`, `qa:motion`, `qa:focus` | no | no: in the switch matrix and ticket 54's full pass |
+| Home widget links answer 200 (ticket 54a) | `npm run qa:links` | no | no: ticket 54's full pass |
 
 CI has no store credentials, so anything that renders the storefront runs locally or from `release.sh`. Every browser gate blocks the analytics tags, and on a live channel refuses every write ([Analytics and live-store writes](#analytics-and-live-store-writes-network-guardmjs)). `npm run qa:prepush` (`prepush.mjs`) runs axe, the raw-HTML check and the screenshot diffs, in that order. It runs all three even when one fails, exits non-zero if any failed, and ends with each gate's result.
 
@@ -277,7 +280,7 @@ QA_OVERLAY=rf_rise-off npm run qa:raw-html
 QA_OVERLAY=rf_rise-off node scripts/qa/serve.mjs # by hand
 ```
 
-- **The overlays today:** `rf_rise-off` (27), `menu-ids-empty` (28's stock fallback) and `species-empty` (28: no Species group). Add one per switch as each module lands, in the same PR.
+- **The overlays today:** `rf_rise-off` (27), `menu-ids-empty` (28's stock fallback) and `species-empty` (28: no Species group), and one per module switch for the switch matrix (ticket 54a): `rf_cart_state-off` (42), `rf_quick_add-off` (43) and `rf_region_prompt-on` (52). A module ticket records its overlay's baselines when its module lands; a new switch adds its overlay in the same PR.
 - **Only declared settings.** An overlay is refused while `config.json` doesn't declare one of its settings, or when a value has another type than the declared one, because the render would look unchanged and pass for the overlay. So the three above run once ticket 25's scaffold declares `rf_rise` and the menu ids. A misspelt key in the file, a missing `description` or an empty `settings` is refused too.
 - **The patch** sets each value in the base settings and in every variation's, so it renders whatever `QA_VARIATION` is. It also sets `rf_qa_overlay` to the overlay's name. `?debug=context` shows it in `theme_settings`, and the gates check it: an overlay run trusts only a server that renders its overlay, and a plain run never trusts one that renders any overlay.
 - **A throwaway git worktree.** The run makes a worktree of the checkout's working tree as it is, uncommitted and untracked changes included, through a temporary index (the checkout's index, branch and files stay as they were). It goes in `QA_SCRATCH_DIR`, or the system temp folder, as `rf-qa-overlay-<port>-<overlay>-…`. Its `node_modules`, `secrets.stencil.json` and `config.stencil.json` are links to the checkout's own, never copies. Only its `stencil start` runs there: Playwright, the specs, the baselines and the manifest stay in the checkout. It is removed when the run ends, also on Ctrl-C, `SIGTERM` or `SIGHUP`. One a killed run left on the same port is removed, with a `STALE` line, by the next overlay run on that port, which holds the port lock. It is found by its name among the repo's worktrees, whatever `QA_SCRATCH_DIR` either run had, and a worktree on a branch is never removed, whatever its folder is called.
@@ -307,6 +310,86 @@ On the store, a custom template is chosen by a template association, which belon
 - The page must exist on the store as that type, such as a category on channel 1 or a Web Page on 1895766. Pin it in `pages.mjs` (for example `category@noindex`), and add the mapping in the same PR as the template.
 - `stencil start` reads `config.stencil.json` once, when it starts, so stop a running server after changing `custom-layouts.json`. A plain run reuses a running server.
 - The file maps nothing today. Tickets 32, 34 and 35 add theirs.
+
+## Switch matrix and the extra checks (ticket 54a)
+
+Ticket 54's full pass on prelaunch (54b, after refactor 14) needs checks the release's gates don't run: every pinned page with each module switch on and off, reflow at 320, reduced motion, a focus tab-through, and the home widget links. Ticket 54a builds them now, so each module ticket can run them on its own switch as it lands.
+
+None of them runs in CI or in `qa:prepush`. They are for the full pass, the module tickets and the checkpoints, and the reduced-motion check fails on stock Cornerstone until ticket 25's skin adds its reset (revisitable).
+
+### The module switches (`switches.mjs`)
+
+The module switches are config.json's boolean `rf_*` settings: `rf_rise` (27), `rf_cart_state` (42), `rf_quick_add` (43) and `rf_region_prompt` (52). `SWITCHES` has one entry per switch, in ticket order with a blank line between entries, so each ticket changes only its own lines:
+
+| Key | What |
+|---|---|
+| `ticket`, `module` | who owns the switch, and what it switches |
+| `markers` | the `data-rf-*` attributes the module's markup carries. With the switch off, no element on the page may carry one. |
+| `chunks` | the `webpackChunkName` of each script the module loads, such as `rf-quick-add`. With the switch off, the page may not load one. |
+
+- **A switch is in the matrix once a template reads it** (`theme_settings.<switch>`, outside a Handlebars comment). Until then its module hasn't landed: the scaffold pre-declares every switch, and flipping one that nothing reads renders the same page.
+- **When your module lands, fill in your entry's `markers` or `chunks`, or both.** `switches.test.mjs` fails, naming your switch, while a template reads it and its entry names neither. It also fails a marker or chunk that no template, and no script under `assets/js`, has. A script may write a marker as `data-rf-…` or through `dataset`. `rf_region_prompt`'s marker is already there: the prompt's root, `data-rf-region-prompt`.
+- **Each switch has an overlay that flips its base value:** `rf_rise-off`, `rf_cart_state-off`, `rf_quick_add-off` and `rf_region_prompt-on` (off everywhere by default). `switches.test.mjs` checks that every switch has one, so a new switch adds its own.
+- **Record your overlay's baselines with your module,** as for any overlay ([Render modes](#render-modes-w0-8)). The matrix's screenshot gate fails a row whose overlay has none.
+
+### The switch matrix (`switch-matrix.mjs`)
+
+```sh
+export QA_PORT=4300            # the worktree's own pair; the overlay rows take 4310 and 4311
+npm run qa:matrix -- --list    # the plan only: which rows, and which switches wait
+npm run qa:matrix              # every row
+```
+
+- **The rows:** the plain run, with every switch at its value for `QA_VARIATION`, then one row per landed switch. Each of those renders with the overlay that sets its switch the other way and changes nothing else, so each switch is seen on and off.
+- **A switch that no template reads** is listed under "Not in the matrix yet", with its ticket, and doesn't fail the run: a switchable module that isn't ready ships switched off (ticket 10's rule).
+- **What fails the plan:** a landed switch with no overlay to flip it (the line names the file to add), and a boolean `rf_*` setting with no entry in `SWITCHES`.
+- **What each row runs.** Each command starts its own stencil start: an overlay never reuses one, and the plain row reuses only a server that renders it.
+  1. Playwright with the matrix's specs (`MATRIX_SPECS`): the screenshot diffs, axe, `switch-stock` (below), reflow, reduced motion, focus, and the network guard's self-test. The filters are anchored to each file's name, so the widget shots, the screenshot self-test and the reference screens don't run. Each spec is a gate of its own: the run writes a JSON report to `results/matrix/<row>.json` (`RF_QA_JSON_REPORT`, which `playwright.config.mjs` adds beside its own reporters), and the matrix reads each spec's result from it.
+  2. The raw-HTML check.
+- **The output:** the plan, then one line per gate per row (`ok` or `FAIL`, with the first failures under it), then the verdict. Every row runs, whatever the rows before it did.
+  - It exits 1 if a gate failed or the plan has a problem, and 2 if it couldn't start.
+  - `results/matrix/summary.json` keeps the plan and each gate's result, for ticket 54b's report.
+  - Each row's screenshots go into the screenshot manifest under their overlay's name, for the review pages.
+- **It refuses** `QA_OVERLAY` (it sets that itself, row by row), `QA_BASE_URL` and `QA_FRESH_SERVER=1`: an overlay renders only on a local stencil start, and never in a release.
+- **One switch by hand:** `QA_OVERLAY=rf_quick_add-off npx playwright test --config scripts/qa/playwright.config.mjs switch-stock`, and `npm run qa:screens`, `qa:axe` and the rest with the same `QA_OVERLAY`.
+
+**Stock markup with a switch off** (`switch-stock.spec.mjs`; stories 35 and 73). On every pinned page, at 375 and 1280, once the page has loaded, no element carries a marker of a switch that is off in the run, and the page requested no chunk of one.
+
+- The run's switches are config.json's for `QA_VARIATION`, with `QA_OVERLAY`'s on top. So the plain run checks what its variation turns off (`rf_region_prompt` in ReelFlies CA), and each matrix row checks the switch its overlay turns off.
+- A test whose switched-off modules name no markers or chunks yet is skipped, with the reason.
+
+### Reflow, reduced motion and focus
+
+Each is a thin spec over `page-checks.mjs`. `page-checks.test.mjs` proves each check on fixture pages in Chromium, with a failing fixture beside each passing one. Each spec covers the pinned pages of `QA_CHANNEL`, kind@name pins included, and renders with `QA_OVERLAY` when it is set. None takes a screenshot or has a baseline.
+
+| Check | Command | What fails | On |
+|---|---|---|---|
+| Reflow at 320 (story 71) | `npm run qa:reflow` | The page is wider than the viewport at 320 x 568, so it scrolls sideways. The failure names the outermost boxes past the edge that no ancestor clips: a carousel's track, which its frame clips, doesn't count. | Every pin, as a phone (`phone-375`'s mobile emulation) and as a desktop browser zoomed to 400% (`desktop-1280`), which is WCAG 1.4.10's case |
+| Reduced motion (story 69) | `npm run qa:motion` | With `prefers-reduced-motion: reduce` emulated: an animation still running after the cart count goes up, which is when the rise ring plays (ticket 27). Or any transition or animation an element, `::before` or `::after` declares, or smooth scrolling. Both count only above 10 ms (`MOTION_LIMIT_MS`), because a reset usually sets 0.01 ms. | Every pin, at 375 and 1280 |
+| Focus tab-through (story 67) | `npm run qa:focus` | Tabbing from the top of the page to the end (250 Tabs at most), a focused element whose centre, by `elementFromPoint`, is under a fixed or sticky box that doesn't hold it: the sticky header, the sticky bars (38, 41) or the prompt card (52). | The product and cart pins, at 375 |
+
+- **Reduced motion fails on stock Cornerstone, on every page.** It has no reset, and its buttons, links and menus declare transitions. Ticket 25's skin adds "a global reduced-motion reset" (spec module 1), and each failure says so.
+- **The cart count goes up the way an add sends it** (build pipeline, section 6.9): the stock `cart-quantity-update` on `<body>`, then `rf:cart-changed` on `document`. Nothing reaches the store: the stock handler updates only the count and `localStorage`.
+- **The tab-through notes, without failing,** a focused element with no visible box, one whose centre is off screen, and one that another element (not fixed or sticky) lies over. Those are for ticket 55's keyboard pass.
+
+### Home widget links (`widget-links.mjs`)
+
+```sh
+export QA_PORT=4300 && npm run qa:links                                           # through a local stencil start
+QA_BASE_URL=https://reelflies_ca-1895766.mybigcommerce.com npm run qa:links    # the prelaunch host, with QA_PREVIEW_COOKIE read first
+```
+
+This is ticket 54's "every link in the home widgets returns 200 with no redirect", which tickets 47 to 49 leave to 54.
+
+- It fetches the channel's home pin with no JavaScript, as `qa:raw-html` does, and finds every `<a href>` inside an element with `data-widget-id`, which is how Page Builder and the Widgets API render a widget. Links in comments and scripts don't count.
+- It fetches each link to the storefront once, with a GET that follows no redirect. A link passes only on 200: a 301 fails, naming where it points.
+- A link to the store's own host counts as the storefront's. A local run reads that host from `?debug=context`, and fetches the path through its own server.
+- **Not fetched, and listed:**
+  - another host, as a `WARNING`, so a link from prelaunch to live reelflies.ca shows
+  - a link that changes the cart or the session on a GET (`GET_WRITES` in `read-only-posts.mjs`), as a `WARNING`
+  - a link within the page, and `mailto:`, `tel:` and `javascript:` links
+- **A home page with no widget yet passes, with a `WARNING`.** The widgets are tickets 46 to 49's.
+- The preview cookie goes only to `QA_BASE_URL`'s host. It exits 1 when a link or the home page failed, and 2 when the storefront can't be reached.
 
 ## Bundle limits (`scripts/check-bundle.mjs`)
 
@@ -787,6 +870,8 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - `lighthouse-rules.test.mjs` covers ticket 17's rules on real Lighthouse results (`lighthouse-fixtures/`): the metrics, the median of three, the budgets, the drop rule, the URL lists and the history. `lighthouse.test.mjs` covers the run around them with stand-ins for Lighthouse, the browser, the storefront and the store.
 - `npm run test:scripts` runs every `scripts/**/*.test.mjs` with `node --test`, the fixture renders included.
 - `scaffold.test.mjs` holds ticket 25's shared-file slots (build pipeline 6.1; CUSTOMIZATIONS.md, "Slots for parallel tickets"): the ReelFlies settings block, schema group and lang slots, the style layer's imports, the slots in `page-modules.js`, `reelflies/global.js` and `js-settings.html`, and the hooks in `base.html`, `app.js` and `global.js`. It also runs the release guard and step 1's diff on the block (spec seam 5): the first push, a switch toggled live, and a value changed after the scaffold's push (refused by rule 1 until the release lane gives values the three-way rule, which a todo test holds). `render/partials/body.test.mjs` and `reelflies-frame.test.mjs` render the `<main>` hook, the icon sheet, the icon partial, `body-start.html` and `js-settings.html`.
+- `switches.test.mjs` covers ticket 54a's switch registry: the switches against config.json, which switches a template reads, the overlay that flips each, and the markers and chunks a landed module names. `switch-matrix.test.mjs` covers the matrix's plan, its Playwright filters, how it reads each row's JSON report, what it runs for a row and what it prints. `page-checks.test.mjs` proves the reflow, reduced-motion and focus checks in Chromium (skipped in CI, which has none), and `widget-links.test.mjs` the widget link check against a server of its own.
+- `reflow.spec.mjs`, `reduced-motion.spec.mjs`, `focus.spec.mjs` and `switch-stock.spec.mjs` run through `qa:reflow`, `qa:motion`, `qa:focus` and the switch matrix, never through `qa:axe`, `qa:screens` or `qa:prepush`, whose filters don't match them.
 - Jest runs `assets/js/test-unit/`. `jest.config.js` ignores `scripts/`, because Jest 30 would otherwise match `*.test.mjs` and `*.spec.mjs` too.
 - `screens-reference.spec.mjs` runs with `qa:screens`, because its name matches the filter, and never fails it. `review-live.spec.mjs` runs only when named. Neither is a gate. `review/manifest-reporter.test.mjs` checks both against `package.json`'s filters.
 - Playwright writes its report, traces and failed diffs to `scripts/qa/results/`, which is ignored by git. The manifest reporter writes `results/manifest.json` there too, and the review pages go to `results/review/`. A run with `QA_PREVIEW_COOKIE` writes no traces, so the cookie never lands there.
