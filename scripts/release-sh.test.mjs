@@ -1764,7 +1764,7 @@ test('ticket 17: a state step 6b can\'t read still lets the release go on to wri
     assert.match(step.stdout, /the Lighthouse step couldn't run/);
 });
 
-test('ticket 17: Ctrl-C during the run stops Lighthouse, not the release: step 6b records "pending host batch" and exits 0, so step 7 still runs', async () => {
+test('ticket 17: Ctrl-C during the run stops Lighthouse: step 6b records "pending host batch" and exits 0, so step 7 still writes the entry, then stops the release before the prune', async () => {
     const folder = lighthouseFolder();
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-release-state-'));
     tempDirs.push(dir);
@@ -1789,6 +1789,11 @@ test('ticket 17: Ctrl-C during the run stops Lighthouse, not the release: step 6
     const saved = JSON.parse(fs.readFileSync(statePath, 'utf8'));
     assert.equal(saved.lighthouse.result, 'pending');
     assert.match(saved.lighthouse.reason, /stopped by SIGINT \(Ctrl-C\)/);
+    assert.equal(saved.lighthouse.interrupted, 'SIGINT');
+    const log = runReleaseMjs('write-log', [], { cwd: folder.dir, state: saved });
+    assert.equal(log.status, 1, log.output);
+    assert.match(log.stderr, /^STOP {5}step 6b was stopped by SIGINT \(Ctrl-C\).*The prune didn't run/m);
+    assert.match(fs.readFileSync(path.join(folder.dir, 'RELEASES.md'), 'utf8'), /\n- Lighthouse: pending host batch\n- Operator: /);
 });
 
 test('ticket 17: step 7 always writes a Lighthouse line: "pending host batch" when step 6b recorded nothing', () => {

@@ -200,7 +200,11 @@ export function lighthouseOutcome({
     }) || summaryProblem({
         status, summary, startedAt, uuid,
     });
-    if (problem) return pending(`${problem}. The next host batch of this build (npm run qa:prelaunch) measures it and fills in the entry`);
+    if (problem) {
+        // A run the operator stopped is recorded as pending too, and stops the release after step 7
+        // (stopReason): they asked the release to stop, so the prune doesn't run after it.
+        return { ...pending(`${problem}. The next host batch of this build (npm run qa:prelaunch) measures it and fills in the entry`), ...(interrupted ? { interrupted } : {}) };
+    }
     const pass = status === 0 && summary.ok === true;
     return {
         result: pass ? 'pass' : 'fail',
@@ -238,12 +242,21 @@ export function describeLighthouse(lighthouse) {
     return lighthouseEntryLines(lighthouse)[0].replace(/^- Lighthouse: /, '');
 }
 
-// Why the release stops once step 7 has written its entry, or null: a failed gate. The theme is
-// live on prelaunch by then, so the release can only report it; the entry's "fail" keeps the build
-// from moving on to channel 1 (ticket 56), and the stop keeps the prune from running after it.
+const PRUNE_LATER = 'The prune didn\'t run: commit RELEASES.md, then run scripts/release.sh --prune-only --dry-run and --prune-only from the main clone';
+
+// Why the release stops once step 7 has written its entry, or null: a failed gate, or a run the
+// operator stopped (Ctrl-C, SIGTERM or SIGHUP). The theme is live on prelaunch by then, so the
+// release can only report a fail; the entry's "fail" keeps the build from moving on to channel 1
+// (ticket 56). Either way the stop keeps the prune from running after it.
 export function stopReason(lighthouse) {
-    if (!lighthouse || lighthouse.result !== 'fail') return null;
-    return 'Lighthouse failed on the prelaunch host (the entry lists each URL and the budget it missed), so this build doesn\'t move on to channel 1 (ticket 56). Fix forward, or roll back to the previous release\'s theme, which RELEASES.md records. The prune didn\'t run: commit RELEASES.md, then run scripts/release.sh --prune-only --dry-run and --prune-only from the main clone';
+    if (!lighthouse) return null;
+    if (lighthouse.result === 'fail') {
+        return `Lighthouse failed on the prelaunch host (the entry lists each URL and the budget it missed), so this build doesn't move on to channel 1 (ticket 56). Fix forward, or roll back to the previous release's theme, which RELEASES.md records. ${PRUNE_LATER}`;
+    }
+    if (lighthouse.result === 'pending' && lighthouse.interrupted) {
+        return `step 6b was stopped by ${lighthouse.interrupted}${lighthouse.interrupted === 'SIGINT' ? ' (Ctrl-C)' : ''}, so the release stops here. The entry records Lighthouse as pending host batch, which the next host batch of this build (npm run qa:prelaunch) fills in. ${PRUNE_LATER}`;
+    }
+    return null;
 }
 
 // --- The run (not pure) ----------------------------------------------------------------------------

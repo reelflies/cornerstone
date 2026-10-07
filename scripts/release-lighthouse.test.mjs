@@ -543,3 +543,23 @@ test('a run that was stopped records "pending host batch", saying how it stopped
         assert.match(outcome.reason, why);
     }
 });
+
+test('a run the operator stopped (Ctrl-C, SIGTERM or SIGHUP) stops the release once its entry is written, before the prune; a time limit or a failure to start doesn\'t', () => {
+    for (const name of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+        const outcome = lighthouseOutcome({
+            status: null, interrupted: name, signal: name, summary: summary(), startedAt: STARTED, uuid: UUID,
+        });
+        assert.equal(outcome.result, 'pending');
+        assert.equal(outcome.interrupted, name);
+        assert.deepEqual(lighthouseEntryLines(outcome), [LIGHTHOUSE_PENDING_LINE]);
+        assert.match(stopReason(outcome), new RegExp(`step 6b was stopped by ${name}`));
+        assert.match(stopReason(outcome), /The prune didn't run/);
+    }
+    for (const stopped of [{ timedOut: true, signal: 'SIGTERM' }, { error: new Error('spawn npm ENOENT') }, { status: 2 }]) {
+        const outcome = lighthouseOutcome({
+            status: null, ...stopped, summary: null, startedAt: STARTED, uuid: UUID,
+        });
+        assert.equal(outcome.result, 'pending');
+        assert.equal(stopReason(outcome), null, JSON.stringify(stopped));
+    }
+});
