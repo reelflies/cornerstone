@@ -14,15 +14,19 @@
 //     base: { sha, timestamp } | null, baseNote }, guard: { values, newSwitches },
 //   verify: { problems } | null, operator,
 //   confirmation: { mode: 'typed' } | { mode: 'nonprod', channel }, calendar: { line },
-//   pairedChannel1: { phase, since, t28, flip, status } | null }
+//   pairedChannel1: { phase, since, t28, flip, status } | null, lighthouse }
 // step1.base is the channel's last release, which step 1 compared with; baseNote says why there was
 // none. previousThemeUuid, confirmation, calendar and pairedChannel1 are W0-1's: the theme the
 // channel ran just before the push (step 5's capture), how step 5 was confirmed, the release
 // calendar's describePhase line, and the paired channel-1 release pending from T-28 (ticket 56).
+// lighthouse is ticket 17's: the plan (release-lighthouse.mjs lighthousePlan) until step 6b runs,
+// then its outcome; the entry records its line after Verify, and a record without it (an entry from
+// before the hook) has none.
 
 import { formatBytes } from './lib/format.mjs';
 import { describeLiveTheme } from './release-capture.mjs';
 import { displayValue } from './release-diff.mjs';
+import { describeLighthouse, lighthouseEntryLines } from './release-lighthouse.mjs';
 
 // W0-3: every theme the release tooling deletes from My Themes (and uploads, if the upload mode is
 // ever built), one row each. The prune writes a row right after each deletion.
@@ -127,6 +131,7 @@ export function formatReleaseEntry(release) {
         `- rf_* values pushed: ${valueList(release.guard.values, true)}`,
         `- New switches: ${codeList(release.guard.newSwitches) || 'none'}`,
         `- Verify: ${describeVerify(release.verify)}`,
+        ...(release.lighthouse ? lighthouseEntryLines(release.lighthouse, { dryRun: !release.verify }) : []),
         `- Operator: ${release.operator}`,
         `- Confirmation: ${describeConfirmation(release.confirmation)}`,
         ...(release.pairedChannel1 ? [`- Paired channel-1 release: ${describePairedRelease(release.pairedChannel1)}`] : []),
@@ -281,5 +286,6 @@ export function formatPushSummary(release) {
             : describeConfirmation(release.confirmation, false)),
         line('calendar', release.calendar.line.replace(/^Release calendar: /, '')),
         ...(release.pairedChannel1 ? [line('channel 1', `paired release ${describePairedRelease(release.pairedChannel1)}`)] : []),
+        ...(release.lighthouse ? [line('lighthouse', describeLighthouse(release.lighthouse))] : []),
     ].join('\n');
 }
