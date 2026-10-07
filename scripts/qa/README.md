@@ -563,6 +563,7 @@ A widget whose layout makes promises a shot can't prove has its own Playwright s
 - its text 4.5:1 or better over the scrim and the photo on desktop, at 801 and 1280 px. The text is made transparent, each line box is shot, and the lightest pixel behind it is read back through a canvas; each ratio is a test annotation.
 - no serious or critical axe issues in the widget
 
+### Worked example
 
 `render/example/` tests a partial from fixture JSON, with two fixtures that pass and one that fails. Copy it for your own partial.
 

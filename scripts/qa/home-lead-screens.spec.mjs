@@ -1,8 +1,8 @@
 // The home lead's layout, contrast and accessibility (ticket 46; spec module 6; stories 11, 67,
 // 68, 70), checked on the widget's fixture page (W0-9), which renders widgets/home-lead from
 // the fixture ReelFlies_CA gets, inside the theme's own body, with this checkout's theme CSS.
-// The store's copy of the hero is hidden in page baselines (W0-6's HIDDEN), so its layout is
-// checked here, from its source, and its look by widget-screens.spec.mjs's element shots.
+// The store's copy of the hero is hidden in page baselines (W0-5's HIDDEN, in pages.mjs), so its
+// layout is checked here, from its source, and its look by widget-screens.spec.mjs's element shots.
 //
 // Its name ends in "screens", so `npm run qa:screens` (and so qa:prepush and release.sh) runs it.
 //
