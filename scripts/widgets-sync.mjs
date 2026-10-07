@@ -8,6 +8,7 @@
 //   node scripts/widgets-sync.mjs --channel 1895766 --ticket 46 --only placement         # place widgets already recorded
 //   node scripts/widgets-sync.mjs --channel 1895766 --ticket 57 --unpublish home-lead    # switch a home section off (R12)
 //   node scripts/widgets-sync.mjs --channel 1895766 --record                             # after an apply: write the uuids into channels/<id>.json
+//   node scripts/widgets-sync.mjs --channel 1895766 --verify                             # after an apply: exit 1 unless the channel holds what the repo records
 //
 // What a run does, and never does (docs/widgets.md has the routine):
 //
@@ -25,6 +26,10 @@
 //    RELEASES.md). The helper checks channel_id again on every request, response and re-read.
 // 5. After an apply, --record reads the channel again and writes the uuids the store gave each
 //    object into widgets/<name>/channels/<channel>.json, for the PR that follows.
+// 6. --verify reads the channel again and exits 1, printing the diff, unless it holds exactly what
+//    the repo records. It is the check that an apply took (a placement made active, or an
+//    unpublish), so the raw-HTML gates never compare the store with the channel files: they
+//    check the widgets' markup wherever a page has them (build pipeline, section 6.6).
 //
 // --unpublish <name> sets the widget's placement "inactive" in its channel file and plans only
 // that status change: the one widget write the release calendar allows from T-14 (ticket 57).
@@ -49,12 +54,13 @@ import {
 export const USAGE = [
     'usage: node scripts/widgets-sync.mjs --channel <id> --ticket <NN> [--widget <name>]... [--only content|placement | --unpublish <name>]',
     '       node scripts/widgets-sync.mjs --channel <id> --record [--widget <name>]...',
+    '       node scripts/widgets-sync.mjs --channel <id> --verify [--widget <name>]...',
 ].join('\n');
 const MAIN_CLONE = '~/reelflies/theme/cornerstone';
 
 export function parseArgs(argv) {
     const options = {
-        channel: null, ticket: null, widgets: [], only: 'all', unpublish: null, record: false,
+        channel: null, ticket: null, widgets: [], only: 'all', unpublish: null, record: false, verify: false,
     };
     let channelGiven = false;
     let onlyGiven = false;
@@ -84,6 +90,8 @@ export function parseArgs(argv) {
             options.unpublish = value();
         } else if (arg === '--record') {
             options.record = true;
+        } else if (arg === '--verify') {
+            options.verify = true;
         } else {
             throw new Error(`unknown argument ${arg}`);
         }
@@ -92,9 +100,10 @@ export function parseArgs(argv) {
     if (!SYNC_CHANNELS.includes(options.channel)) {
         throw new Error(`channel ${options.channel} isn't a sync target (${SYNC_CHANNELS.join(', ')}): ticket 53 adds channel 1, whose widget writes are Shaun's to approve`);
     }
+    if (options.verify && (options.record || onlyGiven || options.unpublish)) throw new Error('--verify only reads the channel and compares it with the repo: it takes no --record, --only or --unpublish');
     if (options.record && (onlyGiven || options.unpublish)) throw new Error('--record only reads the channel and writes the uuids into the channel files: it takes no --only or --unpublish');
     if (options.unpublish && onlyGiven) throw new Error('--unpublish can\'t be combined with --only: it plans only the placement\'s status');
-    if (!options.record && !options.ticket) throw new Error('--ticket is required: the ticket the writes are for, which labels the store-write helper\'s log rows');
+    if (!options.record && !options.verify && !options.ticket) throw new Error('--ticket is required: the ticket the writes are for, which labels the store-write helper\'s log rows');
     return options;
 }
 
@@ -189,6 +198,11 @@ export async function main(argv, {
         if (!requests.length) {
             print(`Channel ${channel} is in step with the repo: nothing to write.`);
             return 0;
+        }
+        if (options.verify) {
+            print(`NOT IN STEP  channel ${channel} differs from the repo: ${requests.length} request${requests.length === 1 ? '' : 's'} would close it (above). Nothing was written: no changes file.`);
+            print('After an apply, this means a write didn\'t take, or the channel file\'s PR doesn\'t match the apply: check the apply\'s re-read and the channel files (docs/widgets.md).');
+            return 1;
         }
         if (options.unpublish) {
             setPlacementStatus(entries[0].channelFile, 'inactive');

@@ -95,7 +95,7 @@ test('it takes one channel per run, and only ReelFlies_CA until ticket 53 adds c
     assert.throws(() => parseArgs(['--channel', '1', '--ticket', '46']), /channel 1 isn't a sync target \(1895766\): ticket 53 adds channel 1/);
     assert.throws(() => parseArgs(['--channel', '1855224', '--ticket', '46']), /isn't a sync target/);
     assert.deepEqual(parseArgs(['--channel', '1895766', '--ticket', '46']), {
-        channel: CH, ticket: '46', widgets: [], only: 'all', unpublish: null, record: false,
+        channel: CH, ticket: '46', widgets: [], only: 'all', unpublish: null, record: false, verify: false,
     });
 });
 
@@ -106,6 +106,10 @@ test('its options are checked before anything is read', () => {
     assert.throws(() => parseArgs(['--channel', '1895766', '--record', '--unpublish', 'home-lead']), /--record only reads/);
     assert.throws(() => parseArgs(['--channel', '1895766', '--ticket', '46', '--apply']), /unknown argument --apply/);
     assert.deepEqual(parseArgs(['--channel', '1895766', '--record']).record, true);
+    assert.deepEqual(parseArgs(['--channel', '1895766', '--verify']).verify, true, '--verify only reads, so it takes no --ticket');
+    assert.throws(() => parseArgs(['--channel', '1895766', '--verify', '--record']), /--verify only reads/);
+    assert.throws(() => parseArgs(['--channel', '1895766', '--verify', '--only', 'content']), /--verify only reads/);
+    assert.throws(() => parseArgs(['--channel', '1895766', '--verify', '--unpublish', 'home-lead']), /--verify only reads/);
     assert.deepEqual(parseArgs(['--channel', '1895766', '--ticket', '47', '--widget', 'home-lead', '--widget', 'home-tiles']).widgets, ['home-lead', 'home-tiles']);
 });
 
@@ -184,4 +188,47 @@ test('--unpublish sets the placement inactive in the channel file and plans only
     assert.deepEqual(readChanges(changes, { root }), [{
         method: 'PUT', path: `/v3/content/placements/${P}`, query: {}, body: { status: 'inactive', channel_id: CH },
     }]);
+});
+
+// The hero as recorded on the channel (uuids set), with its placement at `fileStatus` in the
+// repo and `storeStatus` on the store.
+function recordedHero({ fileStatus, storeStatus }) {
+    const widgetsRoot = copyHero();
+    const widget = readWidget('home-lead', { root: widgetsRoot });
+    const channelFile = readChannelFile(widget, CH);
+    const file = JSON.parse(fs.readFileSync(channelFile.file, 'utf8'));
+    fs.writeFileSync(channelFile.file, JSON.stringify({ ...file, placement: { ...file.placement, status: fileStatus }, uuids: { template: T, widget: W, placement: P } }));
+    const routes = routesFor(FIXTURES.placed(widget, channelFile.configuration, { ...file.placement, status: storeStatus }));
+    return { widgetsRoot, routes };
+}
+
+test('--verify passes when the channel holds what the repo records, reading with GETs only', async () => {
+    const { widgetsRoot, routes } = recordedHero({ fileStatus: 'active', storeStatus: 'active' });
+    const {
+        code, text, calls, root,
+    } = await run(['--channel', '1895766', '--verify'], { routes, widgetsRoot });
+    assert.equal(code, 0, text);
+    assert.ok(calls.every(call => call.method === 'GET'));
+    assert.match(text, /Channel 1895766 is in step with the repo/);
+    assert.deepEqual(changesFiles(root), []);
+});
+
+test('--verify fails, naming each difference, when the store and the repo disagree, and writes nothing', async () => {
+    const { widgetsRoot, routes } = recordedHero({ fileStatus: 'inactive', storeStatus: 'active' });
+    const before = fs.readFileSync(path.join(widgetsRoot, 'home-lead', 'channels', '1895766.json'), 'utf8');
+    const { code, text, root } = await run(['--channel', '1895766', '--verify'], { routes, widgetsRoot });
+    assert.equal(code, 1, text);
+    assert.match(text, /placement pages\/home home_below_menu \(e1e1e1e1\): update/);
+    assert.match(text, /status: "active" -> "inactive"/);
+    assert.match(text, /NOT IN STEP +channel 1895766 differs from the repo: 1 request would close it/);
+    assert.deepEqual(changesFiles(root), [], 'no changes file');
+    assert.equal(fs.readFileSync(path.join(widgetsRoot, 'home-lead', 'channels', '1895766.json'), 'utf8'), before, 'the channel file is left as it was');
+});
+
+test('--verify fails on a channel the hero was never applied to', async () => {
+    const { code, text, root } = await run(['--channel', '1895766', '--verify']);
+    assert.equal(code, 1, text);
+    assert.match(text, /template rf-home-lead: create/);
+    assert.match(text, /NOT IN STEP +channel 1895766 differs from the repo: 3 requests would close it/);
+    assert.deepEqual(changesFiles(root), []);
 });
