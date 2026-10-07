@@ -73,7 +73,7 @@ import {
 import { redact } from './release-redact.mjs';
 import { validateThemeConfig } from './release-schema.mjs';
 import { buildPushArgs, findTarget, RELEASE_TARGETS } from './release-targets.mjs';
-import { readMyThemes, themeDeleter } from './release-themes.mjs';
+import { readMyThemes, themeDeleter, themeReader } from './release-themes.mjs';
 import { fetchChannelCategoryIds, readGuardToken, tokenGetJson } from './release-tree-ids.mjs';
 
 const MAIN_JS = 'assets/dist/theme-bundle.main.js';
@@ -489,7 +489,8 @@ async function readCategoryIds(state, repoSettings) {
     try {
         return await fetchChannelCategoryIds({ channelId: state.channel, storeHash: await getStoreHash(), getJson: tokenGetJson(token) });
     } catch (error) {
-        throw new Stop(`reading channel ${state.channel}'s category tree failed: ${error.message}`);
+        // The token may come from the Keychain, which the push output's filter can't see.
+        throw new Stop(`reading channel ${state.channel}'s category tree failed: ${redact(error.message, [token])}`);
     }
 }
 
@@ -752,7 +753,8 @@ function writeReleaseLog() {
 // --- W0-3: pruning My Themes ------------------------------------------------------------------
 
 // My Themes and every channel's active theme: the store, read-only, or RF_RELEASE_THEMES_FIXTURE in a
-// dry run. A deleter is made only for a real prune, so a dry run has no way to delete.
+// dry run. A deleter is made only for a real prune, so a dry run has no way to delete. Every store
+// error comes back from release-themes.mjs as a message only, never with the request.
 async function readStoreThemes(releases, deleting) {
     const fixture = process.env.RF_RELEASE_THEMES_FIXTURE;
     if (fixture) {
@@ -767,7 +769,7 @@ async function readStoreThemes(releases, deleting) {
         const { themes, activeByChannel } = await readMyThemes({ client, api, knownChannels });
         if (!deleting) return { themes, activeByChannel };
         return {
-            themes, activeByChannel, deleteTheme: themeDeleter({ client, api }), readThemes: () => client.getThemes(api),
+            themes, activeByChannel, deleteTheme: themeDeleter({ client, api }), readThemes: themeReader({ client, api }),
         };
     } catch (error) {
         throw new Stop(`reading My Themes failed, so nothing was deleted: ${redact(error.message, knownSecrets())}`);

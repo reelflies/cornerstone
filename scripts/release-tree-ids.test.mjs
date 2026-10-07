@@ -87,7 +87,7 @@ test('without the token, the guard\'s message names the scope and where the toke
 test('a 401 or 403 from the catalogue names the read-only token\'s scope, never the token', async () => {
     const sent = [];
     const request = async (url, init) => {
-        sent.push([url, init.method, init.headers['X-Auth-Token']]);
+        sent.push([url, init.method, init.headers['X-Auth-Token'], init.redirect]);
         return { ok: false, status: 403, statusText: 'Forbidden' };
     };
     await assert.rejects(tokenGetJson(FAKE, { request })('https://api.bigcommerce.com/stores/abc/v3/catalog/trees'), error => {
@@ -95,5 +95,6 @@ test('a 401 or 403 from the catalogue names the read-only token\'s scope, never 
         assert.ok(!error.message.includes(FAKE));
         return true;
     });
-    assert.deepEqual(sent, [['https://api.bigcommerce.com/stores/abc/v3/catalog/trees', 'GET', FAKE]]);
+    // redirect: 'error': fetch keeps the X-Auth-Token header on a redirect off the API's origin.
+    assert.deepEqual(sent, [['https://api.bigcommerce.com/stores/abc/v3/catalog/trees', 'GET', FAKE, 'error']]);
 });

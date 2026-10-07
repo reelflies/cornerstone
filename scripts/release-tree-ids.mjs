@@ -41,10 +41,11 @@ export function categoryIdsFromPage(response) {
 }
 
 // A GET that returns the parsed body. Errors name the status, never the token. `request` is
-// fetch, or a stand-in in the tests.
+// fetch, or a stand-in in the tests. It never follows a redirect, which would send the X-Auth-Token
+// header on to another origin (fetch drops only Authorization).
 export function tokenGetJson(token, { request = fetch } = {}) {
     return async url => {
-        const response = await request(url, { method: 'GET', headers: { 'X-Auth-Token': token, Accept: 'application/json' } });
+        const response = await request(url, { method: 'GET', headers: { 'X-Auth-Token': token, Accept: 'application/json' }, redirect: 'error' });
         if (!response.ok) {
             const hint = response.status === 401 || response.status === 403 ? ' (the read-only store API token needs Products: read-only)' : '';
             throw new Error(`GET ${url} answered ${response.status} ${response.statusText}${hint}`);
