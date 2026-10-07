@@ -13,7 +13,7 @@
 //   node scripts/release.mjs verify                           step 6: capture again and compare
 //   node scripts/release.mjs lighthouse                       step 6b (ticket 17): Lighthouse on the prelaunch
 //                                                             host with the shell's preview cookie, or "pending
-//                                                             host batch" without it; never stops the release
+//                                                             host batch" without it; never stops the release itself
 //   node scripts/release.mjs write-log                        step 7: appends the entry to RELEASES.md
 //   node scripts/release.mjs prune-after-push                 after step 7, or at the end of a dry run: prunes
 //                                                             My Themes (W0-3; a plan only, until a --prune-only
@@ -804,9 +804,10 @@ async function measureLighthouse(state) {
 }
 
 // Step 6b, between verify and the log entry, so the entry records Lighthouse. The push is done and
-// RELEASES.md has no entry yet, so this step never stops the release: whatever goes wrong here
-// (Ctrl-C included, which stops only the runner) is recorded as "pending host batch", and a failed
-// gate stops the release only once step 7 has written its entry.
+// RELEASES.md has no entry yet, so this step never stops the release itself: whatever goes wrong
+// here (Ctrl-C included, which stops only the runner) is recorded as "pending host batch", and a
+// failed gate, or a run the operator stopped, stops the release only once step 7 has written its
+// entry.
 async function lighthouseStep() {
     const state = readState();
     heading('Step 6b · Lighthouse on the prelaunch host (ticket 17)');

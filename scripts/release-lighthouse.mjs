@@ -32,9 +32,10 @@
 // so its own code could still write to RELEASES.md: the release-log PR's rf/safety reads that diff.)
 // Everything but runCommand is pure: no browser, no store, no files.
 //
-// The push is done when this step runs, and RELEASES.md has no entry yet, so the step never stops
-// the release: runCommand gives the runner a time limit, takes Ctrl-C to stop the runner rather
-// than the release (release.sh then goes on to step 7), and takes the secrets out of its output.
+// The push is done when this step runs, and RELEASES.md has no entry yet, so the step itself never
+// stops the release: runCommand gives the runner a time limit (SIGTERM, then SIGKILL), takes Ctrl-C
+// to stop the runner (release.sh then goes on to step 7, which stops the release before the prune),
+// and takes the secrets out of its output.
 
 import { spawn } from 'child_process';
 import { redact } from './release-redact.mjs';

@@ -25,7 +25,8 @@
 # and records its plan, which a real --prune-only needs (within 60 minutes) and deletes no more than.
 #
 # docs/releasing.md explains each step, flag and refusal. The node steps are in scripts/release.mjs.
-# Every failed step stops the release, and only one release or dry run runs at a time on this Mac.
+# Every failed step but 6b stops the release (6b records what went wrong, and step 7 still writes the
+# entry), and only one release or dry run runs at a time on this Mac.
 
 set -euo pipefail
 
@@ -188,12 +189,14 @@ npx stencil "${push_args[@]}" </dev/null 2>&1 | release redact
 
 release verify
 # Step 6b (ticket 17): Lighthouse needs the theme live, so it runs after the push, and before step 7
-# so the entry records the scores and pass or fail. It never stops the release itself (Ctrl-C stops
-# only Lighthouse, and if the step fails anyway step 7 records "pending host batch"): the push is
-# done, so step 7 must write its entry. A failed gate stops the release once the entry is written,
-# before the prune.
+# so the entry records the scores and pass or fail. It doesn't stop the release by itself: the push
+# is done, so step 7 must write its entry, and if the step fails anyway step 7 records "pending host
+# batch". A failed gate, or Ctrl-C during the run, stops the release once the entry is written,
+# before the prune. This script traps only its exit, so a SIGHUP or SIGTERM that reaches it (a
+# closed terminal) ends it before step 7, with no entry: docs/releasing.md says not to.
 release lighthouse || echo "WARNING  step 6b stopped (above), so step 7 records Lighthouse as pending host batch" >&2
 release write-log
 # W0-3: after the log entry, so the prune counts this release. write-log stops the release when
-# verify found a problem, so nothing is pruned then.
+# verify found a problem, Lighthouse failed or its run was stopped (step 6b), so nothing is pruned
+# then.
 release prune-after-push
