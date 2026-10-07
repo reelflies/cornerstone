@@ -7,6 +7,7 @@
 import path from 'path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { OVERLAY_PORT_OFFSET } from './overlays.mjs';
 import {
     MATRIX_SPECS, RAW_HTML_GATE, gateResults, matrixEnvProblem, matrixLines, matrixPlan, playwrightArgs, runMatrix,
 } from './switch-matrix.mjs';
@@ -168,7 +169,7 @@ describe('running the matrix', () => {
             plan, results, channel: '1895766', variation: 'ReelFlies CA', port: 4300,
         });
         const text = lines.join('\n');
-        assert.match(text, /^Switch matrix on channel 1895766, "ReelFlies CA", port 4300 \(overlays on 4310\)/);
+        assert.match(text, new RegExp(`^Switch matrix on channel 1895766, "ReelFlies CA", port 4300 \\(overlays on ${4300 + OVERLAY_PORT_OFFSET}\\)`));
         assert.match(text, /\n {2}plain +rf_rise on, rf_cart_state on, rf_quick_add on, rf_region_prompt off\n/);
         assert.match(text, /\n {2}rf_rise off +the overlay rf_rise-off\n/);
         assert.match(text, /\nNot in the matrix yet:\n {2}rf_cart_state \(ticket 42\): no template reads/);

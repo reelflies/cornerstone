@@ -17,8 +17,8 @@ import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { listOverlays, readOverlay } from './overlays.mjs';
 import {
-    SWITCHES, chunkRequested, datasetName, describeValues, flippingOverlays, moduleSwitches, offSwitches, readSwitchValues, sourceText, stripHandlebarsComments,
-    switchValues, templatesReading,
+    SWITCHES, TEMPLATES_DIR, chunkRequested, datasetName, describeValues, flippingOverlays, moduleSwitches, offSwitches, readSwitchValues, sourceText,
+    stripHandlebarsComments, switchValues, templatesReading,
 } from './switches.mjs';
 
 const CONFIG = JSON.parse(fs.readFileSync(path.resolve('config.json'), 'utf8'));
@@ -125,10 +125,9 @@ describe('which switches a template reads', () => {
     });
 
     it('reads the theme\'s own templates by default', () => {
-        // The scaffold's js-settings.html names every switch, but only in comments.
-        assert.ok(fs.readFileSync(path.join(TEMPLATES, 'components/reelflies/js-settings.html'), 'utf8').includes('theme_settings.rf_rise'));
-        const reading = templatesReading(moduleSwitches(CONFIG));
-        for (const key of reading) assert.ok(moduleSwitches(CONFIG).includes(key));
+        assert.equal(TEMPLATES_DIR, TEMPLATES);
+        const keys = moduleSwitches(CONFIG);
+        assert.deepEqual(templatesReading(keys), templatesReading(keys, { dir: TEMPLATES }));
     });
 });
 

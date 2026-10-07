@@ -27,8 +27,9 @@
 // A transition or an animation of this length or shorter counts as no motion: a global reset
 // usually sets 0.01 ms, so that transitionend and animationend still fire. Revisitable.
 export const MOTION_LIMIT_MS = 10;
-// The most Tabs one tab-through presses. A stock product page on channel 1 has about 150
-// focusable elements at 375, header and footer included.
+// The most Tabs one tab-through presses. The stock product page pinned on channel 1 has 46
+// visible tabbable elements at 375, header and footer included (2026-10-07), so this leaves
+// room for longer pages and the modules still to come.
 export const MAX_TABS = 250;
 
 export function inPage({ check, limitMs = 10 }) {

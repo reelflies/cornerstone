@@ -34,7 +34,7 @@ import { spawnSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { isMain } from '../lib/is-main.mjs';
-import { listOverlays, readOverlay } from './overlays.mjs';
+import { OVERLAY_PORT_OFFSET, listOverlays, readOverlay } from './overlays.mjs';
 import { gateEnv } from './prepush.mjs';
 import {
     QA_CHANNEL, QA_PORT, QA_VARIATION, ROOT, checkEnv, slug,
@@ -55,7 +55,6 @@ export const MATRIX_SPECS = [
 ];
 export const RAW_HTML_GATE = 'raw HTML';
 export const MATRIX_DIR = path.join(ROOT, 'scripts', 'qa', 'results', 'matrix');
-const OVERLAY_OFFSET = 10; // overlays.mjs, OVERLAY_PORT_OFFSET
 
 const count = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 const onOff = value => (value ? 'on' : 'off');
@@ -202,7 +201,7 @@ export async function runMatrix(plan, {
 export function matrixLines({
     plan, results, channel, variation, port,
 }) {
-    const lines = [`Switch matrix on channel ${channel}, "${variation}", port ${port} (overlays on ${port + OVERLAY_OFFSET})`, '', 'Rows:'];
+    const lines = [`Switch matrix on channel ${channel}, "${variation}", port ${port} (overlays on ${port + OVERLAY_PORT_OFFSET})`, '', 'Rows:'];
     const width = Math.max(...plan.rows.map(({ name }) => name.length)) + 2;
     for (const row of plan.rows) lines.push(`  ${row.name.padEnd(width)}${row.overlay ? `the overlay ${row.overlay}` : describeValues(row.values)}`);
     if (plan.waiting.length) {
