@@ -1,0 +1,155 @@
+{
+  "_about": "Ticket 21, the undo for store-settings/store-wide/product-filtering.json (choice 1 on plan/approvals/21-product-filtering.md): it puts back the store's default filter list as read on 2026-10-06 (scripts/settings/fixtures/recorded-2026-10-06.json), in the read's order, with the writable fields only (the read-only facet fields are left out) and items_to_show as the same documented strings the forward file sends. It is committed before the forward list is ever applied, so a live page that changes can be put back the same day: plan.mjs --approved from the main clone, then Shaun's apply.mjs --approved, as for the forward file. If the forward plan was re-made with numbers after a 422, this file changes the same way in the same PR. It takes no channel_id, so it is store-wide and Shaun's. Choice 2 (a ReelFlies_CA context, the recommended route) leaves the default list alone and never needs it.",
+  "requests": [
+    {
+      "method": "PUT",
+      "path": "/v3/settings/search/filters",
+      "body": [
+        {
+          "id": "Ym9vbA==",
+          "display_name": "Other",
+          "type": "other",
+          "is_enabled": true,
+          "display_product_count": true,
+          "collapsed_by_default": true,
+          "show_free_shipping_filter": false,
+          "show_is_featured_filter": false,
+          "show_in_stock_filter": false
+        },
+        {
+          "id": "Y2F0ZWdvcnk=",
+          "display_name": "Category",
+          "type": "category",
+          "items_to_show": "15",
+          "collapsed_by_default": false,
+          "display_product_count": true,
+          "is_enabled": true
+        },
+        {
+          "id": "YnJhbmQ=",
+          "display_name": "Brand",
+          "type": "brand",
+          "sort_by": "alpha",
+          "items_to_show": "10",
+          "collapsed_by_default": false,
+          "display_product_count": true,
+          "is_enabled": false
+        },
+        {
+          "id": "cHJpY2U=",
+          "display_name": "Price",
+          "type": "price",
+          "collapsed_by_default": false,
+          "is_enabled": false
+        },
+        {
+          "id": "cmF0aW5n",
+          "display_name": "Rating",
+          "type": "rating",
+          "collapsed_by_default": true,
+          "is_enabled": true
+        },
+        {
+          "id": "Rmx5IFNpemVz",
+          "display_name": "Fly Sizes",
+          "type": "product",
+          "display_product_count": true,
+          "collapsed_by_default": false,
+          "items_to_show": "10",
+          "sort_by": "alpha",
+          "is_enabled": true
+        },
+        {
+          "id": "Q2hvb3NlIEZvYW0gU3R5bGU=",
+          "display_name": "Choose Foam Style",
+          "type": "product",
+          "display_product_count": true,
+          "collapsed_by_default": false,
+          "items_to_show": "10",
+          "sort_by": "alpha",
+          "is_enabled": false
+        },
+        {
+          "id": "Q29sb3I=",
+          "display_name": "Color",
+          "type": "product",
+          "display_product_count": true,
+          "collapsed_by_default": false,
+          "items_to_show": "10",
+          "sort_by": "alpha",
+          "is_enabled": false
+        },
+        {
+          "id": "Q29sb3Vy",
+          "display_name": "Colour",
+          "type": "product",
+          "display_product_count": true,
+          "collapsed_by_default": false,
+          "items_to_show": "10",
+          "sort_by": "alpha",
+          "is_enabled": false
+        },
+        {
+          "id": "Y2hvb3NlIGxlYWRlciB3ZWlnaHQ=",
+          "display_name": "choose leader weight",
+          "type": "product",
+          "display_product_count": true,
+          "collapsed_by_default": false,
+          "items_to_show": "10",
+          "sort_by": "alpha",
+          "is_enabled": false
+        },
+        {
+          "id": "U3RyaWtlIEluZGljYXRvciBDb2xvdXI=",
+          "display_name": "Strike Indicator Colour",
+          "type": "product",
+          "display_product_count": true,
+          "collapsed_by_default": false,
+          "items_to_show": "10",
+          "sort_by": "alpha",
+          "is_enabled": false
+        },
+        {
+          "id": "U2l6ZQ==",
+          "display_name": "Size",
+          "type": "product",
+          "display_product_count": true,
+          "collapsed_by_default": false,
+          "items_to_show": "10",
+          "sort_by": "alpha",
+          "is_enabled": false
+        },
+        {
+          "id": "Q2hvb3NlIFNpemU=",
+          "display_name": "Choose Size",
+          "type": "product",
+          "display_product_count": true,
+          "collapsed_by_default": false,
+          "items_to_show": "10",
+          "sort_by": "alpha",
+          "is_enabled": false
+        },
+        {
+          "id": "WWFybiBJbmRpY2F0b3IgQ29sb3Vy",
+          "display_name": "Yarn Indicator Colour",
+          "type": "product",
+          "display_product_count": true,
+          "collapsed_by_default": false,
+          "items_to_show": "10",
+          "sort_by": "alpha",
+          "is_enabled": false
+        },
+        {
+          "id": "RkxZIEJPWCBPUFRJT05BTA==",
+          "display_name": "FLY BOX OPTIONAL",
+          "type": "product",
+          "display_product_count": true,
+          "collapsed_by_default": false,
+          "items_to_show": "10",
+          "sort_by": "alpha",
+          "is_enabled": false
+        }
+      ]
+    }
+  ]
+}
