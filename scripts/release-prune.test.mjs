@@ -171,8 +171,9 @@ test('W0-3: a recorded uuid whose My Themes name isn\'t exactly ReelFlies or "Re
     assert.deepEqual(lookalikePlan.others.map(other => other.name), [...OTHERS.map(other => other.name), ...lookalikes]);
 });
 
-// W0-3b: the store names a repeat upload "ReelFlies (1)", "ReelFlies (2)" and so on while My Themes
-// already holds a "ReelFlies" (the first agent push, RELEASES.md 2026-10-07 03:07 UTC). Those are
+// W0-3b: the store named the first agent push "ReelFlies (1)", because My Themes already held a
+// "ReelFlies" (RELEASES.md 2026-10-07 03:07 UTC), and later uploads are expected to be numbered on,
+// "ReelFlies (2)" and so on (unseen until the next push; default 1, revisitable). Those are
 // ReelFlies builds too, and the number in the name ranks nothing: RELEASES.md doesn't record it, and
 // only RELEASES.md ranks builds.
 const SUFFIXES = {

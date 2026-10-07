@@ -1104,9 +1104,9 @@ for (const [name, args, reason] of PRUNE_REFUSALS) {
 const uuidN = n => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
 
 // RELEASES.md with builds 1 to n of "ReelFlies" 6.22.0 on 1895766, one a day, and My Themes as
-// GET /v3/themes and the active-theme reads give it (RF_RELEASE_THEMES_FIXTURE). As in the store,
-// My Themes names build 1 "ReelFlies" and each later upload "ReelFlies (1)", "ReelFlies (2)" and
-// so on, because it already holds a "ReelFlies" (W0-3b).
+// GET /v3/themes and the active-theme reads give it (RF_RELEASE_THEMES_FIXTURE). My Themes names
+// build 1 "ReelFlies" and each later upload "ReelFlies (1)", "ReelFlies (2)" and so on: the store
+// named the first agent push "ReelFlies (1)", and is expected to number later uploads on (W0-3b).
 function pruneFixtures(n = 5, { deletionLogged = false } = {}) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-prune-test-'));
     tempDirs.push(dir);
