@@ -1,8 +1,9 @@
 // The scaffold ticket 25 lands first (build pipeline, section 6.1): one slot per module in each
 // shared file, so tickets that run in parallel fill their own lines instead of appending to the
 // same ones, and the upstream hooks that load the ReelFlies files. These tests hold the
-// conventions, not the values: a ticket changes its own group's values and its own slot freely.
-// Seam 5 (spec, Testing Decisions): the release guard's fixture for the pre-declared switches.
+// conventions, not the values: a ticket fills its own slot and sets its own group's values (the
+// four module switches stay booleans). Seam 5 (spec, Testing Decisions): the release guard's
+// fixture for the pre-declared keys, switches and values, before and after the scaffold's push.
 //
 //   node --test scripts/qa/scaffold.test.mjs
 
@@ -33,6 +34,9 @@ const SETTINGS_GROUPS = [
     [52, ['rf_region_prompt']],
 ];
 const SWITCHES = ['rf_rise', 'rf_cart_state', 'rf_quick_add', 'rf_region_prompt'];
+// The pre-declared values that aren't menu ids. Rule 1 guards them like the switches.
+const VALUE_KEYS = SETTINGS_GROUPS.flatMap(([, groupKeys]) => groupKeys)
+    .filter(key => !SWITCHES.includes(key) && !MENU_ID_KEYS.includes(key));
 const VARIATIONS = ['ReelFlies CA', 'ReelFlies US'];
 
 // Section 6.1's lang modules, in order.
@@ -129,6 +133,57 @@ describe('the release guard and step 1 with the pre-declared keys (seam 5)', () 
                 });
                 assert.equal(result.pass, false, key);
                 assert.ok(result.reasons.some(reason => reason.startsWith(`${key}:`)), key);
+            }
+        });
+
+        // After the scaffold's push, the live theme holds every pre-declared key at the scaffold's
+        // value, which is also the channel's last released value. An owner ticket then sets its
+        // real value in config.json.
+        const pushed = repo;
+        const another = key => (repo[key] === '5' ? '6' : '5');
+
+        it(`refuses, on ${variation}, a pre-declared value that config.json changes after the scaffold's push (rule 1)`, () => {
+            assert.equal(VALUE_KEYS.length, 6);
+            for (const key of VALUE_KEYS) {
+                const result = checkRelease({
+                    repoSettings: { ...repo, [key]: another(key) }, liveSettings: pushed, channelId: 1895766, categoryIds: null,
+                });
+                // If this starts passing, the release lane has given values the three-way rule: update
+                // CUSTOMIZATIONS.md ("Changing a pre-declared value"), drop this test and the todo below's flag.
+                assert.equal(result.pass, false, key);
+                assert.ok(result.reasons.some(reason => reason.startsWith(`${key}: live `) && /No flag overrides this/.test(reason)), key);
+            }
+        });
+
+        it(`passes, on ${variation}, a pre-declared value set in Theme Styles first and then in config.json`, () => {
+            for (const key of VALUE_KEYS) {
+                const value = another(key);
+                const changed = { ...repo, [key]: value };
+                const result = checkRelease({
+                    repoSettings: changed, liveSettings: { ...pushed, [key]: value }, channelId: 1895766, categoryIds: null,
+                });
+                assert.equal(result.pass, true, `${key}: ${result.reasons.join('; ')}`);
+                const { blocking } = threeWayDiff({ repo: changed, live: { ...pushed, [key]: value }, released: pushed });
+                assert.deepEqual(blocking, [], key);
+            }
+        });
+
+        // The release-lane change PR #29 asks the orchestrator for: values follow W0-2's three-way
+        // rule, as the menu ids do, so a value config.json changed since the last release passes
+        // while the live value is still the released one. A control-panel edit still stops step 1.
+        it(`passes, on ${variation}, a pre-declared value that config.json changed since the last release`, {
+            todo: 'waits on the release lane: non-boolean rf_* values follow step 1\'s three-way rule',
+        }, () => {
+            for (const key of VALUE_KEYS) {
+                const changed = { ...repo, [key]: another(key) };
+                const result = checkRelease({
+                    repoSettings: changed, liveSettings: pushed, channelId: 1895766, categoryIds: null,
+                });
+                assert.equal(result.pass, true, `${key}: ${result.reasons.join('; ')}`);
+                const step1 = threeWayDiff({ repo: changed, live: pushed, released: pushed });
+                assert.deepEqual(step1.changedInRepo.map(entry => entry.key), [key]);
+                const edited = threeWayDiff({ repo, live: { ...pushed, [key]: another(key) }, released: pushed });
+                assert.deepEqual(edited.blocking.map(entry => entry.key), [key], `${key} edited live still stops step 1`);
             }
         });
     }

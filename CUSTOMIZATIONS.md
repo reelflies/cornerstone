@@ -29,7 +29,7 @@ Ticket 25's scaffold gives each module its own lines in every shared file (`plan
 
 | File | What each module gets | How a ticket fills it |
 |---|---|---|
-| `config.json` `settings` | One group per module in ticket order, a blank line between groups, in the ReelFlies block just before the last stock key (`paymentbuttons-provider-sorting`), so every ReelFlies line ends with a comma | Change your group's values; add a key that section 6.3 doesn't name at the end of your own group |
+| `config.json` `settings` | One group per module in ticket order, a blank line between groups, in the ReelFlies block just before the last stock key (`paymentbuttons-provider-sorting`), so every ReelFlies line ends with a comma | Set your group's values (once the block is live, see [Changing a pre-declared value](#changing-a-pre-declared-value)); add a key that section 6.3 doesn't name at the end of your own group |
 | `config.json` `variations` | Both variations declare `rf_menu_type_ids` and `rf_menu_species_root_id`, empty | Set a variation's own value only where it differs from the base |
 | `schema.json` | The ReelFlies group (`i18n.RfReelFlies`), just before the last stock group (`i18n.PaymentButtons`): one heading per settings module, in ticket order, and the two menu-id text settings under the menu heading | Add your settings right after your heading |
 | `schemaTranslations.json` | The `i18n.Rf…` strings (`default` only), just before the last stock key, grouped by module | Add your strings at the end of your module's group |
@@ -54,6 +54,15 @@ The settings groups and their documented defaults (section 6.3). A pre-declared 
 | 52 | `rf_region_prompt` (false) |
 
 `scripts/qa/scaffold.test.mjs` holds these conventions (not the values), and runs the release guard and step 1's diff on the block (spec seam 5).
+
+### Changing a pre-declared value
+
+The release guard's rule 1 covers every `rf_*` key except the two menu ids, values as well as switches ([releasing](docs/releasing.md#the-release-guard)). So once ticket 25's push has put the block live on 1895766, a `config.json` change to any pre-declared key stops every release of `master` with "No flag overrides this", until the live value matches. That includes the value keys `rf_menu_exclude_ids`, `rf_price_unit_exclude`, `rf_ship_*` and `rf_store_same_as`, and a key you add yourself, from its own first push on.
+
+- **Until the release lane gives values step 1's three-way rule,** as the menu ids have (asked for on PR #29; a todo test in `scaffold.test.mjs` holds the behaviour it should have):
+  1. The value is set in Theme Styles on 1895766 first, and logged under "Switch toggles" in `RELEASES.md`. Agents have no route for that edit, so ask the orchestrator to put it in Shaun's batch.
+  2. Then `config.json` changes to match. Don't merge that change before the live value matches: merged first, it stops the next release of `master` for every ticket. Until then, mark the criterion that needs the value waiting, with that trigger.
+- **The switches** stay under rule 1 for good: toggle them in Theme Styles, log the toggle, then change `config.json` ([switch toggles](docs/releasing.md#switch-toggles)).
 
 ## Never
 
