@@ -792,7 +792,7 @@ async function measureLighthouse(state) {
     });
     const summary = readLighthouseSummary(path.join(resultsDirFor(uuid), 'lighthouse', 'summary.json'));
     const outcome = lighthouseOutcome({
-        ...run, summary, startedAt, uuid,
+        ...run, summary, startedAt, uuid, secrets: lighthouseSecrets(cookie),
     });
     if (outcome.result === 'pending') {
         say('pending', outcome.reason);

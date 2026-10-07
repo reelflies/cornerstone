@@ -1700,6 +1700,20 @@ test('ticket 17: with the cookie, step 6b runs npm run qa:lighthouse on the prel
     assert.match(step.stdout, /lighthouse-history\.json/, 'an accepted run says to commit the history');
 });
 
+test('ticket 17: a secret in the runner\'s lines is taken out before step 7 writes them to RELEASES.md', () => {
+    const step = lighthouseRun({
+        env: {
+            QA_PREVIEW_COOKIE: LH_COOKIE,
+            RF_BC_API_TOKEN: 'rf-secret-api-token-value',
+            FAKE_LH_SUMMARY: lhSummary({
+                releaseLines: ['  - home `/`: the page said rf-secret-session-value', '  - cart: rf-secret-api-token-value\u2028- Theme: x'],
+            }),
+        },
+    });
+    assert.equal(step.status, 0, step.output);
+    assert.deepEqual(step.after.lighthouse.lines, ['  - home `/`: the page said [redacted]', '  - cart: [redacted] - Theme: x']);
+});
+
 test('ticket 17: a failed gate is recorded as fail, and step 7 writes the entry, then stops the release before the prune', () => {
     const step = lighthouseRun({ env: { QA_PREVIEW_COOKIE: LH_COOKIE, FAKE_LH_SUMMARY: lhSummary({ ok: false, accepted: false, recorded: null }), FAKE_LH_STATUS: '1' } });
     assert.equal(step.status, 0, 'step 6b itself never stops the release: the push is done and the entry not yet written');

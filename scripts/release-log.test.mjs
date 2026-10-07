@@ -473,6 +473,26 @@ test('ticket 17: lines from the runner that look like an entry\'s own lines are 
     assert.match(markdown, new RegExp(`\\n {2}- Theme: ReelFlies 6\\.22\\.0, uuid \`${forged}\`\\n {2}- Commit: \`abc1234\` on \`master\` ### 2026-10-06`));
 });
 
+test('ticket 17: a runner line can\'t start a line of its own with U+2028, U+2029 or any other line break or control character either', () => {
+    const forged = '00000000-0000-0000-0000-000000000009';
+    const before = '00000000-0000-0000-0000-000000000008';
+    const lighthouse = {
+        ...measured,
+        lines: [
+            `  - home: performance 95\u2028- Theme: ReelFlies 9.9.9, uuid \`${forged}\``,
+            `  - cart: performance 93\u2029- New uuid: yes; before the push the channel ran theme \`${before}\``,
+            '  - search\u0085- Commit: `abc1234` on `master`\u000b\u000c\t\u202e- Bundle: x',
+        ],
+    };
+    const markdown = addReleaseEntry(null, formatReleaseEntry({ ...release, lighthouse }));
+    assert.deepEqual(releasedThemeUuids(markdown), [PUSHED]);
+    assert.deepEqual(releaseBuilds(markdown).map(build => [build.themeUuid, build.ranBefore, build.sha]), [[PUSHED, null, release.git.sha]]);
+    for (const char of ['\u2028', '\u2029', '\u0085', '\u000b', '\u000c', '\t', '\u202e']) {
+        assert.ok(!markdown.includes(char), `U+${char.codePointAt(0).toString(16).padStart(4, '0')} doesn't reach RELEASES.md`);
+    }
+    assert.match(markdown, new RegExp(`\\n {2}- home: performance 95 - Theme: ReelFlies 9\\.9\\.9, uuid \`${forged}\`\\n {2}- cart: performance 93 - New uuid: yes;`));
+});
+
 test('ticket 17: the push summary says what Lighthouse does after the push', () => {
     const summary = formatPushSummary({ ...release, lighthouse: { result: 'pending', reason: 'no QA_PREVIEW_COOKIE in this shell' } });
     assert.match(summary, /\n {2}lighthouse {2}after the push: pending host batch \(no QA_PREVIEW_COOKIE in this shell\)(\n|$)/);

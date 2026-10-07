@@ -280,6 +280,39 @@ test('the lines under the entry\'s Lighthouse line stay indented list items of o
     assert.deepEqual(outcome.lines, ['  - Theme: x, uuid `00000000-0000-0000-0000-000000000001`']);
 });
 
+test('every line break and control character in a runner line is folded, U+2028 and U+2029 included, which JavaScript\'s ^ and $ treat as line ends', () => {
+    assert.deepEqual(safeLines([
+        '  - home\u2028- Theme: x, uuid `00000000-0000-0000-0000-000000000001`',
+        '  - cart\u2029### 2026-10-20 14:00 UTC · channel 1 (reelflies.ca) · Minimal',
+        '  - search\u0085\u000b\u000c\t\u0000end',
+        '  - bidi \u202eesrever\u202c and zero\u200bwidth',
+        '\u2028- Theme: leading',
+    ]), [
+        '  - home - Theme: x, uuid `00000000-0000-0000-0000-000000000001`',
+        '  - cart ### 2026-10-20 14:00 UTC · channel 1 (reelflies.ca) · Minimal',
+        '  - search end',
+        '  - bidi esrever and zero width',
+        '  - Theme: leading',
+    ]);
+    const outcome = lighthouseOutcome({
+        status: 1, summary: summary({ ok: false, releaseLines: ['  - home: 95\u2028- Theme: x, uuid `00000000-0000-0000-0000-000000000001`'] }), startedAt: STARTED, uuid: UUID,
+    });
+    assert.deepEqual(outcome.lines, ['  - home: 95 - Theme: x, uuid `00000000-0000-0000-0000-000000000001`']);
+});
+
+test('a secret in a runner line is taken out before the line is kept for RELEASES.md, and a line cut at its limit can\'t leave half of one', () => {
+    const secrets = ['rf-secret-cp-token', 'rf-secret-session', undefined, ''];
+    const outcome = lighthouseOutcome({
+        status: 1,
+        summary: summary({ ok: false, releaseLines: ['  - failed: home: Lighthouse printed STORESUITE_CP_TOKEN=rf-secret-cp-token', `  - ${'x'.repeat(490)}rf-secret-session`] }),
+        startedAt: STARTED,
+        uuid: UUID,
+        secrets,
+    });
+    assert.deepEqual(outcome.lines, ['  - failed: home: Lighthouse printed STORESUITE_CP_TOKEN=[redacted]', `  - ${'x'.repeat(490)}[redacted]`]);
+    assert.deepEqual(safeLines(['  - a rf-secret-session b'], secrets), ['  - a [redacted] b']);
+});
+
 // --- What the entry and the push summary say -------------------------------------------------------
 
 test('the entry records pass or fail with the time, "analytics blocked: yes", the results folder and each URL\'s medians', () => {

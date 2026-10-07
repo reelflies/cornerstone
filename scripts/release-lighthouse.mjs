@@ -25,9 +25,12 @@
 //
 // The runner is QA code, which isn't guarded, so this module never imports it: it reads the
 // runner's summary.json, checks that it is this run's, on the prelaunch host, of the pushed build,
-// with the tags blocked, and keeps every line it copies into RELEASES.md an indented list item of
-// one line (safeLines), so no line from the runner can read as one of the entry's own lines, which
-// the prune and step 1 parse. Everything but runCommand is pure: no browser, no store, no files.
+// with the tags blocked, and that it measured at least one URL. Every line it copies into
+// RELEASES.md from the summary's releaseLines is an indented list item of one line, with every
+// line end and control character folded and the secrets taken out (safeLines), so none can read as
+// one of the entry's own lines, which the prune and step 1 parse. (The runner runs in the checkout,
+// so its own code could still write to RELEASES.md: the release-log PR's rf/safety reads that diff.)
+// Everything but runCommand is pure: no browser, no store, no files.
 //
 // The push is done when this step runs, and RELEASES.md has no entry yet, so the step never stops
 // the release: runCommand gives the runner a time limit, takes Ctrl-C to stop the runner rather
@@ -123,12 +126,20 @@ export function lighthouseEnv({
     };
 }
 
+// Every line end and every other control or invisible format character: \r and \n, U+2028 and
+// U+2029 (which JavaScript's ^ and $ under the m flag, as RELEASES.md's parsers use them, also
+// treat as line ends), U+0085, tabs, NUL, and the bidi and zero-width characters a rendered diff
+// doesn't show its reviewer.
+const FOLD = /\s*[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+\s*/gu;
+
 // Each line the runner gives for the entry (summary.json's releaseLines), as an indented list item
-// of one line: newlines folded, a leading "- " indented, cut at MAX_LINE characters, and at most
-// MAX_LINES of them, so none can read as one of the entry's own lines.
-export function safeLines(lines) {
+// of one line: every line end and control character folded into a space, a leading "- " indented,
+// `secrets` taken out (release-redact.mjs), then cut at MAX_LINE characters, so a cut can't leave
+// part of a secret, and at most MAX_LINES of them. So no line of releaseLines can read as one of
+// the entry's own lines.
+export function safeLines(lines, secrets = []) {
     if (!Array.isArray(lines)) return [];
-    const kept = lines.filter(line => typeof line === 'string').map(line => line.replace(/\s*[\r\n]+\s*/g, ' ').trim().replace(/^-\s*/, '')).filter(Boolean)
+    const kept = lines.filter(line => typeof line === 'string').map(line => redact(line.replace(FOLD, ' ').trim().replace(/^-\s*/, ''), secrets)).filter(Boolean)
         .map(body => `  - ${body.length > MAX_LINE ? `${body.slice(0, MAX_LINE - 1)}…` : body}`);
     if (kept.length <= MAX_LINES) return kept;
     return [...kept.slice(0, MAX_LINES), `  - ${kept.length - MAX_LINES} more line(s) are in the run's summary.json`];
@@ -170,9 +181,10 @@ function stoppedProblem({
 // What the entry records once `npm run qa:lighthouse` ended (runCommand's result: status,
 // interrupted, timedOut, signal, error): { result: 'pass' | 'fail' | 'pending', at, uuid, accepted,
 // lines, reason }. A pass needs both exit 0 and the summary's ok: true. A run that was stopped, or
-// measured nothing usable, is pending, for the next host batch.
+// measured nothing usable, is pending, for the next host batch. `secrets` are taken out of the
+// runner's lines before they are kept for RELEASES.md.
 export function lighthouseOutcome({
-    status, interrupted = null, timedOut = false, signal = null, error = null, summary, startedAt, uuid,
+    status, interrupted = null, timedOut = false, signal = null, error = null, summary, startedAt, uuid, secrets = [],
 }) {
     const problem = stoppedProblem({
         interrupted, timedOut, signal, error,
@@ -186,7 +198,7 @@ export function lighthouseOutcome({
         at: startedAt,
         uuid,
         accepted: pass && summary.accepted === true && Boolean(summary.recorded),
-        lines: safeLines(summary.releaseLines),
+        lines: safeLines(summary.releaseLines, secrets),
         reason: null,
     };
 }
