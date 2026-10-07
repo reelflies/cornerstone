@@ -6,7 +6,9 @@
 //   with parts 1 and 2 of the three-part test proved, and applies with part 3 holding; a leak to
 //   the global value is put back and locks the helper.
 // - store-settings/store-wide/: Shaun's approval batch. Each is refused as a lifted write and
-//   plans only in approved mode, and carries exactly the change the checklist describes.
+//   plans only in approved mode, and carries exactly the change the checklist describes. The
+//   Product Filtering list has its undo beside it (product-filtering.restore.json), equal to the
+//   recorded list.
 
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -87,8 +89,9 @@ const withData = (answer, data) => ({ ...answer, data: { ...answer.data, ...data
 // --- What the recorded reads say, which the checklist relies on -------------------------------
 
 test('the recorded reads: sold-out sizes are already labelled store-wide, and Product Filtering is already on', () => {
-    // option_out_of_stock_behavior is label_option globally and 1895766 inherits it, so ticket 21's
-    // label_option needs no write; product_out_of_stock_behavior keeps sold-out products listed.
+    // option_out_of_stock_behavior is label_option globally and 1895766 inherits it, so sold-out
+    // sizes are labelled today; inventory.json pins it on 1895766, with product_out_of_stock_behavior's
+    // do_nothing, which keeps sold-out products listed.
     assert.equal(recorded.inventory.global.data.option_out_of_stock_behavior, 'label_option');
     assert.equal(recorded.inventory['1895766'].data.option_out_of_stock_behavior, null);
     assert.equal(recorded.inventory.global.data.product_out_of_stock_behavior, 'do_nothing');
@@ -238,7 +241,7 @@ test('CAD only and channel 1\'s logins aren\'t helper writes in either mode: the
 
 test('every store-wide changes file is refused as a lifted write and plans only in approved mode, once it isn\'t waiting', () => {
     const names = changesFiles('store-wide');
-    assert.deepEqual(names, ['free-shipping-promotion.json', 'product-filtering.json']);
+    assert.deepEqual(names, ['free-shipping-promotion.json', 'product-filtering.json', 'product-filtering.restore.json']);
     for (const name of names) {
         const file = loadChanges('store-wide', name);
         // A file that waits keeps its draft under draft_requests, which plan.mjs never reads.
@@ -330,6 +333,33 @@ test('Product Filtering plans in approved mode from the global read alone, with 
     assert.match(made.diff[1], /global: .* -> /);
 });
 
+test('Product Filtering\'s undo puts back the recorded list: the same filters in the read\'s order, writable fields only, counts as the forward file sends them', () => {
+    const file = loadChanges('store-wide', 'product-filtering.restore.json');
+    assert.match(file._about, /undo for store-settings\/store-wide\/product-filtering\.json/);
+    const [request, ...more] = file.requests;
+    assert.deepEqual(more, [], 'one request');
+    assert.equal(request.method, 'PUT');
+    assert.equal(request.path, '/v3/settings/search/filters');
+    assert.equal(request.query, undefined, 'the default list takes no channel_id');
+    // Equal to the read apart from the read-only facet fields, with each count in the documented
+    // string form, as in the forward file.
+    const expected = readFilters.map(item => Object.fromEntries(Object.entries(writable(item)).map(([key, value]) => [key, key === 'items_to_show' ? String(value) : value])));
+    assert.deepEqual(request.body, expected);
+    const forward = requestsOf('store-wide', 'product-filtering.json')[0].body;
+    const countForm = list => [...new Set(list.filter(item => Object.hasOwn(item, 'items_to_show')).map(item => typeof item.items_to_show))];
+    assert.deepEqual(countForm(request.body), countForm(forward), 'the undo sends its counts in the same form as the forward list');
+    assert.deepEqual(request.body.map(item => item.id).sort(), forward.map(item => item.id).sort(), 'the undo and the forward list name the same filters');
+});
+
+test('Product Filtering\'s undo plans in approved mode only, from the global read alone', async () => {
+    const { requests } = loadChanges('store-wide', 'product-filtering.restore.json');
+    assert.throws(() => checkRequests(requests, { mode: 'lifted', phase: unset }), error => error.name === 'Refused');
+    const { plan: made } = await plan(requests, { 'GET /v3/settings/search/filters': { body: recorded['search/filters'] } }, { mode: 'approved' });
+    assert.equal(made.mode, 'approved');
+    assert.equal(made.channel, 'store-wide');
+    assert.deepEqual(made.snapshot.reads.map(read => read.key), ['GET /v3/settings/search/filters']);
+});
+
 test('the free-shipping promotion is scoped to 1895766 and CAD, with ticket 13\'s wording, and waits for its ids', () => {
     const file = loadChanges('store-wide', 'free-shipping-promotion.json');
     const [request] = file.requests || file.draft_requests;
@@ -343,7 +373,9 @@ test('the free-shipping promotion is scoped to 1895766 and CAD, with ticket 13\'
     assert.equal(promotion.rules.length, 1);
     const [rule] = promotion.rules;
     assert.equal(rule.action.shipping.free_shipping, true);
-    assert.equal(rule.condition.cart.minimum_spend, 60);
+    // The promotions reference types minimum_spend as a string ("100" in its order and brand
+    // examples), as items_to_show is for the filter list.
+    assert.equal(rule.condition.cart.minimum_spend, '60');
     const notice = type => promotion.notifications.find(item => item.type === type);
     assert.equal(notice('UPSELL').content, 'Free standard shipping in Canada on fly orders over $60. Fly boxes and gear not included.');
     for (const type of ['UPSELL', 'ELIGIBLE', 'APPLIED']) assert.ok(notice(type).locations.includes('CART_PAGE'), `${type} shows on the cart`);

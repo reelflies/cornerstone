@@ -17,7 +17,7 @@
             "action": { "shipping": { "free_shipping": true, "zone_ids": [] } },
             "apply_once": true,
             "stop": false,
-            "condition": { "cart": { "items": { "categories": [] }, "minimum_spend": 60 } }
+            "condition": { "cart": { "items": { "categories": [] }, "minimum_spend": "60" } }
           }
         ],
         "notifications": [
