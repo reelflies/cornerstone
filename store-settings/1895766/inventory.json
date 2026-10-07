@@ -1,0 +1,15 @@
+{
+  "_about": "Ticket 21, inventory on ReelFlies_CA (1895766). It sets option_out_of_stock_behavior label_option on 1895766, as the ticket asks, so sold-out sizes stay visible and marked (the size pills, 37, and quick add's sold-out rows, 43, depend on it). It also sets product_out_of_stock_behavior do_nothing, so fully sold-out products stay listed (ticket 13 decision 1). The reads of 2026-10-06 show both are already the global values, which 1895766 only inherits, so a later store-wide change would reach 1895766 too: writing them here pins them. The do_nothing pin is behaviour-neutral: it writes the value decision 1 chose and 1895766 already shows, not a change of that decision (it never sets hide_product_and_accessible), so the recount ticket 13 asks for before a write that hides products isn't needed. It also shows the stock level only when it is low. The out-of-stock message stays the inherited plain 'Out of stock'. After the apply, the re-read shows whether the store keeps an override equal to the global value: if it reads null, the two are inherited after all, and the checklist says so. A lifted write: plan and apply with scripts/store/ (docs/store-writes.md).",
+  "requests": [
+    {
+      "method": "PUT",
+      "path": "/v3/settings/inventory",
+      "query": { "channel_id": 1895766 },
+      "body": {
+        "product_out_of_stock_behavior": "do_nothing",
+        "option_out_of_stock_behavior": "label_option",
+        "stock_level_display": "show_when_low"
+      }
+    }
+  ]
+}
