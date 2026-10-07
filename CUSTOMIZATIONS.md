@@ -53,7 +53,7 @@ The settings groups and their documented defaults (section 6.3). A pre-declared 
 | 43 | `rf_quick_add` (true) |
 | 52 | `rf_region_prompt` (false) |
 
-`scripts/qa/scaffold.test.mjs` holds these conventions (not the values), and runs the release guard and step 1's diff on the block (spec seam 5).
+`scripts/qa/scaffold.test.mjs` holds these conventions, not the values (only the four switches must stay booleans), and runs the release guard and step 1's diff on the block (spec seam 5).
 
 ### Changing a pre-declared value
 

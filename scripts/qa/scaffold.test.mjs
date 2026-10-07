@@ -84,12 +84,10 @@ describe('config.json: the ReelFlies settings block', () => {
         assert.equal(text[lineOf(keys[keys.length - 1]) - 1].trim(), '', 'a blank line after the block');
     });
 
-    it('makes the module switches booleans and the other values strings', () => {
-        for (const [, groupKeys] of SETTINGS_GROUPS) {
-            for (const key of groupKeys) {
-                assert.equal(typeof config.settings[key], SWITCHES.includes(key) ? 'boolean' : 'string', key);
-            }
-        }
+    // Only the switches' type is a convention: a module reads true or false. A value's type is its
+    // owner's to choose.
+    it('makes the four module switches booleans', () => {
+        for (const key of SWITCHES) assert.equal(typeof config.settings[key], 'boolean', key);
     });
 
     it('declares the two menu ids in both variations too', () => {
@@ -281,6 +279,82 @@ describe('the ReelFlies style layer', () => {
         assert.equal(theme[settings - 1], '@import "settings/layouts/layouts"; // 4');
         assert.match(theme[theme.length - 1], /^@import "reelflies\/index";/);
         assert.equal(theme.filter(line => line.includes('"reelflies/')).length, 2);
+    });
+});
+
+// A slot list split at its blank lines: group i is the i-th ticket's slot. An empty slot is the
+// ticket's one comment line. A ticket fills it by replacing that line with its own lines, or by
+// keeping the comment and adding its lines right under it. So a group that doesn't start with a
+// slot comment is a filled slot, and a slot comment anywhere else in a group means a blank line
+// between two slots has gone, which brings back the adjacent-line conflicts section 6.1 prevents.
+function slotProblems(body, tickets, slotComment) {
+    const groups = body.reduce((list, line) => {
+        if (line.trim() === '') {
+            if (list[list.length - 1].length) list.push([]);
+        } else {
+            list[list.length - 1].push(line);
+        }
+        return list;
+    }, [[]]).filter(group => group.length);
+    const problems = [];
+    if (groups.length !== tickets.length) {
+        problems.push(`${groups.length} slots, not ${tickets.length} (tickets ${tickets.join(', ')}): keep one blank line between slots`);
+    }
+    groups.forEach((group, index) => {
+        group.forEach((line, at) => {
+            const ticket = slotComment.exec(line)?.[1];
+            if (!ticket) return;
+            if (at > 0) problems.push(`ticket ${ticket}'s slot has no blank line before it`);
+            else if (Number(ticket) !== tickets[index]) problems.push(`slot ${index + 1} is ticket ${ticket}'s, not ticket ${tickets[index]}'s: keep ticket order`);
+        });
+    });
+    return problems;
+}
+
+const JS_SLOT = /^\s*\/\/ (\d+) \S/;
+const TEMPLATE_SLOT = /^\{\{!-- (\d+) .*--\}\}$/;
+
+// The lines of a `name = [ … ];` array literal, between its brackets.
+function arrayBody(file, name) {
+    const text = lines(file);
+    const start = text.findIndex(line => new RegExp(`\\b${name} = \\[$`).test(line));
+    assert.ok(start >= 0, `${file} has ${name}`);
+    const end = text.findIndex((line, index) => index > start && line === '];');
+    return text.slice(start + 1, end);
+}
+
+describe('the JavaScript and template slots', () => {
+    const PAGE_MODULES = 'assets/js/theme/reelflies/page-modules.js';
+
+    for (const [name, tickets] of [['product', [37, 38, 42]], ['listing', [31, 33, 42, 43]], ['cart', [41]], ['page', [35]]]) {
+        it(`page-modules.js: the ${name} array has one slot per module, in ticket order, with blank lines between`, () => {
+            assert.deepEqual(slotProblems(arrayBody(PAGE_MODULES, name), tickets, JS_SLOT), []);
+        });
+    }
+
+    it('reelflies/global.js: GLOBAL_MODULES has one slot per module, in ticket order, with blank lines between', () => {
+        assert.deepEqual(slotProblems(arrayBody('assets/js/theme/reelflies/global.js', 'GLOBAL_MODULES'), [27, 28, 30, 52], JS_SLOT), []);
+    });
+
+    it('js-settings.html: one slot per switch ticket, in ticket order, with blank lines between', () => {
+        const text = lines('templates/components/reelflies/js-settings.html');
+        const body = text.slice(text.indexOf('--}}') + 1);
+        assert.deepEqual(slotProblems(body, [27, 31, 39, 40, 42, 43, 52], TEMPLATE_SLOT), []);
+    });
+
+    it('the slot check accepts a filled slot and catches a lost blank line or a slot out of order', () => {
+        const slots = ['    // 37 size pills', '', '    // 38 add flow', '', '    // 42 cart state'];
+        const tickets = [37, 38, 42];
+        assert.deepEqual(slotProblems(slots, tickets, JS_SLOT), []);
+        const filled = ['    () => import(\'./size-pills\'),', '', '    // 38 add flow', '', '    // 42 cart state', '    () => import(\'./cart-state\'),'];
+        assert.deepEqual(slotProblems(filled, tickets, JS_SLOT), []);
+        const lostBlank = /ticket 38's slot has no blank line before it/;
+        assert.ok(slotProblems(['    // 37 size pills', '    // 38 add flow', '', '    // 42 cart state'], tickets, JS_SLOT).some(problem => lostBlank.test(problem)));
+        assert.ok(slotProblems(['    () => import(\'./size-pills\'),', '    // 38 add flow', '', '    // 42 cart state'], tickets, JS_SLOT).some(problem => lostBlank.test(problem)));
+        assert.deepEqual(slotProblems(['    // 38 add flow', '', '    // 37 size pills', '', '    // 42 cart state'], tickets, JS_SLOT), [
+            'slot 1 is ticket 38\'s, not ticket 37\'s: keep ticket order',
+            'slot 2 is ticket 37\'s, not ticket 38\'s: keep ticket order',
+        ]);
     });
 });
 
