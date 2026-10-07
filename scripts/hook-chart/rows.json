@@ -1,0 +1,28 @@
+{
+    "status": "draft",
+    "about": "The copy and the Fly Types of the hook size chart's size rows (ticket 35). scripts/hook-chart/rows.mjs writes the rows between the chart page's two markers on every run, so change them here, never on the store. The copy is the reference design's (plan/design/src/reference.src.html, USES) and waits for Shaun's approval with the page copy; set the status to approved then.",
+    "flyTypesSource": "Ticket 28's six Fly Types, in rf_menu_type_ids order. Each is matched by name to a top-level category of the tree read; once refactor 13 builds tree 4, give its id here if a name differs.",
+    "flyTypes": [
+        { "name": "Dry Flies" },
+        { "name": "Nymphs" },
+        { "name": "Streamers" },
+        { "name": "Eggs & Worms" },
+        { "name": "Warmwater Flies" },
+        { "name": "Saltwater Flies" }
+    ],
+    "text": {
+        "size": "Size",
+        "uses": "Common uses",
+        "shop": "Shop this size",
+        "none": "No flies in this size right now"
+    },
+    "uses": [
+        { "sizes": ["6/0", "5/0", "4/0", "3/0"], "text": "Pike, muskie and big saltwater baitfish patterns" },
+        { "sizes": ["2/0", "1/0", "1"], "text": "Large streamers, bass bugs, salmon and saltwater flies" },
+        { "sizes": ["2", "4", "6"], "text": "Streamers, hoppers, stoneflies and big nymphs" },
+        { "sizes": ["8", "10"], "text": "Hoppers, larger dries and nymphs, woolly buggers" },
+        { "sizes": ["12", "14", "16"], "text": "Most trout dries and nymphs: mayflies and caddis" },
+        { "sizes": ["18", "20"], "text": "Small mayflies such as Blue-winged Olives, and midge pupae" },
+        { "sizes": ["22", "24"], "text": "Midges and the smallest mayflies" }
+    ]
+}
