@@ -430,6 +430,7 @@ export default {
 | `no-region-prompt` | 16, then 52 | no element carries `data-rf-region-prompt` |
 | `home-one-h1` | 46 | exactly one `<h1>` on the home page: the hero's, once ticket 27 makes the logo a `<div>` |
 | `home-hero` | 46 | the hero's `<img>` has a srcset (320w to 1600w), sizes, width and height, and is the page's only `fetchpriority="high"`; its `<h1>` has text; its two buttons are `<a href>`. Whether the page must have the hero follows `widgets/home-lead/channels/<channel>.json`: required once its placement is recorded active, refused once recorded inactive, checked if present before that |
+| `home-no-carousel` | 46 | no stock carousel (`.heroCarousel`) on the home page |
 
 **Still to come:**
 
