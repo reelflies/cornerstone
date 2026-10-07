@@ -73,10 +73,20 @@ const desiredTemplate = widget => ({
     name: widget.templateName, template: widget.template, schema: widget.schema, storefront_api_query: widget.query,
 });
 
+// A widget_configuration without the "_": { "id": <the widget's uuid> } the store adds to each one
+// (a template reads it as {{_.id}}). Any other "_" stays, so it reads as drift.
+function withoutStoreId(configuration, uuid) {
+    if (!isObject(configuration) || !isDeepStrictEqual(configuration._, { id: uuid })) return configuration;
+    return Object.fromEntries(Object.entries(configuration).filter(([key]) => key !== '_'));
+}
+
 // The store's value of a field, as a create or update would set it.
 const storeValue = {
     'widget-templates': (item, key) => (key === 'storefront_api_query' ? item[key] ?? '' : item[key]),
-    widgets: (item, key) => (key === 'widget_template_uuid' ? item.widget_template?.uuid : item[key]),
+    widgets: (item, key) => {
+        if (key === 'widget_template_uuid') return item.widget_template?.uuid;
+        return key === 'widget_configuration' ? withoutStoreId(item[key], item.uuid) : item[key];
+    },
     placements: (item, key) => (key === 'widget_uuid' ? item.widget?.uuid : item[key]),
 };
 
