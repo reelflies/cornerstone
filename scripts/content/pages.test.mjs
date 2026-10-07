@@ -315,6 +315,14 @@ describe('ticket 22, on the real sources', () => {
         assert.ok(textOf(about.body).includes('We stand behind every fly we sell.'));
     });
 
+    it('About leaves out the claims and customer mentions ticket 14 holds until Shaun confirms them', () => {
+        const about = page('/about-us/');
+        assert.equal(about.status, 'draft');
+        assert.doesNotMatch(textOf(about.body), /largest|most popular|award-winning|New Fly Fisher|McKeown|Spicer|Verhoef|Fly Fitters|Grindstone/i);
+        assert.ok(about.forShaun.some(entry => /largest and most popular/.test(entry.question) && /award-winning/.test(entry.question)));
+        assert.ok(about.forShaun.some(entry => /condensed from the live About text/.test(entry.question)));
+    });
+
     it('Help links to the hook size chart and to Shipping & Returns, and says the fly box isn\'t included', () => {
         const help = page('/help/');
         const links = linksIn(help.body);
@@ -322,6 +330,8 @@ describe('ticket 22, on the real sources', () => {
         assert.ok(links.includes('/shipping-returns/'), links.join(' '));
         assert.ok(links.includes('https://reelflies.com/'), links.join(' '));
         assert.match(textOf(help.body), /fly box[^.]*isn't included/i);
+        assert.match(textOf(help.body), /Does an Assortment come with a fly box\?/);
+        assert.doesNotMatch(`${textOf(help.body)} ${help.meta_description}`, /fly selection/i, 'CONTEXT.md: Assortment, not "selection"');
     });
 
     it('Contact is the form, the phone number and the address, with no email address', () => {
