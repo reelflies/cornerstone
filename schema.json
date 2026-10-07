@@ -51,6 +51,21 @@
         "id": "body-font",
         "options": [
           {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnest",
+            "value": "Onest_400"
+          },
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnestMedium",
+            "value": "Onest_500"
+          },
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnestSemiBold",
+            "value": "Onest_600"
+          },
+          {
             "group": "i18n.Karla",
             "label": "i18n.Karla",
             "value": "Google_Karla_400"
@@ -143,6 +158,21 @@
         "label": "i18n.HeadingFontFamily",
         "id": "headings-font",
         "options": [
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnest",
+            "value": "Onest_400"
+          },
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnestMedium",
+            "value": "Onest_500"
+          },
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnestSemiBold",
+            "value": "Onest_600"
+          },
           {
             "group": "i18n.Montserrat",
             "label": "i18n.MontserratLight",
@@ -2247,6 +2277,21 @@
         "id": "optimizedCheckout-headingPrimary-font",
         "options": [
           {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnest",
+            "value": "Onest_400"
+          },
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnestMedium",
+            "value": "Onest_500"
+          },
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnestSemiBold",
+            "value": "Onest_600"
+          },
+          {
             "group": "i18n.OpenSans",
             "label": "i18n.OpenSans",
             "value": "Google_Open+Sans_400"
@@ -2303,6 +2348,21 @@
         "label": "i18n.Heading2FontFamily",
         "id": "optimizedCheckout-headingSecondary-font",
         "options": [
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnest",
+            "value": "Onest_400"
+          },
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnestMedium",
+            "value": "Onest_500"
+          },
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnestSemiBold",
+            "value": "Onest_600"
+          },
           {
             "group": "i18n.OpenSans",
             "label": "i18n.OpenSans",
@@ -2379,6 +2439,21 @@
         "id": "optimizedCheckout-contentPrimary-font",
         "options": [
           {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnest",
+            "value": "Onest_400"
+          },
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnestMedium",
+            "value": "Onest_500"
+          },
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnestSemiBold",
+            "value": "Onest_600"
+          },
+          {
             "group": "i18n.OpenSans",
             "label": "i18n.OpenSans",
             "value": "Google_Open+Sans_400"
@@ -2436,6 +2511,21 @@
         "id": "optimizedCheckout-contentSecondary-font",
         "options": [
           {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnest",
+            "value": "Onest_400"
+          },
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnestMedium",
+            "value": "Onest_500"
+          },
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnestSemiBold",
+            "value": "Onest_600"
+          },
+          {
             "group": "i18n.OpenSans",
             "label": "i18n.OpenSans",
             "value": "Google_Open+Sans_400"
@@ -2492,6 +2582,21 @@
         "label": "i18n.LinkFontFamily",
         "id": "optimizedCheckout-link-font",
         "options": [
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnest",
+            "value": "Onest_400"
+          },
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnestMedium",
+            "value": "Onest_500"
+          },
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnestSemiBold",
+            "value": "Onest_600"
+          },
           {
             "group": "i18n.OpenSans",
             "label": "i18n.OpenSans",
@@ -2558,6 +2663,21 @@
         "label": "i18n.ButtonTextFontFamily",
         "id": "optimizedCheckout-buttonPrimary-font",
         "options": [
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnest",
+            "value": "Onest_400"
+          },
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnestMedium",
+            "value": "Onest_500"
+          },
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnestSemiBold",
+            "value": "Onest_600"
+          },
           {
             "group": "i18n.OpenSans",
             "label": "i18n.OpenSans",
@@ -2674,6 +2794,21 @@
         "label": "i18n.ButtonTextFontFamily",
         "id": "optimizedCheckout-buttonSecondary-font",
         "options": [
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnest",
+            "value": "Onest_400"
+          },
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnestMedium",
+            "value": "Onest_500"
+          },
+          {
+            "group": "i18n.RfOnest",
+            "label": "i18n.RfOnestSemiBold",
+            "value": "Onest_600"
+          },
           {
             "group": "i18n.OpenSans",
             "label": "i18n.OpenSans",

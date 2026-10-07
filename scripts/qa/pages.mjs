@@ -4,7 +4,7 @@
 // Keys are page keys: a page kind, which is a template name from the spec's seam 1 list
 // (home, fly-type, species, species-hub, product, cart, hook-chart, 404 and brand, plus
 // category for the stock category template until ticket 32 builds the Fly Type and Species
-// pages), or kind@name for one more pin of the same kind (W0-8), such as product@5663 or
+// pages, page for a Web Page, and login and create-account for the sign-in forms), or kind@name for one more pin of the same kind (W0-8), such as product@5663 or
 // product@sold-out. A template ticket adds its page here when it lands; the screenshot and axe
 // runs then cover it.
 // - The kind decides what the page must answer (expectedStatus), which raw-HTML assertions
@@ -36,6 +36,10 @@ export const CHANNELS = {
             cart: '/cart.php',
             brand: '/brands/ReelFlies.html',
             404: '/rf-qa-missing-page/',
+            // Ticket 25: the sign-in and create-account forms, whose stock templates had no <main>
+            // and whose fields carry the autocomplete tokens (raw-HTML assertion autocomplete).
+            login: '/login.php',
+            'create-account': '/login.php?action=create_account',
         },
         // Pin both, and delete these lines, when refactor tickets 13 and 14 land.
         notPinnedYet: {
@@ -55,6 +59,10 @@ export const CHANNELS = {
             // them: `hold` below keeps that from moving the page.
             product: '/realistic-flying-hot-butt-hopper-brown/',
             category: '/flies/realistic-trout-flies/', // tree 1; 12 cards with Quick view, and facets
+            // A Web Page (pages/page), for ticket 25's focus ring and landmark checks: ReelFlies_CA
+            // has none yet (ticket 22's sources sync later). One paragraph of terms that read the
+            // same on 2026-10-07 as the coupon wording on reelflies.ca has for years.
+            page: '/coupon-codes/',
         },
         // The live catalogue decides which products these pages list, so the lists can't
         // be pinned here. Pin a listing that holds still before unmasking one.

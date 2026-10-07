@@ -6,4 +6,55 @@
 // stock settings can be read here and everything after them sees what is set here. Colours that
 // Theme Styles has no key for live here once (ticket 25). Settings only: no CSS output.
 //
+// The palette (spec, "Look"; ticket 25) is set in config.json's base settings, so Theme Styles
+// shows it and both variations share it. The $rf-* colours below read those keys back, so a
+// Theme Styles edit reaches the ReelFlies layer too. _foundation.scss turns them into the --rf-*
+// custom properties every later ticket uses.
+//
 // -----------------------------------------------------------------------------
+
+
+// Colours from Theme Styles
+// -----------------------------------------------------------------------------
+
+$rf-paper:        stencilColor("body-bg");                              // #FFFFFF page
+$rf-ink:          stencilColor("color-textBase");                       // #212721 text, selected states
+$rf-dun:          stencilColor("color-textSecondary");                  // #5A645A secondary text
+$rf-sage:         stencilColor("icon-color");                           // #7B8E7A the brand green: icons and accents
+$rf-buy:          stencilColor("button--primary-backgroundColor");      // #5D705C buy actions and the cart count only
+$rf-buy-hover:    stencilColor("button--primary-backgroundColorHover"); // #4F5F4E
+$rf-buy-ink:      stencilColor("button--primary-color");                // #FFFFFF labels on buy (5.3:1)
+$rf-edge:         stencilColor("input-border-color");                   // #879186 control borders, chips (3.3:1)
+$rf-tile:         stencilColor("container-fill-dark");                  // #F1F3F0 soft surfaces
+$rf-tile-2:       stencilColor("container-border-global-color-base");   // #E3E8E2 hover fills, dividers
+$rf-error:        stencilColor("color-error");                          // #B42318
+$rf-success:      stencilColor("color-success");                        // #1E7A3C
+
+
+// Colours Theme Styles has no key for
+// -----------------------------------------------------------------------------
+//
+// scripts/check-contrast.mjs checks the rings (FOCUS_RING, FOCUS_RING_DARK, FOREST), and its test
+// keeps those values equal to these.
+
+$rf-forest:           #2f382f; // forest charcoal: the footer and forest bands (ticket 50 sets footer-backgroundColor)
+$rf-focus-ring:       #23272b; // the focus ring on light grounds (15:1 on white)
+$rf-focus-ring-dark:  #f2c14e; // the gold bead ring on forest grounds (7.2:1)
+$rf-bead-soft:        #fdf3d7;
+$rf-scrim:            28, 29, 31; // #1C1D1F, neutral image scrims, as rgba() channels
+
+
+// Type
+// -----------------------------------------------------------------------------
+//
+// Onest, self-hosted (_fonts.scss), then its size-matched Arial fallback, so text barely moves
+// when Onest arrives (font-display: swap).
+
+$rf-font-stack:   "Onest", "Onest Fallback", system-ui, sans-serif;
+
+
+// Motion
+// -----------------------------------------------------------------------------
+
+$rf-t-fast:       150ms; // hover and focus
+$rf-t-mid:        200ms; // drawers and dropdowns

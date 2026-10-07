@@ -6083,6 +6083,16 @@
     "default": "ReelFlies"
   },
 
+  "i18n.RfOnest": {
+    "default": "Onest (self-hosted)"
+  },
+  "i18n.RfOnestMedium": {
+    "default": "Onest Medium (self-hosted)"
+  },
+  "i18n.RfOnestSemiBold": {
+    "default": "Onest SemiBold (self-hosted)"
+  },
+
   "i18n.RfHeader": {
     "default": "Header"
   },

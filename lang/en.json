@@ -109,15 +109,15 @@
             "add_info": "Add Info",
             "cancel": "Cancel",
             "select_a_country": "Country",
-            "select_a_state": "State/province",
+            "select_a_state": "Province/territory",
             "estimate_shipping": "Estimate Shipping",
-            "suburb_city": "Suburb/city",
-            "zip_postal_code": "Zip/postcode",
+            "suburb_city": "City",
+            "zip_postal_code": "Postal code",
             "free_shipping": "Free shipping",
             "hide_ups_rates": "Hide UPS Rates",
             "show_ups_rates": "Show UPS Rates",
             "empty_country_error": "The 'Country' field cannot be blank.",
-            "empty_province_error": "The 'State/Province' field cannot be blank."
+            "empty_province_error": "The 'Province/territory' field cannot be blank."
         },
         "gift_wrapping": {
             "title": "Gift Wrapping",
@@ -432,12 +432,12 @@
             "billing_address_labels": {
               "address_line_1": "Address Line 1",
               "address_line_2": "Address Line 2",
-              "suburb_city": "Suburb/City",
-              "state_province": "State/Province",
-              "choose_state": "Choose a State",
+              "suburb_city": "City",
+              "state_province": "Province/Territory",
+              "choose_state": "Choose a Province or Territory",
               "country": "Country",
               "choose_country": "Choose a Country",
-              "zip_postcode": "Zip/Postcode"
+              "zip_postcode": "Postal Code"
             }
         },
         "returns": {
@@ -600,10 +600,10 @@
             "phone": "Phone Number",
             "address1": "Address Line 1",
             "address2": "Address Line 2",
-            "city": "Suburb/City",
+            "city": "City",
             "country": "Country",
-            "state": "State/Province",
-            "postal_code": "Zip/Postcode",
+            "state": "Province/Territory",
+            "postal_code": "Postal Code",
             "choose_country": "Choose a Country",
             "default_instrument": "Default Payment Method"
         },
@@ -877,7 +877,7 @@
     },
     "errors": {
         "shipping_quote_failure": "There was a problem retrieving your shipping quote",
-        "state_error": "There was a problem retrieving states/provinces"
+        "state_error": "There was a problem retrieving provinces and territories"
     },
     "search": {
         "errorMessage": "There was a problem retrieving your results. Please try again in a few seconds.",

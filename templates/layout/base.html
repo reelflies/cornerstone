@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="no-js" lang="{{ locale_name }}">
+<html class="no-js" lang="en-CA">{{!-- ReelFlies hook (ticket 25): Canadian English on every page; stock printed the store locale_name --}}
     <head>
         <title>{{ head.title }}</title>
         {{{ resourceHints }}}
@@ -26,9 +26,9 @@
         </script>
         <script nonce="{{nonce}}" async src="{{cdn 'assets/dist/theme-bundle.head_async.js' resourceHint='preload' as='script'}}"></script>
         
-        {{getFontsCollection font-display='block'}}
+        {{getFontsCollection font-display='swap'}}{{!-- ReelFlies hook (ticket 25): swap, not block --}}
         
-        <script nonce="{{nonce}}" async src="{{cdn 'assets/dist/theme-bundle.font.js' resourceHint='preload' as='script'}}"></script>
+        {{> components/reelflies/head}}{{!-- ReelFlies hook (ticket 25): Onest's preload, content-language and the default share image, in place of theme-bundle.font.js --}}
 
         {{{stylesheet '/assets/css/theme.css'}}}
 
