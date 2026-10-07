@@ -13,6 +13,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import { parseCalendar, phaseOn } from '../lib/release-calendar.mjs';
 import { classify } from '../store/allowlist.mjs';
 import { applyPlan, lockedProblem } from '../store/apply.mjs';
@@ -244,6 +245,9 @@ test('every store-wide changes file is refused as a lifted write and plans only 
 
 const readFilters = recorded['search/filters'].data;
 const writable = item => Object.fromEntries(Object.entries(item).filter(([key]) => !/facet/.test(key)));
+// The store reads items_to_show as a number; BigCommerce's Update Enabled Filters documents the
+// string enum "5", "10" and "15", so the file sends strings. The same count isn't a change.
+const same = (key, a, b) => (key === 'items_to_show' ? String(a) === String(b) : isDeepStrictEqual(a, b));
 
 test('Product Filtering: Fly Sizes first and open, 15 values by option value; Category, Price and Brand hidden; the rest as read', () => {
     const [request] = requestsOf('store-wide', 'product-filtering.json');
@@ -255,8 +259,9 @@ test('Product Filtering: Fly Sizes first and open, 15 values by option value; Ca
     assert.equal(first.display_name, 'Fly Sizes');
     assert.equal(first.is_enabled, true);
     assert.equal(first.collapsed_by_default, false);
-    assert.equal(first.items_to_show, 15, 'the most the setting allows, as a number as the store reads it');
+    assert.equal(first.items_to_show, '15', 'the most the setting allows, as the documented string');
     assert.equal(first.sort_by, 'option_values');
+    for (const item of list.filter(filter => Object.hasOwn(filter, 'items_to_show'))) assert.ok(['5', '10', '15'].includes(item.items_to_show), `${item.display_name} sends a documented items_to_show`);
     for (const type of ['category', 'price', 'brand']) assert.equal(list.find(item => item.type === type).is_enabled, false, `${type} hidden`);
     const intended = {
         'Fly Sizes': ['collapsed_by_default', 'items_to_show', 'sort_by', 'is_enabled'], Category: ['is_enabled'], Brand: ['is_enabled'], Price: ['is_enabled'],
@@ -264,9 +269,28 @@ test('Product Filtering: Fly Sizes first and open, 15 values by option value; Ca
     for (const item of list) {
         const read = writable(readFilters.find(old => old.id === item.id));
         assert.deepEqual(Object.keys(item).sort(), Object.keys(read).sort(), `${item.display_name} keeps the read's writable fields, and no read-only facet field`);
-        const changed = Object.keys(item).filter(key => JSON.stringify(item[key]) !== JSON.stringify(read[key]));
-        assert.deepEqual(changed.sort(), (intended[item.display_name] || []).filter(key => JSON.stringify(item[key]) !== JSON.stringify(read[key])).sort(), `${item.display_name} changes only what the checklist says`);
+        const changed = Object.keys(item).filter(key => !same(key, item[key], read[key]));
+        assert.deepEqual(changed.sort(), (intended[item.display_name] || []).filter(key => !same(key, item[key], read[key])).sort(), `${item.display_name} changes only what the checklist says`);
     }
+});
+
+test('Product Filtering\'s order: Fly Sizes, then the other shown filters as read, then the hidden ones as read', () => {
+    const list = requestsOf('store-wide', 'product-filtering.json')[0].body;
+    assert.deepEqual(list.map(item => item.display_name), [
+        'Fly Sizes', 'Other', 'Rating', 'Category', 'Brand', 'Price', 'Choose Foam Style', 'Color', 'Colour', 'choose leader weight', 'Strike Indicator Colour', 'Size', 'Choose Size', 'Yarn Indicator Colour', 'FLY BOX OPTIONAL',
+    ]);
+    // The rule behind it: Rating moves from 5th to 3rd only because Category, Brand and Price, now
+    // all hidden, move below the shown filters. The shown filters keep their order after Fly Sizes.
+    const planned = new Map(list.map(item => [item.id, item]));
+    const rest = readFilters.filter(item => item.display_name !== 'Fly Sizes');
+    const expected = [
+        'Fly Sizes',
+        ...rest.filter(item => planned.get(item.id).is_enabled).map(item => item.display_name),
+        ...rest.filter(item => !planned.get(item.id).is_enabled).map(item => item.display_name),
+    ];
+    assert.deepEqual(list.map(item => item.display_name), expected);
+    const about = loadChanges('store-wide', 'product-filtering.json')._about;
+    assert.match(about, /Rating moves from 5th to 3rd/);
 });
 
 test('Product Filtering plans in approved mode from the global read alone, with a diff Shaun reads', async () => {
