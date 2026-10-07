@@ -704,6 +704,7 @@ A widget whose layout makes promises a shot can't prove has its own Playwright s
 - on phones, the text below the photo, and the photo cropped to 16:10
 - the photo loaded from its srcset, the page's one `fetchpriority="high"`, and mirrored
 - its text 4.5:1 or better over the scrim and the photo on desktop, at 801 and 1280 px. The text is made transparent, each line box is shot, and the lightest pixel behind it is read back through a canvas; each ratio is a test annotation.
+- ticket 25's focus ring on both buttons from the keyboard: #23272B on phones, where they sit on the white page, and the gold bead from 801px, where they sit on the scrim, each 3:1 or better against every pixel round it (read the same way, with the ring hidden)
 - no serious or critical axe issues in the widget
 
 ### Worked example

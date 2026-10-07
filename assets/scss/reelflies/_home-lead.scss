@@ -136,14 +136,13 @@ $rf-hero-subline-on-photo:  #e6e9ec;
     padding: 0 22px;
     text-decoration: none;
 
-    &:focus-visible {
-        outline: 3px solid stencilColor("color-textHeading");
-        outline-offset: 3px;
-    }
-
+    // The focus ring is ticket 25's (_foundation.scss). On phones the buttons sit on the white
+    // page and keep its #23272B ring. From 801px they sit on the scrim, so they take its
+    // dark-ground ring, the gold bead: this rule has the foundation's [href]:focus-visible
+    // specificity and comes after it, so it wins (home-lead-screens.spec.mjs checks both).
     @include breakpoint("medium") {
         &:focus-visible {
-            outline-color: $rf-hero-text-on-photo;
+            @include rf-focus-ring(var(--rf-focus-dark));
         }
     }
 }
