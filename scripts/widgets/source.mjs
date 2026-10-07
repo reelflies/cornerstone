@@ -6,7 +6,8 @@
 //
 // A widget's folder (scripts/qa/README.md, "Widgets"):
 //
-//   widgets/<name>/template.html          the template, uploaded as widget template rf-<name>
+//   widgets/<name>/template.html          the template, uploaded as widget template rf-<name>, with
+//                                         _shared partials inlined and each comment emptied
 //   widgets/<name>/schema.json            its Page Builder schema (an array of tabs)
 //   widgets/<name>/query.graphql          optional: its storefront_api_query
 //   widgets/<name>/channels/<id>.json     the widget on one channel: its widget_configuration,
@@ -25,9 +26,14 @@
 // them in from the channel's snapshot, and the PR that follows the apply commits them.
 
 import fs from 'fs';
+import { createRequire } from 'module';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { channelsNamed } from '../store/channel.mjs';
+
+const require = createRequire(import.meta.url);
+// The Handlebars build Paper renders widgets with (config.json's handlebars_v4), for its parser.
+const Handlebars = require('@bigcommerce/handlebars-v4'); // eslint-disable-line import/no-extraneous-dependencies
 
 export const WIDGETS_DIR = fileURLToPath(new URL('../../widgets/', import.meta.url)).replace(/\/$/, '');
 // The channels a sync may target. Ticket 53 adds channel 1 (Option A), whose writes are Shaun's,
@@ -84,6 +90,71 @@ export function inlineShared(source, root = WIDGETS_DIR) {
     return `${source}${source.endsWith('\n') ? '' : '\n'}${definitions.join('')}`;
 }
 
+// Handlebars' lexer breaks lines at \r\n, \r and \n, and counts its columns from there.
+const LINE_BREAK = /\r\n?|\n/g;
+// A comment token's text, as Handlebars' parser takes it from {{!-- … --}} or {{! … }}.
+const commentText = token => token.replace(/^\{\{~?!-?-?/, '').replace(/-?-?~?\}\}$/, '');
+
+// Each Handlebars comment in a template, {{!-- … --}} or {{! … }}, as Handlebars' own parser finds
+// it (so an escaped \{{! … }} or a "{{! … }}" in a string isn't one): its offsets and ~ flags.
+// Throws when the parser places a comment where it isn't: its lexer counts a column short after a
+// U+2028 or U+2029 in a token that spans lines.
+function commentSpans(source) {
+    const lineStarts = [0, ...[...source.matchAll(LINE_BREAK)].map(found => found.index + found[0].length)];
+    const offset = ({ line, column }) => lineStarts[line - 1] + column;
+    const spans = [];
+    const walk = node => {
+        if (Array.isArray(node)) {
+            node.forEach(walk);
+            return;
+        }
+        if (!isObject(node)) return;
+        if (node.type === 'CommentStatement') {
+            const span = { start: offset(node.loc.start), end: offset(node.loc.end), strip: node.strip };
+            const token = source.slice(span.start, span.end);
+            if (!/^\{\{~?![\s\S]*\}\}$/.test(token) || commentText(token) !== node.value) {
+                throw new Error(`Handlebars places a comment at line ${node.loc.start.line}, column ${node.loc.start.column} where it isn't, so its comments can't be emptied. A U+2028 or U+2029 character upsets its count of lines: replace it with a space or a line break`);
+            }
+            spans.push(span);
+            return;
+        }
+        Object.entries(node).forEach(([key, value]) => {
+            if (key !== 'loc') walk(value);
+        });
+    };
+    walk(Handlebars.parseWithoutProcessing(source));
+    return spans;
+}
+
+// A template's parse tree without its places or its comments' text: what Handlebars renders from.
+const parsedShape = source => JSON.stringify(Handlebars.parseWithoutProcessing(source), function shape(key, value) {
+    if (key === 'loc') return undefined;
+    return key === 'value' && this.type === 'CommentStatement' ? '' : value;
+});
+
+// The template with each comment emptied to {{!}}, keeping its ~ flags ({{~!}}, {{!~}}, {{~!~}}).
+// Only the comments' text changes, which it checks by parsing the result again, so the store
+// renders exactly what the fixture renderer renders, whitespace and standalone lines included.
+// The store most likely reads the text inside comments when it checks a template's HTML: it
+// refused the hero's first upload, whose comment names <width>, <path> and <channel>, as "not
+// valid HTML" (2026-10-07).
+export function emptyComments(source) {
+    const emptied = commentSpans(source)
+        .sort((a, b) => b.start - a.start)
+        .reduce((text, { start, end, strip }) => `${text.slice(0, start)}{{${strip.open ? '~' : ''}!${strip.close ? '~' : ''}}}${text.slice(end)}`, source);
+    if (parsedShape(emptied) !== parsedShape(source)) throw new Error('emptying its comments would change more than their text, so it isn\'t uploaded');
+    return emptied;
+}
+
+// make(), with any error it throws prefixed by `where`.
+const naming = (where, make) => {
+    try {
+        return make();
+    } catch (error) {
+        throw new Error(`${where}: ${error.message}`);
+    }
+};
+
 // The ids a widget_configuration holds: every setting's, in tabs, sections, hidden groups and
 // conditional settings. An array setting holds its items under its own id.
 const settingIds = schema => {
@@ -102,8 +173,8 @@ const settingIds = schema => {
     return ids;
 };
 
-// A widget as the store should hold it: its template (with _shared partials inlined), schema and
-// query, and the names its template and widget take on every channel.
+// A widget as the store should hold it: its template (with _shared partials inlined and each
+// comment emptied), schema and query, and the names its template and widget take on every channel.
 export function readWidget(name, { root = WIDGETS_DIR } = {}) {
     if (!NAME.test(name)) throw new Error(`"${name}" isn't a widget name: a folder in widgets/ (lower-case letters, digits and -)`);
     const dir = path.join(root, name);
@@ -112,13 +183,18 @@ export function readWidget(name, { root = WIDGETS_DIR } = {}) {
     const schema = readJson(path.join(dir, 'schema.json'), `${relative(root, path.join(dir, 'schema.json'))}`);
     if (!Array.isArray(schema)) throw new Error(`${relative(root, path.join(dir, 'schema.json'))} must be a JSON array of tabs (the Page Builder schema)`);
     const queryFile = path.join(dir, 'query.graphql');
+    // Its own comments are emptied first, so a partial a note names is neither inlined nor refused;
+    // then the inlined _shared partials' comments, whose lines count after the template's.
+    const where = relative(root, templateFile);
+    const own = naming(where, () => emptyComments(fs.readFileSync(templateFile, 'utf8')));
+    const template = naming(`${where} with its _shared partials inlined after it`, () => emptyComments(inlineShared(own, root)));
     return {
         name,
         dir,
         root,
         templateName: `rf-${name}`,
         widgetName: `rf-${name}`,
-        template: inlineShared(fs.readFileSync(templateFile, 'utf8'), root),
+        template,
         schema,
         settings: settingIds(schema),
         query: fs.existsSync(queryFile) ? fs.readFileSync(queryFile, 'utf8').trim() : '',

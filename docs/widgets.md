@@ -8,7 +8,14 @@ The sync never writes to the store itself. It reads the channel with GETs only a
 
 | Path | What |
 |---|---|
-| `widgets/<name>/template.html` | The template, uploaded as the widget template `rf-<name>`. It reads its `widget_configuration` at the top level and its query's result as `_.data`. It may include `widgets/_shared/` partials, which the sync inlines (a store template can't include partials). |
+| `widgets/<name>/template.html` | The template, uploaded as the widget template `rf-<name>`. It reads its `widget_configuration` at the top level and its query's result as `_.data`. It may include `widgets/_shared/` partials, which the sync inlines (a store template can't include partials). The store gets each Handlebars comment emptied to `{{!}}`, keeping its `~` flags (`emptyComments` in `scripts/widgets/source.mjs`).
+
+- Handlebars' own parser finds the comments, and only their text changes, so the store renders exactly what the fixture renderer does.
+- The sync checks this by parsing the result again. It refuses a template whose comments Handlebars places wrongly; a U+2028 or U+2029 character can cause that.
+- The store refused the hero's first upload, whose comment named `<width>`, `<path>` and `<channel>`, as "not valid HTML". Most likely it reads comment text when it checks a template's HTML.
+- Because the sync empties every comment, notes go in comments freely, even ones that name tags or partials.
+
+Close void elements (`<img … />`), as BigCommerce's own examples do, because the store doesn't document its check. The tests check every widget for both. |
 | `widgets/<name>/schema.json` | Its Page Builder schema: an array with one `tab`, holding sections of settings. |
 | `widgets/<name>/query.graphql` | Optional: its `storefront_api_query`. |
 | `widgets/<name>/channels/<channel>.json` | The widget on one channel: `channel_id`, its `configuration` (every schema setting's value there, and nothing else), its `placement` (`template_file`, `region`, `sort_order`, `status`) and the `uuids` the store gave its template, widget and placement (`null` until it makes them). |
