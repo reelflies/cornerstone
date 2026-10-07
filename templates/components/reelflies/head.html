@@ -1,0 +1,18 @@
+{{!--
+    What every page's <head> gets from ReelFlies (ticket 25), included once from layout/base.html:
+    - the content language, en-CA, beside <html lang="en-CA"> (spec module 25). A theme can't set
+      the HTTP header, so it is the meta element.
+    - a preload of Onest, the one font file, so it arrives with the CSS. The same URL as the
+      @font-face in assets/scss/reelflies/_fonts.scss, which the browser then takes from this
+      request: crossorigin, because fonts are always fetched in CORS mode.
+    - the default share image, for a page with no image of its own: the store gives products
+      theirs in head.meta_tags, and every other page none. Built from the 133x95 logo until the
+      logo master arrives (ticket 14; decision 17).
+--}}
+<meta http-equiv="content-language" content="en-CA">
+<link rel="preload" href="{{cdn 'assets/fonts/onest-latin-var.woff2'}}" as="font" type="font/woff2" crossorigin>
+{{#contains head.meta_tags 'og:image'}}{{else}}
+<meta property="og:image" content="{{cdn 'assets/img/reelflies/social-default.jpg'}}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+{{/contains}}

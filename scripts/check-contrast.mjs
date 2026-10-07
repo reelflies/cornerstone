@@ -19,13 +19,19 @@ import { isMain } from './lib/is-main.mjs';
 const TEXT = 4.5;
 const UI = 3;
 
-// Hard-coded in assets/scss/tools/_theme_focus.scss:7, not a Theme Styles setting.
-// Update it when the skin overrides the focus ring.
-const FOCUS_RING = '#0f7fff';
+// The focus rings have no Theme Styles setting. The ReelFlies layer draws them from
+// assets/scss/reelflies/_settings.scss ($rf-focus-ring on light grounds, the gold bead
+// $rf-focus-ring-dark on the forest footer and bands), over the stock #0f7fff ring
+// (assets/scss/tools/_theme_focus.scss:7). check-contrast.test.mjs keeps these in step with it.
+export const FOCUS_RING = '#23272b';
+export const FOCUS_RING_DARK = '#f2c14e';
+// The forest ground ($rf-forest). Ticket 50 points the bead's pair at footer-backgroundColor when
+// it sets the footer to forest; until then the footer stays white and the ring there is the dark one.
+export const FOREST = '#2f382f';
 
 // [id, foreground, background, minimum]. A value starting with # is a literal
 // colour; anything else is a config.json settings key.
-const PAIRS = [
+export const PAIRS = [
     ['body-text', 'color-textBase', 'body-bg', TEXT],
     ['heading', 'color-textHeading', 'body-bg', TEXT],
     ['link', 'color-textLink', 'body-bg', TEXT],
@@ -58,23 +64,17 @@ const PAIRS = [
     ['checkout-error', 'optimizedCheckout-formField-errorColor', 'optimizedCheckout-body-backgroundColor', TEXT],
     ['checkout-link', 'optimizedCheckout-link-color', 'optimizedCheckout-body-backgroundColor', TEXT],
     ['focus-ring', FOCUS_RING, 'body-bg', UI],
+    ['focus-ring-on-forest', FOCUS_RING_DARK, FOREST, UI],
     ['checkout-focus', 'optimizedCheckout-colorFocus', 'optimizedCheckout-body-backgroundColor', UI],
     ['input-border', 'input-border-color', 'input-bg-color', UI],
     ['carousel-arrow', 'carousel-arrow-color', 'carousel-arrow-bgColor', UI],
 ];
 
-// Failures allowed for now, by variation name. They are reported but don't fail
-// the check. Remove an entry once the skin fixes it; a variation not listed here
-// gets no allowances, so every failure in it counts.
-//
-// Both ReelFlies variations still inherit Cornerstone Light's palette from the
-// base settings, so they carry Light's stock failures until the skin sets the
-// ReelFlies colours (after the ticket 12 sign-off). The skin must empty this list.
-const LIGHT_PLACEHOLDER_FAILURES = ['submenu-hover', 'quick-search-secondary', 'sale-badge', 'sold-out-badge', 'order-status-label', 'play-pause-text', 'blockquote-cite', 'checkout-placeholder'];
-const KNOWN_FAILURES = {
-    'ReelFlies CA': LIGHT_PLACEHOLDER_FAILURES,
-    'ReelFlies US': LIGHT_PLACEHOLDER_FAILURES,
-};
+// Failures allowed for now, by variation name. They are reported but don't fail the check.
+// Remove an entry once the skin fixes it; a variation not listed here gets no allowances, so
+// every failure in it counts. Ticket 25's palette cleared Cornerstone Light's eight
+// (LIGHT_PLACEHOLDER_FAILURES, ticket 04), so neither ReelFlies variation has any.
+export const KNOWN_FAILURES = {};
 
 function parseHex(value) {
     const match = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.exec(String(value).trim());
