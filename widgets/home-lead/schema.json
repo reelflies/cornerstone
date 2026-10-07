@@ -1,0 +1,35 @@
+[
+    {
+        "type": "tab",
+        "label": "Content",
+        "sections": [
+            {
+                "label": "Text",
+                "settings": [
+                    { "type": "input", "label": "Heading (the home page's H1)", "id": "heading", "default": "Hand-tied fly fishing flies, sold one at a time." },
+                    { "type": "input", "label": "Subline", "id": "subline", "default": "Nearly 2,000 patterns from $0.75 a fly, tied by hand and shipped across Canada from our family shop in Tillsonburg, Ontario, since 2003." }
+                ]
+            },
+            {
+                "label": "Buttons (links to real pages)",
+                "settings": [
+                    { "type": "input", "label": "First button text", "id": "primary_label", "default": "Shop dry flies" },
+                    { "type": "input", "label": "First button link (a path on this storefront)", "id": "primary_url", "default": "/dry-flies/" },
+                    { "type": "input", "label": "Second button text", "id": "secondary_label", "default": "Shop by fish" },
+                    { "type": "input", "label": "Second button link (a path on this storefront)", "id": "secondary_url", "default": "/species/" }
+                ]
+            },
+            {
+                "label": "Photo",
+                "settings": [
+                    { "type": "input", "label": "Image CDN base, up to /images/stencil", "id": "image_base", "default": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil" },
+                    { "type": "input", "label": "Image path after the size segment (for example image-manager/<file>)", "id": "image_path", "default": "s/bass-panfish__24775.original.jpg" },
+                    { "type": "input", "label": "Image width in px (the file's own)", "id": "image_width", "default": "1600" },
+                    { "type": "input", "label": "Image height in px (the file's own)", "id": "image_height", "default": "700" },
+                    { "type": "input", "label": "Image alt text (empty: the photo is decorative)", "id": "image_alt", "default": "" },
+                    { "type": "boolean", "label": "Mirror the photo", "id": "image_mirror", "default": true }
+                ]
+            }
+        ]
+    }
+]

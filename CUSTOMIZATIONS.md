@@ -12,11 +12,11 @@ This repo is Cornerstone (`upstream`, bigcommerce/cornerstone) plus ReelFlies co
 | Custom page templates (for example the Species hub) | `templates/pages/custom/` |
 | Styles | `assets/scss/reelflies/`: `_settings.scss` is imported after the settings in `theme.scss`, and `_index.scss` at the end of it |
 | Icons | SVG partials in `templates/components/reelflies/icons/`. Don't add to `assets/icons/`, because that regenerates `assets/img/icon-sprite.svg`. |
-| Hero widget template and schema (stored in BigCommerce) | `widgets/` |
+| Widgets API templates, schemas and per-channel files (stored in BigCommerce), synced by `scripts/widgets-sync.mjs` ([widgets](docs/widgets.md)) | `widgets/` |
 | Release, check and generator tooling (never bundled) | `scripts/` |
 | Research notes and their evidence, such as ticket 07's prelaunch probes (never bundled) | `research/` |
 | Decisions | `docs/adr/` |
-| Operator guides, such as [releasing](docs/releasing.md), [guardrails](docs/guardrails.md) and [store writes](docs/store-writes.md) | `docs/` |
+| Operator guides, such as [releasing](docs/releasing.md), [guardrails](docs/guardrails.md), [store writes](docs/store-writes.md) and [widgets](docs/widgets.md) | `docs/` |
 | Claude Code permission rules: a draft until Shaun turns them on ([permissions](docs/permissions.md)) | `.claude/` |
 
 - **New theme settings** go in one block at the end of `schema.json`, `schemaTranslations.json` and the `settings` object in `config.json`.
@@ -51,6 +51,7 @@ This repo is Cornerstone (`upstream`, bigcommerce/cornerstone) plus ReelFlies co
 | `package.json`, `package-lock.json` | `@playwright/test` 1.59.1 and `@axe-core/playwright` 4.10.2 as exact devDependencies; `qa:axe`, `qa:screens`, `qa:quick-view`, `qa:raw-html` and `qa:prepush` scripts | The storefront gates in `scripts/qa/`. Playwright 1.59.1 uses Chromium build 1217; `@axe-core/playwright` 4.10.2 uses the axe-core 4.10.3 already in the lockfile, the same engine as Lighthouse's audit | 16 |
 | `package.json` | `qa:prelaunch` script: runs `scripts/qa/prelaunch.mjs` | The host batch: the storefront gates against the prelaunch host once per checkpoint, with the analytics tags blocked and the results filed by theme uuid (W0-6) | 16 |
 | `package.json` | `qa:lighthouse` script: runs `scripts/qa/lighthouse.mjs` | Ticket 17's Lighthouse budgets on six URLs (median of 3, mobile, the drop rule), which the host batch runs. It uses upstream's own `lighthouse` devDependency (12.8.1 in the lockfile) and `lighthouse-config.js`, both unchanged, so no dependency is added | 17 |
+| `package.json` | `widgets:sync` script: runs `scripts/widgets-sync.mjs` | The widget sync: home content as code, synced to one channel at a time through the store-write helper ([widgets](docs/widgets.md)) | 46 |
 
 New ReelFlies files in upstream folders: `.github/workflows/reelflies-checks.yml`, `.github/workflows/reelflies-baseline-scope.yml` (W0-13), `.gitleaksignore`, `.gitattributes` at the repo root (W0-11: `RELEASES.md` merges as a union, so parallel log branches keep both sides' rows; upstream has no `.gitattributes`), and `RELEASES.md` at the repo root (the release log, written by `scripts/release.sh`, the Switch toggles log, the host batch's Host runs, and the My Themes log of each theme the prune deletes; tickets 05, 15 and 16, W0-3). `stencil bundle` zips only `README.md` and `CHANGELOG.md` from the root's Markdown files, so `RELEASES.md` never ships.
 

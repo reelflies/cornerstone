@@ -1,0 +1,38 @@
+{{!--
+    The home lead (ticket 46; spec module 6, O21): the photo hero that holds the home page's only
+    H1, placed in home_below_menu. Ticket 47 adds the three big cards after the hero, in this
+    template. Synced to each channel by scripts/widgets-sync.mjs; styled by the theme's ReelFlies
+    layer (assets/scss/reelflies/_home-lead.scss), so nothing here is inline CSS.
+
+    - Every word and link is a widget field (schema.json; each channel's values are in
+      channels/<channel>.json), so channel 1's copy can carry tree-1 paths (ticket 53).
+    - The photo is a real <img> with a srcset built from the CDN base and the image's path after
+      the size segment (/images/stencil/<width>w/<path>), with its width and height, eager and
+      fetchpriority="high": the only one on the home page (SEO-8). The path is a text field
+      (HOME-2's fallback until ticket 07's probe 13).
+    - Both buttons are links to real pages, never controls that open the menu (UX-3, CD-1).
+--}}
+<div class="rf-home-lead">
+    <div class="container">
+        <div class="rf-hero">
+            <div class="rf-hero__media">
+                <img class="rf-hero__img{{#if image_mirror}} rf-hero__img--mirror{{/if}}"
+                    src="{{image_base}}/1280w/{{image_path}}"
+                    srcset="{{image_base}}/320w/{{image_path}} 320w, {{image_base}}/480w/{{image_path}} 480w, {{image_base}}/640w/{{image_path}} 640w, {{image_base}}/960w/{{image_path}} 960w, {{image_base}}/1280w/{{image_path}} 1280w, {{image_base}}/1600w/{{image_path}} 1600w"
+                    sizes="(min-width: 1284px) 1200px, 100vw"
+                    width="{{image_width}}"
+                    height="{{image_height}}"
+                    alt="{{image_alt}}"
+                    fetchpriority="high">
+            </div>
+            <div class="rf-hero__copy">
+                <h1 class="rf-hero__heading">{{heading}}</h1>
+                <p class="rf-hero__text">{{subline}}</p>
+                <div class="rf-hero__actions">
+                    <a class="rf-hero__button rf-hero__button--primary" href="{{primary_url}}">{{primary_label}}</a>
+                    <a class="rf-hero__button rf-hero__button--secondary" href="{{secondary_url}}">{{secondary_label}}</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
