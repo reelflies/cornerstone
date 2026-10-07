@@ -1,13 +1,12 @@
 {
-    "about": "ReelFlies_CA's home title and meta description (ticket 46; SEO-11, O21, story 72), as a changes file for the store-write helper: node ~/reelflies/theme/cornerstone/scripts/store/plan.mjs --ticket 46 --changes content/settings/1895766/storefront-seo.json, then apply.mjs. A lifted channel setting only once plan.mjs proves parts 1 and 2 of ticket 21's three-part test. The title is SEO-11's; the meta description is a DRAFT until Shaun approves it on the review page. Both go on ticket 57's Flip-day checks.",
+    "about": "ReelFlies_CA's home title (ticket 46; SEO-11, O21, story 72), as a changes file for the store-write helper: node ~/reelflies/theme/cornerstone/scripts/store/plan.mjs --ticket 46 --changes content/settings/1895766/storefront-seo.json, then apply.mjs. A lifted channel setting only once plan.mjs proves parts 1 and 2 of ticket 21's three-part test. The title is SEO-11's own copy. The meta description is a DRAFT until Shaun approves it on the review page, so it waits in content/drafts/1895766/storefront-seo-meta.json, which is never a changes file. Both go on ticket 57's Flip-day checks.",
     "requests": [
         {
             "method": "PUT",
             "path": "/v3/settings/storefront/seo",
             "query": { "channel_id": 1895766 },
             "body": {
-                "page_title": "ReelFlies.ca | Hand-Tied Fly Fishing Flies, Canada's Online Fly Shop",
-                "meta_description": "Hand-tied fly fishing flies, sold one at a time: nearly 2,000 patterns from $0.75 a fly, shipped across Canada from our family shop in Tillsonburg, Ontario."
+                "page_title": "ReelFlies.ca | Hand-Tied Fly Fishing Flies, Canada's Online Fly Shop"
             }
         }
     ]

@@ -1,0 +1,7 @@
+{
+    "about": "ReelFlies_CA's home meta description (ticket 46; SEO-11, O21, story 72). A DRAFT until Shaun approves it on the review page, so it is kept out of content/settings/, and it has no requests: the store-write helper refuses this file as a changes file. Once he approves it (or his own words), the orchestrator adds the PUT below to a changes file in content/settings/1895766/ through a PR, then plans and applies it. Its figures are decision 14's, rechecked at the T-14 content freeze (HOME-4; ticket 57).",
+    "status": "DRAFT",
+    "awaiting": "Shaun's approval on the review page (ticket 46, criterion 9)",
+    "setting": "/v3/settings/storefront/seo?channel_id=1895766 meta_description",
+    "value": "Hand-tied fly fishing flies, sold one at a time: nearly 2,000 patterns from $0.75 a fly, shipped across Canada from our family shop in Tillsonburg, Ontario."
+}
