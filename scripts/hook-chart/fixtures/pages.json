@@ -15,8 +15,15 @@
             "name": "Fly Hook Size Chart",
             "type": "page",
             "url": "/fly-hook-size-chart/",
-            "is_visible": true,
+            "is_visible": false,
+            "parent_id": 0,
+            "sort_order": 4,
+            "is_homepage": false,
+            "is_customers_only": false,
+            "meta_title": "Fly Hook Size Chart | ReelFlies",
+            "meta_keywords": "hook size chart,fly hook sizes",
             "meta_description": "Fly hook sizes from 6/0 to 24.",
+            "search_keywords": "hook sizes,size chart",
             "body": "<p>Fly hooks are sized by number. From 1 to 24, the bigger the number, the smaller the hook.</p>\n<p>See also the <a href=\"/blog/mustad-277-size-32/\">Mustad 277 in size 32</a>.</p>\n<!-- rf:hook-chart-rows start -->\n<table><tbody><tr id=\"size-14\"><th scope=\"row\">14</th><td>old rows</td></tr></tbody></table>\n<!-- rf:hook-chart-rows end -->\n<p>Long-shank hooks are longer than the standard hooks drawn here.</p>\n"
         }
     ],

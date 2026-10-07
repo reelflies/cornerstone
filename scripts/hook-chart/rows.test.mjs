@@ -114,7 +114,7 @@ describe('joinPages: a paged read, from one saved file per page', () => {
         const [first, second, third] = named(pages, 'tree');
         const other = structuredClone(second);
         other.read.meta.pagination.total_pages = 4;
-        assert.throws(() => joinPages([first, other, third], 'tree'), /^Error: the tree read's pages come from different reads: tree-p1\.json says 3 pages and 12 items, tree-p2\.json says 4 pages and 12 items$/);
+        assert.throws(() => joinPages([first, other, third], 'tree'), /^Error: the tree read's pages come from different reads: tree-p1\.json says 3 pages and 13 items, tree-p2\.json says 4 pages and 13 items$/);
         const past = structuredClone(third);
         past.read.meta.pagination.current_page = 4;
         assert.throws(() => joinPages([first, second, third, { ...past, file: 'p4.json' }], 'tree'), /p4\.json is page 4, but the tree read has 3 pages/);
@@ -122,7 +122,7 @@ describe('joinPages: a paged read, from one saved file per page', () => {
         short.read.data.pop();
         assert.throws(() => joinPages([first, short, third], 'tree'), /^Error: page 2 of the tree read \(tree-p2\.json\) holds 4 items but says it holds 5$/);
         short.read.meta.pagination.count = 4;
-        assert.throws(() => joinPages([first, short, third], 'tree'), /^Error: the tree read's pages hold 11 items, but the read says 12: the store changed while it was read, so read every page again$/);
+        assert.throws(() => joinPages([first, short, third], 'tree'), /^Error: the tree read's pages hold 12 items, but the read says 13: the store changed while it was read, so read every page again$/);
     });
 });
 
@@ -142,6 +142,57 @@ describe('catalogueProducts', () => {
         assert.deepEqual(byId[10].sizes, [], 'a "Size" option isn\'t the Fly Sizes facet');
         assert.deepEqual(byId[11].sizes, ['26', '14']);
         assert.deepEqual(byId[12].sizes, []);
+    });
+
+    it('counts a hyphen-spelled aught only when sizes.mjs reads it as a hook size', () => {
+        const odd = read('products.json');
+        odd.data[0].variants = ['0-0', '100-0', '14', '3-0'].map((label, index) => ({
+            id: 9000 + index, inventory_level: 1, purchasing_disabled: false, option_values: [{ label, option_display_name: 'Fly Sizes' }],
+        }));
+        const [first] = catalogueProducts(odd, read('assignments.json'));
+        assert.deepEqual(first.sizes, ['14', '3/0']);
+        assert.equal(first.hyphenAughts, 1, '0-0 and 100-0 aren\'t hook sizes');
+    });
+
+    // The store hides out-of-stock options from filtering (probe 10), so the rows count only the
+    // sizes a shopper can buy now.
+    describe('stock: the sizes a shopper can buy now (inStock)', () => {
+        it('tracked by variant, a size is in stock while any of its variants is above zero and for sale', () => {
+            assert.deepEqual(byId[1].inStock, byId[1].sizes);
+            assert.deepEqual(byId[15].sizes, ['16', '18']);
+            assert.deepEqual(byId[15].inStock, ['16'], 'one colour of 16 is in stock; both colours of 18 are at zero');
+        });
+
+        it('a variant in stock but not for sale (purchasing_disabled) doesn\'t count', () => {
+            assert.deepEqual(byId[13].sizes, ['20', '22', '24']);
+            assert.deepEqual(byId[13].inStock, [], '20 and 22 are at zero, and 24 is disabled');
+        });
+
+        it('tracked by product, every size follows the product\'s level, whatever its variants say', () => {
+            assert.deepEqual(byId[4].inStock, ['10', '8', '6', '4', '2'], 'the product is above zero, its variants at zero');
+            assert.deepEqual(byId[14].sizes, ['2/0', '1/0']);
+            assert.deepEqual(byId[14].inStock, [], 'the product is at zero, its variants above');
+        });
+
+        it('not tracked, every size is in stock, even at zero', () => {
+            assert.deepEqual(byId[6].inStock, ['1/0', '2', '4']);
+        });
+
+        it('refuses a read without the stock fields, rather than guess', () => {
+            // The first product changed by `edit`, and its variant `at` by `editVariant`.
+            const reading = (edit, at, editVariant) => {
+                const changed = read('products.json');
+                const [first] = changed.data;
+                changed.data[0] = edit({ ...first, variants: first.variants.map((variant, index) => (index === at ? editVariant(variant) : variant)) });
+                return () => catalogueProducts(changed, read('assignments.json'));
+            };
+            const same = value => value;
+            assert.throws(reading(product => ({ ...product, inventory_tracking: undefined })), /^Error: product 1's inventory_tracking is undefined, not none, product or variant: read the products as the API answers them$/);
+            assert.throws(reading(product => ({ ...product, inventory_tracking: 'sku' })), /product 1's inventory_tracking is "sku"/);
+            assert.throws(reading(product => ({ ...product, inventory_tracking: 'product', inventory_level: undefined })), /^Error: product 1 tracks stock by product but has no inventory_level$/);
+            assert.throws(reading(same, 1, variant => ({ ...variant, inventory_level: undefined })), /^Error: variant 1002 of product 1 has no inventory_level, and the product tracks stock by variant$/);
+            assert.throws(reading(same, 2, variant => ({ ...variant, purchasing_disabled: undefined })), /^Error: variant 1003 of product 1 has no purchasing_disabled: read the products with include=variants, every field$/);
+        });
     });
 
     it('refuses reads in the wrong shape', () => {
@@ -166,6 +217,31 @@ describe('flyTypesFromTree', () => {
             ['Eggs & Worms', '/eggs-worms/'], ['Warmwater Flies', '/warmwater-flies/'], ['Saltwater Flies', '/saltwater-flies/'],
         ]);
         assert.deepEqual(flyTypes[0].categories.map(({ id }) => id), [101, 111, 112, 113]);
+        assert.deepEqual(flyTypes[1].categories.map(({ id }) => id), [102, 121, 122]);
+    });
+
+    it('gives each category its depth below the Fly Type, for the roll-up report', () => {
+        assert.deepEqual(flyTypes[0].categories.map(({ id, depth }) => [id, depth]), [[101, 0], [111, 1], [112, 1], [113, 2]]);
+    });
+
+    it('marks a hidden category, and every category below one, as hidden', () => {
+        assert.deepEqual(flyTypes[1].categories.map(({ id, hidden }) => [id, hidden]), [[102, false], [121, false], [122, true]]);
+        const tree = read('tree.json');
+        tree.data.find(({ category_id: id }) => id === 112).is_visible = false;
+        const [dry] = flyTypesFromTree(tree, config.flyTypes);
+        assert.deepEqual(dry.categories.map(({ id, hidden }) => [id, hidden]), [[101, false], [111, false], [112, true], [113, true]], 'Elk Hair Caddis is visible, but under a hidden category');
+    });
+
+    it('refuses a hidden Fly Type, which the rows would otherwise link', () => {
+        const tree = read('tree.json');
+        tree.data.find(({ category_id: id }) => id === 102).is_visible = false;
+        assert.throws(() => flyTypesFromTree(tree, config.flyTypes), /^Error: the Fly Type "Nymphs" \(102\) is hidden in tree 4: the rows never link a hidden category, so make it visible or take it out of rows\.json$/);
+    });
+
+    it('refuses a category read without is_visible', () => {
+        const tree = read('tree.json');
+        delete tree.data[3].is_visible;
+        assert.throws(() => flyTypesFromTree(tree, config.flyTypes), /^Error: category 113 has no is_visible: read the tree as the API answers it$/);
     });
 
     it('matches by id when the config gives one, and reads `id` as well as `category_id`', () => {
@@ -185,7 +261,7 @@ describe('flyTypesFromTree', () => {
     it('refuses a read that mixes trees, so a tree-1 category can never be linked from 1895766', () => {
         const tree = read('tree.json');
         tree.data.push({
-            category_id: 23, parent_id: 0, tree_id: 1, name: 'Dry Flies', url: { path: '/flies/dry-flies/' },
+            category_id: 23, parent_id: 0, tree_id: 1, name: 'Dry Flies', url: { path: '/flies/dry-flies/' }, is_visible: true,
         });
         assert.throws(() => flyTypesFromTree(tree, config.flyTypes), /the tree read holds trees 1 and 4: read one tree/);
     });
@@ -193,7 +269,7 @@ describe('flyTypesFromTree', () => {
     it('refuses two top-level categories with the Fly Type\'s name, and a URL that isn\'t a plain path', () => {
         const twice = read('tree.json');
         twice.data.push({
-            category_id: 107, parent_id: 0, tree_id: 4, name: 'Nymphs', url: { path: '/nymphs-2/' },
+            category_id: 107, parent_id: 0, tree_id: 4, name: 'Nymphs', url: { path: '/nymphs-2/' }, is_visible: true,
         });
         assert.throws(() => flyTypesFromTree(twice, config.flyTypes), /two top-level categories are named "Nymphs" \(102, 107\): give its id in rows\.json/);
         const odd = read('tree.json');
@@ -230,15 +306,96 @@ describe('buildTable', () => {
 
     it('reports what it left out, so nothing disappears unseen', () => {
         assert.deepEqual(table.report, {
-            counted: 7, notListed: 2, noFlyType: 1, noSizes: 2, offChart: { 26: 1 }, hyphenAughts: 3,
+            counted: 8,
+            notListed: 2,
+            noFlyType: 1,
+            hiddenOnly: 1,
+            noSizes: 2,
+            outOfStock: 2,
+            offChart: { 26: 1 },
+            hyphenAughts: 3,
+            stock: [{ size: '1/0', name: 'Warmwater Flies' }, { size: '22', name: 'Nymphs' }, { size: '24', name: 'Nymphs' }],
+            deep: [],
+            deepOnly: 1,
         });
     });
 
     it('leaves out a Fly Type with fewer Live products in a size than --min', () => {
         const strict = buildTable(products, flyTypes, { min: 2 });
         assert.deepEqual(names(strict.rows).filter(([, links]) => links.length), [
-            ['2', ['Streamers']], ['4', ['Streamers']], ['12', ['Dry Flies']], ['14', ['Dry Flies']], ['16', ['Dry Flies']],
+            ['2', ['Streamers']], ['4', ['Streamers']], ['12', ['Dry Flies']], ['14', ['Dry Flies']], ['16', ['Dry Flies', 'Nymphs']],
         ]);
+    });
+
+    // Probe 10: the store hides out-of-stock options from filtering, so a link whose size is out
+    // of stock in every product would open an empty listing.
+    describe('stock', () => {
+        const linkOf = (result, size, name) => result.rows.find(row => row.size === size).links.find(link => link.name === name);
+
+        it('never links a size that is out of stock in every product, and lists each link it leaves out', () => {
+            assert.equal(linkOf(table, '1/0', 'Warmwater Flies'), undefined, 'the Deer Hair Mouse is at zero, tracked by product');
+            assert.equal(linkOf(table, '22', 'Nymphs'), undefined, 'the Zebra Midge\'s 22 is at zero');
+            assert.equal(linkOf(table, '24', 'Nymphs'), undefined, 'the Zebra Midge\'s 24 is in stock but not for sale');
+            assert.deepEqual(table.report.stock.map(({ size, name }) => `${size} ${name}`), ['1/0 Warmwater Flies', '22 Nymphs', '24 Nymphs']);
+        });
+
+        it('counts only the products in stock in a size, so a link at --min can drop for stock', () => {
+            assert.equal(linkOf(table, '18', 'Nymphs').count, 1, 'the Copper John is out of stock in 18');
+            assert.equal(linkOf(table, '16', 'Nymphs').count, 2, 'and in stock in 16');
+            assert.equal(linkOf(table, '20', 'Nymphs').count, 1, 'the Zebra Midge is out of stock in 20');
+            const strict = buildTable(products, flyTypes, { min: 2 });
+            assert.deepEqual(strict.report.stock.map(({ size, name }) => `${size} ${name}`), ['2/0 Warmwater Flies', '18 Nymphs', '20 Nymphs']);
+        });
+
+        it('with stockOuts (--count-stock-outs), counts every size whatever its stock, and still lists the links that rely on it', () => {
+            const all = buildTable(products, flyTypes, { stockOuts: true });
+            assert.equal(linkOf(all, '1/0', 'Warmwater Flies').count, 1);
+            assert.equal(linkOf(all, '18', 'Nymphs').count, 2);
+            assert.deepEqual(names(all.rows).filter(([size]) => ['22', '24'].includes(size)), [['22', ['Nymphs']], ['24', ['Nymphs']]]);
+            assert.deepEqual(all.report.stock, table.report.stock);
+            assert.equal(all.report.counted, 10);
+            assert.equal(all.report.outOfStock, 2);
+        });
+
+        it('without roll-up, checks the stock of each category it links', () => {
+            const direct = buildTable(products, flyTypes, { rollup: false });
+            assert.deepEqual(direct.report.stock.map(({ size, name }) => `${size} ${name}`), ['1/0 Warmwater Flies', '18 Nymphs', '22 Bead Head Nymphs', '24 Bead Head Nymphs']);
+            assert.deepEqual(names(direct.rows).find(([size]) => size === '18'), ['18', ['Parachute Dry Flies', 'Bead Head Nymphs']]);
+        });
+    });
+
+    describe('hidden categories', () => {
+        it('counts no product through a hidden category, and reports the products placed only there', () => {
+            assert.equal(table.report.hiddenOnly, 1, 'the Perdigon sits only in Euro Nymphs, which is hidden');
+            assert.equal(table.rows.find(({ size }) => size === '14').links.find(({ name }) => name === 'Nymphs').count, 1);
+        });
+
+        it('never links a hidden category, or one below it, without roll-up', () => {
+            const tree = read('tree.json');
+            tree.data.find(({ category_id: id }) => id === 112).is_visible = false;
+            const hidden = flyTypesFromTree(tree, config.flyTypes);
+            const direct = buildTable(products, hidden, { rollup: false });
+            const linked = direct.rows.flatMap(({ links }) => links.map(({ name }) => name));
+            assert.equal(linked.includes('Caddis Dry Flies'), false);
+            assert.equal(linked.includes('Elk Hair Caddis'), false);
+            assert.equal(linked.includes('Euro Nymphs'), false);
+            assert.equal(direct.report.hiddenOnly, 2, 'the Elk Hair Caddis and the Perdigon');
+            assert.equal(buildTable(products, hidden).rows.find(({ size }) => size === '12').links[0].count, 1, 'rolled up, the Elk Hair Caddis no longer counts');
+        });
+    });
+
+    describe('roll-up depth (probe 8 proved one level)', () => {
+        it('counts the products placed only two or more levels below their Fly Type', () => {
+            assert.equal(table.report.deepOnly, 1, 'the Elk Hair Caddis, in Dry Flies > Caddis Dry Flies > Elk Hair Caddis');
+            assert.deepEqual(table.report.deep, [], 'every link also has a product within one level');
+        });
+
+        it('lists the links that rely on deeper roll-up, for the R1 rerun and the spot check', () => {
+            const withoutAdams = products.filter(({ id }) => id !== 1);
+            assert.deepEqual(buildTable(withoutAdams, flyTypes).report.deep, [{ size: '12', name: 'Dry Flies' }, { size: '16', name: 'Dry Flies' }]);
+            assert.deepEqual(buildTable(products, flyTypes, { min: 2 }).report.deep, [{ size: '12', name: 'Dry Flies' }, { size: '16', name: 'Dry Flies' }]);
+            assert.deepEqual(buildTable(withoutAdams, flyTypes, { rollup: false }).report.deep, [], 'without roll-up, every link is the category itself');
+        });
     });
 
     it('without roll-up (probe 8), links the categories that hold the products themselves, so every link opens a page with products', () => {
@@ -337,7 +494,6 @@ describe('chartPageRequest', () => {
         assert.equal(page.id, 7);
         assert.equal(request.method, 'PUT');
         assert.equal(request.path, '/v3/content/pages/7');
-        assert.deepEqual(Object.keys(request.body), ['channel_id', 'name', 'type', 'body']);
         assert.equal(request.body.channel_id, 1895766);
         assert.equal(request.body.name, 'Fly Hook Size Chart');
         assert.equal(request.body.type, 'page');
@@ -346,6 +502,21 @@ describe('chartPageRequest', () => {
         assert.equal(what.object, 'pages');
         assert.equal(what.action, 'update');
         assert.deepEqual(requestChannelProblems(request, what), []);
+    });
+
+    // BigCommerce's page update documents defaults for fields it isn't sent (is_visible true,
+    // meta_description "" …), and plan.mjs diffs only the fields sent, so a field left out could
+    // change unseen (spec review, round 2).
+    it('sends every field the read gave back but the id, as read, so only the body changes', () => {
+        const { page, request } = chartPageRequest(pages, block);
+        const { id, ...fields } = page;
+        assert.equal(id, 7);
+        assert.equal('id' in request.body, false);
+        assert.deepEqual({ ...request.body, body: page.body }, fields);
+        assert.deepEqual(Object.keys(request.body).filter(key => request.body[key] !== page[key]), ['body']);
+        assert.equal(request.body.is_visible, false, 'a hidden page stays hidden');
+        assert.equal(request.body.meta_description, 'Fly hook sizes from 6/0 to 24.');
+        assert.equal(request.body.search_keywords, 'hook sizes,size chart');
     });
 
     it('sends nothing when the rows are already the page\'s', () => {
@@ -383,7 +554,9 @@ describe('rows.mjs, run as a command', () => {
         assert.equal(status, 0, stderr);
         assert.match(stdout, /^14 +Dry Flies \(3\), Nymphs \(1\)$/m);
         assert.match(stdout, /^5\/0 +-$/m);
-        assert.match(stdout, /^counted +7 products visible and assigned to ReelFlies_CA \(1895766\), rolled up to the 6 Fly Types; left out: 2 not visible and assigned to 1895766, 1 with no Fly Type Placement, 2 with no Fly Sizes$/m);
+        assert.match(stdout, /^counted +8 products visible and assigned to ReelFlies_CA \(1895766\), rolled up to the 6 Fly Types; left out: 2 not visible and assigned to 1895766, 1 with no Fly Type Placement, 1 placed only in hidden categories, 2 with no Fly Sizes, 2 out of stock in every size$/m);
+        assert.match(stdout, /^stock +3 links left out because every variant of the size is out of stock or not for sale, which the store hides from filtering \(probe 10\): 1\/0 Warmwater Flies, 22 Nymphs, 24 Nymphs$/m);
+        assert.match(stdout, /^deep +0 links need roll-up deeper than the one level probe 8 proved; 1 product counted only through a category two or more levels down$/m);
         assert.match(stderr, /WARN +sizes off the chart, not shown: 26 \(1 product\)/);
         assert.match(stderr, /WARN +3 aught values are still spelled with a hyphen/);
         assert.match(stderr, /^WARN +the rows' copy in scripts\/hook-chart\/rows\.json is draft, not approved by Shaun yet$/m);
@@ -394,8 +567,8 @@ describe('rows.mjs, run as a command', () => {
         const whole = run(...inputs);
         const productPages = pageFiles(dir, 'products.json', 5);
         const assignmentPages = pageFiles(dir, 'assignments.json', 4);
-        const treePages = pageFiles(dir, 'tree.json', 6);
-        assert.deepEqual([productPages.length, assignmentPages.length, treePages.length], [3, 4, 2]);
+        const treePages = pageFiles(dir, 'tree.json', 7);
+        assert.deepEqual([productPages.length, assignmentPages.length, treePages.length], [4, 5, 2]);
         const split = run(...repeat('--products', productPages), ...repeat('--assignments', assignmentPages.reverse()), ...repeat('--tree', treePages.reverse()));
         assert.equal(split.status, 0, split.stderr);
         assert.equal(split.stdout, whole.stdout);
@@ -406,7 +579,7 @@ describe('rows.mjs, run as a command', () => {
     it('refuses a page given twice or left out, and a read saved without its pagination, before it prints a table', () => {
         const dir = scratch();
         const productPages = pageFiles(dir, 'products.json', 5);
-        const treePages = pageFiles(dir, 'tree.json', 6);
+        const treePages = pageFiles(dir, 'tree.json', 7);
         const others = ['--assignments', fixture('assignments.json'), '--tree', fixture('tree.json')];
         const twice = run(...repeat('--products', [productPages[0], ...productPages]), ...others);
         assert.equal(twice.status, 1);
@@ -426,12 +599,23 @@ describe('rows.mjs, run as a command', () => {
         const direct = run(...inputs, '--no-rollup');
         assert.equal(direct.status, 0, direct.stderr);
         assert.match(direct.stdout, /^14 +Dry Flies \(1\), Parachute Dry Flies \(1\), Elk Hair Caddis \(1\), Bead Head Nymphs \(1\)$/m);
-        assert.match(direct.stdout, /^counted +7 products .*, linked to the categories that hold them; left out/m);
+        assert.match(direct.stdout, /^counted +8 products .*, linked to the categories that hold them; left out/m);
+        assert.doesNotMatch(direct.stdout, /^deep/m, 'without roll-up, depth doesn\'t matter');
         const strict = run(...inputs, '--min', '2');
         assert.equal(strict.status, 0, strict.stderr);
         assert.match(strict.stdout, /^14 +Dry Flies \(3\)$/m);
         assert.match(strict.stdout, /^20 +-$/m);
         assert.match(strict.stdout, /rolled up to the 6 Fly Types, at least 2 a link; left out/);
+        assert.match(strict.stdout, /^deep +2 links need roll-up deeper than the one level probe 8 proved: 12 Dry Flies, 16 Dry Flies; 1 product/m);
+    });
+
+    it('--count-stock-outs counts every size whatever its stock, and lists the links that rely on it', () => {
+        const all = run(...inputs, '--count-stock-outs');
+        assert.equal(all.status, 0, all.stderr);
+        assert.match(all.stdout, /^1\/0 +Streamers \(1\), Warmwater Flies \(1\), Saltwater Flies \(1\)$/m);
+        assert.match(all.stdout, /^22 +Nymphs \(1\)$/m);
+        assert.match(all.stdout, /^counted +10 products .*, out-of-stock sizes included; left out: .*, 2 with no Fly Sizes$/m);
+        assert.match(all.stdout, /^stock +3 links kept although every variant of the size is out of stock or not for sale \(--count-stock-outs\): 1\/0 Warmwater Flies, 22 Nymphs, 24 Nymphs$/m);
     });
 
     it('--config takes another copy and Fly Type list, and warns only while that copy is a draft', () => {

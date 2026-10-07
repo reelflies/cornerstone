@@ -13,19 +13,39 @@
 // The reads are saved one file per page, each exactly as the API answers it, with its "data"
 // and "meta.pagination". Give each read's option once per page: every page from 1 to
 // total_pages, each once, all from one read. A page left out or given twice, a file without its
-// pagination, or pages that don't add up to the read's total (the store changed while it was
-// read) are refused, because each would change the table without a sign.
+// pagination, pages that don't add up to the read's total, or an item on two pages is refused,
+// because each would change the table without a sign. That catches most changes to the store
+// between pages, but not all: if one item is deleted and another added between two pages, the
+// totals still match and an item can move past the page boundary unread. So the read step
+// (below) is to read every page in one pass, then read page 1's total again at the end.
 //
 // - --products: GET /v3/catalog/products?include=variants. A product's sizes are the labels of
 //   its variants' "Fly Sizes" option values, the facet the row links filter by.
+//   A size counts only while a shopper can buy it, because the store hides the rest from the
+//   filtered listing the row links open (probe 10, research/07-prelaunch-probes.md: every
+//   channel inherits option_out_of_stock_behavior "label_option" and hide_in_product_filtering
+//   true). A variant can be bought when purchasing_disabled is false and the product's
+//   inventory_tracking is "none", or "product" with the product's inventory_level above 0, or
+//   "variant" with that variant's inventory_level above 0. A size counts when any of its
+//   variants can be bought, and a product out of stock in every size isn't counted. The links
+//   this leaves out are listed on every run. The rows show the stock at the time of the run, so
+//   they go stale as stock moves until the next run.
 // - --assignments: GET /v3/catalog/products/channel-assignments?channel_id:in=1895766. A product
 //   counts only when it is visible and assigned to ReelFlies_CA (1895766). Refactor 14 places
 //   only Live products there (CONTEXT.md: a Live product is visible and assigned to ReelFlies,
 //   channel 1), so these are the Live products placed on ReelFlies_CA.
 // - --tree: GET /v3/catalog/trees/categories?tree_id:in=4 (ReelFlies_CA's tree), one tree only.
-//   The Fly Types in rows.json are found at its top level, by id or by name.
+//   The Fly Types in rows.json are found at its top level, by id or by name. A hidden Fly Type
+//   is refused. A hidden category, or one below a hidden category, is never linked and counts
+//   no product: a shopper can't open it, and whether a Fly Type's page lists its products
+//   wasn't probed. The products placed only there are reported.
 // - --existing: GET /v3/content/pages?channel_id=1895766&include=body. The chart page is the
-//   one at /fly-hook-size-chart/, and it must already hold the two markers.
+//   one at /fly-hook-size-chart/, and it must already hold the two markers. The update sends
+//   every field the read gave back, with only the body changed (chartPageRequest).
+//
+// Roll-up: probe 8 found that a Fly Type's page lists its sub-types' products one level down;
+// deeper levels weren't tested. Every rolled-up run lists the links that rely only on products
+// two or more levels down, for the R1 rerun of probe 8 and criterion 3's spot check.
 //
 // No repo tool saves these reads yet, and they are never fetched by hand: no curl, and no
 // store token read anywhere but scripts/lib/store-token.mjs. The first run waits on a read step
@@ -38,6 +58,8 @@
 //                 (if a Fly Type page doesn't list its sub-types' products; probe 8 found that
 //                 roots roll up one level, research/07-prelaunch-probes.md)
 //   --min <n>     link a Fly Type only when at least n counted products come in that size (default 1)
+//   --count-stock-outs   count a size whatever its stock, if the store stops hiding out-of-stock
+//                 options from filtering (hide_in_product_filtering false, or backorders allowed)
 //   --text-only   name the Fly Types without links (channel 1 until the Flip, ticket 53);
 //                 only with --rows-out, because the store-write helper never writes channel 1.
 //                 The rows are still ReelFlies_CA's: tree 4's Fly Types and what is placed on
@@ -51,7 +73,7 @@ import { fileURLToPath } from 'url';
 import { isMain } from '../lib/is-main.mjs';
 import { CHANNEL } from '../store/channel.mjs';
 import {
-    CHART_SIZES, CHART_URL, FACET_NAME, anchorId, facetParam, isChartSize, normalizeSize,
+    CHART_SIZES, CHART_URL, FACET_NAME, anchorId, facetParam, isChartSize, isHyphenAught, normalizeSize,
 } from '../hook-gauge/sizes.mjs';
 
 export { CHART_URL };
@@ -175,9 +197,24 @@ export function readRowsConfig(file = CONFIG_FILE) {
     return config;
 }
 
+const TRACKING = ['none', 'product', 'variant'];
+
+// Whether a shopper can buy a variant now, as the store's filtering sees it (the header):
+// never when purchasing is disabled; otherwise by the stock the product tracks.
+function canBuy(product, variant) {
+    const { id, inventory_tracking: tracking } = product;
+    if (typeof variant.purchasing_disabled !== 'boolean') throw new Error(`variant ${variant.id} of product ${id} has no purchasing_disabled: read the products with include=variants, every field`);
+    if (variant.purchasing_disabled) return false;
+    if (tracking === 'none') return true;
+    if (tracking === 'product') return product.inventory_level > 0;
+    if (!Number.isInteger(variant.inventory_level)) throw new Error(`variant ${variant.id} of product ${id} has no inventory_level, and the product tracks stock by variant`);
+    return variant.inventory_level > 0;
+}
+
 // The catalogue's products as the table needs them: whether each is listed on ReelFlies_CA
-// (visible and assigned to 1895766), its category ids, its Fly Sizes in chart spelling, and how
-// many of its aught values are still spelled with a hyphen ("2-0", before ticket 18's rename).
+// (visible and assigned to 1895766), its category ids, its Fly Sizes in chart spelling, those
+// a shopper can buy now (inStock), and how many of its aught values are still spelled with a
+// hyphen ("2-0", before ticket 18's rename).
 export function catalogueProducts(productsRead, assignmentsRead) {
     const assigned = new Set();
     const pairs = new Set();
@@ -195,31 +232,54 @@ export function catalogueProducts(productsRead, assignmentsRead) {
         onlyOnce(ids, id, `product ${id}`, 'products');
         if (!Array.isArray(product.variants)) throw new Error(`product ${id} has no variants: read the products with include=variants`);
         if (!Array.isArray(product.categories)) throw new Error(`product ${id} has no categories list`);
-        const labels = new Set(product.variants.flatMap(variant => (Array.isArray(variant?.option_values) ? variant.option_values : []))
-            .filter(value => value?.option_display_name === FACET_NAME)
-            .map(value => String(value.label)));
-        const sizes = [...new Set([...labels].map(normalizeSize).filter(Boolean))];
+        if (!TRACKING.includes(product.inventory_tracking)) {
+            throw new Error(`product ${id}'s inventory_tracking is ${JSON.stringify(product.inventory_tracking)}, not none, product or variant: read the products as the API answers them`);
+        }
+        if (product.inventory_tracking === 'product' && !Number.isInteger(product.inventory_level)) {
+            throw new Error(`product ${id} tracks stock by product but has no inventory_level`);
+        }
+        // Each variant's Fly Sizes labels, and whether it can be bought; a variant without a
+        // Fly Sizes value (a product with no sizes, or another option) takes no part.
+        const variants = product.variants.map(variant => {
+            if (!isObject(variant)) throw new Error(`product ${id} has a variant that isn't an object`);
+            const labels = (Array.isArray(variant.option_values) ? variant.option_values : [])
+                .filter(value => value?.option_display_name === FACET_NAME)
+                .map(value => String(value.label));
+            return { labels, buyable: labels.length > 0 && canBuy(product, variant) };
+        });
+        const labels = new Set(variants.flatMap(variant => variant.labels));
+        const sizesOf = list => [...new Set([...list].map(normalizeSize).filter(Boolean))];
+        const sizes = sizesOf(labels);
+        const stocked = new Set(sizesOf(variants.filter(variant => variant.buyable).flatMap(variant => variant.labels)));
         return {
             id,
             listed: product.is_visible === true && assigned.has(id),
             categories: product.categories,
             sizes,
-            hyphenAughts: [...labels].filter(label => /^\s*#?\s*\d+\s*-\s*0\s*$/.test(label)).length,
+            inStock: sizes.filter(size => stocked.has(size)),
+            hyphenAughts: [...labels].filter(isHyphenAught).length,
         };
     });
 }
 
 // The configured Fly Types, found at the top level of one tree's category read, each with every
-// category below it, in tree order (the Fly Type itself first).
+// category below it, in tree order (the Fly Type itself first). Each category carries its depth
+// below the Fly Type (0 for the Fly Type) and whether it is hidden: not visible itself, or
+// below a category that isn't.
 export function flyTypesFromTree(treeRead, configured) {
     const ids = new Set();
-    const categories = listOf(treeRead, 'tree').map(category => ({
-        id: category.category_id ?? category.id,
-        parent: category.parent_id,
-        tree: category.tree_id,
-        name: category.name,
-        url: typeof category.url === 'string' ? category.url : category.url?.path,
-    }));
+    const categories = listOf(treeRead, 'tree').map(category => {
+        const id = category.category_id ?? category.id;
+        if (typeof category.is_visible !== 'boolean') throw new Error(`category ${id} has no is_visible: read the tree as the API answers it`);
+        return {
+            id,
+            parent: category.parent_id,
+            tree: category.tree_id,
+            name: category.name,
+            url: typeof category.url === 'string' ? category.url : category.url?.path,
+            visible: category.is_visible,
+        };
+    });
     categories.forEach(({ id }) => onlyOnce(ids, id, `category ${id}`, 'tree'));
     const trees = [...new Set(categories.map(({ tree }) => tree).filter(tree => tree !== undefined))].sort((a, b) => a - b);
     if (trees.length > 1) throw new Error(`the tree read holds trees ${andList(trees)}: read one tree`);
@@ -230,7 +290,10 @@ export function flyTypesFromTree(treeRead, configured) {
         if (!children.has(category.parent)) children.set(category.parent, []);
         children.get(category.parent).push(category);
     }
-    const below = category => [category, ...(children.get(category.id) || []).flatMap(below)];
+    const below = (category, depth = 0, hiddenAbove = false) => {
+        const hidden = hiddenAbove || !category.visible;
+        return [{ ...category, depth, hidden }, ...(children.get(category.id) || []).flatMap(child => below(child, depth + 1, hidden))];
+    };
     return configured.map(({ name, id }) => {
         const matches = id ? top.filter(category => category.id === id) : top.filter(category => String(category.name).toLowerCase() === name.toLowerCase());
         if (!matches.length) {
@@ -240,11 +303,16 @@ export function flyTypesFromTree(treeRead, configured) {
             throw new Error(`${matches.length === 2 ? 'two' : matches.length} top-level categories are named "${name}" (${matches.map(category => category.id).join(', ')}): give its id in rows.json`);
         }
         const [root] = matches;
+        if (!root.visible) {
+            throw new Error(`the Fly Type "${root.name}" (${root.id}) is hidden in ${where}: the rows never link a hidden category, so make it visible or take it out of rows.json`);
+        }
         const subtree = below(root).map(category => {
             if (typeof category.url !== 'string' || !PLAIN_PATH.test(category.url)) {
                 throw new Error(`category ${category.id}'s URL ${JSON.stringify(category.url)} isn't a plain path like /dry-flies/`);
             }
-            return { id: category.id, name: category.name, url: category.url };
+            return {
+                id: category.id, name: category.name, url: category.url, depth: category.depth, hidden: category.hidden,
+            };
         });
         return {
             name: root.name, id: root.id, url: root.url, categories: subtree,
@@ -256,44 +324,73 @@ export function flyTypesFromTree(treeRead, configured) {
 // with at least `min` listed products in that size, counting the products placed anywhere below
 // it, since its page lists its sub-types' products too. Without roll-up (probe 8), a row links
 // each category that holds such products itself, so every link opens a page with products.
-export function buildTable(products, flyTypes, { rollup = true, min = 1 } = {}) {
+// A size counts only while it is in stock (the header), unless stockOuts is true. A hidden
+// category is never linked and counts no product.
+//
+// The report says what was left out and why, so nothing disappears unseen:
+// - stock: the links that only out-of-stock sizes would make, [{ size, name }]. They are left
+//   out, or with stockOuts kept, and listed either way.
+// - deep: rolled up, the links with fewer than `min` products within one level of the Fly Type,
+//   which rely on roll-up deeper than probe 8 proved; deepOnly counts the products counted
+//   only through such a placement.
+export function buildTable(products, flyTypes, { rollup = true, min = 1, stockOuts = false } = {}) {
     if (!Number.isInteger(min) || min < 1) throw new Error(`min must be a whole number of products, at least 1, not ${min}`);
     const owners = new Map();
     flyTypes.forEach((flyType, index) => flyType.categories.forEach(category => owners.set(category.id, { index, category })));
-    const holders = new Map();
-    const hold = (key, id) => {
-        if (!holders.has(key)) holders.set(key, new Set());
-        holders.get(key).add(id);
+    // Who holds each link: every listed, placed product whatever its stock (any), those in stock
+    // (inStock), and of the linked ones, those within one level of the Fly Type (near).
+    const held = { any: new Map(), inStock: new Map(), near: new Map() };
+    const hold = (map, key, id) => {
+        if (!map.has(key)) map.set(key, new Set());
+        map.get(key).add(id);
     };
-    const count = key => holders.get(key)?.size || 0;
+    const count = (map, key) => map.get(key)?.size || 0;
+    const keyOf = (size, { index, category }) => (rollup ? `${size}|type ${index}` : `${size}|category ${category.id}`);
     const report = {
-        counted: 0, notListed: 0, noFlyType: 0, noSizes: 0, offChart: {}, hyphenAughts: 0,
+        counted: 0, notListed: 0, noFlyType: 0, hiddenOnly: 0, noSizes: 0, outOfStock: 0, offChart: {}, hyphenAughts: 0, stock: [], deep: [], deepOnly: 0,
     };
     for (const product of products) {
-        const placements = product.categories.map(id => owners.get(id)).filter(Boolean);
+        const placed = product.categories.map(id => owners.get(id)).filter(Boolean);
+        const placements = placed.filter(({ category }) => !category.hidden);
         if (!product.listed) report.notListed += 1;
-        else if (!placements.length) report.noFlyType += 1;
+        else if (!placed.length) report.noFlyType += 1;
+        else if (!placements.length) report.hiddenOnly += 1;
         else if (!product.sizes.length) report.noSizes += 1;
         else {
-            report.counted += 1;
-            report.hyphenAughts += product.hyphenAughts;
-            for (const size of product.sizes) {
-                if (!isChartSize(size)) {
-                    report.offChart[size] = (report.offChart[size] || 0) + 1;
-                } else {
-                    for (const { index, category } of placements) hold(rollup ? `${size}|type ${index}` : `${size}|category ${category.id}`, product.id);
-                }
+            const chartSizes = product.sizes.filter(isChartSize);
+            const inStock = product.inStock.filter(isChartSize);
+            chartSizes.forEach(size => placements.forEach(placement => hold(held.any, keyOf(size, placement), product.id)));
+            inStock.forEach(size => placements.forEach(placement => hold(held.inStock, keyOf(size, placement), product.id)));
+            if (!product.inStock.length) report.outOfStock += 1;
+            if (stockOuts || product.inStock.length) {
+                report.counted += 1;
+                report.hyphenAughts += product.hyphenAughts;
+                for (const size of product.sizes.filter(value => !isChartSize(value))) report.offChart[size] = (report.offChart[size] || 0) + 1;
+                const near = placements.filter(({ category }) => category.depth <= 1);
+                if (rollup && !near.length) report.deepOnly += 1;
+                (stockOuts ? chartSizes : inStock).forEach(size => near.forEach(placement => hold(held.near, keyOf(size, placement), product.id)));
             }
         }
     }
-    const link = (name, url, n) => (n >= min ? [{ name, url, count: n }] : []);
-    const rows = CHART_SIZES.map(size => ({
-        size,
-        anchor: anchorId(size),
-        links: rollup
-            ? flyTypes.flatMap((flyType, index) => link(flyType.name, flyType.url, count(`${size}|type ${index}`)))
-            : flyTypes.flatMap(flyType => flyType.categories.flatMap(category => link(category.name, category.url, count(`${size}|category ${category.id}`)))),
-    }));
+    const linked = stockOuts ? held.any : held.inStock;
+    // Every link a row could have, in Fly Type order: rolled up, the Fly Types; otherwise their
+    // visible categories.
+    const candidates = rollup
+        ? flyTypes.map((flyType, index) => ({ name: flyType.name, url: flyType.url, key: size => `${size}|type ${index}` }))
+        : flyTypes.flatMap(flyType => flyType.categories.filter(category => !category.hidden)
+            .map(category => ({ name: category.name, url: category.url, key: size => `${size}|category ${category.id}` })));
+    const rows = CHART_SIZES.map(size => {
+        const links = [];
+        for (const { name, url, key } of candidates) {
+            const n = count(linked, key(size));
+            if (count(held.any, key(size)) >= min && count(held.inStock, key(size)) < min) report.stock.push({ size, name });
+            if (n >= min) {
+                links.push({ name, url, count: n });
+                if (rollup && count(held.near, key(size)) < min) report.deep.push({ size, name });
+            }
+        }
+        return { size, anchor: anchorId(size), links };
+    });
     return { rows, report };
 }
 
@@ -341,8 +438,12 @@ export function spliceRows(body, block) {
 }
 
 // The update of the chart's Web Page on 1895766 that puts `block` between its markers, as a
-// request for the store-write helper, or null when the page already has these rows. name and
-// type go with the body because BigCommerce's page update asks for them; both are the page's own.
+// request for the store-write helper, or null when the page already has these rows. It sends
+// every field the read gave back but the id, as read, with only the body changed. BigCommerce's
+// page update needs name and type, and documents a default for several fields it isn't sent
+// (is_visible true, meta_description "", parent_id 0 …), while plan.mjs's diff compares only the
+// fields sent. Sending them all keeps the page as it is, and the reviewed diff shows the body
+// alone, or any field that changed on the store since the read.
 export function chartPageRequest(pagesRead, block) {
     const pages = listOf(pagesRead, 'pages').filter(page => isObject(page) && page.url === CHART_URL);
     if (!pages.length) throw new Error(`no Web Page at ${CHART_URL} in the read: create it first, with the two markers where the rows go`);
@@ -352,14 +453,13 @@ export function chartPageRequest(pagesRead, block) {
     if (typeof page.body !== 'string') throw new Error(`page ${page.id} has no body: read the pages with include=body`);
     const body = spliceRows(page.body, block);
     if (body === page.body) return { page, request: null };
+    const { id, ...fields } = page;
     return {
         page,
         request: {
             method: 'PUT',
-            path: `/v3/content/pages/${page.id}`,
-            body: {
-                channel_id: CHANNEL, name: page.name, type: page.type, body,
-            },
+            path: `/v3/content/pages/${id}`,
+            body: { ...fields, channel_id: CHANNEL, body },
         },
     };
 }
@@ -368,7 +468,7 @@ class Usage extends Error {}
 
 export function parseArgs(argv) {
     const args = {
-        products: [], assignments: [], tree: [], config: CONFIG_FILE, rollup: true, min: 1, rowsOut: null, existing: [], changes: null, textOnly: false,
+        products: [], assignments: [], tree: [], config: CONFIG_FILE, rollup: true, min: 1, stockOuts: false, rowsOut: null, existing: [], changes: null, textOnly: false,
     };
     const value = (i, flag) => {
         if (!argv[i + 1] || argv[i + 1].startsWith('--')) throw new Usage(`${flag} needs a value`);
@@ -378,6 +478,7 @@ export function parseArgs(argv) {
         const flag = argv[i];
         if (flag === '--no-rollup') args.rollup = false;
         else if (flag === '--text-only') args.textOnly = true;
+        else if (flag === '--count-stock-outs') args.stockOuts = true;
         else if (['--products', '--assignments', '--tree', '--config', '--min', '--rows-out', '--existing', '--changes'].includes(flag)) {
             const given = value(i, flag);
             i += 1;
@@ -427,13 +528,24 @@ export function main(argv = process.argv.slice(2)) {
         const products = catalogueProducts(readPages(args.products, 'products'), readPages(args.assignments, 'channel assignments'));
         const flyTypes = flyTypesFromTree(readPages(args.tree, 'tree'), config.flyTypes);
         const pages = args.existing.length ? readPages(args.existing, 'pages') : null;
-        const table = buildTable(products, flyTypes, { rollup: args.rollup, min: args.min });
+        const table = buildTable(products, flyTypes, { rollup: args.rollup, min: args.min, stockOuts: args.stockOuts });
         for (const row of table.rows) {
             console.log(`${row.size.padEnd(5)} ${row.links.map(({ name, count }) => `${name} (${count})`).join(', ') || '-'}`);
         }
         const { report } = table;
         console.log(`counted  ${plural(report.counted, 'product')} visible and assigned to ReelFlies_CA (${CHANNEL}), ${args.rollup ? `rolled up to the ${flyTypes.length} Fly Types` : 'linked to the categories that hold them'}`
-            + `${args.min > 1 ? `, at least ${args.min} a link` : ''}; left out: ${report.notListed} not visible and assigned to ${CHANNEL}, ${report.noFlyType} with no Fly Type Placement, ${report.noSizes} with no ${FACET_NAME}`);
+            + `${args.min > 1 ? `, at least ${args.min} a link` : ''}${args.stockOuts ? ', out-of-stock sizes included' : ''}`
+            + `; left out: ${report.notListed} not visible and assigned to ${CHANNEL}, ${report.noFlyType} with no Fly Type Placement, ${report.hiddenOnly} placed only in hidden categories, ${report.noSizes} with no ${FACET_NAME}`
+            + `${args.stockOuts ? '' : `, ${report.outOfStock} out of stock in every size`}`);
+        // The links a report line names: ": 22 Nymphs, 24 Nymphs", or nothing.
+        const listed = list => (list.length ? `: ${list.map(({ size, name }) => `${size} ${name}`).join(', ')}` : '');
+        console.log(args.stockOuts
+            ? `stock    ${plural(report.stock.length, 'link')} kept although every variant of the size is out of stock or not for sale (--count-stock-outs)${listed(report.stock)}`
+            : `stock    ${plural(report.stock.length, 'link')} left out because every variant of the size is out of stock or not for sale, which the store hides from filtering (probe 10)${listed(report.stock)}`);
+        if (args.rollup) {
+            console.log(`deep     ${plural(report.deep.length, 'link')} ${report.deep.length === 1 ? 'needs' : 'need'} roll-up deeper than the one level probe 8 proved${listed(report.deep)}`
+                + `; ${plural(report.deepOnly, 'product')} counted only through a category two or more levels down`);
+        }
         const offChart = Object.entries(report.offChart);
         if (offChart.length) console.error(`WARN     sizes off the chart, not shown: ${offChart.map(([size, n]) => `${size} (${plural(n, 'product')})`).join(', ')}`);
         if (report.hyphenAughts) console.error(`WARN     ${report.hyphenAughts} aught values are still spelled with a hyphen (2-0): their row links resolve only after ticket 18's rename to 2/0`);
