@@ -107,6 +107,9 @@ export const playwrightArgs = (specs = MATRIX_SPECS) => [
 
 const stripColour = text => String(text).replace(/\u001b\[[0-9;]*m/g, ''); // eslint-disable-line no-control-regex
 const firstLine = text => stripColour(text).split('\n').find(line => line.trim()) || '';
+// A failure's first line, cut to fit one line of the matrix's output. The JSON report and
+// Playwright's HTML report (results/report) keep the whole message.
+const clip = (text, length = 240) => (text.length > length ? `${text.slice(0, length - 1)}…` : text);
 const testsOf = suite => [
     ...(suite.specs || []).flatMap(spec => (spec.tests || []).map(item => ({ title: spec.title, ...item }))),
     ...(suite.suites || []).flatMap(testsOf),
@@ -129,7 +132,7 @@ export function gateResults(report, { status = null, specs = MATRIX_SPECS } = {}
         const passed = tests.length - failed.length - skipped;
         const failures = failed.map(({ title, projectName, results = [] }) => {
             const error = results.at(-1)?.error?.message;
-            return `${title} [${projectName}]${error ? `: ${firstLine(error)}` : ''}`;
+            return `${title} [${projectName}]${error ? `: ${clip(firstLine(error))}` : ''}`;
         });
         const parts = [failed.length && `${failed.length} failed`, passed && `${passed} passed`, skipped && `${skipped} skipped`].filter(Boolean);
         return {

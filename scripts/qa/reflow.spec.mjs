@@ -23,6 +23,7 @@ for (const [key, pagePath] of Object.entries(PAGES)) {
         await dismissCookieBanner(page);
         const result = await page.evaluate(inPage, { check: 'overflow' });
         testInfo.annotations.push({ type: 'reflow', description: `${result.scrollWidth} px of content at ${result.width} px` });
-        expect(overflowProblems(result), `${key} at 320 wide (${testInfo.project.name})`).toEqual([]);
+        const problems = overflowProblems(result);
+        expect(problems, `${key} at 320 wide (${testInfo.project.name})${problems.length ? `: ${problems[0]}` : ''}`).toEqual([]);
     });
 }

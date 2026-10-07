@@ -45,6 +45,6 @@ for (const [key, pagePath] of Object.entries(PAGES)) {
                 if (url) problems.push(`${name} is off, and the page loaded ${module}'s script ${new URL(url).pathname} (ticket ${ticket})`);
             }
         }
-        expect(problems, `${key} with ${OFF.map(({ key: name }) => name).join(', ')} off (${testInfo.project.name})`).toEqual([]);
+        expect(problems, `${key} with ${OFF.map(({ key: name }) => name).join(', ')} off (${testInfo.project.name})${problems.length ? `: ${problems[0]}` : ''}`).toEqual([]);
     });
 }

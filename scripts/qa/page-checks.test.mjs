@@ -14,7 +14,7 @@ import {
 import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
 import {
-    MOTION_LIMIT_MS, focusNotes, focusProblems, inPage, motionProblems, overflowProblems, tabThrough,
+    MOTION_LIMIT_MS, describeBump, focusNotes, focusProblems, inPage, motionProblems, overflowProblems, tabThrough,
 } from './page-checks.mjs';
 
 const hasChromium = (() => {
@@ -110,9 +110,10 @@ describe('the page checks in a browser', { skip: SKIP }, () => {
             assert.deepEqual(motionProblems({ running, declared }), []);
         });
 
-        // The rise ring (ticket 27) plays when the cart count goes up. bumpCart sends the two
-        // events an add sends (build pipeline 6.9): the stock cart-quantity-update on <body>, through
-        // jQuery, and rf:cart-changed on document.
+        // The rise ring (ticket 27) plays when the cart count goes up. bumpCart sends what an add
+        // sends (build pipeline 6.9): the stock cart-quantity-update on <body> through jQuery, or,
+        // where jQuery isn't global (Cornerstone's build, whose expose-loader rule never matches its
+        // jquery alias), the change the stock handler makes to the count; then rf:cart-changed.
         const RING = `<span class="cart-quantity">2</span><span class="ring"></span><script>
             window.$ = selector => ({ trigger: (name, value) => { window.triggered = [selector, name, value]; } });
             document.addEventListener('rf:cart-changed', event => {
@@ -125,7 +126,7 @@ describe('the page checks in a browser', { skip: SKIP }, () => {
 
         it('sends a cart count change the way an add does, and sees a ring that plays anyway', async () => {
             const page = await open(page320(RING), { reducedMotion: 'reduce' });
-            assert.deepEqual(await page.evaluate(inPage, { check: 'bumpCart' }), { from: 2, to: 3, stock: true });
+            assert.deepEqual(await page.evaluate(inPage, { check: 'bumpCart' }), { from: 2, to: 3, via: 'jquery' });
             assert.deepEqual(await page.evaluate(() => window.triggered), ['body', 'cart-quantity-update', 3]);
             assert.deepEqual(await page.evaluate(() => window.changed), { source: 'qa', productId: 0 });
             const running = await page.evaluate(inPage, { check: 'animations', limitMs: MOTION_LIMIT_MS });
@@ -138,10 +139,27 @@ describe('the page checks in a browser', { skip: SKIP }, () => {
             assert.deepEqual(await page.evaluate(inPage, { check: 'animations', limitMs: MOTION_LIMIT_MS }), []);
         });
 
-        it('sends the event on a page without jQuery, or without a count, too', async () => {
+        it('changes the count as the stock handler does where jQuery isn\'t global, and a ring that watches the count plays', async () => {
+            const page = await open(page320(`<a class="navUser-action" aria-label="Cart with 2 items"><span class="countPill cart-quantity">2</span></a><span class="ring"></span><script>
+                new MutationObserver(() => document.querySelector('.ring').animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400 }))
+                    .observe(document.querySelector('.cart-quantity'), { childList: true, characterData: true, subtree: true });
+            </script>`), { reducedMotion: 'reduce' });
+            assert.deepEqual(await page.evaluate(inPage, { check: 'bumpCart' }), { from: 2, to: 3, via: 'count' });
+            assert.deepEqual(await page.evaluate(() => [document.querySelector('.cart-quantity').textContent, document.querySelector('.cart-quantity').classList.contains('countPill--positive')]), ['3', true]);
+            const running = await page.evaluate(inPage, { check: 'animations', limitMs: MOTION_LIMIT_MS });
+            assert.match(motionProblems({ running, declared: [] })[0], /span\.ring Animation a script animation \(400 ms\)/);
+        });
+
+        it('sends the event on a page with no count too', async () => {
             const page = await open(page320('<script>document.addEventListener("rf:cart-changed", () => { window.changed = true; });</script>'));
-            assert.deepEqual(await page.evaluate(inPage, { check: 'bumpCart' }), { from: 0, to: 1, stock: false });
+            assert.deepEqual(await page.evaluate(inPage, { check: 'bumpCart' }), { from: 0, to: 1, via: 'event only' });
             assert.equal(await page.evaluate(() => window.changed), true);
+        });
+
+        it('says how the count went up, for the test\'s annotation', () => {
+            assert.equal(describeBump({ from: 2, to: 3, via: 'jquery' }), '2 to 3, through the stock cart-quantity-update (jQuery), then rf:cart-changed');
+            assert.equal(describeBump({ from: 0, to: 1, via: 'count' }), '0 to 1, by changing .cart-quantity as the stock handler does (jQuery isn\'t global), then rf:cart-changed');
+            assert.equal(describeBump({ from: 0, to: 1, via: 'event only' }), 'no cart count on the page; rf:cart-changed only');
         });
     });
 
@@ -174,13 +192,14 @@ describe('the page checks in a browser', { skip: SKIP }, () => {
         it('notes a focused element it can\'t see, and one something else lies over, without failing them', async () => {
             const page = await open(page320(`<main style="padding-top: 10px">
                 <a href="#skip" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Skip to main content</a>
+                <a href="/cart.php" style="position: absolute; width: 0; height: 0; overflow: hidden"><svg></svg></a>
                 <span style="position: relative; display: inline-block"><input id="size" type="radio" name="size"><label for="size" style="position: absolute; inset: 0; background: #eee">12</label></span>
             </main>`));
             const { steps } = await tabThrough(page);
-            assert.deepEqual(steps.map(({ kind }) => kind), ['hidden', 'other']);
+            assert.deepEqual(steps.map(({ kind }) => kind), ['hidden', 'hidden', 'other']);
             assert.deepEqual(focusProblems(steps), []);
             assert.deepEqual(focusNotes(steps), [
-                '1 focused element had no visible box: a "Skip to main content"',
+                '2 focused elements had no visible box: a "Skip to main content"; a[href="/cart.php"]',
                 '1 focused element had another element over its centre (not fixed or sticky): input#size under label "12"',
             ]);
         });

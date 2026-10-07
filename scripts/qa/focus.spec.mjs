@@ -34,6 +34,7 @@ for (const [key, pagePath] of Object.entries(PAGES).filter(([pin]) => FOCUS_KIND
         testInfo.annotations.push({ type: 'tab-through', description: `${steps.length} focused elements; ${end}` });
         focusNotes(steps).forEach(note => testInfo.annotations.push({ type: 'focus note', description: note }));
         expect(steps.length, `Tab reached no element on ${key}`).toBeGreaterThan(0);
-        expect(focusProblems(steps), `${key} at 375`).toEqual([]);
+        const problems = focusProblems(steps);
+        expect(problems, `${key} at 375${problems.length ? `: ${problems.length} covered, first ${problems[0]}` : ''}`).toEqual([]);
     });
 }

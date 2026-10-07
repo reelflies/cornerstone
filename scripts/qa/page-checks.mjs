@@ -11,9 +11,11 @@
 //     animations   every animation running now (CSS animations and transitions, and script
 //                  animations through element.animate), longer than limitMs
 //     bumpCart     sends what an add sends when the cart count goes up (build pipeline 6.9): the
-//                  stock cart-quantity-update on <body>, through jQuery, then rf:cart-changed on
-//                  document. It writes nothing to the store: the stock handler only updates the
-//                  count and localStorage.
+//                  stock cart-quantity-update on <body> through jQuery, then rf:cart-changed on
+//                  document. Cornerstone's build keeps jQuery out of window (webpack.common.js
+//                  aliases jquery to jquery.min.js, which its expose-loader rule never matches), so
+//                  then it makes the change the stock handler makes (cart-preview.js): the count's
+//                  text and countPill--positive. It writes nothing to the store.
 //     focus        the focused element, and what elementFromPoint finds at its centre (story 67)
 // - tabThrough(page) presses Tab from the top of the page until focus leaves the page or comes
 //   back, and records the focus check at each step.
@@ -36,7 +38,10 @@ export function inPage({ check, limitMs = 10 }) {
         const id = element.id ? `#${element.id}` : '';
         const classes = Array.from(element.classList).slice(0, 2).map(name => `.${name}`).join('');
         const label = (element.getAttribute('aria-label') || element.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 40);
-        return `${tag}${id}${classes}${label ? ` "${label}"` : ''}`;
+        if (label) return `${tag}${id}${classes} "${label}"`;
+        // A link with no text, such as an icon or a logo, by where it goes.
+        const href = tag === 'a' && element.getAttribute('href');
+        return `${tag}${id}${classes}${href ? `[href="${href.slice(0, 60)}"]` : ''}`;
     };
     // Shorter, so that the same rule on many elements reads as one group.
     const kindOf = element => `${element.tagName.toLowerCase()}${element.classList.length ? `.${element.classList[0]}` : ''}`;
@@ -129,17 +134,23 @@ export function inPage({ check, limitMs = 10 }) {
         },
 
         bumpCart() {
-            const counter = document.querySelector('.cart-quantity');
-            const from = counter ? parseInt(counter.textContent, 10) || 0 : 0;
+            const counters = document.querySelectorAll('.cart-quantity');
+            const from = counters.length ? parseInt(counters[0].textContent, 10) || 0 : 0;
             const to = from + 1;
             const jquery = window.$ || window.jQuery;
-            let stock = false;
+            let via = 'event only';
             if (typeof jquery === 'function') {
                 jquery('body').trigger('cart-quantity-update', to);
-                stock = true;
+                via = 'jquery';
+            } else if (counters.length) {
+                counters.forEach(counter => {
+                    counter.textContent = String(to); // eslint-disable-line no-param-reassign
+                    counter.classList.add('countPill--positive');
+                });
+                via = 'count';
             }
             document.dispatchEvent(new CustomEvent('rf:cart-changed', { detail: { source: 'qa', productId: 0 } }));
-            return { from, to, stock };
+            return { from, to, via };
         },
 
         focus() {
@@ -218,6 +229,13 @@ export async function tabThrough(page, { maxTabs = MAX_TABS } = {}) {
 }
 
 const count = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+// How bumpCart made the count go up, for the reduced-motion test's annotation.
+export function describeBump({ from, to, via }) {
+    if (via === 'jquery') return `${from} to ${to}, through the stock cart-quantity-update (jQuery), then rf:cart-changed`;
+    if (via === 'count') return `${from} to ${to}, by changing .cart-quantity as the stock handler does (jQuery isn't global), then rf:cart-changed`;
+    return 'no cart count on the page; rf:cart-changed only';
+}
 
 export function overflowProblems({ width, scrollWidth, offenders }) {
     if (scrollWidth <= width) return [];

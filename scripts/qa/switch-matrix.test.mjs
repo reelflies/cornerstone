@@ -107,6 +107,9 @@ describe('a row\'s Playwright run', () => {
         assert.deepEqual([byGate.axe.ok, byGate.axe.passed, byGate.axe.failed], [true, 2, 0]);
         assert.deepEqual([byGate['reduced motion'].ok, byGate['reduced motion'].failed], [false, 1]);
         assert.deepEqual(byGate['reduced motion'].failures, ['home (/) runs and declares no motion under reduced motion [phone-375]: Error: home under reduced motion']);
+        const long = gateResults({ suites: [{ file: 'reflow.spec.mjs', specs: [test('home', 'phone-375', 'unexpected', `Error: home at 320 wide: ${'x'.repeat(400)}`)] }], errors: [] });
+        assert.equal(long.find(({ gate }) => gate === 'reflow at 320').failures[0].length, 'home [phone-375]: '.length + 240);
+        assert.match(long.find(({ gate }) => gate === 'reflow at 320').failures[0], /x…$/);
         assert.deepEqual([byGate.focus.ok, byGate.focus.passed, byGate.focus.skipped], [true, 1, 1]);
         assert.deepEqual([byGate.screenshots.ok, byGate.screenshots.summary], [true, 'no tests']);
     });

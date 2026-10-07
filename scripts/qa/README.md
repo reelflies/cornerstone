@@ -369,7 +369,9 @@ Each is a thin spec over `page-checks.mjs`. `page-checks.test.mjs` proves each c
 | Focus tab-through (story 67) | `npm run qa:focus` | Tabbing from the top of the page to the end (250 Tabs at most), a focused element whose centre, by `elementFromPoint`, is under a fixed or sticky box that doesn't hold it: the sticky header, the sticky bars (38, 41) or the prompt card (52). | The product and cart pins, at 375 |
 
 - **Reduced motion fails on stock Cornerstone, on every page.** It has no reset, and its buttons, links and menus declare transitions. Ticket 25's skin adds "a global reduced-motion reset" (spec module 1), and each failure says so.
-- **The cart count goes up the way an add sends it** (build pipeline, section 6.9): the stock `cart-quantity-update` on `<body>`, then `rf:cart-changed` on `document`. Nothing reaches the store: the stock handler updates only the count and `localStorage`.
+- **The cart count goes up the way an add sends it** (build pipeline, section 6.9): the stock `cart-quantity-update` on `<body>`, then `rf:cart-changed` on `document`. Nothing reaches the store.
+  - **jQuery isn't global in this build.** `webpack.common.js` aliases `jquery` to `jquery.min.js`, and its `expose-loader` rule matches only `jquery.js`, so `window.$` is never set. So on the storefront the check can't send the stock event with a count. It makes the change the stock handler makes instead (`cart-preview.js`): the `.cart-quantity` text goes up by one and gets `countPill--positive`. Then it sends `rf:cart-changed`. The test's "cart count" annotation says which way it went.
+  - **So a rise ring (ticket 27) is checked here only if it plays on one of those:** `rf:cart-changed`, or a change to the count. One that listens only to the stock jQuery event isn't seen.
 - **The tab-through notes, without failing,** a focused element with no visible box, one whose centre is off screen, and one that another element (not fixed or sticky) lies over. Those are for ticket 55's keyboard pass.
 
 ### Home widget links (`widget-links.mjs`)
