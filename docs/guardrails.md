@@ -72,10 +72,10 @@ node ~/reelflies/theme/cornerstone/scripts/status.mjs --pr 12 --sha <full head s
 `scripts/guarded-paths.txt` lists the paths a PR may change only with an extra safety review. Shaun's answer of 2026-10-06 lets agents merge these PRs too, so a guarded path doesn't stop a merge: it adds `rf/safety` to the statuses merge.sh needs. The list covers:
 
 - the release tooling and every module it imports (bar `check-contrast.mjs`, below), and `RELEASES.md`, which it reads to tell this fork's theme uuids apart, which W0-3's prune ranks by, and where the prune logs each deletion
-- `scripts/store/`, the store token loader and the catalogue apply step
+- `scripts/store/`, the store token loader, the catalogue apply step, and the in-memory catalogue its tests trust (`scripts/catalogue/fixtures/`)
 - the merge tooling and every module `merge.mjs` imports, `status.mjs`, the baseline-scope check and the list itself
 - the release calendar
-- `.claude/`, the permission test, the root `CLAUDE.md` and `AGENTS.md`, and the documents agents and Shaun act on: `docs/guardrails.md`, `docs/permissions.md` (its probes are run by Shaun), `docs/releasing.md` and `docs/store-writes.md`
+- `.claude/`, the permission test, the root `CLAUDE.md` and `AGENTS.md`, and the documents agents and Shaun act on: `docs/guardrails.md`, `docs/permissions.md` (its probes are run by Shaun), `docs/releasing.md`, `docs/store-writes.md` and `docs/catalogue-jobs.md` (the catalogue write, and the token he makes for it)
 - `.github/`, `scripts/test-scripts.mjs` (which picks the script tests CI runs), and `.gitleaks.toml` and `.gitleaksignore`, which gitleaks reads from the repo by itself, so either could switch the secret scan off
 - `.gitattributes`, because an attribute can change how a guarded file merges (`RELEASES.md merge=union`, W0-11) or hide its diff from a reviewer (`-diff`, `linguist-generated`)
 

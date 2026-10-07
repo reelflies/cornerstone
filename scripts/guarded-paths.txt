@@ -16,10 +16,13 @@ scripts/release*.mjs
 scripts/lib/format*.mjs
 RELEASES.md
 
-# Store and catalogue writes (W0-11; ticket 18)
+# Store and catalogue writes (W0-11; ticket 18), the guide Shaun follows for a catalogue write,
+# and the in-memory catalogue the apply tests trust
 scripts/store/
 scripts/lib/store-token*.mjs
 scripts/catalogue/apply*
+scripts/catalogue/fixtures/
+docs/catalogue-jobs.md
 
 # The merge tooling, every module it imports, the statuses it reads, and the checks behind
 # them (W0-13). scripts/lib/lock.mjs is the merge lock, which W0-7 extends.

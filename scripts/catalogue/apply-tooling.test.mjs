@@ -98,3 +98,11 @@ test('apply imports only checked tooling: its own apply* files, scripts/store/ a
     const patterns = readGuardedPaths();
     for (const file of closure) assert.ok(isGuarded(file, patterns), `${file} should be guarded`);
 });
+
+test('the guide Shaun follows for catalogue writes, and the in-memory catalogue the apply tests trust, are guarded too', () => {
+    const patterns = readGuardedPaths();
+    for (const file of ['docs/catalogue-jobs.md', 'scripts/catalogue/fixtures/catalogue-store.mjs', 'scripts/catalogue/fixtures/export.csv']) assert.ok(isGuarded(file, patterns), `${file} should be guarded`);
+    for (const file of ['scripts/catalogue/jobs.mjs', 'scripts/catalogue/dry-run.mjs', 'scripts/catalogue/report.mjs']) assert.ok(!isGuarded(file, patterns), `${file} stays open: the dry run only proposes`);
+    const guide = fs.readFileSync(path.join(ROOT, 'docs/guardrails.md'), 'utf8');
+    assert.match(guide, /`docs\/catalogue-jobs\.md`/, 'docs/guardrails.md lists it with the other documents agents and Shaun act on');
+});
