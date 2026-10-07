@@ -6,12 +6,17 @@
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { renderWidget } from '../qa/render/render.mjs';
 import {
-    SYNC_CHANNELS, WIDGETS_DIR, entriesFor, inlineShared, readChannelFile, readWidget, setPlacementStatus, stripComments, writeUuids,
+    SYNC_CHANNELS, WIDGETS_DIR, emptyComments, entriesFor, inlineShared, readChannelFile, readWidget, setPlacementStatus, writeUuids,
 } from './source.mjs';
+
+const require = createRequire(import.meta.url);
+// The Handlebars build Paper renders with (config.json's handlebars_v4), to read a template's comments.
+const Handlebars = require('@bigcommerce/handlebars-v4'); // eslint-disable-line import/no-extraneous-dependencies
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-widgets-source-'));
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
@@ -73,60 +78,129 @@ test('the hero\'s 1895766 file sets every schema field and nothing else, and rec
     });
 });
 
-test('a widget\'s schema and query are what the store gets, and its template without its Handlebars comments', () => {
+test('a widget\'s schema and query are what the store gets, and its template with each comment emptied', () => {
     const { root } = widgetsRoot('rf-x', { template: '{{!-- a note --}}<p>{{text}}</p>' });
     fs.writeFileSync(path.join(root, 'rf-x', 'query.graphql'), 'query Q { site { settings { storeName } } }\n');
     const widget = readWidget('rf-x', { root });
     assert.equal(widget.query, 'query Q { site { settings { storeName } } }');
-    assert.equal(widget.template, '<p>{{text}}</p>');
+    assert.equal(widget.template, '{{!}}<p>{{text}}</p>');
 });
 
-// The store refused the hero, whose comment names <width>, <path> and <channel>, with "422:
-// template: is not valid HTML" (2026-10-07). A comment renders nothing, so the store gets none.
-test('comments are dropped as Handlebars drops them, so the store renders what the fixture renderer renders', async () => {
+// Renders `template` as the fixture renderer does and as the store would, from the copy readWidget
+// gives the store, and returns both renders and that copy.
+async function renderBoth(template, configuration = { text: 'Hello' }) {
+    const { root } = widgetsRoot('rf-x', { template });
+    const stored = readWidget('rf-x', { root }).template;
+    const copy = fs.mkdtempSync(path.join(tmp, 'stored-'));
+    fs.mkdirSync(path.join(copy, 'rf-x'));
+    fs.writeFileSync(path.join(copy, 'rf-x', 'template.html'), stored);
+    const fixture = { configuration };
+    return { stored, fixture: await renderWidget('rf-x', fixture, { root }), store: await renderWidget('rf-x', fixture, { root: copy }) };
+}
+
+// The comments in a template as Handlebars parses them: each one's text and ~ flags.
+const commentsIn = template => {
+    const found = [];
+    const walk = node => {
+        if (Array.isArray(node)) node.forEach(walk);
+        else if (node && typeof node === 'object') {
+            if (node.type === 'CommentStatement') found.push({ value: node.value, strip: node.strip });
+            Object.entries(node).forEach(([key, value]) => key !== 'loc' && walk(value));
+        }
+    };
+    walk(Handlebars.parseWithoutProcessing(template));
+    return found;
+};
+
+test('each comment is emptied to {{!}} with its ~ flags, so the store renders exactly what the fixture renderer renders', async () => {
     const template = [
         '{{!--',
         '    A note naming <width>, <path> and }} inside a block comment.',
         '--}}',
         '<div class="rf-x">',
-        '    {{! a short note }}',
         '    <p>{{text}}{{!-- mid-line --}}!</p>',
         '    <p>{{~! trims the space before ~}}  {{text}}</p>',
-        '  {{!-- standalone, indented --}}  ',
+        '  {{~!-- trims before only --}}  ',
         '</div>',
-        '{{! last line, no newline }}',
     ].join('\n');
-    assert.equal(stripComments(template), [
+    assert.equal(emptyComments(template), [
+        '{{!}}',
         '<div class="rf-x">',
-        '    <p>{{text}}!</p>',
-        '    <p>{{text}}</p>',
+        '    <p>{{text}}{{!}}!</p>',
+        '    <p>{{~!~}}  {{text}}</p>',
+        '  {{~!}}  ',
         '</div>',
-        '',
     ].join('\n'));
-    const { root } = widgetsRoot('rf-x', { template });
-    const stripped = fs.mkdtempSync(path.join(tmp, 'stripped-'));
-    fs.mkdirSync(path.join(stripped, 'rf-x'));
-    fs.writeFileSync(path.join(stripped, 'rf-x', 'template.html'), readWidget('rf-x', { root }).template);
+    // The reviewers' cases (PR #46), each rendered both ways: empty and dash-only comments, ~ beside
+    // a standalone comment or a mustache, comments sharing a line with a block tag or {{else}},
+    // escapes, a "{{! … }}" in a string, CRLF, a non-breaking space, and a template that is only a comment.
+    const cases = [
+        template,
+        '{{!--}}<p>{{text}}</p>{{!-- note --}}\n',
+        '<b>{{text}}</b>{{!---}}<p>{{text}}</p>{{!-- later --}}',
+        '<p>a</p> \n {{~!-- trim --}}\n<p>{{text}}</p>\n',
+        '<p>a</p>\n  {{! c ~}}  \n<p>{{text}}</p>\n',
+        '<div>\n    {{~! note }}\n</div>',
+        '<div>\n    {{!-- note --~}}\n</div>',
+        '<p>\n{{! a }}\n   {{~! b }}x',
+        '<p>{{text~}}{{! c }}  x</p>',
+        '<div>\n{{! c }}{{#if text}}\n  <p>{{text}}</p>\n{{/if}}\n</div>',
+        '{{#if text}}{{! yes }}\n<p>{{text}}</p>\n{{else}}{{!-- no --}}\n<p>none</p>\n{{/if}}\n',
+        '<p>\\{{! shown as typed }} {{text}}</p>\n',
+        '<p>\\\\{{! hidden }} {{text}}</p>\n',
+        '\\{{!-- a }} <b>{{text}}</b> {{!-- real <x> --}}',
+        '<p>{{concat text "{{! x }}"}}</p>',
+        '<p>a</p>\r\n{{! c }}\r\n<p>{{text}}</p>\r\n',
+        '<p>a</p>\n {{! c }}\n<p>{{text}}</p>\n',
+        '{{!-- only --}}',
+    ];
+    for (const source of cases) {
+        const { stored, fixture, store } = await renderBoth(source); // eslint-disable-line no-await-in-loop
+        assert.equal(store, fixture, `renders differently: ${JSON.stringify(source)}`);
+        const original = commentsIn(source);
+        const emptied = commentsIn(stored);
+        assert.deepEqual(emptied.map(comment => comment.strip), original.map(comment => comment.strip), `~ flags: ${JSON.stringify(source)}`);
+        assert.ok(emptied.every(comment => comment.value === ''), `a comment keeps text: ${JSON.stringify(stored)}`);
+    }
+    const loop = await renderBoth('<ul>\n{{#each items}}{{! one per item }}\n<li>{{this}}</li>\n{{/each}}\n</ul>\n', { items: ['1', '2'] });
+    assert.equal(loop.store, loop.fixture);
+});
+
+test('a _shared partial\'s comments are emptied too, after it is inlined', async () => {
+    const { root } = widgetsRoot('rf-x', { template: '<p>{{> _shared/rf-note text=text}}</p>\n' });
+    fs.mkdirSync(path.join(root, '_shared'));
+    fs.writeFileSync(path.join(root, '_shared', 'rf-note.html'), '{{!-- the note <b> --}}\n<em>{{text}}</em>\n');
+    const stored = readWidget('rf-x', { root }).template;
+    assert.ok(stored.includes('{{#*inline "_shared/rf-note"}}\n{{!}}\n<em>{{text}}</em>\n{{/inline}}'), stored);
+    const copy = fs.mkdtempSync(path.join(tmp, 'stored-'));
+    fs.mkdirSync(path.join(copy, 'rf-x'));
+    fs.writeFileSync(path.join(copy, 'rf-x', 'template.html'), stored);
     const fixture = { configuration: { text: 'Hello' } };
-    assert.equal(await renderWidget('rf-x', fixture, { root: stripped }), await renderWidget('rf-x', fixture, { root }));
+    assert.equal(await renderWidget('rf-x', fixture, { root: copy }), await renderWidget('rf-x', fixture, { root }));
 });
 
-test('an escaped \\{{! … }} is text, not a comment, and stays', async () => {
-    const template = '<p>\\{{! shown as typed }} {{text}}</p>\n';
-    assert.equal(stripComments(template), template);
-    const { root } = widgetsRoot('rf-x', { template });
-    assert.match(await renderWidget('rf-x', { configuration: { text: 'Hello' } }, { root }), /\{\{! shown as typed \}\} Hello/);
+test('every widget, with each of its fixtures, renders from the store\'s copy as from its files', async () => {
+    const names = fs.readdirSync(WIDGETS_DIR).filter(name => !name.startsWith('_') && fs.existsSync(path.join(WIDGETS_DIR, name, 'template.html')));
+    assert.ok(names.includes('home-lead'));
+    for (const name of names) {
+        const stored = readWidget(name).template;
+        assert.ok(commentsIn(stored).every(comment => comment.value === ''), `${name}: a comment keeps text`);
+        const copy = fs.mkdtempSync(path.join(tmp, `${name}-`));
+        fs.mkdirSync(path.join(copy, name));
+        fs.writeFileSync(path.join(copy, name, 'template.html'), stored);
+        const dir = path.join(WIDGETS_DIR, name, 'fixtures');
+        const fixtures = fs.existsSync(dir) ? fs.readdirSync(dir).filter(file => file.endsWith('.json')) : [];
+        assert.ok(fixtures.length, `${name} has no fixture`);
+        for (const file of fixtures) {
+            const fixture = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
+            // eslint-disable-next-line no-await-in-loop
+            assert.equal(await renderWidget(name, fixture, { root: copy }), await renderWidget(name, fixture), `${name} with ${file}`);
+        }
+    }
 });
 
-test('the hero the store gets has no comments, renders as its fixture does, and closes its <img>', async () => {
-    const hero = readWidget('home-lead');
-    assert.doesNotMatch(hero.template, /\{\{~?!/);
-    assert.match(hero.template, /<img\b[^>]*\/>/);
-    const stripped = fs.mkdtempSync(path.join(tmp, 'hero-'));
-    fs.mkdirSync(path.join(stripped, 'home-lead'));
-    fs.writeFileSync(path.join(stripped, 'home-lead', 'template.html'), hero.template);
-    const fixture = JSON.parse(fs.readFileSync(path.join(WIDGETS_DIR, 'home-lead', 'fixtures', 'default.json'), 'utf8'));
-    assert.equal(await renderWidget('home-lead', fixture, { root: stripped }), await renderWidget('home-lead', fixture));
+test('the hero closes its <img>, as BigCommerce\'s examples do', () => {
+    assert.match(readWidget('home-lead').template, /<img\b[^>]*\/>/);
 });
 
 test('a widget without template.html or schema.json, or with a schema that isn\'t an array, is refused', () => {

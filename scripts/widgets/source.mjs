@@ -25,9 +25,14 @@
 // them in from the channel's snapshot, and the PR that follows the apply commits them.
 
 import fs from 'fs';
+import { createRequire } from 'module';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { channelsNamed } from '../store/channel.mjs';
+
+const require = createRequire(import.meta.url);
+// The Handlebars build Paper renders widgets with (config.json's handlebars_v4), for its parser.
+const Handlebars = require('@bigcommerce/handlebars-v4'); // eslint-disable-line import/no-extraneous-dependencies
 
 export const WIDGETS_DIR = fileURLToPath(new URL('../../widgets/', import.meta.url)).replace(/\/$/, '');
 // The channels a sync may target. Ticket 53 adds channel 1 (Option A), whose writes are Shaun's,
@@ -84,39 +89,40 @@ export function inlineShared(source, root = WIDGETS_DIR) {
     return `${source}${source.endsWith('\n') ? '' : '\n'}${definitions.join('')}`;
 }
 
-// Handlebars comments, {{!-- … --}} (which may hold "}}") and {{! … }}, with any ~ whitespace control.
-const COMMENT = /\{\{(~?)!(?:--[\s\S]*?--(~?)\}\}|(?!--)[\s\S]*?(~?)\}\})/g;
-
-// The template without its Handlebars comments, dropped as Handlebars drops them: a comment alone
-// on its lines goes with those lines, and a ~ takes the whitespace on its side. They render
-// nothing, and the store's HTML check reads the text inside them: it refused the hero's, which
-// names <width>, <path> and <channel>, as "not valid HTML" (2026-10-07).
-export function stripComments(source) {
-    // \{{! … }} is text Handlebars shows as typed; \\{{! … }} is a backslash, then a comment.
-    const escaped = ({ index }) => source[index - 1] === '\\' && source[index - 2] !== '\\';
-    let out = '';
-    let at = 0;
-    for (const match of [...source.matchAll(COMMENT)].filter(found => !escaped(found))) {
-        const start = match.index;
-        const end = start + match[0].length;
-        const trimBefore = match[1] === '~';
-        const trimAfter = (match[2] || match[3]) === '~';
-        const lineStart = source.lastIndexOf('\n', start - 1) + 1;
-        const newline = source.indexOf('\n', end);
-        const lineEnd = newline === -1 ? source.length : newline + 1;
-        const standalone = !trimBefore && !trimAfter && lineStart >= at
-            && /^[ \t]*$/.test(source.slice(lineStart, start)) && /^[ \t]*\r?\n?$/.test(source.slice(end, lineEnd));
-        if (standalone) {
-            out += source.slice(at, lineStart);
-            at = lineEnd;
-        } else {
-            out += source.slice(at, start);
-            if (trimBefore) out = out.trimEnd();
-            at = end;
-            if (trimAfter) while (at < source.length && /\s/.test(source[at])) at += 1;
+// Each Handlebars comment in a template, {{!-- … --}} or {{! … }}, as Handlebars' own parser finds
+// it (so an escaped \{{! … }} or a "{{! … }}" in a string isn't one): its offsets and ~ flags.
+function commentSpans(source) {
+    const lineStarts = [0];
+    for (let at = source.indexOf('\n'); at !== -1; at = source.indexOf('\n', at + 1)) lineStarts.push(at + 1);
+    const offset = ({ line, column }) => lineStarts[line - 1] + column;
+    const spans = [];
+    const walk = node => {
+        if (Array.isArray(node)) {
+            node.forEach(walk);
+            return;
         }
-    }
-    return out + source.slice(at);
+        if (!isObject(node)) return;
+        if (node.type === 'CommentStatement') {
+            spans.push({ start: offset(node.loc.start), end: offset(node.loc.end), strip: node.strip });
+            return;
+        }
+        Object.entries(node).forEach(([key, value]) => {
+            if (key !== 'loc') walk(value);
+        });
+    };
+    walk(Handlebars.parseWithoutProcessing(source));
+    return spans;
+}
+
+// The template with each comment emptied to {{!}}, keeping its ~ flags ({{~!}}, {{!~}}, {{~!~}}).
+// Only the comments' text changes, so the store renders exactly what the fixture renderer renders,
+// whitespace and standalone lines included. The store most likely reads the text inside comments
+// when it checks a template's HTML: it refused the hero's first upload, whose comment names
+// <width>, <path> and <channel>, as "not valid HTML" (2026-10-07).
+export function emptyComments(source) {
+    return commentSpans(source)
+        .sort((a, b) => b.start - a.start)
+        .reduce((text, { start, end, strip }) => `${text.slice(0, start)}{{${strip.open ? '~' : ''}!${strip.close ? '~' : ''}}}${text.slice(end)}`, source);
 }
 
 // The ids a widget_configuration holds: every setting's, in tabs, sections, hidden groups and
@@ -137,8 +143,8 @@ const settingIds = schema => {
     return ids;
 };
 
-// A widget as the store should hold it: its template (with _shared partials inlined and no
-// comments), schema and query, and the names its template and widget take on every channel.
+// A widget as the store should hold it: its template (with _shared partials inlined and each
+// comment emptied), schema and query, and the names its template and widget take on every channel.
 export function readWidget(name, { root = WIDGETS_DIR } = {}) {
     if (!NAME.test(name)) throw new Error(`"${name}" isn't a widget name: a folder in widgets/ (lower-case letters, digits and -)`);
     const dir = path.join(root, name);
@@ -153,7 +159,7 @@ export function readWidget(name, { root = WIDGETS_DIR } = {}) {
         root,
         templateName: `rf-${name}`,
         widgetName: `rf-${name}`,
-        template: stripComments(inlineShared(fs.readFileSync(templateFile, 'utf8'), root)),
+        template: emptyComments(inlineShared(fs.readFileSync(templateFile, 'utf8'), root)),
         schema,
         settings: settingIds(schema),
         query: fs.existsSync(queryFile) ? fs.readFileSync(queryFile, 'utf8').trim() : '',
