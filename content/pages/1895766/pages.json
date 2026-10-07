@@ -117,6 +117,25 @@
         { "key": "sale-terms", "question": "The sale terms from the live About page: no other codes during a sale, sale prices final, and a close alternative when an item is briefly out of stock. Keep them here? \"Final\" still allows a Claim." },
         { "question": "The path is /help/, a new page. Any questions to add or drop?" }
       ]
+    },
+    {
+      "file": "coupon-codes.html",
+      "name": "Coupon Codes",
+      "type": "page",
+      "url": "/coupon-codes/",
+      "path": {
+        "kind": "live",
+        "live": "/coupon-codes/",
+        "evidence": "Live reelflies.ca (channel 1) Web Page id 7 at /coupon-codes/ (the coupon terms, last in the live footer's page list), read with stencil start -c 1 ?debug=context on 2026-10-06; ticket 59 and plan/reference/cavio-vs-cornerstone-and-hreflang.json list it as a .ca-only path"
+      },
+      "is_visible": true,
+      "sort_order": 70,
+      "meta_description": "How coupon codes work at ReelFlies: one code per order, some single-use, and none with other offers or on sale-priced items.",
+      "status": "draft",
+      "approved": null,
+      "forShaun": [
+        { "question": "Live reelflies.ca has this page at /coupon-codes/ (channel 1 id 7), and ticket 59 expects it on .ca after the Flip. This draft carries it over at the same path, with the live page's two sale-price sentences merged into one (a revisitable default). Keep it, Redirect /coupon-codes/ to /help/ through refactor 09 instead, or drop it on purpose?" }
+      ]
     }
   ]
 }

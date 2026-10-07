@@ -230,10 +230,10 @@ describe('the format rules (pageProblems)', () => {
 });
 
 describe('ticket 22, on the real sources', () => {
-    it('has the five pages at their paths: the live .ca ones, and Help new', () => {
+    it('has the pages at their paths: the live .ca ones, Coupon Codes among them, and Help new', () => {
         const urls = site.pages.map(item => item.url).sort();
-        assert.deepEqual(urls, ['/about-us/', '/contact-us/', '/help/', '/privacy-policy/', '/shipping-returns/']);
-        for (const url of ['/about-us/', '/contact-us/', '/privacy-policy/', '/shipping-returns/']) {
+        assert.deepEqual(urls, ['/about-us/', '/contact-us/', '/coupon-codes/', '/help/', '/privacy-policy/', '/shipping-returns/']);
+        for (const url of ['/about-us/', '/contact-us/', '/coupon-codes/', '/privacy-policy/', '/shipping-returns/']) {
             assert.equal(page(url).path.kind, 'live', url);
         }
         assert.equal(page('/help/').path.kind, 'new');
