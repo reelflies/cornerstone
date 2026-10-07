@@ -15,9 +15,10 @@
 //    one build.
 // 3. It runs axe, the raw-HTML check and the screenshots (qa:prepush's gates) on every page
 //    pinned for 1895766, as the variation the host runs, with the analytics tags blocked
-//    whatever QA_ANALYTICS says. Ticket 17's Lighthouse joins them once `npm run qa:lighthouse`
-//    exists. Once ticket 08 records Shaun's GA4 hostname filter (GA4_HOSTNAME_FILTER_SINCE),
-//    one more Lighthouse run loads the tags, as information only: it never fails the batch,
+//    whatever QA_ANALYTICS says, then ticket 17's Lighthouse (`npm run qa:lighthouse`, which
+//    files its results in the uuid's lighthouse/ folder). Once ticket 08 records Shaun's GA4
+//    hostname filter (GA4_HOSTNAME_FILTER_SINCE), one more Lighthouse run loads the tags, as
+//    information only: it never fails the batch,
 //    the budgets stay on the blocked runs, and its results go in a folder of their own
 //    (tags-loaded/), so they never overwrite the blocked run's.
 // 4. It reads the active theme again, and fails if it changed meanwhile.
@@ -25,8 +26,9 @@
 //    (from the uuid's newest release entry), the gates, pass or fail, and "analytics blocked":
 //    yes, or, when the tags-loaded run ran, yes in the gates it counts and where they loaded.
 //    Once Lighthouse ran, it also fills in that entry's "Lighthouse: pending host batch", the
-//    line a push made without the cookie records (ticket 17's release.sh hook). The orchestrator
-//    commits the change through the next release-log PR (build pipeline, section 6.5).
+//    line a push made without the cookie records (ticket 17's release.sh hook), with pass or fail
+//    and, under it, each URL's medians from the run's summary.json. The orchestrator commits the
+//    change through the next release-log PR (build pipeline, section 6.5).
 //
 // It exits 0 when every gate passed, 1 when one failed or the theme changed, and 2 when it
 // stopped before the first gate.
@@ -38,6 +40,7 @@ import { isMain } from '../lib/is-main.mjs';
 import { captureLive } from '../release-capture.mjs';
 import { RELEASES_TEMPLATE } from '../release-log.mjs';
 import { PRELAUNCH_URL, analyticsRecord, isPrelaunchHost } from './analytics-hosts.mjs';
+import { lighthouseReleaseLines } from './lighthouse-rules.mjs';
 import { GATES } from './prepush.mjs';
 import { ROOT, slug } from './storefront.mjs';
 
@@ -185,15 +188,25 @@ export function addHostRun(markdown, row) {
     return `${markdown.slice(0, end).replace(/\n*$/, '\n')}${row}\n${next === -1 ? '' : `\n${markdown.slice(end)}`}`;
 }
 
+// The summary ticket 17's runner (lighthouse.mjs) wrote in the uuid's folder, or null.
+function readLighthouseSummary(dir) {
+    try {
+        return JSON.parse(fs.readFileSync(path.join(dir, 'lighthouse', 'summary.json'), 'utf8'));
+    } catch {
+        return null;
+    }
+}
+
 // The batch, with everything it touches passed in (main below gives the real ones):
 //   capture(channel)   resolves to release-capture.mjs's { capture: { themeUuid, themeName, variationName } }
 //   runGate({ gate, env, args, logFile })   resolves to the gate's problems, empty when it passed
 //   checkout()         { sha, dirty } of the checkout the gates run from
 //   readReleases(), writeReleases(text), writeJson(file, data), mkdir(dir), now(), log, error
+//   readLighthouse(dir)   the summary.json ticket 17's runner wrote in dir/lighthouse/, or null
 // Resolves to { code }: 0 passed, 1 failed, 2 stopped before the first gate.
 export async function runHostBatch({
     env, root = ROOT, scripts = {}, ga4FilterSince = GA4_HOSTNAME_FILTER_SINCE, now = () => new Date(), checkout, capture, runGate,
-    readReleases, writeReleases, writeJson, mkdir, log = console.log, error = console.error,
+    readReleases, writeReleases, writeJson, mkdir, readLighthouse = readLighthouseSummary, log = console.log, error = console.error,
 }) {
     const stop = message => {
         error(`STOP     ${message}`);
@@ -282,7 +295,14 @@ export async function runHostBatch({
     let text = releases ?? RELEASES_TEMPLATE;
     const lighthouse = results.find(gate => gate.script === 'qa:lighthouse' && !gate.informational);
     if (lighthouse) {
-        text = fillPendingLighthouse(text, uuid, `${lighthouse.problems.length ? 'fail' : 'pass'}, host batch of ${utc(started)} (analytics blocked: yes; results in scripts/qa/results/host/${uuid}/)`);
+        // Each URL's medians go under the line, from the summary this batch's run wrote: one from
+        // before the batch started is an older run's, left there when this one stopped early.
+        const summary = readLighthouse(dir);
+        const lines = summary && summary.startedAt >= started.toISOString() ? lighthouseReleaseLines(summary) : [];
+        text = fillPendingLighthouse(text, uuid, [
+            `${lighthouse.problems.length ? 'fail' : 'pass'}, host batch of ${utc(started)} (analytics blocked: yes; results in scripts/qa/results/host/${uuid}/)`,
+            ...lines,
+        ].join('\n'));
     }
     text = addHostRun(text, hostRunRow({
         date: started,
