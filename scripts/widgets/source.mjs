@@ -92,9 +92,11 @@ const COMMENT = /\{\{(~?)!(?:--[\s\S]*?--(~?)\}\}|(?!--)[\s\S]*?(~?)\}\})/g;
 // nothing, and the store's HTML check reads the text inside them: it refused the hero's, which
 // names <width>, <path> and <channel>, as "not valid HTML" (2026-10-07).
 export function stripComments(source) {
+    // \{{! … }} is text Handlebars shows as typed; \\{{! … }} is a backslash, then a comment.
+    const escaped = ({ index }) => source[index - 1] === '\\' && source[index - 2] !== '\\';
     let out = '';
     let at = 0;
-    for (const match of source.matchAll(COMMENT)) {
+    for (const match of [...source.matchAll(COMMENT)].filter(found => !escaped(found))) {
         const start = match.index;
         const end = start + match[0].length;
         const trimBefore = match[1] === '~';

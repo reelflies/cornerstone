@@ -111,6 +111,13 @@ test('comments are dropped as Handlebars drops them, so the store renders what t
     assert.equal(await renderWidget('rf-x', fixture, { root: stripped }), await renderWidget('rf-x', fixture, { root }));
 });
 
+test('an escaped \\{{! … }} is text, not a comment, and stays', async () => {
+    const template = '<p>\\{{! shown as typed }} {{text}}</p>\n';
+    assert.equal(stripComments(template), template);
+    const { root } = widgetsRoot('rf-x', { template });
+    assert.match(await renderWidget('rf-x', { configuration: { text: 'Hello' } }, { root }), /\{\{! shown as typed \}\} Hello/);
+});
+
 test('the hero the store gets has no comments, renders as its fixture does, and closes its <img>', async () => {
     const hero = readWidget('home-lead');
     assert.doesNotMatch(hero.template, /\{\{~?!/);
