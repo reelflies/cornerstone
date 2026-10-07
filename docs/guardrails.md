@@ -10,6 +10,7 @@ Agents merge their own PRs and push to ReelFlies_CA (HANDOFF, "Rules for every s
 | The baseline-scope check | `scripts/check-baseline-scope.mjs`, `.github/workflows/reelflies-baseline-scope.yml` | A screenshot baseline changed outside the kinds the PR declares |
 | The release calendar | `scripts/release-calendar.json`, `scripts/lib/release-calendar.mjs` | Pushes and widget edits during the freezes (read by W0-1 and W0-11) |
 | The store-write helper | `scripts/store/`, `scripts/lib/store-token.mjs`, [store-writes.md](store-writes.md) | A store write that skips the snapshot, the diff or the log row, names a channel other than 1895766, hits an endpoint off the allowlist, edits a widget from T-14 or writes anything but an unpublish from the Flip, runs rules other than `origin/master`'s, or is a store-wide write not typed by Shaun at his terminal |
+| The catalogue apply | `scripts/catalogue/apply*`, `scripts/catalogue/fixtures/`, [catalogue-jobs.md](catalogue-jobs.md) | A catalogue write (ticket 18) not confirmed by Shaun at his terminal with a token he made, run by rules other than `origin/master`'s, sent from a stale plan or one made for another store, outside the four catalogue PUTs, or moving a size label onto another value id; or a restore that no apply logged, or that puts back a field its plan never wrote |
 | Claude Code permission rules (a draft until Shaun turns them on) | `.claude/settings.draft.json`, [permissions.md](permissions.md) | A bare `stencil push`, a raw `gh pr merge`, a non-GET `curl` to the store API, reading a token |
 
 All of it is tested offline by `npm run test:scripts`, with a stubbed `gh`.
@@ -72,7 +73,7 @@ node ~/reelflies/theme/cornerstone/scripts/status.mjs --pr 12 --sha <full head s
 `scripts/guarded-paths.txt` lists the paths a PR may change only with an extra safety review. Shaun's answer of 2026-10-06 lets agents merge these PRs too, so a guarded path doesn't stop a merge: it adds `rf/safety` to the statuses merge.sh needs. The list covers:
 
 - the release tooling and every module it imports (bar `check-contrast.mjs`, below), and `RELEASES.md`, which it reads to tell this fork's theme uuids apart, which W0-3's prune ranks by, and where the prune logs each deletion
-- `scripts/store/`, the store token loader, the catalogue apply step, and the in-memory catalogue its tests trust (`scripts/catalogue/fixtures/`)
+- `scripts/store/`, the store token loader, the catalogue apply step, and the in-memory catalogue its tests trust (`scripts/catalogue/fixtures/`, which holds nothing else)
 - the merge tooling and every module `merge.mjs` imports, `status.mjs`, the baseline-scope check and the list itself
 - the release calendar
 - `.claude/`, the permission test, the root `CLAUDE.md` and `AGENTS.md`, and the documents agents and Shaun act on: `docs/guardrails.md`, `docs/permissions.md` (its probes are run by Shaun), `docs/releasing.md`, `docs/store-writes.md` and `docs/catalogue-jobs.md` (the catalogue write, and the token he makes for it)
@@ -93,6 +94,7 @@ How it matches:
 The guard covers the code and data that decide what merges, what is pushed where, and what is written to the store. It doesn't cover every file that runs during a merge or a release: `release.sh` also runs `npm ci`, the webpack build, Jest and the gates, so guarding all of it would guard most of the repo. These stay open, and the four normal sign-offs review them:
 
 - `scripts/check-contrast.mjs` and `scripts/check-bundle.mjs`: gates on colours and bundle size that decide no channel or target. Tickets 25 and 50 own the contrast check.
+- The catalogue dry run (`scripts/catalogue/` bar `apply*` and `fixtures/`, its sample export in `dry-run-fixtures/` included): it only proposes. Every plan it makes is checked by the guarded `apply-rules.mjs` when it is written and again when Shaun applies it, and the diff he approves is derived by apply from the store, never from the plan. A test keeps these files open and the apply files guarded.
 - `package.json` and `package-lock.json`: W0-6, 17, 46 and 54 add scripts, and dependency bumps change the lockfile (section 6.4 of the plan). A change to `test:scripts`, `qa:prepush` or the stencil-cli pin is a finding for the standards review.
 - `scripts/qa/`: the gates lane (W0-4 to W0-8) and every template ticket edit it.
 - A `gitleaks:allow` comment, which gitleaks honours in any file. The skeptic treats one as a finding.

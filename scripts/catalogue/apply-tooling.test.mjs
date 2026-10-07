@@ -101,8 +101,11 @@ test('apply imports only checked tooling: its own apply* files, scripts/store/ a
 
 test('the guide Shaun follows for catalogue writes, and the in-memory catalogue the apply tests trust, are guarded too', () => {
     const patterns = readGuardedPaths();
-    for (const file of ['docs/catalogue-jobs.md', 'scripts/catalogue/fixtures/catalogue-store.mjs', 'scripts/catalogue/fixtures/export.csv']) assert.ok(isGuarded(file, patterns), `${file} should be guarded`);
-    for (const file of ['scripts/catalogue/jobs.mjs', 'scripts/catalogue/dry-run.mjs', 'scripts/catalogue/report.mjs']) assert.ok(!isGuarded(file, patterns), `${file} stays open: the dry run only proposes`);
+    for (const file of ['docs/catalogue-jobs.md', 'scripts/catalogue/fixtures/catalogue-store.mjs']) assert.ok(isGuarded(file, patterns), `${file} should be guarded`);
+    for (const file of ['scripts/catalogue/jobs.mjs', 'scripts/catalogue/dry-run.mjs', 'scripts/catalogue/report.mjs', 'scripts/catalogue/dry-run-fixtures/export.csv']) assert.ok(!isGuarded(file, patterns), `${file} stays open: the dry run only proposes`);
+    assert.deepEqual(fs.readdirSync(path.join(ROOT, 'scripts/catalogue/fixtures')), ['catalogue-store.mjs'], 'the guarded fixtures folder holds only what the apply tests trust; the dry run\'s sample export lives in dry-run-fixtures/');
     const guide = fs.readFileSync(path.join(ROOT, 'docs/guardrails.md'), 'utf8');
     assert.match(guide, /`docs\/catalogue-jobs\.md`/, 'docs/guardrails.md lists it with the other documents agents and Shaun act on');
+    assert.match(guide, /^\| The catalogue apply \| `scripts\/catalogue\/apply\*`/m, 'the guardrails table has a row for the catalogue apply');
+    assert.match(guide, /The catalogue dry run \(`scripts\/catalogue\/` bar `apply\*` and `fixtures\/`/, '"What isn\'t guarded" says the dry run stays open on purpose');
 });
