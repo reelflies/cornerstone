@@ -9,15 +9,15 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { describe, it } from 'node:test';
+import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { findTags } from '../qa/raw-html/html.mjs';
 import { unbalancedTags } from '../qa/render/html-checks.mjs';
 import { classify } from '../store/allowlist.mjs';
 import { requestChannelProblems } from '../store/channel.mjs';
-import { CHART_SIZES, anchorId } from '../hook-gauge/sizes.mjs';
+import { CHART_SIZES, CHART_URL as SHARED_CHART_URL, anchorId } from '../hook-gauge/sizes.mjs';
 import {
-    CHART_URL, MARKERS, buildTable, catalogueProducts, chartPageRequest, flyTypesFromTree, readRowsConfig, renderRows, rowsConfigProblems, spliceRows,
+    CHART_URL, MARKERS, buildTable, catalogueProducts, chartPageRequest, flyTypesFromTree, joinPages, readRowsConfig, renderRows, rowsConfigProblems, spliceRows,
 } from './rows.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -29,7 +29,31 @@ const flyTypes = flyTypesFromTree(read('tree.json'), config.flyTypes);
 const table = buildTable(products, flyTypes);
 const names = rows => rows.map(({ size, links }) => [size, links.map(link => link.name)]);
 const decode = value => value.replace(/&amp;/g, '&');
-const scratch = () => fs.mkdtempSync(path.join(os.tmpdir(), 'rf-hook-chart-'));
+const scratches = [];
+const scratch = () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-hook-chart-'));
+    scratches.push(dir);
+    return dir;
+};
+after(() => scratches.forEach(dir => fs.rmSync(dir, { recursive: true, force: true })));
+
+// A read split into pages of `perPage`, each as the API answers it, with its meta.pagination.
+const paged = (whole, perPage) => {
+    const items = whole.data;
+    const totalPages = Math.max(Math.ceil(items.length / perPage), 1);
+    return Array.from({ length: totalPages }, (_, index) => {
+        const data = items.slice(index * perPage, (index + 1) * perPage);
+        return {
+            data,
+            meta: {
+                pagination: {
+                    total: items.length, count: data.length, per_page: perPage, current_page: index + 1, total_pages: totalPages,
+                },
+            },
+        };
+    });
+};
+const named = (pages, prefix) => pages.map((page, index) => ({ file: `${prefix}-p${index + 1}.json`, read: page }));
 
 describe('the rows config (scripts/hook-chart/rows.json)', () => {
     it('lists the six Fly Types in ticket 28\'s rf_menu_type_ids order', () => {
@@ -54,13 +78,61 @@ describe('the rows config (scripts/hook-chart/rows.json)', () => {
     });
 });
 
+describe('joinPages: a paged read, from one saved file per page', () => {
+    const tree = read('tree.json');
+    const pages = paged(tree, 5);
+
+    it('joins every page, in page order whatever order the files come in', () => {
+        assert.equal(pages.length, 3);
+        const joined = joinPages(named(pages, 'tree').reverse(), 'tree');
+        assert.deepEqual(joined.data, tree.data);
+        assert.deepEqual(joinPages([{ file: 'tree.json', read: tree }], 'tree').data, tree.data);
+    });
+
+    it('takes an empty read as its one page', () => {
+        const pagination = {
+            total: 0, count: 0, per_page: 50, current_page: 1, total_pages: 0,
+        };
+        const empty = { data: [], meta: { pagination } };
+        assert.deepEqual(joinPages([{ file: 'none.json', read: empty }], 'channel assignments').data, []);
+    });
+
+    it('refuses a page given twice, and a page left out, naming the files', () => {
+        const [first, second, third] = named(pages, 'tree');
+        assert.throws(() => joinPages([first, { ...first, file: 'again.json' }, second, third], 'tree'), /^Error: the tree read gives page 1 twice \(tree-p1\.json, again\.json\): give each page once$/);
+        assert.throws(() => joinPages([first, third], 'tree'), /^Error: the tree read has no page 2 of 3: give every page from 1 to 3, each once$/);
+        assert.throws(() => joinPages([second, third], 'tree'), /no page 1 of 3/);
+    });
+
+    it('refuses a file that isn\'t a page as the API answers it', () => {
+        assert.throws(() => joinPages([{ file: 'bare.json', read: tree.data }], 'tree'), /^Error: the tree read bare\.json isn't a page as the API answers it: save each page with its "data" and "meta\.pagination"$/);
+        assert.throws(() => joinPages([{ file: 'no-meta.json', read: { data: tree.data } }], 'tree'), /no-meta\.json isn't a page as the API answers it/);
+        assert.throws(() => joinPages([], 'tree'), /no tree read/);
+    });
+
+    it('refuses pages of different reads, a page past the last, and pages that don\'t add up to the read\'s total', () => {
+        const [first, second, third] = named(pages, 'tree');
+        const other = structuredClone(second);
+        other.read.meta.pagination.total_pages = 4;
+        assert.throws(() => joinPages([first, other, third], 'tree'), /^Error: the tree read's pages come from different reads: tree-p1\.json says 3 pages and 12 items, tree-p2\.json says 4 pages and 12 items$/);
+        const past = structuredClone(third);
+        past.read.meta.pagination.current_page = 4;
+        assert.throws(() => joinPages([first, second, third, { ...past, file: 'p4.json' }], 'tree'), /p4\.json is page 4, but the tree read has 3 pages/);
+        const short = structuredClone(second);
+        short.read.data.pop();
+        assert.throws(() => joinPages([first, short, third], 'tree'), /^Error: page 2 of the tree read \(tree-p2\.json\) holds 4 items but says it holds 5$/);
+        short.read.meta.pagination.count = 4;
+        assert.throws(() => joinPages([first, short, third], 'tree'), /^Error: the tree read's pages hold 11 items, but the read says 12: the store changed while it was read, so read every page again$/);
+    });
+});
+
 describe('catalogueProducts', () => {
     const byId = Object.fromEntries(products.map(product => [product.id, product]));
 
-    it('counts a product as Live on ReelFlies_CA only when it is visible and assigned to 1895766', () => {
-        assert.equal(byId[1].live, true);
-        assert.equal(byId[7].live, false, 'not visible');
-        assert.equal(byId[8].live, false, 'assigned to channel 1 only');
+    it('counts a product only when it is visible and assigned to ReelFlies_CA (1895766)', () => {
+        assert.equal(byId[1].listed, true);
+        assert.equal(byId[7].listed, false, 'not visible');
+        assert.equal(byId[8].listed, false, 'assigned to channel 1 only');
     });
 
     it('reads the Fly Sizes option only, in hook-size spelling, and keeps aughts still spelled with a hyphen', () => {
@@ -75,6 +147,15 @@ describe('catalogueProducts', () => {
     it('refuses reads in the wrong shape', () => {
         assert.throws(() => catalogueProducts({ products: [] }, read('assignments.json')), /the products read must be \{ "data": \[…\] \} or an array/);
         assert.throws(() => catalogueProducts({ data: [{ id: 1, is_visible: true, categories: [] }] }, []), /product 1 has no variants: read the products with include=variants/);
+    });
+
+    it('refuses a product or a channel assignment read twice, as when the catalogue changes between pages', () => {
+        const twice = read('products.json');
+        twice.data.push(twice.data[2]);
+        assert.throws(() => catalogueProducts(twice, read('assignments.json')), /^Error: product 3 is in the products read twice: the store changed while it was read, or a page was given twice, so read every page again$/);
+        const assignments = read('assignments.json');
+        assignments.data.push(assignments.data[0]);
+        assert.throws(() => catalogueProducts(read('products.json'), assignments), /product 1's assignment to channel 1895766 is in the channel assignments read twice/);
     });
 });
 
@@ -119,6 +200,12 @@ describe('flyTypesFromTree', () => {
         odd.data[0].url.path = '/dry-flies/?sort=newest';
         assert.throws(() => flyTypesFromTree(odd, config.flyTypes), /category 101's URL "\/dry-flies\/\?sort=newest" isn't a plain path/);
     });
+
+    it('refuses a category read twice', () => {
+        const twice = read('tree.json');
+        twice.data.push(twice.data[1]);
+        assert.throws(() => flyTypesFromTree(twice, config.flyTypes), /^Error: category 111 is in the tree read twice: the store changed while it was read, or a page was given twice, so read every page again$/);
+    });
 });
 
 describe('buildTable', () => {
@@ -143,7 +230,7 @@ describe('buildTable', () => {
 
     it('reports what it left out, so nothing disappears unseen', () => {
         assert.deepEqual(table.report, {
-            counted: 7, notLive: 2, noFlyType: 1, noSizes: 2, offChart: { 26: 1 }, hyphenAughts: 3,
+            counted: 7, notListed: 2, noFlyType: 1, noSizes: 2, offChart: { 26: 1 }, hyphenAughts: 3,
         });
     });
 
@@ -222,10 +309,10 @@ describe('spliceRows', () => {
     it('rewrites only the block between the markers, so the copy around it is never touched', () => {
         const next = spliceRows(body, block);
         const [before] = body.split(MARKERS.start);
-        const [, after] = body.split(MARKERS.end);
+        const [, rest] = body.split(MARKERS.end);
         assert.ok(next.startsWith(before));
-        assert.ok(next.endsWith(after));
-        assert.equal(next, `${before}${block}${after}`);
+        assert.ok(next.endsWith(rest));
+        assert.equal(next, `${before}${block}${rest}`);
         assert.equal(spliceRows(next, block), next, 'a second run changes nothing');
     });
 
@@ -240,6 +327,10 @@ describe('spliceRows', () => {
 describe('chartPageRequest', () => {
     const pages = read('pages.json');
     const block = renderRows(table, config);
+
+    it('finds the chart page at the one chart URL the gauge links to', () => {
+        assert.equal(CHART_URL, SHARED_CHART_URL);
+    });
 
     it('updates the chart\'s Web Page on 1895766 in a request the store-write helper accepts', () => {
         const { page, request } = chartPageRequest(pages, block);
@@ -276,17 +367,87 @@ describe('chartPageRequest', () => {
 describe('rows.mjs, run as a command', () => {
     const SCRIPT = path.join(HERE, 'rows.mjs');
     const fixture = name => path.join(FIXTURES, name);
-    const run = (...args) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8' });
+    const THEME = path.join(HERE, '..', '..');
+    const run = (...args) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8', cwd: THEME });
     const inputs = ['--products', fixture('products.json'), '--assignments', fixture('assignments.json'), '--tree', fixture('tree.json')];
+    // Each read saved one file per page, as the API answers it, and given as one option per page.
+    const pageFiles = (dir, name, perPage) => paged(read(name), perPage).map((page, index) => {
+        const file = path.join(dir, `${path.basename(name, '.json')}-p${index + 1}.json`);
+        fs.writeFileSync(file, JSON.stringify(page));
+        return file;
+    });
+    const repeat = (flag, files) => files.flatMap(file => [flag, file]);
 
     it('prints the table and what it left out, and writes nothing without an output', () => {
         const { status, stdout, stderr } = run(...inputs);
         assert.equal(status, 0, stderr);
         assert.match(stdout, /^14 +Dry Flies \(3\), Nymphs \(1\)$/m);
         assert.match(stdout, /^5\/0 +-$/m);
-        assert.match(stdout, /7 Live products counted/);
+        assert.match(stdout, /^counted +7 products visible and assigned to ReelFlies_CA \(1895766\), rolled up to the 6 Fly Types; left out: 2 not visible and assigned to 1895766, 1 with no Fly Type Placement, 2 with no Fly Sizes$/m);
         assert.match(stderr, /WARN +sizes off the chart, not shown: 26 \(1 product\)/);
         assert.match(stderr, /WARN +3 aught values are still spelled with a hyphen/);
+        assert.match(stderr, /^WARN +the rows' copy in scripts\/hook-chart\/rows\.json is draft, not approved by Shaun yet$/m);
+    });
+
+    it('reads each read from one file per page, in any order, as it reads the whole read from one file', () => {
+        const dir = scratch();
+        const whole = run(...inputs);
+        const productPages = pageFiles(dir, 'products.json', 5);
+        const assignmentPages = pageFiles(dir, 'assignments.json', 4);
+        const treePages = pageFiles(dir, 'tree.json', 6);
+        assert.deepEqual([productPages.length, assignmentPages.length, treePages.length], [3, 4, 2]);
+        const split = run(...repeat('--products', productPages), ...repeat('--assignments', assignmentPages.reverse()), ...repeat('--tree', treePages.reverse()));
+        assert.equal(split.status, 0, split.stderr);
+        assert.equal(split.stdout, whole.stdout);
+        assert.match(split.stdout, /^12 +Dry Flies \(2\)$/m);
+        assert.match(split.stdout, /^14 +Dry Flies \(3\), Nymphs \(1\)$/m);
+    });
+
+    it('refuses a page given twice or left out, and a read saved without its pagination, before it prints a table', () => {
+        const dir = scratch();
+        const productPages = pageFiles(dir, 'products.json', 5);
+        const treePages = pageFiles(dir, 'tree.json', 6);
+        const others = ['--assignments', fixture('assignments.json'), '--tree', fixture('tree.json')];
+        const twice = run(...repeat('--products', [productPages[0], ...productPages]), ...others);
+        assert.equal(twice.status, 1);
+        assert.equal(twice.stdout, '');
+        assert.match(twice.stderr, /^rows\.mjs: the products read gives page 1 twice \(.*products-p1\.json, .*products-p1\.json\): give each page once$/m);
+        const missing = run('--products', fixture('products.json'), '--assignments', fixture('assignments.json'), '--tree', treePages[1]);
+        assert.equal(missing.status, 1);
+        assert.match(missing.stderr, /^rows\.mjs: the tree read has no page 1 of 2: give every page from 1 to 2, each once$/m);
+        const bare = path.join(dir, 'bare.json');
+        fs.writeFileSync(bare, JSON.stringify(read('tree.json').data));
+        const unpaged = run('--products', fixture('products.json'), '--assignments', fixture('assignments.json'), '--tree', bare);
+        assert.equal(unpaged.status, 1);
+        assert.match(unpaged.stderr, /rows\.mjs: the tree read .*bare\.json isn't a page as the API answers it/);
+    });
+
+    it('--no-rollup links the categories that hold each size\'s products, and --min leaves out a link with fewer', () => {
+        const direct = run(...inputs, '--no-rollup');
+        assert.equal(direct.status, 0, direct.stderr);
+        assert.match(direct.stdout, /^14 +Dry Flies \(1\), Parachute Dry Flies \(1\), Elk Hair Caddis \(1\), Bead Head Nymphs \(1\)$/m);
+        assert.match(direct.stdout, /^counted +7 products .*, linked to the categories that hold them; left out/m);
+        const strict = run(...inputs, '--min', '2');
+        assert.equal(strict.status, 0, strict.stderr);
+        assert.match(strict.stdout, /^14 +Dry Flies \(3\)$/m);
+        assert.match(strict.stdout, /^20 +-$/m);
+        assert.match(strict.stdout, /rolled up to the 6 Fly Types, at least 2 a link; left out/);
+    });
+
+    it('--config takes another copy and Fly Type list, and warns only while that copy is a draft', () => {
+        const dir = scratch();
+        const approved = path.join(dir, 'rows.json');
+        fs.writeFileSync(approved, JSON.stringify({ ...config, status: 'approved', text: { ...config.text, none: 'None in stock' } }));
+        const rowsOut = path.join(dir, 'rows.html');
+        const { status, stderr } = run(...inputs, '--config', approved, '--rows-out', rowsOut);
+        assert.equal(status, 0, stderr);
+        assert.doesNotMatch(stderr, /copy in/);
+        assert.match(fs.readFileSync(rowsOut, 'utf8'), /<tr id="size-5-0"><th scope="row">5\/0<\/th><td>[^<]+<\/td><td>None in stock<\/td><\/tr>/);
+        const broken = path.join(dir, 'broken.json');
+        fs.writeFileSync(broken, JSON.stringify({ ...config, status: 'final' }));
+        const refused = run(...inputs, '--config', broken);
+        assert.equal(refused.status, 1);
+        assert.match(refused.stderr, /^rows\.mjs: .*broken\.json can't be used:\n- status must be draft or approved, not "final"$/m);
     });
 
     it('writes the rows block and the changes file for plan.mjs', () => {

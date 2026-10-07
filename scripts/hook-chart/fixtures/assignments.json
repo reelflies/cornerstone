@@ -13,5 +13,6 @@
         { "product_id": 10, "channel_id": 1895766 },
         { "product_id": 11, "channel_id": 1895766 },
         { "product_id": 12, "channel_id": 1895766 }
-    ]
+    ],
+    "meta": { "pagination": { "total": 13, "count": 13, "per_page": 50, "current_page": 1, "total_pages": 1 } }
 }

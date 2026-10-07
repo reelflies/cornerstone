@@ -5,30 +5,44 @@
 // store and reads no token. The write is the store-write helper's (scripts/store/, W0-11):
 // this writes the changes file for plan.mjs, then apply.mjs sends it.
 //
-//   node scripts/hook-chart/rows.mjs --products <read.json> --assignments <read.json> --tree <read.json>
+//   node scripts/hook-chart/rows.mjs --products <page.json> --assignments <page.json> --tree <page.json>
 //       prints the table, and what it left out
 //   … --rows-out <rows.html>                                   also writes the rows block
-//   … --existing <pages read.json> --changes <changes.json>    also writes the page update for plan.mjs
+//   … --existing <pages page.json> --changes <changes.json>    also writes the page update for plan.mjs
 //
-// The reads, saved as the API answers them ({ "data": [...] } or the bare array; repeat
-// --products or --assignments for each page of a paged read):
+// The reads are saved one file per page, each exactly as the API answers it, with its "data"
+// and "meta.pagination". Give each read's option once per page: every page from 1 to
+// total_pages, each once, all from one read. A page left out or given twice, a file without its
+// pagination, or pages that don't add up to the read's total (the store changed while it was
+// read) are refused, because each would change the table without a sign.
 //
 // - --products: GET /v3/catalog/products?include=variants. A product's sizes are the labels of
 //   its variants' "Fly Sizes" option values, the facet the row links filter by.
 // - --assignments: GET /v3/catalog/products/channel-assignments?channel_id:in=1895766. A product
-//   counts only when it is Live on ReelFlies_CA: visible, and assigned to 1895766 (refactor 14
-//   places them; CONTEXT.md, "Live product").
-// - --tree: GET /v3/catalog/trees/categories?tree_id:in=<ReelFlies_CA's tree>, one tree only.
+//   counts only when it is visible and assigned to ReelFlies_CA (1895766). Refactor 14 places
+//   only Live products there (CONTEXT.md: a Live product is visible and assigned to ReelFlies,
+//   channel 1), so these are the Live products placed on ReelFlies_CA.
+// - --tree: GET /v3/catalog/trees/categories?tree_id:in=4 (ReelFlies_CA's tree), one tree only.
 //   The Fly Types in rows.json are found at its top level, by id or by name.
 // - --existing: GET /v3/content/pages?channel_id=1895766&include=body. The chart page is the
 //   one at /fly-hook-size-chart/, and it must already hold the two markers.
 //
+// No repo tool saves these reads yet, and they are never fetched by hand: no curl, and no
+// store token read anywhere but scripts/lib/store-token.mjs. The first run waits on a read step
+// built on scripts/store/client.mjs's read-only client (ticket 35's template PR, or ticket 18's
+// scripts/catalogue/api-read.mjs if it then reads variants and tree 4), after refactors 13
+// (tree 4's Fly Types) and 14 (the products placed on ReelFlies_CA).
+//
 // Options:
 //   --no-rollup   link the categories that hold each size's products, not the six Fly Types
-//                 (if probe 8 shows a Fly Type page doesn't list its sub-types' products)
-//   --min <n>     link a Fly Type only when at least n Live products come in that size (default 1)
+//                 (if a Fly Type page doesn't list its sub-types' products; probe 8 found that
+//                 roots roll up one level, research/07-prelaunch-probes.md)
+//   --min <n>     link a Fly Type only when at least n counted products come in that size (default 1)
 //   --text-only   name the Fly Types without links (channel 1 until the Flip, ticket 53);
-//                 only with --rows-out, because the store-write helper never writes channel 1
+//                 only with --rows-out, because the store-write helper never writes channel 1.
+//                 The rows are still ReelFlies_CA's: tree 4's Fly Types and what is placed on
+//                 1895766, so they too wait for refactors 13 and 14. Rows from tree 1, where the
+//                 Fly Types sit under Flies (398), and tree-1 facet links aren't supported.
 //   --config <rows.json>   another copy and Fly Type list (default scripts/hook-chart/rows.json)
 
 import fs from 'fs';
@@ -37,11 +51,11 @@ import { fileURLToPath } from 'url';
 import { isMain } from '../lib/is-main.mjs';
 import { CHANNEL } from '../store/channel.mjs';
 import {
-    CHART_SIZES, FACET_NAME, anchorId, facetParam, isChartSize, normalizeSize,
+    CHART_SIZES, CHART_URL, FACET_NAME, anchorId, facetParam, isChartSize, normalizeSize,
 } from '../hook-gauge/sizes.mjs';
 
+export { CHART_URL };
 export const CONFIG_FILE = fileURLToPath(new URL('./rows.json', import.meta.url));
-export const CHART_URL = '/fly-hook-size-chart/';
 // Fixed markers around the rows in the page's body. Everything between them is rewritten on
 // each run; everything outside them is Shaun's copy, and is never touched.
 export const MARKERS = Object.freeze({
@@ -57,7 +71,9 @@ const PLAIN_PATH = /^\/[^?#\s]*\/$/;
 const isObject = value => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const isText = value => typeof value === 'string' && value.trim() !== '';
 const andList = items => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);
-// Text and attribute values in the page body.
+// Text and attribute values in the page body. Not gauge.mjs's escaper, which matches Handlebars
+// and so also escapes "=": the row links must keep "_bc_fsnf=1" as it is in the raw HTML, where
+// story 16's curl looks for it.
 const escapeHtml = text => String(text).replace(/[&<>"]/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;',
 }[character]));
@@ -67,6 +83,51 @@ export function listOf(read, what) {
     if (isObject(read) && Array.isArray(read.data)) return read.data;
     throw new Error(`the ${what} read must be { "data": […] } or an array`);
 }
+
+const AGAIN = 'the store changed while it was read, or a page was given twice, so read every page again';
+const isCount = value => Number.isInteger(value) && value >= 0;
+
+// One paged read, from its pages as the API answered them: [{ file, read }], in any order. It
+// returns { data } with every page's items in page order, and refuses anything that would leave
+// an item out or count it twice.
+export function joinPages(pages, what) {
+    if (!pages.length) throw new Error(`no ${what} read`);
+    const described = pages.map(({ file, read }) => {
+        const pagination = isObject(read) && Array.isArray(read.data) && isObject(read.meta) ? read.meta.pagination : null;
+        if (!isObject(pagination) || !Number.isInteger(pagination.current_page) || pagination.current_page < 1
+            || !isCount(pagination.total_pages) || !isCount(pagination.total) || !isCount(pagination.count)) {
+            throw new Error(`the ${what} read ${file} isn't a page as the API answers it: save each page with its "data" and "meta.pagination"`);
+        }
+        return {
+            file, data: read.data, page: pagination.current_page, pages: pagination.total_pages, total: pagination.total, count: pagination.count,
+        };
+    });
+    const [first] = described;
+    const odd = described.find(({ pages: n, total }) => n !== first.pages || total !== first.total);
+    if (odd) {
+        const size = ({ file, pages: n, total }) => `${file} says ${n} pages and ${total} items`;
+        throw new Error(`the ${what} read's pages come from different reads: ${size(first)}, ${size(odd)}`);
+    }
+    const last = Math.max(first.pages, 1);
+    const byPage = new Map();
+    for (const page of described) {
+        if (page.page > last) throw new Error(`${page.file} is page ${page.page}, but the ${what} read has ${last} ${last === 1 ? 'page' : 'pages'}`);
+        if (byPage.has(page.page)) throw new Error(`the ${what} read gives page ${page.page} twice (${byPage.get(page.page).file}, ${page.file}): give each page once`);
+        if (page.data.length !== page.count) throw new Error(`page ${page.page} of the ${what} read (${page.file}) holds ${page.data.length} items but says it holds ${page.count}`);
+        byPage.set(page.page, page);
+    }
+    const missing = Array.from({ length: last }, (_, index) => index + 1).filter(n => !byPage.has(n));
+    if (missing.length) throw new Error(`the ${what} read has no page ${andList(missing)} of ${last}: give every page from 1 to ${last}, each once`);
+    const data = Array.from({ length: last }, (_, index) => byPage.get(index + 1).data).flat();
+    if (data.length !== first.total) throw new Error(`the ${what} read's pages hold ${data.length} items, but the read says ${first.total}: the store changed while it was read, so read every page again`);
+    return { data };
+}
+
+// Throws when `key` was seen before, naming the thing and the read.
+const onlyOnce = (seen, key, thing, what) => {
+    if (seen.has(key)) throw new Error(`${thing} is in the ${what} read twice: ${AGAIN}`);
+    seen.add(key);
+};
 
 // Everything wrong with rows.json, as sentences; empty when it can be used.
 export function rowsConfigProblems(config) {
@@ -114,20 +175,24 @@ export function readRowsConfig(file = CONFIG_FILE) {
     return config;
 }
 
-// The catalogue's products as the table needs them: whether each is Live on ReelFlies_CA, its
-// category ids, its Fly Sizes in chart spelling, and how many of its aught values are still
-// spelled with a hyphen ("2-0", before ticket 18's rename).
+// The catalogue's products as the table needs them: whether each is listed on ReelFlies_CA
+// (visible and assigned to 1895766), its category ids, its Fly Sizes in chart spelling, and how
+// many of its aught values are still spelled with a hyphen ("2-0", before ticket 18's rename).
 export function catalogueProducts(productsRead, assignmentsRead) {
     const assigned = new Set();
+    const pairs = new Set();
     for (const row of listOf(assignmentsRead, 'channel assignments')) {
         if (!isObject(row) || !Number.isInteger(row.product_id) || !Number.isInteger(row.channel_id)) {
             throw new Error('each channel assignment needs a product_id and a channel_id');
         }
+        onlyOnce(pairs, `${row.product_id} ${row.channel_id}`, `product ${row.product_id}'s assignment to channel ${row.channel_id}`, 'channel assignments');
         if (row.channel_id === CHANNEL) assigned.add(row.product_id);
     }
+    const ids = new Set();
     return listOf(productsRead, 'products').map(product => {
         if (!isObject(product) || !Number.isInteger(product.id)) throw new Error('each product needs its id');
         const { id } = product;
+        onlyOnce(ids, id, `product ${id}`, 'products');
         if (!Array.isArray(product.variants)) throw new Error(`product ${id} has no variants: read the products with include=variants`);
         if (!Array.isArray(product.categories)) throw new Error(`product ${id} has no categories list`);
         const labels = new Set(product.variants.flatMap(variant => (Array.isArray(variant?.option_values) ? variant.option_values : []))
@@ -136,7 +201,7 @@ export function catalogueProducts(productsRead, assignmentsRead) {
         const sizes = [...new Set([...labels].map(normalizeSize).filter(Boolean))];
         return {
             id,
-            live: product.is_visible === true && assigned.has(id),
+            listed: product.is_visible === true && assigned.has(id),
             categories: product.categories,
             sizes,
             hyphenAughts: [...labels].filter(label => /^\s*#?\s*\d+\s*-\s*0\s*$/.test(label)).length,
@@ -147,6 +212,7 @@ export function catalogueProducts(productsRead, assignmentsRead) {
 // The configured Fly Types, found at the top level of one tree's category read, each with every
 // category below it, in tree order (the Fly Type itself first).
 export function flyTypesFromTree(treeRead, configured) {
+    const ids = new Set();
     const categories = listOf(treeRead, 'tree').map(category => ({
         id: category.category_id ?? category.id,
         parent: category.parent_id,
@@ -154,6 +220,7 @@ export function flyTypesFromTree(treeRead, configured) {
         name: category.name,
         url: typeof category.url === 'string' ? category.url : category.url?.path,
     }));
+    categories.forEach(({ id }) => onlyOnce(ids, id, `category ${id}`, 'tree'));
     const trees = [...new Set(categories.map(({ tree }) => tree).filter(tree => tree !== undefined))].sort((a, b) => a - b);
     if (trees.length > 1) throw new Error(`the tree read holds trees ${andList(trees)}: read one tree`);
     const where = trees.length ? `tree ${trees[0]}` : 'the tree read';
@@ -186,7 +253,7 @@ export function flyTypesFromTree(treeRead, configured) {
 }
 
 // One row per chart size, in hook order. Rolled up (the default), a row links each Fly Type
-// with at least `min` Live products in that size, counting the products placed anywhere below
+// with at least `min` listed products in that size, counting the products placed anywhere below
 // it, since its page lists its sub-types' products too. Without roll-up (probe 8), a row links
 // each category that holds such products itself, so every link opens a page with products.
 export function buildTable(products, flyTypes, { rollup = true, min = 1 } = {}) {
@@ -200,11 +267,11 @@ export function buildTable(products, flyTypes, { rollup = true, min = 1 } = {}) 
     };
     const count = key => holders.get(key)?.size || 0;
     const report = {
-        counted: 0, notLive: 0, noFlyType: 0, noSizes: 0, offChart: {}, hyphenAughts: 0,
+        counted: 0, notListed: 0, noFlyType: 0, noSizes: 0, offChart: {}, hyphenAughts: 0,
     };
     for (const product of products) {
         const placements = product.categories.map(id => owners.get(id)).filter(Boolean);
-        if (!product.live) report.notLive += 1;
+        if (!product.listed) report.notListed += 1;
         else if (!placements.length) report.noFlyType += 1;
         else if (!product.sizes.length) report.noSizes += 1;
         else {
@@ -301,7 +368,7 @@ class Usage extends Error {}
 
 export function parseArgs(argv) {
     const args = {
-        products: [], assignments: [], tree: null, config: CONFIG_FILE, rollup: true, min: 1, rowsOut: null, existing: null, changes: null, textOnly: false,
+        products: [], assignments: [], tree: [], config: CONFIG_FILE, rollup: true, min: 1, rowsOut: null, existing: [], changes: null, textOnly: false,
     };
     const value = (i, flag) => {
         if (!argv[i + 1] || argv[i + 1].startsWith('--')) throw new Usage(`${flag} needs a value`);
@@ -316,10 +383,10 @@ export function parseArgs(argv) {
             i += 1;
             if (flag === '--products') args.products.push(given);
             else if (flag === '--assignments') args.assignments.push(given);
-            else if (flag === '--tree') args.tree = given;
+            else if (flag === '--tree') args.tree.push(given);
             else if (flag === '--config') args.config = given;
             else if (flag === '--rows-out') args.rowsOut = given;
-            else if (flag === '--existing') args.existing = given;
+            else if (flag === '--existing') args.existing.push(given);
             else if (flag === '--changes') args.changes = given;
             else {
                 args.min = Number(given);
@@ -329,8 +396,8 @@ export function parseArgs(argv) {
             throw new Usage(`unknown argument ${flag} (see the top of scripts/hook-chart/rows.mjs)`);
         }
     }
-    if (!args.products.length || !args.assignments.length || !args.tree) throw new Usage('--products, --assignments and --tree are needed: saved reads of the products, their channel assignments and the tree');
-    if (args.changes && !args.existing) throw new Usage('--changes needs --existing, the channel\'s pages read with include=body');
+    if (!args.products.length || !args.assignments.length || !args.tree.length) throw new Usage('--products, --assignments and --tree are needed: saved reads of the products, their channel assignments and the tree');
+    if (args.changes && !args.existing.length) throw new Usage('--changes needs --existing, the channel\'s pages read with include=body');
     if (args.textOnly && args.changes) throw new Usage('--text-only rows are for channel 1 (ticket 53), which the store-write helper never writes: use --rows-out');
     return args;
 }
@@ -343,6 +410,8 @@ const readJson = file => {
     }
 };
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+// Every page of one read, from its files.
+const readPages = (files, what) => joinPages(files.map(file => ({ file, read: readJson(file) })), what);
 
 export function main(argv = process.argv.slice(2)) {
     let args;
@@ -355,18 +424,16 @@ export function main(argv = process.argv.slice(2)) {
     }
     try {
         const config = readRowsConfig(args.config);
-        const products = catalogueProducts(
-            { data: args.products.flatMap(file => listOf(readJson(file), 'products')) },
-            { data: args.assignments.flatMap(file => listOf(readJson(file), 'channel assignments')) },
-        );
-        const flyTypes = flyTypesFromTree(readJson(args.tree), config.flyTypes);
+        const products = catalogueProducts(readPages(args.products, 'products'), readPages(args.assignments, 'channel assignments'));
+        const flyTypes = flyTypesFromTree(readPages(args.tree, 'tree'), config.flyTypes);
+        const pages = args.existing.length ? readPages(args.existing, 'pages') : null;
         const table = buildTable(products, flyTypes, { rollup: args.rollup, min: args.min });
         for (const row of table.rows) {
             console.log(`${row.size.padEnd(5)} ${row.links.map(({ name, count }) => `${name} (${count})`).join(', ') || '-'}`);
         }
         const { report } = table;
-        console.log(`counted  ${plural(report.counted, 'Live product')} counted, ${args.rollup ? `rolled up to the ${flyTypes.length} Fly Types` : 'linked to the categories that hold them'}`
-            + `${args.min > 1 ? `, at least ${args.min} a link` : ''}; left out: ${report.notLive} not Live on ${CHANNEL}, ${report.noFlyType} with no Fly Type Placement, ${report.noSizes} with no ${FACET_NAME}`);
+        console.log(`counted  ${plural(report.counted, 'product')} visible and assigned to ReelFlies_CA (${CHANNEL}), ${args.rollup ? `rolled up to the ${flyTypes.length} Fly Types` : 'linked to the categories that hold them'}`
+            + `${args.min > 1 ? `, at least ${args.min} a link` : ''}; left out: ${report.notListed} not visible and assigned to ${CHANNEL}, ${report.noFlyType} with no Fly Type Placement, ${report.noSizes} with no ${FACET_NAME}`);
         const offChart = Object.entries(report.offChart);
         if (offChart.length) console.error(`WARN     sizes off the chart, not shown: ${offChart.map(([size, n]) => `${size} (${plural(n, 'product')})`).join(', ')}`);
         if (report.hyphenAughts) console.error(`WARN     ${report.hyphenAughts} aught values are still spelled with a hyphen (2-0): their row links resolve only after ticket 18's rename to 2/0`);
@@ -376,8 +443,8 @@ export function main(argv = process.argv.slice(2)) {
             fs.writeFileSync(args.rowsOut, `${block}\n`);
             console.log(`wrote    ${args.rowsOut}`);
         }
-        if (args.existing) {
-            const { page, request } = chartPageRequest(readJson(args.existing), block);
+        if (pages) {
+            const { page, request } = chartPageRequest(pages, block);
             if (!request) {
                 console.log(`unchanged: the page already has these rows; no changes file written (page ${page.id})`);
             } else if (args.changes) {
