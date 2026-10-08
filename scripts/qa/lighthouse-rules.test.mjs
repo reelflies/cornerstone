@@ -14,6 +14,7 @@ import {
     BUDGETS, DROP_LIMIT, LIGHTHOUSE_KINDS, RUNS_PER_URL, addToHistory, analyticsRequests, budgetResults, channelUrls, comparisonPoint,
     emptyHistory, historyProblems, judgeUrl, lighthouseReleaseLines, median, medianMetrics, metricsOf, urlListProblems,
 } from './lighthouse-rules.mjs';
+import { CHANNELS } from './pages.mjs';
 
 const fixture = name => JSON.parse(fs.readFileSync(new URL(`lighthouse-fixtures/${name}.json`, import.meta.url), 'utf8'));
 // The home fixture with its performance score set, as Lighthouse reports it (0 to 1).
@@ -237,6 +238,28 @@ describe('the URL lists (scripts/qa/lighthouse-urls.json)', () => {
         assert.deepEqual([...urls.map(url => url.kind), ...waiting.map(item => item.kind)].sort(), [...LIGHTHOUSE_KINDS].sort());
         assert.equal(urls.find(url => url.kind === 'home').budget, 'self', 'home is compared only with itself until tickets 46–49 land (SEO-8)');
         for (const url of urls) assert.match(url.path, /^\/(?!\/)/, `${url.key} is a path on the storefront`);
+    });
+
+    // Ticket 53 (Option A): live reelflies.ca on tree 1, which ticket 56 runs after the channel-1 push.
+    it('covers every kind on channel 1 with tree-1 pages, and says why tree 1 has no Species page', () => {
+        const {
+            urls, waiting, missing, stale,
+        } = channelUrls(list, '1');
+        assert.deepEqual(missing, []);
+        assert.deepEqual(stale, []);
+        const byKind = Object.fromEntries(urls.map(url => [url.kind, url]));
+        assert.deepEqual(Object.keys(byKind).sort(), ['cart', 'fly-type', 'home', 'product', 'search']);
+        assert.equal(byKind.home.path, '/');
+        assert.equal(byKind['fly-type'].path, '/flies/dry-flies/', 'Dry Flies (298), a Fly Type under Flies on tree 1, in the channel-1 menu ids');
+        assert.equal(byKind.product.path, CHANNELS[1].pages.product, 'the gates\' channel-1 product pin, with Fly Sizes, which ticket 11 measured on the old theme');
+        assert.equal(byKind.cart.path, '/cart.php', 'the empty cart: no action, so no cart write');
+        assert.equal(byKind.search.path, channelUrls(list, '1895766').urls.find(url => url.kind === 'search').path, 'the same search as prelaunch');
+        assert.deepEqual(waiting.map(item => item.kind), ['species']);
+        assert.match(waiting[0].reason, /tree 1 has no Species pages/i);
+        for (const url of urls) {
+            assert.equal(url.budget, 'full', `${url.key}: held to the full budget on live reelflies.ca (ticket 56)`);
+            assert.doesNotMatch(url.path, /action=|\/remote\/|wishlist|logout/, `${url.key} sends no write as it loads`);
+        }
     });
 
     it('reports a kind no pin covers, and a reason left over for a kind now pinned', () => {

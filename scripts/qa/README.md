@@ -854,7 +854,9 @@ QA_BASE_URL=https://reelflies_ca-1895766.mybigcommerce.com npm run qa:lighthouse
 **The URLs** are in `lighthouse-urls.json`, one list per channel, covering six page kinds: `home`, `species`, `fly-type`, `product` (one with Fly Sizes), `cart` and `search`. A key is a kind, or `kind@name` for a second page of one kind, as in `pages.mjs`.
 
 - A kind a channel can't list yet goes in its `notPinnedYet` with the reason, which every run prints. ReelFlies_CA lists home, the empty cart and a search for "adams" today; the Species and Fly Type pages wait for refactor 13 and the product page for refactor 14. A kind with neither a URL nor a reason fails the run.
-- Ticket 53 adds channel 1's tree-1 list (Option A).
+- **Channel 1** is live reelflies.ca on tree 1 (ticket 53, Option A). It lists home, the Dry Flies Fly Type page (`/flies/dry-flies/`), product 6178 with Fly Sizes (the gates' channel-1 pin, and ticket 11's old-theme page), the empty cart and the same "adams" search, all held to the full budget. Tree 1 has no Species page until the Flip, so `species` waits with that reason.
+  - `release.sh`'s step 6b never runs this list: the gate runs on prelaunch.
+  - Ticket 56 runs it on live reelflies.ca after the channel-1 push session, with `QA_BASE_URL=https://reelflies.ca QA_CHANNEL=1 npm run qa:lighthouse` (below, "Another host").
 - `"budget": "self"` holds a page to no budget, only to its own last accepted run. The home page has it until tickets 46–49 populate it (SEO-8); ticket 49 deletes the line.
 
 **How it runs:**
@@ -863,7 +865,10 @@ QA_BASE_URL=https://reelflies_ca-1895766.mybigcommerce.com npm run qa:lighthouse
 - Each run starts from a cleared cache and cleared origin storage (Lighthouse's own reset), so it measures a first visit, as SEO-13 asks for CLS.
 - **The analytics tags are blocked**, through `blockedUrlPatterns` from `lighthouseBlockedUrlPatterns()` ([Analytics and live-store writes](#analytics-and-live-store-writes-network-guardmjs)). Every result records "analytics blocked". A run fails when a request to a listed host completed anyway. `QA_ANALYTICS=allow` loads the tags, on the prelaunch host only and before the Flip, as information: such a run is never compared with or added to the history.
 - **A run Lighthouse can't finish** (a 5xx, a page that never paints, a protocol error) is run once more, with a `RETRY` line, as the gates ask a 5xx again (W0-4). A second failure fails that URL, naming Lighthouse's error, and the other URLs are still measured.
-- Lighthouse only loads pages: it clicks nothing and sends no form. It can block URLs but not methods, so it has no write guard like the Playwright gates' (W0-6). Before a live channel's list is added (ticket 53), check in a report's network requests that those pages send no write while they load.
+- Lighthouse only loads pages: it clicks nothing and sends no form. It can block URLs but not methods, so it has no write guard like the Playwright gates' (W0-6). Before a live channel's list is added, check that those pages send no write while they load.
+  - **Channel 1's list was checked on 2026-10-07** (ticket 53), on a local `stencil start -c 1` of "ReelFlies CA channel 1" through the gates' network guard. The only request that wasn't a GET was the product page's `POST /remote/v1/product-attributes/6178`, a listed read-only POST (`read-only-posts.mjs`: it reads the price and stock of the chosen options).
+  - On the live host, ticket 11's preflight of home and the product page (Hero-2024) found one more: Cloudflare's bot-detection beacon, `POST /cdn-cgi/challenge-platform/h/…`, which goes to Cloudflare's edge, not to the store.
+  - Ticket 56 checks again on live reelflies.ca, with the fork, before its run.
 
 **Where it runs:**
 

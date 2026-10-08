@@ -8,7 +8,9 @@
 #
 #   0 how step 5 is confirmed (typed, or --confirm-nonprod on a non-production target, W0-1) within
 #     the release calendar's limits (scripts/release-calendar.json); --confirm-nonprod runs only from
-#     master at origin/master's tip (scripts/release-origin.mjs)
+#     master at origin/master's tip (scripts/release-origin.mjs). A production target (channel 1,
+#     ticket 53) is released only by an operator at a terminal, never an agent, dry runs included
+#     (scripts/release-checks.mjs operatorProblems), and only from merged code
 #   1 capture the channel's live Theme Styles (read-only) and diff them against config.json and
 #     against config.json at the channel's last release in RELEASES.md (W0-2), report the live
 #     colours' contrast, then the release guard: rf_* module switches and menu ids

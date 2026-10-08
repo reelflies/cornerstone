@@ -10,7 +10,9 @@
 //
 // What the hook does after a push (lighthousePlan):
 //   - on a channel other than prelaunch: nothing ("not run"). The gate runs on prelaunch, and ticket
-//     56 reads the 1895766 entry of the commit it pushes to channel 1.
+//     56 reads the 1895766 entry of the commit it pushes to channel 1. Channel 1 has its own list in
+//     scripts/qa/lighthouse-urls.json (ticket 53), which ticket 56 runs on live reelflies.ca after
+//     the push.
 //   - from the Flip (calendar phase T-0 or T+30): "skipped". 1895766 is then live reelflies.ca, and
 //     whether a P1 fix runs the gate is Shaun's open question (ticket 17); until he answers it is
 //     skipped, so no run after the Flip is ever accepted (build pipeline, section 4).
@@ -96,7 +98,9 @@ export function lighthousePlan({
         throw new Error(`unknown release calendar phase "${phase}": the Lighthouse step can't tell whether the Flip has passed`);
     }
     if (Number(channel) !== PRELAUNCH_CHANNEL) {
-        return { result: 'not-run', reason: `the gate runs on prelaunch (${PRELAUNCH_CHANNEL}), not channel ${channel}: ticket 56 reads the ${PRELAUNCH_CHANNEL} entry of the commit it pushes` };
+        // Ticket 53: channel 1 has its own list, which ticket 56's smoke tests run on the live host.
+        const own = Number(channel) === 1 ? '; ticket 56 runs channel 1\'s own list in scripts/qa/lighthouse-urls.json on live reelflies.ca after the push, with the analytics tags blocked' : '';
+        return { result: 'not-run', reason: `the gate runs on prelaunch (${PRELAUNCH_CHANNEL}), not channel ${channel}: ticket 56 reads the ${PRELAUNCH_CHANNEL} entry of the commit it pushes${own}` };
     }
     if (AFTER_FLIP_PHASES.includes(phase)) {
         return { result: 'skipped', reason: `after the Flip ${PRELAUNCH_CHANNEL} is live reelflies.ca, and whether a P1 fix runs the gate is Shaun's open question (ticket 17); until he answers, it is skipped, so no run after the Flip is ever accepted` };

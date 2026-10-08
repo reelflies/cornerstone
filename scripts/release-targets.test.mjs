@@ -1,8 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import {
     buildPushArgs, CONFIRM_NONPROD, CONFIRM_TYPED, findTarget, RELEASE_TARGETS,
 } from './release-targets.mjs';
+
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 test('the push command names one zip, one variation and one channel', () => {
     assert.deepEqual(
@@ -32,10 +36,38 @@ test('ReelFlies_CA is a release target for the ReelFlies CA variation', () => {
     assert.equal(target.liveFile, 'config.ca.live.json');
 });
 
-test('live reelflies.ca, reelflies.com and unknown channels are refused, each with its reason', () => {
-    assert.throws(() => findTarget(1), /ticket 53/);
+test('reelflies.com and unknown channels are refused, each with its reason', () => {
     assert.throws(() => findTarget(1855224), /\.com stays on its own theme/);
     assert.throws(() => findTarget(42), /not a release target/);
+});
+
+// --- Ticket 53: the guarded channel-1 target (Option A) ------------------------------------------
+
+test('ticket 53: live reelflies.ca (channel 1) is a target for "ReelFlies CA channel 1" only, with its own capture file and bundle name', () => {
+    const target = findTarget(1);
+    assert.equal(target.id, 1);
+    assert.equal(target.name, 'reelflies.ca');
+    assert.deepEqual(target.variations, ['ReelFlies CA channel 1']);
+    assert.equal(target.slug, 'ca-channel-1');
+    assert.equal(target.liveFile, 'config.ca-channel-1.live.json');
+    // The capture holds the live settings (Cavio's held a token), so git must ignore it.
+    assert.equal(spawnSync('git', ['check-ignore', '-q', '--no-index', target.liveFile], { cwd: ROOT }).status, 0, `.gitignore ignores ${target.liveFile}`);
+    assert.notEqual(target.liveFile, findTarget(1895766).liveFile);
+    assert.notEqual(target.slug, findTarget(1895766).slug);
+});
+
+test('ticket 53: channel 1 is production and typed only, and never becomes an agent target at the Flip', () => {
+    const target = findTarget('1');
+    assert.equal(target.production, true);
+    assert.deepEqual(target.confirmation, [CONFIRM_TYPED]);
+    assert.equal(Boolean(target.liveFromFlip), false, 'liveFromFlip is for a non-production target that goes live at the Flip');
+    assert.ok(!findTarget(1895766).variations.includes('ReelFlies CA channel 1'), 'the channel-1 variation never goes to ReelFlies_CA');
+});
+
+test('ticket 53: channel 1 and 1895766 are the only targets, so a new one is a reviewed change to this test', () => {
+    assert.deepEqual(Object.keys(RELEASE_TARGETS).map(Number).sort((a, b) => a - b), [1, 1895766]);
+    const production = Object.entries(RELEASE_TARGETS).filter(([, target]) => target.production !== false).map(([id]) => Number(id));
+    assert.deepEqual(production, [1]);
 });
 
 // --- W0-1: production flags and confirmation modes ---------------------------------------------
