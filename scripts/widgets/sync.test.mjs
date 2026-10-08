@@ -104,6 +104,15 @@ test('the first sync creates the template, the widget and the placement, each wi
     assert.ok(lines.some(line => /placement pages\/home home_below_menu: create/.test(line)), lines.join('\n'));
 });
 
+// The created placement takes the channel file's status, whichever it is (#62's rf/skeptic).
+test('a first sync of a file recorded active creates the placement active', () => {
+    const entry = hero(undefined, { status: 'active' });
+    const { requests, problems } = planSync({ channel: CH, entries: [entry], store: empty });
+    assert.deepEqual(problems, []);
+    const placement = requests.find(request => request.path === PATHS.placements).body;
+    assert.equal(placement.status, 'active');
+});
+
 test('every request a sync makes passes the store-write helper\'s own checks (W0-11)', () => {
     const entry = hero(recorded, { status: 'active' });
     const changed = {

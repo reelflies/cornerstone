@@ -36,7 +36,8 @@ test('the shot\'s fixture is exactly what ReelFlies_CA gets', () => {
 
 test('the channel file places it on 1895766 in header_bottom--global, the region every page has, active, with the uuids its first write made', () => {
     assert.equal(channelFile.channel_id, 1895766);
-    // A global region still names a template; the widget shows on every page that has the region.
+    // A global region still names a template file. BigCommerce says the widget then shows on every
+    // page that has the region; that waits on a check on the prelaunch host (docs/widgets.md, #62).
     // Active since the checkpoint-02 release carried 27's landmark and styles.
     assert.deepEqual(channelFile.placement, {
         template_file: 'pages/home', region: 'header_bottom--global', sort_order: 0, status: 'active',

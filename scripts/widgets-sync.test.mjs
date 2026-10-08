@@ -48,7 +48,8 @@ function copyHero() {
     fs.cpSync(path.resolve('widgets/_shared'), path.join(root, '_shared'), { recursive: true });
     const file = path.join(root, 'home-lead', 'channels', '1895766.json');
     const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-    fs.writeFileSync(file, `${JSON.stringify({ ...data, uuids: { template: null, widget: null, placement: null } }, null, 4)}\n`);
+    // As before its first apply: no uuids, and inactive whatever the live file says (#62's rf/skeptic).
+    fs.writeFileSync(file, `${JSON.stringify({ ...data, placement: { ...data.placement, status: 'inactive' }, uuids: { template: null, widget: null, placement: null } }, null, 4)}\n`);
     return root;
 }
 
