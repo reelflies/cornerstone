@@ -24,12 +24,10 @@
 // -----------------------------------------------------------------------------
 
 $rf-card-text:          #ffffff;
-$rf-card-text-soft:     #e6e9ec;    // the label and the count, as the hero's subline
-$rf-card-scrim:         #1c1d1f;    // the neutral scrim, rgb(28, 29, 31), as $rf-scrim (CD-6)
-$rf-card-scrim-strong:  0.8;        // behind the text (CD-6)
+$rf-card-scrim:         rgb(nth($rf-scrim, 1), nth($rf-scrim, 2), nth($rf-scrim, 3)); // $rf-scrim as a colour (CD-6)
+$rf-card-scrim-strong:  0.8;        // its opacity behind the text
 $rf-card-fade:          48px;       // the scrim's fade to clear, above the text
 $rf-card-fade-phone:    32px;       // the same below 801px
-$rf-tile-border:        #dde2dc;    // CD-11
 $rf-cards-gap:          clamp(14px, 1.8vw, 24px);
 
 
@@ -110,7 +108,7 @@ $rf-cards-gap:          clamp(14px, 1.8vw, 24px);
     display: block;
     height: 100%;
     object-fit: cover;
-    transition: transform 300ms ease-out;
+    transition: transform var(--rf-t-photo) ease-out;
     width: 100%;
 }
 
@@ -161,7 +159,7 @@ $rf-cards-gap:          clamp(14px, 1.8vw, 24px);
 }
 
 .rf-type-card__label {
-    color: $rf-card-text-soft;
+    color: $rf-on-photo-soft;
     font-size: 14px;
     font-weight: 500;
     line-height: 1.4;
@@ -183,7 +181,7 @@ $rf-cards-gap:          clamp(14px, 1.8vw, 24px);
 }
 
 .rf-type-card__count {
-    color: $rf-card-text-soft;
+    color: $rf-on-photo-soft;
     font-size: 15px;
     line-height: 1.4;
 }
