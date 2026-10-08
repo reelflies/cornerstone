@@ -12,6 +12,9 @@
 // - A create of the widget refers to the template created before it in the same plan, and the
 //   placement to the widget, with the store-write helper's {"$created": n} (docs/store-writes.md).
 // - An update sends only the fields that changed, with the channel.
+// - A recorded template the store saves with another engine than STORE_ENGINE (engine.mjs) stops
+//   the sync: the fixture renders and the store copy's checks model Handlebars 3. An unpublish
+//   still goes ahead, because switching a widget off doesn't depend on how it renders.
 // - Nothing here reads or writes the store. widgets-sync.mjs reads the snapshot with GETs only,
 //   and every write goes through the store-write helper (W0-11), which checks the channel again
 //   on every request, response and re-read.
@@ -19,6 +22,7 @@
 import { isDeepStrictEqual } from 'util';
 import { channelsNamed } from '../store/channel.mjs';
 import { showValue } from '../store/plan.mjs';
+import { STORE_ENGINE } from './engine.mjs';
 
 export const PATHS = {
     'widget-templates': '/v3/content/widget-templates',
@@ -94,12 +98,14 @@ const changedFields = (object, item, desired) => Object.fromEntries(Object.entri
     .filter(([key, value]) => !isDeepStrictEqual(storeValue[object](item, key), value)));
 
 // The diff lines for a changed field: an object compared key by key, so a changed heading in
-// widget_configuration reads as one line, not the whole configuration.
+// widget_configuration reads as one line, not the whole configuration. A key one side lacks
+// reads as (none), so a key an update leaves out doesn't read as a null it would send.
 function fieldLines(key, from, to) {
     if (isObject(from) && isObject(to)) {
+        const side = (object, name) => (name in object ? showValue(object[name], name) : '(none)');
         return [...new Set([...Object.keys(from), ...Object.keys(to)])]
             .filter(name => !isDeepStrictEqual(from[name], to[name]))
-            .map(name => `${INDENT}${key}.${name}: ${showValue(from[name], name)} -> ${showValue(to[name], name)}`);
+            .map(name => `${INDENT}${key}.${name}: ${side(from, name)} -> ${side(to, name)}`);
     }
     return [`${INDENT}${key}: ${from === undefined ? '(none)' : showValue(from, key)} -> ${showValue(to, key)}`];
 }
@@ -160,6 +166,10 @@ export function planSync({
     if (problems.length) return { requests: [], lines, problems };
     for (const { widget, channelFile } of entries) {
         if (unpublish && widget.name !== unpublish) continue; // eslint-disable-line no-continue
+        const saved = !unpublish && channelFile.uuids.template && (store.templates || []).find(item => item.uuid === channelFile.uuids.template);
+        if (saved && saved.template_engine !== STORE_ENGINE) {
+            problems.push(`${widget.name}: template ${short(saved.uuid)} on channel ${channel} is saved with template_engine ${saved.template_engine === undefined ? '(none)' : JSON.stringify(saved.template_engine)}, not "${STORE_ENGINE}", the engine the fixture renderer and the store copy's checks use (scripts/widgets/engine.mjs): check how the store renders the widgets now, and update engine.mjs, before syncing`);
+        }
         lines.push(`${widget.name} on channel ${channel} (${channelFile.where})`);
         const context = {
             channel, requests, lines, problems, store, where: channelFile.where, entryName: widget.name,
