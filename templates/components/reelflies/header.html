@@ -13,10 +13,14 @@
     - Menu is a real <button> for stock mobile-menu-toggle.js (data-mobile-menu-toggle), which
       opens #menu and sets aria-expanded. Its visible label, Menu or Close, follows aria-expanded
       in CSS, so its name changes with it; header.js adds Escape.
-    - "Shop flies" opens #menu as a panel on desktop (header.js) until ticket 28's grouped panel.
-      #menu keeps the stock navigation-menu, the phone drawer's content until ticket 28.
+    - #menu is the phone drawer (Menu) and the desktop panel ("Shop flies", header.js). With
+      rf_menu_type_ids or rf_menu_species_root_id set, it holds ticket 28's grouped menu
+      (reelflies/menu.html), with no data-menu, so stock menu.js binds nothing to it. With both
+      empty it holds the stock navigation-menu, as before ticket 28 (the fallback; ReelFlies CA's
+      ids stay empty until tree 4 exists).
     - Signed in, Sign out follows Account in the row from 801px (stock's was navigation.html:77).
-      Phones keep the stock drawer's, which stock hides from 801px (_navPages.scss:475-478).
+      Phones have the drawer's: the grouped drawer's footer, or the stock drawer's, which stock
+      hides from 801px (_navPages.scss:475-478).
     - The cart count is the stock pill (.countPill.cart-quantity, which cart-preview.js fills).
       With rf_rise on, the rise ring sits on it (rise.js); off, there is no ring markup and
       rise.js never loads (js-settings.html, reelflies/global.js).
@@ -70,9 +74,15 @@
             </a>
         </nav>
     </div>
+    {{#or (trim theme_settings.rf_menu_type_ids) (trim theme_settings.rf_menu_species_root_id)}}
+    <div class="navPages-container rf-header-drawer rf-header-drawer--grouped" id="menu">
+        {{> components/reelflies/menu}}
+    </div>
+    {{else}}
     <div class="navPages-container rf-header-drawer" id="menu" data-menu>
         {{> components/common/navigation-menu}}
     </div>
+    {{/or}}
     {{{region name="header_navigation_bottom--global"}}}
 </header>
 {{> components/reelflies/phone-search-row}}

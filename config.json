@@ -485,7 +485,7 @@
         ]
       },
       "settings": {
-        "rf_menu_type_ids": "",
+        "rf_menu_type_ids": "450,458,489,505,535",
         "rf_menu_species_root_id": "",
 
         "rf_ship_free_threshold": ""

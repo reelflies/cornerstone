@@ -1031,7 +1031,17 @@
         },
 
         "menu": {
-            "_slot": ""
+            "_slot": "",
+            "label": "Shop flies",
+            "types": "Fly types",
+            "species": "Species",
+            "more": "More from ReelFlies",
+            "show": "Show",
+            "shipping": "Shipping & Returns",
+            "contact": "Contact us",
+            "hook_chart": "Hook size chart",
+            "articles": "Fly fishing articles",
+            "call": "Call"
         },
 
         "search": {
