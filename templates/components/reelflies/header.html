@@ -15,6 +15,8 @@
       in CSS, so its name changes with it; header.js adds Escape.
     - "Shop flies" opens #menu as a panel on desktop (header.js) until ticket 28's grouped panel.
       #menu keeps the stock navigation-menu, the phone drawer's content until ticket 28.
+    - Signed in, Sign out follows Account in the row from 801px (stock's was navigation.html:77).
+      Phones keep the stock drawer's, which stock hides from 801px (_navPages.scss:475-478).
     - The cart count is the stock pill (.countPill.cart-quantity, which cart-preview.js fills).
       With rf_rise on, the rise ring sits on it (rise.js); off, there is no ring markup and
       rise.js never loads (js-settings.html, reelflies/global.js).
@@ -56,6 +58,9 @@
             <a class="rf-header-action rf-header-account" href="{{#if customer}}{{urls.account.index}}{{else}}{{urls.auth.login}}{{/if}}">
                 {{> components/reelflies/icon name='account'}}<span class="rf-header-label">{{lang 'common.account'}}</span>
             </a>
+            {{#if customer}}
+            <a class="rf-header-action rf-header-sign-out" href="{{urls.auth.logout}}" data-rf-sign-out>{{lang 'common.logout'}}</a>
+            {{/if}}
             <a class="rf-header-action rf-header-cart" href="{{urls.cart}}">
                 {{> components/reelflies/icon name='bag'}}<span class="rf-header-label rf-header-label--cart">{{lang 'common.cart'}}</span>
                 <span class="rf-header-count">

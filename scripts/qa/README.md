@@ -603,11 +603,12 @@ It isn't part of `qa:prepush`, so a release doesn't run it. Ticket 54 folds the 
 
 Ticket 27's checks in a browser (spec modules 2, 4 and 19; stories 4, 9, 57, 67 and 68), on every page pinned for `QA_CHANNEL`, at 375 and 1280:
 
-- **At 1280:** one row holding the logo, "Shop flies", a visible search field, Account and Cart, in that order, and no Saved, Compare or Gift Certificates link. "Shop flies" opens the stock menu as a panel under the row until ticket 28, and Escape closes it with focus back on the button.
+- **At 1280:** one row holding the logo, "Shop flies", a visible search field, Account and Cart (with Sign out between them when signed in, below), in that order, and no Saved, Compare or Gift Certificates link. "Shop flies" opens the stock menu as a panel under the row until ticket 28, and Escape closes it with focus back on the button.
 - **At 375:** a 56px bar that stays at the top as the page scrolls. Menu is a `<button>` named "Menu" with `aria-expanded`; open, it is named "Close", the drawer shows and `<html data-rf-open>` holds `drawer`; Escape closes it with focus back on the button.
 - **Focus:** tabbing through the category pins (home where the channel has none), at both widths, never leaves the focused element under the sticky bar (`tabThrough` and `focusProblems` from `page-checks.mjs`).
 - **axe:** no serious or critical issue in the header or the strip's landmark with the drawer or panel closed and open, and no node of axe's `region` rule inside them.
-- **No script error:** the stock scripts that bound to the stock header's markup (`quick-search.js`, `cart-preview.js`'s dropdown) find nothing, and throw nothing.
+- **No script error:** the stock scripts that bound to the stock header's markup throw nothing. `cart-preview.js`'s dropdown finds nothing; `quick-search.js` still binds to the stock quick-search form in the drawer (`navigation-menu.html:2-4`) until ticket 28.
+- **Signed in:** Sign out is in the row from 801px, between Account and Cart, and hidden on phones, where the stock drawer has it. No pin is signed in (an account is customer data), so this one test renders the header with a customer on W0-9's fixture page (the shipping strip's, with this checkout's theme CSS); `render/partials/header.test.mjs` checks the markup.
 - **The rise ring:** with `rf_rise` on, `rise.js` loads, the ring plays once when the count goes up (`bumpCart`), and not under reduced motion; under `QA_OVERLAY=rf_rise-off` there is no ring and no `rf-rise` chunk.
 
 ```sh

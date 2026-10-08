@@ -134,6 +134,26 @@ describe('the header partial', () => {
         assert.ok(!findTags(row, 'a').some(tag => tag.attrs.href === '/login.php'));
     });
 
+    it('gives a signed-in customer Sign out in the row, after Account: the drawer\'s is hidden from 801px', async () => {
+        // Stock had it in navigation.html:77, which the header no longer includes; the drawer's
+        // (navigation-menu.html:195-201) is in .navPages-list--user, which stock hides from 801px.
+        const row = headerRowSource(await render({ customer: { id: 1, name: 'A shopper' } }));
+        // Handlebars writes the = as &#x3D;, as in stock's own {{urls.auth.logout}}; a browser reads it as =.
+        const href = value => value.replace(/&#x3D;/g, '=');
+        const hrefs = findTags(row, 'a').map(tag => href(tag.attrs.href));
+        assert.deepEqual(hrefs, ['https://reelflies.ca/', '/search.php', '/account.php', '/login.php?action=logout', '/cart.php']);
+        const signOut = elementSource(row, 'a', attrs => href(attrs.href) === '/login.php?action=logout');
+        assert.equal(text(signOut), 'Sign out', 'the stock common.logout string');
+        assert.ok('data-rf-sign-out' in findTags(signOut, 'a')[0].attrs);
+    });
+
+    it('has no Sign out in the row when no one is signed in', async () => {
+        const row = headerRowSource(await render());
+        assert.ok(!findTags(row, 'a').some(tag => /action(=|&#x3D;)logout/.test(tag.attrs.href)));
+        assert.ok(!findTags(row, 'a').some(tag => 'data-rf-sign-out' in tag.attrs));
+        assert.doesNotMatch(text(row), /Sign out/);
+    });
+
     it('has no Saved, Compare or Gift Certificates link in the row (stock O04; UX-20)', async () => {
         const row = headerRowSource(await render({ customer: { id: 1, name: 'A shopper' } }));
         const hrefs = findTags(row, 'a').map(tag => tag.attrs.href);

@@ -15,6 +15,9 @@
 //   drawer or the panel open and closed, and no content outside a landmark there (axe region).
 // - With rf_rise on, the ring plays once when the count goes up and not under reduced motion;
 //   with it off (QA_OVERLAY=rf_rise-off), there is no ring and rise.js never loads.
+// - Signed in, Sign out is in the row from 801px, where the stock drawer's is hidden. No pin is
+//   signed in (a customer account is customer data), so this one renders the header with a
+//   customer on W0-9's fixture page, with this checkout's theme CSS.
 //
 // It isn't a gate in qa:prepush; ticket 27 runs it, and any ticket that changes the header:
 //
@@ -25,6 +28,7 @@
 /* eslint-env browser */ // the page.evaluate callbacks run in the page
 
 import AxeBuilder from '@axe-core/playwright';
+import { test as fixtureTest } from '@playwright/test';
 import {
     PAGES, SWITCH_VALUES, dismissCookieBanner, expect, storefrontPage, test,
 } from './fixtures.mjs';
@@ -33,7 +37,9 @@ import {
 } from './page-checks.mjs';
 import { pageKind } from './pages.mjs';
 import { chunkRequested } from './switches.mjs';
-import { QA_OVERLAY } from './storefront.mjs';
+import { QA_OVERLAY, QA_VARIATION } from './storefront.mjs';
+import { widgetCases } from './render/render.mjs';
+import { openWidget } from './render/widget-page.mjs';
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
 const BLOCKING = ['serious', 'critical'];
@@ -165,8 +171,9 @@ for (const key of PINS) {
     });
 
     test(`${key}: no script error, though the stock scripts no longer find the stock header's markup${label(QA_OVERLAY)}`, async ({ page }) => {
-        // quick-search.js, cart-preview.js and compare-products.js bind to markup that was in the
-        // stock navigation.html, which the ReelFlies header no longer includes.
+        // cart-preview.js and compare-products.js bind to markup that was in the stock
+        // navigation.html, which the ReelFlies header no longer includes; quick-search.js binds to
+        // the drawer's stock quick-search form (navigation-menu.html:2-4) until ticket 28.
         const errors = [];
         page.on('pageerror', error => errors.push(error.message));
         await open(page, key);
@@ -228,4 +235,50 @@ test(`with rf_rise off, the cart count is stock: no ring and no rise script${lab
     await expect(page.locator('[data-rf-rise]')).toHaveCount(0);
     await expect(page.locator('[data-rf-header] .countPill.cart-quantity')).toHaveCount(1);
     expect(requested.filter(url => chunkRequested('rf-rise', url))).toEqual([]);
+});
+
+// The header signed in, on the shipping strip's fixture page (it renders the theme's header,
+// "chrome"), with a customer and the urls the row links to.
+const STRIP_CASE = widgetCases().find(({ widget, name }) => widget === 'shipping-strip' && name === 'default');
+const SIGNED_IN = {
+    ...STRIP_CASE,
+    fixture: {
+        ...STRIP_CASE.fixture,
+        page_context: {
+            ...STRIP_CASE.fixture.page_context,
+            customer: { id: 1, name: 'A shopper' },
+            urls: {
+                home: '/',
+                search: '/search.php',
+                cart: '/cart.php',
+                account: { index: '/account.php' },
+                auth: { login: '/login.php', logout: '/login.php?action=logout' },
+            },
+        },
+    },
+};
+
+fixtureTest('signed in, Sign out is in the row from 801px; on phones it is the drawer\'s (fixture page)', async ({ page }, testInfo) => {
+    fixtureTest.skip(Boolean(QA_OVERLAY), 'the fixture page renders no overlay');
+    const { problems } = await openWidget(page, SIGNED_IN, { variation: QA_VARIATION });
+    expect(problems).toEqual([]);
+    const row = page.locator('[data-rf-header-row]');
+    const signOut = row.locator('[data-rf-sign-out]');
+    await expect(signOut).toHaveCount(1);
+    await expect(signOut).toHaveAttribute('href', '/login.php?action=logout');
+    await expect(page.locator('#menu a[href="/login.php?action=logout"]'), 'the stock drawer keeps its own').toHaveCount(1);
+    if (!desktop(testInfo)) {
+        await expect(signOut, 'phones sign out from the drawer, as stock').toBeHidden();
+        return;
+    }
+    await expect(row.getByRole('link', { name: 'Sign out' })).toBeVisible();
+    const account = await box(row.getByRole('link', { name: 'Account' }));
+    const cart = await box(row.getByRole('link', { name: /^Cart\b/ }));
+    const rowBox = await box(row);
+    const out = await box(signOut);
+    expect(out.top, 'inside the row').toBeGreaterThanOrEqual(rowBox.top - 1);
+    expect(out.bottom, 'inside the row').toBeLessThanOrEqual(rowBox.bottom + 1);
+    expect(out.left, 'after Account').toBeGreaterThanOrEqual(account.right - 1);
+    expect(out.right, 'before Cart').toBeLessThanOrEqual(cart.left + 1);
+    expect(out.height, 'a 44px target, as Account and Cart').toBeGreaterThanOrEqual(44);
 });

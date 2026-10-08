@@ -10,8 +10,9 @@
 //   centred, a search link and the bag. Stock fixed its 55px bar and padded the body to match
 //   (layouts/header/_header.scss:36-44, foundation/global/_global.scss:17-22); a sticky bar needs
 //   no padding, and the shipping strip after it scrolls away under it.
-// - From 801px: one row of the logo, "Shop flies", the search field, Account and Cart, which
-//   scrolls away with the page as the reference's does, so --rf-header-h is 0 there.
+// - From 801px: one row of the logo, "Shop flies", the search field, Account (and Sign out,
+//   signed in) and Cart, which scrolls away with the page as the reference's does, so
+//   --rf-header-h is 0 there.
 // - scroll-padding-top keeps a focused element clear of the sticky bar (WCAG 2.4.11, story 67).
 // - The cart count is the navUser-indicator setting (#5D705C, ticket 25), and its rise ring
 //   plays once when the count goes up (rise.js), never under reduced motion.
@@ -140,8 +141,10 @@ body {
 
 
 // The logo: a link in a <div>, centred on phones and first on desktop. The 133x95 PNG is 78px
-// wide on desktop until ticket 14's master file (decision 17), and 40px tall on phones, the
-// phone bar's cap, as on the reference page; the master's horizontal lockup replaces it there.
+// wide on desktop until ticket 14's master file (decision 17). On phones it is 40px tall, as on
+// the reference page: a deviation from decision 17, which keeps the 40px phone height for the
+// master, because at 78px wide the PNG is 56px tall and fills the bar. The master's horizontal
+// lockup replaces it there.
 // -----------------------------------------------------------------------------
 
 .header-logo.rf-header-logo {
@@ -283,7 +286,7 @@ body {
 }
 
 
-// Account and Cart, and the phone's search link
+// Account, Sign out (signed in) and Cart, and the phone's search link
 // -----------------------------------------------------------------------------
 
 .rf-header-user {
@@ -323,12 +326,19 @@ body {
     }
 }
 
-.rf-header-account {
+.rf-header-account,
+.rf-header-sign-out {
     display: none;
 
     @include breakpoint("medium") {
         display: inline-flex;
     }
+}
+
+// Signed in, Sign out follows Account from 801px, as text. On phones the stock drawer has it
+// (navigation-menu.html), which stock hides from 801px.
+.rf-header-sign-out {
+    white-space: nowrap;
 }
 
 // The labels are always in the links' names; on screen, Cart's from 801px and Account's from
