@@ -32,7 +32,6 @@ const hero = (uuids = { template: null, widget: null, placement: null }, placeme
 };
 const recorded = { template: T, widget: W, placement: P };
 
-// The store's objects, as the Widgets API lists them for the channel.
 // The store's objects, in the shape the first --record after an apply read (2026-10-07): the store
 // adds "_": { "id": <the widget's uuid> } to a widget_configuration, a template_engine to a
 // template and an empty entity_id to a placement.
@@ -157,11 +156,33 @@ test('a channel in step with the repo needs no request', () => {
 
 test('the "_" the store adds to a widget_configuration isn\'t drift; any other "_" is', () => {
     const entry = hero(recorded);
+    // The store's own "_": { "id": <this widget's uuid> } (storeWidget adds it, as the store did).
+    assert.deepEqual(storeWidget(entry).widget_configuration._, { id: W });
+    const own = planSync({ channel: CH, entries: [entry], store: synced(entry) });
+    assert.deepEqual(own.requests, []);
+    assert.ok(own.lines.some(line => /widget rf-home-lead \(d00dfeed\): no change/.test(line)), own.lines.join('\n'));
     const other = planSync({
         channel: CH, entries: [entry], store: { ...synced(entry), widgets: [storeWidget(entry, { widget_configuration: { ...entry.channelFile.configuration, _: { id: 'someone-else' } } })] },
     });
     assert.equal(other.requests.length, 1);
-    assert.match(other.lines.join('\n'), /widget_configuration\._: \{"id":"someone-else"\} -> \(none\)|widget_configuration\._: \{"id":"someone-else"\} -> null/);
+    assert.equal(other.requests[0].body.widget_configuration._, undefined, 'the update sends the repo\'s configuration, with no "_"');
+    // The key the update leaves out reads as (none), not as a null it would send.
+    assert.ok(other.lines.includes('     widget_configuration._: {"id":"someone-else"} -> (none)'), other.lines.join('\n'));
+});
+
+test('a recorded template the store saves with another engine stops the sync, but not an unpublish', () => {
+    const entry = hero(recorded, { status: 'active' });
+    for (const engine of ['handlebars_v4', undefined]) {
+        const store = { ...synced(entry), templates: [storeTemplate(entry, { template_engine: engine })] };
+        const { requests, problems } = planSync({ channel: CH, entries: [entry], store });
+        assert.deepEqual(requests, []);
+        assert.match(problems.join('\n'), new RegExp(`home-lead: template c0ffee00 on channel 1895766 is saved with template_engine ${engine === undefined ? '\\(none\\)' : `"${engine}"`}, not "handlebars_v3"`));
+        const unpublish = planSync({
+            channel: CH, entries: [entry], store, unpublish: 'home-lead',
+        });
+        assert.deepEqual(unpublish.problems, []);
+        assert.equal(unpublish.requests.length, 1);
+    }
 });
 
 test('an update sends only the fields that changed, with the channel', () => {

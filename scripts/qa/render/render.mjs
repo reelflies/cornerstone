@@ -17,11 +17,13 @@
 // - each render with a fresh renderer, so assignVar and getVar start empty, as each page
 //   request does
 //
-// Widget templates render the way the store renders a widget: widget_configuration at the
-// top level of the context, the storefront_api_query result as `_.data`, and the widget's id
-// as `_.id` (here a fixed id, so a shot is the same on every run). A widget template can't
-// include theme partials or read lang strings; it can include the partials in
-// widgets/_shared/, which the widget sync must inline before upload (ticket 46).
+// Widget templates render the way the store renders a widget: with the store's engine,
+// Handlebars 3 (scripts/widgets/engine.mjs: the store saves widget templates as handlebars_v3,
+// and the Widgets API takes no engine), widget_configuration at the top level of the context,
+// the storefront_api_query result as `_.data`, and the widget's id as `_.id` (here a fixed id,
+// so a shot is the same on every run). A widget template can't include theme partials or read
+// lang strings; it can include the partials in widgets/_shared/, which the widget sync pastes
+// into the store's copy (ticket 46). Theme partials and pages stay on config.json's engine.
 //
 // One deliberate difference: a helper the store doesn't have fails the render. The store
 // renders `{{shout name}}` as nothing (stencil-paper-handlebars' helperMissing), which would
@@ -39,6 +41,7 @@ import lodash from 'lodash';
 // loader needs the .js.
 import Paper from '@bigcommerce/stencil-paper'; // eslint-disable-line import/no-extraneous-dependencies
 import templateAssembler from '@bigcommerce/stencil-cli/lib/template-assembler.js'; // eslint-disable-line import/extensions, import/no-extraneous-dependencies
+import { STORE_ENGINE } from '../../widgets/engine.mjs';
 
 const require = createRequire(import.meta.url);
 const HELPERS_VERSION = require('@bigcommerce/stencil-paper-handlebars/package.json').version; // eslint-disable-line import/no-extraneous-dependencies
@@ -54,7 +57,8 @@ export const PLACEMENT_ID = '0f1c5e00-0000-4000-8000-000000000002';
 export const WIDGET_SITE_SETTINGS = { cdn_url: 'https://cdn11.bigcommerce.com/s-fixture' };
 // stencil start passes the request's Accept-Language, lowercased; the gates send en-CA.
 const ACCEPT_LANGUAGE = 'en-ca';
-const WIDGET_ENGINE = 'handlebars-v4';
+// Paper names its engines handlebars-v3 and handlebars-v4.
+export const WIDGET_ENGINE = STORE_ENGINE.replace('_', '-');
 const FRONT_MATTER = /^---\r?\n[\S\s]*?\r?\n---\r?\n/;
 
 const relative = file => path.relative(THEME_DIR, file) || '.';
@@ -238,8 +242,9 @@ function sharedWidgetPartials(root) {
 }
 
 // Renders widgets/<widget>/template.html with a fixture's `configuration` (the widget's
-// widget_configuration) and `data` (the storefront_api_query result). Returns the template's
-// output, without the wrapper the store adds around it (widget-page.mjs adds that).
+// widget_configuration) and `data` (the storefront_api_query result), with the store's engine.
+// Returns the template's output, without the wrapper the store adds around it (widget-page.mjs
+// adds that).
 //
 // options: root (the widgets folder, default widgets/), strict (as for renderPartial; it also
 // fails lang, langJson, inject, jsContext and region, which need the theme's page context)

@@ -1,6 +1,7 @@
 // Tests scripts/widgets/source.mjs (ticket 46): reading a widget and its per-channel file from
-// widgets/<name>/, inlining widgets/_shared/ partials, emptying the template's comments, and
-// writing back the recorded uuids.
+// widgets/<name>/, emptying the template's comments, pasting widgets/_shared/ partials
+// (paste.mjs), and writing back the recorded uuids. Every store copy is rendered with the
+// store's engine, Handlebars 3 (engine.mjs).
 //
 //   node --test scripts/widgets/source.test.mjs
 
@@ -10,13 +11,15 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
-import { renderWidget, widgetCases } from '../qa/render/render.mjs';
+import { WIDGET_ENGINE, renderWidget, widgetCases } from '../qa/render/render.mjs';
+import { Handlebars3, STORE_ENGINE } from './engine.mjs';
+import { pasteShared } from './paste.mjs';
 import {
-    SYNC_CHANNELS, WIDGETS_DIR, emptyComments, entriesFor, inlineShared, readChannelFile, readWidget, setPlacementStatus, writeUuids,
+    SYNC_CHANNELS, WIDGETS_DIR, emptyComments, entriesFor, readChannelFile, readWidget, setPlacementStatus, writeUuids,
 } from './source.mjs';
 
 const require = createRequire(import.meta.url);
-// The Handlebars build Paper renders with (config.json's handlebars_v4), to read a template's comments.
+// Handlebars 4's parser, for parseWithoutProcessing, to read a template's comments where they are written.
 const Handlebars = require('@bigcommerce/handlebars-v4'); // eslint-disable-line import/no-extraneous-dependencies
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-widgets-source-'));
@@ -89,7 +92,7 @@ test('a widget\'s schema and query are what the store gets, and its template wit
 });
 
 // A widgets folder holding only `name`, whose template.html is `template`: the store's copy, which
-// renderWidget then renders as the store would (it has no _shared partials to include).
+// renderWidget then renders with the store's engine and no _shared partials to include.
 function storeCopy(name, template) {
     const root = fs.mkdtempSync(path.join(tmp, 'stored-'));
     fs.mkdirSync(path.join(root, name));
@@ -97,8 +100,8 @@ function storeCopy(name, template) {
     return root;
 }
 
-// Renders `template` as the fixture renderer does and as the store would, from the copy readWidget
-// gives the store, and returns both renders and that copy.
+// Renders `template` from its files and from the copy readWidget gives the store, both with the
+// store's engine, and returns both renders and that copy.
 async function renderBoth(template, configuration = { text: 'Hello' }) {
     const { root } = widgetsRoot('rf-x', { template });
     const stored = readWidget('rf-x', { root }).template;
@@ -120,7 +123,7 @@ const commentsIn = template => {
     return found;
 };
 
-test('each comment is emptied to {{!}} with its ~ flags, so the store renders exactly what the fixture renderer renders', async () => {
+test('each comment is emptied to {{!}} with its ~ flags, so the store copy renders as the files do', async () => {
     const template = [
         '{{!--',
         '    A note naming <width>, <path> and }} inside a block comment.',
@@ -177,17 +180,17 @@ test('each comment is emptied to {{!}} with its ~ flags, so the store renders ex
     assert.equal(loop.store, loop.fixture);
 });
 
-test('a _shared partial\'s comments are emptied too, after it is inlined', async () => {
+test('a _shared partial\'s comments never reach the store: its body is pasted without them', async () => {
     const { root } = widgetsRoot('rf-x', { template: '<p>{{> _shared/rf-note text=text}}</p>\n' });
     fs.mkdirSync(path.join(root, '_shared'));
     fs.writeFileSync(path.join(root, '_shared', 'rf-note.html'), '{{!-- the note <b> --}}\n<em>{{text}}</em>\n');
     const stored = readWidget('rf-x', { root }).template;
-    assert.ok(stored.includes('{{#*inline "_shared/rf-note"}}\n{{!}}\n<em>{{text}}</em>\n{{/inline}}'), stored);
+    assert.equal(stored, '<p>{{!}}{{!}}<em>{{text}}</em>\n{{!}}{{!}}</p>\n');
     const fixture = { configuration: { text: 'Hello' } };
     assert.equal(await renderWidget('rf-x', fixture, { root: storeCopy('rf-x', stored) }), await renderWidget('rf-x', fixture, { root }));
 });
 
-test('a partial call inside a comment is neither inlined nor refused: notes may name any partial', async () => {
+test('a partial call inside a comment is neither pasted nor refused: notes may name any partial', async () => {
     const { root } = widgetsRoot('rf-x', { template: '{{!-- built like {{> components/products/card}}, once {{> _shared/old-card}} --}}<p>{{text}}</p>' });
     assert.equal(readWidget('rf-x', { root }).template, '{{!}}<p>{{text}}</p>');
     // In a _shared partial too.
@@ -208,23 +211,49 @@ test('a comment Handlebars misplaces is refused, naming the template, rather tha
     }
 });
 
-test('a template Handlebars can\'t parse is refused, naming its file', () => {
-    const { root } = widgetsRoot('rf-x', { template: '<p>{{#if text}}</p>' });
-    assert.throws(() => readWidget('rf-x', { root }), /^Error: widgets\/rf-x\/template\.html: Parse error/);
+test('a template Handlebars 3 can\'t parse is refused, naming its file, with its own line numbers', () => {
+    const { root } = widgetsRoot('rf-x', { template: '{{!-- a note\n   over two lines --}}\n<p>{{#if text}}</p>' });
+    assert.throws(() => readWidget('rf-x', { root }), /^Error: widgets\/rf-x\/template\.html: Handlebars 3, the store's engine \(handlebars_v3\), can't parse it: Parse error on line 3/);
+    // A form only Handlebars 4 has, such as an inline partial, is refused too.
+    const inline = widgetsRoot('rf-x', { template: '<p>{{> x}}</p>\n{{#*inline "x"}}<b>{{text}}</b>{{/inline}}\n' }).root;
+    assert.throws(() => readWidget('rf-x', { root: inline }), /^Error: widgets\/rf-x\/template\.html: Handlebars 3, .*on line 2/s);
+});
+
+test('an error in a _shared partial names the partial file, with the partial\'s own line numbers', () => {
+    const { root } = widgetsRoot('rf-x', { template: '<div>\n<p>{{> _shared/rf-note text=text}}</p>\n</div>\n' });
+    fs.mkdirSync(path.join(root, '_shared'));
+    fs.writeFileSync(path.join(root, '_shared', 'rf-note.html'), '<em>\n{{#if text}}{{text}}</em>\n');
+    assert.throws(() => readWidget('rf-x', { root }), /^Error: widgets\/rf-x\/template\.html: widgets\/_shared\/rf-note\.html: Handlebars 3, .*Parse error on line 3:/s);
 });
 
 // The void elements in a template that don't close with "/>" (BigCommerce's own examples close
-// <img … />; the store doesn't say what its HTML check reads).
-const unclosedVoids = template => (template.match(/<(?:area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)\b[^>]*>/gi) ?? [])
-    .filter(tag => !/\/\s*>$/.test(tag));
+// <img … />; the store doesn't say what its HTML check reads). As the HTML tokenizer (parse5)
+// reads a tag: the match steps over quoted attribute values, and "/>" closes the tag only after a
+// quote, whitespace or the bare tag name, so an unquoted value can't swallow the "/".
+const unclosedVoids = template => (template.match(/<(?:area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)\b(?:"[^"]*"|'[^']*'|[^'">])*>/gi) ?? [])
+    .filter(tag => !/(?:^<[a-z]+|["'\s])\/>$/i.test(tag));
 
-test('a void element counts as closed only with "/>", attributes or none', () => {
-    assert.deepEqual(unclosedVoids('<p>a<br>b<hr><img src="x"><input type="text" ></p>'), ['<br>', '<hr>', '<img src="x">', '<input type="text" >']);
-    assert.deepEqual(unclosedVoids('<p>a<br/>b<br />c<img src="x" / ><wbr /></p><b>not void</b>'), []);
+test('a void element counts as closed only with "/>" after a quote, whitespace or its bare name', () => {
+    assert.deepEqual(
+        unclosedVoids('<p>a<br>b<hr><img src="x"><input type="text" ><IMG SRC=x><col span="2"></p>'),
+        ['<br>', '<hr>', '<img src="x">', '<input type="text" >', '<IMG SRC=x>', '<col span="2">'],
+    );
+    // "/ >" isn't a self-closing tag to the tokenizer, an unquoted value takes the "/", and a ">"
+    // inside a quoted value doesn't end the tag.
+    assert.deepEqual(
+        unclosedVoids('<img src="x" / ><br/ ><img src=x/><img src={{text}}/><img alt="a/>b" src="x">'),
+        ['<img src="x" / >', '<br/ >', '<img src=x/>', '<img src={{text}}/>', '<img alt="a/>b" src="x">'],
+    );
+    assert.deepEqual(unclosedVoids([
+        '<p>a<br/>b<br />c<img src="x" /><img src="x"/><wbr /><img alt="5 > 3" src="x" />',
+        '<img\n    src="x"\n    alt="{{lang \'a\'}}"\n/><input {{#if a}}checked{{/if}} /></p><colgroup></colgroup><b>not void</b>',
+    ].join('')), []);
 });
 
-// Each widget's store copy, rendered with every fixture.
-test('every widget has a fixture, and renders from the store\'s copy as from its files, with no comment text and its void elements closed', async () => {
+// Each widget's store copy, rendered with every fixture, with the engine the store renders it with.
+test('every widget has a fixture, and renders from the store\'s copy as from its files under the store\'s engine, with no comment text and its void elements closed', async () => {
+    assert.equal(STORE_ENGINE, 'handlebars_v3');
+    assert.equal(WIDGET_ENGINE, 'handlebars-v3', 'renderWidget renders with the store\'s engine');
     const cases = widgetCases();
     const widgets = fs.readdirSync(WIDGETS_DIR, { withFileTypes: true })
         .filter(entry => entry.isDirectory() && !entry.name.startsWith('_')).map(entry => entry.name).sort();
@@ -236,11 +265,29 @@ test('every widget has a fixture, and renders from the store\'s copy as from its
             const { template } = readWidget(widget);
             assert.ok(commentsIn(template).every(comment => comment.value === ''), `${widget}: a comment keeps text`);
             assert.deepEqual(unclosedVoids(template), [], `${widget}: a void element isn't closed with />`);
+            assert.doesNotThrow(() => Handlebars3.parse(template), `${widget}: Handlebars 3 can't parse the store copy`);
             stored[widget] = storeCopy(widget, template);
         }
         // eslint-disable-next-line no-await-in-loop
         assert.equal(await renderWidget(widget, fixture, { root: stored[widget] }), await renderWidget(widget, fixture), `${widget} with ${name}`);
     }
+});
+
+test('a schema setting can\'t have the id "_", which the store and the renderer give the widget itself', () => {
+    const schema = [{
+        type: 'tab',
+        label: 'Content',
+        sections: [{
+            label: 'Text',
+            settings: [{
+                type: 'input', label: 'Text', id: 'text', default: '',
+            }, {
+                type: 'input', label: 'Note', id: '_', default: '',
+            }],
+        }],
+    }];
+    const { root } = widgetsRoot('rf-x', { schema, channel: { configuration: { text: 'hi', _: 'note' } } });
+    assert.throws(() => readWidget('rf-x', { root }), /widgets\/rf-x\/schema\.json: the setting id "_" is the store's own key/);
 });
 
 test('a widget without template.html or schema.json, or with a schema that isn\'t an array, is refused', () => {
@@ -305,25 +352,27 @@ test('the real widgets folder has the hero on 1895766', () => {
     assert.ok(entriesFor(1895766).some(entry => entry.widget.name === 'home-lead'));
 });
 
-test('_shared partials are inlined as inline partials, so the store renders what the fixture renderer renders', async () => {
+test('_shared partials are pasted in place, so the store copy has no partial and renders as the files do', async () => {
     const source = fs.readFileSync(path.join(RENDER_FIXTURES, 'rf-render-band', 'template.html'), 'utf8');
-    const inlined = inlineShared(source, RENDER_FIXTURES);
-    assert.ok(inlined.startsWith(source), 'the template is kept as it is');
-    assert.match(inlined.slice(source.length), /^\{\{#\*inline "_shared\/rf-render-price"\}\}\n[\s\S]*\n\{\{\/inline\}\}\n$/);
-    assert.ok(inlined.includes('{{> _shared/rf-render-price price=node.prices.price}}'), 'the call is kept, with its hash arguments');
-    // Rendered with no _shared folder at all, the inlined template gives the same HTML.
+    const pasted = pasteShared(emptyComments(source), { root: RENDER_FIXTURES });
+    assert.doesNotMatch(pasted, /\{\{#?>|\{\{#\*inline/);
+    assert.ok(pasted.includes('{{node.name}} {{!}}{{!}}<span class="rf-render-band__price">{{node.prices.price.value}} {{node.prices.price.currencyCode}}</span>\n{{!}}{{!}}</li>'), pasted);
+    // Rendered with no _shared folder at all, the pasted template gives the same HTML.
     const empty = fs.mkdtempSync(path.join(tmp, 'no-shared-'));
-    fs.mkdirSync(path.join(empty, 'rf-inlined'));
-    fs.writeFileSync(path.join(empty, 'rf-inlined', 'template.html'), inlined);
+    fs.mkdirSync(path.join(empty, 'rf-pasted'));
+    fs.writeFileSync(path.join(empty, 'rf-pasted', 'template.html'), pasted);
     const fixture = JSON.parse(fs.readFileSync(path.join(RENDER_FIXTURES, 'rf-render-band', 'fixtures', 'two-in-stock.json'), 'utf8'));
-    assert.equal(await renderWidget('rf-inlined', fixture, { root: empty }), await renderWidget('rf-render-band', fixture, { root: RENDER_FIXTURES }));
+    assert.equal(await renderWidget('rf-pasted', fixture, { root: empty }), await renderWidget('rf-render-band', fixture, { root: RENDER_FIXTURES }));
 });
 
-test('a template that includes anything but a _shared partial, or a missing one, is refused', () => {
-    const { root } = widgetsRoot('rf-x');
-    assert.throws(() => inlineShared('{{> components/products/card}}', root), /a store widget can't include the theme partial components\/products\/card/);
-    assert.throws(() => inlineShared('{{> _shared/rf-nope}}', root), /widgets\/_shared\/rf-nope\.html doesn't exist/);
-    assert.equal(inlineShared('<p>{{text}}</p>', root), '<p>{{text}}</p>');
+test('a template that includes anything but a _shared partial, or a missing one, is refused, naming its file', () => {
+    for (const [template, error] of [
+        ['<p>{{> components/products/card}}</p>', /^Error: widgets\/rf-x\/template\.html: a store widget can't include the theme partial components\/products\/card/],
+        ['<p>{{> _shared/rf-nope}}</p>', /^Error: widgets\/rf-x\/template\.html: widgets\/_shared\/rf-nope\.html doesn't exist/],
+    ]) {
+        const { root } = widgetsRoot('rf-x', { template });
+        assert.throws(() => readWidget('rf-x', { root }), error);
+    }
 });
 
 test('recorded uuids and a placement status are written back into the channel file, and nothing else changes', () => {
