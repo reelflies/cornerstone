@@ -14,27 +14,15 @@ import { pageKind } from './pages.mjs';
 
 export const KNOWN_ISSUES = [
     // Stock Cornerstone's desktop sub-menu, open (the panel-open state on channel 1's category
-    // page, 2026-10-06). Ticket 28 replaces it with the grouped "Shop flies" panel.
+    // page, 2026-10-06), inside ticket 27's "Shop flies" panel since 2026-10-07. Ticket 28
+    // replaces it with the grouped panel. The sub-menu's color-contrast and target-size issues
+    // no longer occur in ticket 27's panel (axe, 2026-10-07), so their entries went.
     {
         rule: 'aria-hidden-focus',
         templates: ['category'],
         states: ['panel-open'],
         ticket: 28,
         why: 'the closed sub-menus beside the open one keep aria-hidden="true" while their links stay focusable',
-    },
-    {
-        rule: 'color-contrast',
-        templates: ['category'],
-        states: ['panel-open'],
-        ticket: 28,
-        why: 'the open sub-menu shows the current category\'s link, and a sub-category with children, in grey on its grey background',
-    },
-    {
-        rule: 'target-size',
-        templates: ['category'],
-        states: ['panel-open'],
-        ticket: 28,
-        why: 'the open sub-menu\'s "All Flies" link is shorter than 24 px, with no space around it',
     },
 ];
 

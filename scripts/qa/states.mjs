@@ -19,10 +19,11 @@
 // (baselineName in pages.mjs), so a PR that changes it declares its page kind on the
 // "Baselines:" line, as for the closed page.
 //
-// The states open stock Cornerstone's UI today. Tickets 27 to 29 rebuild the header, the
-// phone drawer and the desktop panel; each points its state at its own UI when it lands, and
-// may wait for its token in <html data-rf-open> (build pipeline, section 6.9). A ticket adds a
-// state in its own slot below.
+// The states open stock Cornerstone's UI today, from ticket 27's header: its Menu button (the
+// stock toggle) and its "Shop flies" panel round the stock desktop menu. Tickets 28 and 29
+// rebuild the phone drawer and the desktop panel; each points its state at its own UI when it
+// lands, and may wait for its token in <html data-rf-open> (build pipeline, section 6.9). A
+// ticket adds a state in its own slot below.
 
 export const STATE_NAME = /^[a-z0-9][a-z0-9-]*$/;
 
@@ -46,11 +47,19 @@ export const UI_STATES = {
         ticket: '28',
         projects: ['desktop-1280'],
         pages: ['category'],
-        // Stock: the first category with children opens its sub-menu (menu.js and
-        // collapsible.js), from the keyboard, so the pointer stays off the menu. Ticket 28
-        // points this at the "Shop flies" panel, and ticket 29 adds a state per pane if it
-        // needs one.
+        // Ticket 27's one-row header holds the stock menu in the panel "Shop flies" opens
+        // (header.js), so that opens first, from the keyboard. Then, stock: the first category
+        // with children opens its sub-menu (menu.js and collapsible.js), from the keyboard, so
+        // the pointer stays off the menu. Ticket 28 points this at its grouped panel, and ticket
+        // 29 adds a state per pane if it needs one.
         async open(page) {
+            const shop = page.locator('[data-rf-shop]');
+            if (await shop.count()) {
+                await page.waitForFunction(() => performance.getEntriesByType('resource')
+                    .some(entry => new URL(entry.name).pathname.endsWith('/theme-bundle.chunk.rf-header.js')));
+                await shop.press('Enter');
+                await page.locator('#menu').waitFor({ state: 'visible' });
+            }
             const action = page.locator('.navPages-list > .navPages-item > .navPages-action.has-subMenu').first();
             await action.press('Enter');
             await page.locator('.navPages-list > .navPages-item > .navPage-subMenu.is-open').first().waitFor({ state: 'visible' });

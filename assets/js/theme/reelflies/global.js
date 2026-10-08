@@ -18,7 +18,9 @@ import $ from 'jquery';
 import followReducedMotion from './reduced-motion';
 
 export const GLOBAL_MODULES = [
-    // 27 header: rise ring
+    // 27 header: Escape and "Shop flies" (header.js), and the rise ring behind rf_rise (rise.js)
+    () => import(/* webpackChunkName: "rf-header" */ './header').then(module => module.default()),
+    context => context.rfRise && import(/* webpackChunkName: "rf-rise" */ './rise').then(module => module.default(context)),
 
     // 28 grouped menu and phone drawer
 
