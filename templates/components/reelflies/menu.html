@@ -1,0 +1,65 @@
+{{!--
+    The grouped "Shop flies" menu (ticket 28; spec modules 3 and 4; O05-O08, SEO-3, BUILD-2,
+    UX-2): one server-rendered <nav> that is both the desktop panel and the phone drawer. The
+    ReelFlies header (header.html) renders it in #menu when rf_menu_type_ids or
+    rf_menu_species_root_id is set; with both empty, the stock navigation renders there instead.
+    Styles: assets/scss/reelflies/_menu.scss. Behaviour: assets/js/theme/reelflies/menu.js, which
+    only toggles hidden and aria-expanded and never builds a link.
+
+    - Fly types: each id in rf_menu_type_ids, in that order, found at the top level or one level
+      down (tree 1's Fly-Type-like categories sit under Flies). An id the tree doesn't hold
+      renders nothing; the release guard refuses one before a push.
+    - Then a divider and Flies by Species, the category rf_menu_species_root_id names, with no
+      group label. Its pane lists its children only, the Species names (decision 3), so Menu
+      Display Depth stays 3 for the Species hub (ticket 34).
+    - Then More from ReelFlies: every other top-level category in the categories data's order,
+      except those in rf_menu_exclude_ids. Children already in the rail stay out of its pane, and
+      a category left with no children is a plain link.
+    - Each category with children is a row: its name is the link, and a separate button opens its
+      pane (aria-expanded, aria-controls). The pane's heading is the link again, then the
+      children; there is no "All {category}" line (O06). On phones the row is the drawer's split
+      row and the pane expands under it; from 801px the button is the rail item and the pane
+      sits beside the rail.
+    - The drawer footer closes the nav (drawer-footer.html). From 801px only its Hook size chart
+      link shows, at the foot of the rail.
+    - Web Pages aren't printed: Help pages are in the drawer footer and the footer (ticket 50).
+    - Every category link carries data-rf-category, its id, which ticket 30's quick search reads
+      (build pipeline 6.9).
+
+    scripts/qa/menu-urls.mjs states the same rules in JavaScript for the tests.
+--}}
+<nav class="rf-menu" aria-label="{{lang 'reelflies.menu.label'}}" data-rf-menu>
+    {{#if (trim theme_settings.rf_menu_type_ids)}}
+    <div class="rf-menu-group">
+        <p class="rf-menu-label" id="rf-menu-types">{{lang 'reelflies.menu.types'}}</p>
+        <ul class="rf-menu-list" aria-labelledby="rf-menu-types">
+            {{#each (split theme_settings.rf_menu_type_ids ',') as |rfId|}}
+            {{#each @root.categories as |rfTop|}}
+            {{#if rfTop.id '==' (trim rfId)}}{{> components/reelflies/menu-item rf_cat=rfTop}}{{/if}}
+            {{#each rfTop.children as |rfChild|}}
+            {{#if rfChild.id '==' (trim rfId)}}{{> components/reelflies/menu-item rf_cat=rfChild}}{{/if}}
+            {{/each}}
+            {{/each}}
+            {{/each}}
+        </ul>
+    </div>
+    {{/if}}
+    {{#if (trim theme_settings.rf_menu_species_root_id)}}
+    {{#each categories as |rfTop|}}
+    {{#if rfTop.id '==' (trim @root.theme_settings.rf_menu_species_root_id)}}{{> components/reelflies/menu-species rf_cat=rfTop}}{{/if}}
+    {{#each rfTop.children as |rfChild|}}
+    {{#if rfChild.id '==' (trim @root.theme_settings.rf_menu_species_root_id)}}{{> components/reelflies/menu-species rf_cat=rfChild}}{{/if}}
+    {{/each}}
+    {{/each}}
+    {{/if}}
+    <div class="rf-menu-group">
+        <p class="rf-menu-label" id="rf-menu-more">{{lang 'reelflies.menu.more'}}</p>
+        <ul class="rf-menu-list" aria-labelledby="rf-menu-more">
+            {{#each categories as |rfTop|}}
+            {{> components/reelflies/menu-in-rail rf_id=rfTop.id rf_exclude=true}}
+            {{#unless (getVar 'rf_menu_rail')}}{{> components/reelflies/menu-item rf_cat=rfTop rf_more=true}}{{/unless}}
+            {{/each}}
+        </ul>
+    </div>
+    {{> components/reelflies/drawer-footer}}
+</nav>

@@ -4,8 +4,9 @@
 // strip-region; the shipping strip's own place is shipping-strip-screens.spec.mjs's.
 //
 // - At 1280: one row holding the logo, "Shop flies", a visible search field, Account and Cart,
-//   and no Saved, Compare or Gift Certificates link. "Shop flies" opens the stock menu as a panel
-//   until ticket 28, and Escape closes it with focus back on the button.
+//   and no Saved, Compare or Gift Certificates link. "Shop flies" opens #menu as a panel (ticket
+//   28's grouped menu, or the stock menu while both menu ids are empty), and Escape closes it with
+//   focus back on the button. The grouped menu's own checks are menu.spec.mjs's.
 // - At 375: a 56px bar that stays at the top as the page scrolls. Menu is a <button> reading
 //   "Menu" with aria-expanded; open, it reads "Close" and <html data-rf-open> holds "drawer";
 //   Escape closes the drawer with focus back on the button.
@@ -143,7 +144,7 @@ for (const key of PINS) {
         await expect(page.locator('html')).not.toHaveAttribute('data-rf-open', /drawer/);
     });
 
-    test(`${key}: "Shop flies" opens the menu panel at 1280 until ticket 28, and Escape closes it${label(QA_OVERLAY)}`, async ({ page }, testInfo) => {
+    test(`${key}: "Shop flies" opens the menu panel at 1280, and Escape closes it${label(QA_OVERLAY)}`, async ({ page }, testInfo) => {
         test.skip(!desktop(testInfo), '"Shop flies" is the desktop control');
         await open(page, key);
         const shop = page.getByRole('button', { name: 'Shop flies' });
@@ -172,8 +173,9 @@ for (const key of PINS) {
 
     test(`${key}: no script error, though the stock scripts no longer find the stock header's markup${label(QA_OVERLAY)}`, async ({ page }) => {
         // cart-preview.js and compare-products.js bind to markup that was in the stock
-        // navigation.html, which the ReelFlies header no longer includes; quick-search.js binds to
-        // the drawer's stock quick-search form (navigation-menu.html:2-4) until ticket 28.
+        // navigation.html, which the ReelFlies header no longer includes; quick-search.js finds no
+        // form in ticket 28's grouped drawer, and binds to the stock drawer's (navigation-menu.html:2-4)
+        // in the fallback.
         const errors = [];
         page.on('pageerror', error => errors.push(error.message));
         await open(page, key);
@@ -266,7 +268,7 @@ fixtureTest('signed in, Sign out is in the row from 801px; on phones it is the d
     const signOut = row.locator('[data-rf-sign-out]');
     await expect(signOut).toHaveCount(1);
     await expect(signOut).toHaveAttribute('href', '/login.php?action=logout');
-    await expect(page.locator('#menu a[href="/login.php?action=logout"]'), 'the stock drawer keeps its own').toHaveCount(1);
+    await expect(page.locator('#menu a[href="/login.php?action=logout"]'), 'the drawer keeps its own: the grouped footer\'s, or the stock drawer\'s').toHaveCount(1);
     if (!desktop(testInfo)) {
         await expect(signOut, 'phones sign out from the drawer, as stock').toBeHidden();
         return;

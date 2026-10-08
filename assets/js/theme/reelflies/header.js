@@ -5,12 +5,14 @@
 //   closes the drawer and gives focus back to the button. The button's visible label, "Menu" or
 //   "Close", follows aria-expanded in CSS (_header.scss), so it is right before this loads.
 // - While the drawer is open, <html data-rf-open> holds "drawer" (open-state.js; build pipeline
-//   6.9), which ticket 52's prompt waits on. Ticket 28 rebuilds the drawer and takes this over.
-// - "Shop flies", on desktop, opens the stock menu (#menu, stock navigation-menu.html) as a
-//   panel under the header row, until ticket 28's grouped panel replaces it (ticket 26's
-//   finding 2: the one-row header took the stock desktop menu out of the page). Escape, a click
-//   outside the header and focus leaving the header close it; Escape gives focus back to the
-//   button. It closes too when the window narrows to the phone layout, where Menu takes over.
+//   6.9), which ticket 52's prompt waits on. It follows the Menu button, so it covers ticket 28's
+//   grouped drawer and the stock fallback alike.
+// - "Shop flies", on desktop, opens #menu as a panel under the header row: ticket 28's grouped
+//   menu (menu.js shows its pane and moves focus into it), or the stock menu while both menu
+//   ids are empty (ticket 26's finding 2: the one-row header took the stock desktop menu out of
+//   the page). Escape, a click outside the header and focus leaving the header close it; Escape
+//   gives focus back to the button. It closes too when the window narrows to the phone layout,
+//   where Menu takes over.
 
 import { markClosed, markOpen } from './open-state';
 
