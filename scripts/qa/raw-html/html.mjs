@@ -8,7 +8,7 @@
 //   as 'application/ld+json', skipping scripts inside comments.
 // - elementsHtml(html, name, test) and outerHtml(html, name, test) return an element's
 //   whole markup; textOf(html) its text as a browser shows it; decodeHtml(text) an
-//   attribute's text. Tickets 27, 28, 33 and 50 share them (ticket 50's review).
+//   attribute's text. Tickets 27, 28, 29, 30, 33, 46 and 50 share them (ticket 50's review).
 
 const ATTRIBUTES = String.raw`((?:[^>"']|"[^"]*"|'[^']*')*)`;
 const COMMENT_OR_TEXT_ELEMENT = new RegExp(String.raw`<!--[\s\S]*?-->|<(script|style|textarea|title)\b${ATTRIBUTES}>[\s\S]*?<\/\1\s*>`, 'gi');

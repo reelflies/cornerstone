@@ -18,8 +18,9 @@ const WIDTHS = [320, 480, 640, 960, 1280, 1600];
 const classes = tag => (tag.attrs.class || '').split(/\s+/);
 
 // The outer HTML of the first <div> with the class, counting nested divs, or null. Comments
-// and the text of scripts and styles don't count, as for findTags.
-export const heroHtml = source => outerHtml(source, 'div', attrs => (attrs.class || '').split(/\s+/).includes(HERO_CLASS));
+// and the text of scripts and styles don't count, as for findTags. The class is read as a
+// browser reads it: in any quotes or none, in any case of DIV, and never from another attribute.
+export const heroHtml = source => outerHtml(source, 'div', attrs => classes({ attrs }).includes(HERO_CLASS));
 
 const text = html => html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 

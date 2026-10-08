@@ -13,8 +13,8 @@
 // - From 801px: a card under the header row, the rail 300px wide on the left. Each row's button
 //   is the rail item (its name shows; the name link hides), and its pane sits beside the rail:
 //   the heading as the link, then the children in two columns. Only the footer's Hook size
-//   chart link shows, at the foot of the rail. Hover intent, the arrow keys, the banner strip
-//   and the viewport cap are ticket 29's (_rail.scss).
+//   chart link shows, at the foot of the rail. Hover intent and the arrow keys are ticket 29's
+//   (menu.js), and so are the banner strip and the viewport cap (_rail.scss).
 // - menu.js sets hidden and aria-expanded; the layout reads only them.
 //
 // -----------------------------------------------------------------------------
@@ -215,6 +215,8 @@ $rf-menu-max:     1176px;   // the desktop card's width, as the reference's .meg
         pointer-events: none;
     }
 
+    // The card. The rail's right edge, its min- and max-height and its scrolling are _rail.scss's
+    // (ticket 29).
     .rf-menu {
         border-radius: var(--rf-radius-tile);
         border-top: 0;
@@ -225,7 +227,6 @@ $rf-menu-max:     1176px;   // the desktop card's width, as the reference's .meg
         padding: 14px 10px 12px;
         pointer-events: auto;
         position: relative;
-        // The rail's right edge, the card's height and its scrolling are _rail.scss's (ticket 29).
     }
 
     .rf-menu-group,

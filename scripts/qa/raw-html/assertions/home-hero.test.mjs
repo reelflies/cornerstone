@@ -75,6 +75,10 @@ test('the hero is found by its element, never by text in a script or a comment',
     assert.equal(heroHtml('<script>var x = \'<div class="rf-hero">\';</script><!-- <div class="rf-hero"> -->'), null);
     // The class as a whole word, anywhere in the list, and the <div> to its own end tag.
     assert.equal(heroHtml('<div class="rf-hero__media"><div class="x rf-hero y"><div></div></div><p>after</p></div>'), '<div class="x rf-hero y"><div></div></div>');
+    // Read as a browser reads the attributes (rf/standards on 5d61f352, minor 4).
+    assert.equal(heroHtml("<div class='rf-hero'></div>"), "<div class='rf-hero'></div>");
+    assert.equal(heroHtml('<DIV class=rf-hero></DIV>'), '<DIV class=rf-hero></DIV>');
+    assert.equal(heroHtml('<div data-class="rf-hero"></div>'), null);
 });
 
 test('each broken promise of the hero is named', async () => {
