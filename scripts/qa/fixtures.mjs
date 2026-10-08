@@ -40,7 +40,7 @@ import { analyticsMode, isAfterFlip } from './analytics-hosts.mjs';
 import { guardChannel, guardRequestContext, installNetworkGuard } from './network-guard.mjs';
 import { firstInteraction } from './page-checks.mjs';
 import {
-    expectedStatus, pageKind, pinnedPages, screenshotStyle,
+    HIDDEN_FROM_LOAD, expectedStatus, pageKind, pinnedPages, screenshotStyle,
 } from './pages.mjs';
 import { withRetries } from './retry.mjs';
 import {
@@ -95,6 +95,28 @@ const QUERIED = queriedSwitches(SWITCH_VALUES).length > 0;
 
 // A pinned page's path as this run opens it.
 export const pinPath = template => withQuery(PAGES[template], SWITCH_QUERY);
+
+// Takes HIDDEN_FROM_LOAD out of the layout from the page's first layout, with a stylesheet
+// every new document in the page gets before its own scripts run. Call it before page.goto.
+export async function hideWidgetsFromLoad(page) {
+    await page.addInitScript(rule => {
+        const style = document.createElement('style');
+        style.setAttribute('data-rf-qa-hidden-from-load', '');
+        style.textContent = rule;
+        // The script runs before the parser makes <html>, so the style goes in as soon as it
+        // exists, which is before any of the body is parsed.
+        const add = () => {
+            if (!document.documentElement) return false;
+            document.documentElement.append(style);
+            return true;
+        };
+        if (!add()) {
+            new MutationObserver((records, observer) => {
+                if (add()) observer.disconnect();
+            }).observe(document, { childList: true });
+        }
+    }, `${HIDDEN_FROM_LOAD.join(',\n')} { display: none !important; }`);
+}
 
 export async function storefrontPage(page, template, pagePath = pinPath(template)) {
     const response = await withRetries(() => page.goto(pagePath, { waitUntil: 'load' }), {
