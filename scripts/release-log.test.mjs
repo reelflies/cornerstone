@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
-    addMyThemesRow, addReleaseEntry, describeStep1, formatMyThemesRow, formatPushSummary, formatReleaseEntry, lastRelease, MY_THEMES_HEADER, myThemesRows,
-    releaseBuilds, releaseEntries, releasedThemeUuids, RELEASES_TEMPLATE,
+    addMyThemesRow, addReleaseEntry, describePrelaunch, describeStep1, formatMyThemesRow, formatPushSummary, formatReleaseEntry, lastRelease, MY_THEMES_HEADER, myThemesRows,
+    prelaunchBuild, releaseBuilds, releaseEntries, releasedThemeUuids, RELEASES_TEMPLATE,
 } from './release-log.mjs';
 
 const release = {
@@ -497,4 +497,58 @@ test('ticket 17: the push summary says what Lighthouse does after the push', () 
     const summary = formatPushSummary({ ...release, lighthouse: { result: 'pending', reason: 'no QA_PREVIEW_COOKIE in this shell' } });
     assert.match(summary, /\n {2}lighthouse {2}after the push: pending host batch \(no QA_PREVIEW_COOKIE in this shell\)(\n|$)/);
     assert.match(formatPushSummary({ ...release, lighthouse: { result: 'run', reason: 'npm run qa:lighthouse on the prelaunch host' } }), /\n {2}lighthouse {2}after the push: npm run qa:lighthouse on the prelaunch host/);
+});
+
+// --- Ticket 53: whether the commit a channel-1 push sends ran on prelaunch --------------------
+
+// The paired channel-1 release pushes the commit the 1895766 build ran (ticket 56:37), and ticket
+// 56 reads that build's Lighthouse line, so a channel-1 push says whether its commit has a 1895766
+// entry, and which build is the newest there.
+const SHA_C = 'ccccccc000000000000000000000000000000003';
+
+test('ticket 53: prelaunchBuild finds the commit\'s newest 1895766 entry, and the newest prelaunch build of any commit', () => {
+    let markdown = addReleaseEntry(null, at('2026-10-06T18:00:00.000Z', SHA_A));
+    markdown = addReleaseEntry(markdown, at('2026-10-07T09:00:00.000Z', SHA_B));
+    markdown = addReleaseEntry(markdown, at('2026-10-05T09:00:00.000Z', SHA_A)); // a union merge can put an older entry last
+    markdown = addReleaseEntry(markdown, at('2026-10-08T09:00:00.000Z', SHA_C, { channel: 1, channelName: 'reelflies.ca' }));
+    assert.deepEqual(prelaunchBuild(markdown, SHA_A), {
+        sha: SHA_A, entry: { timestamp: '2026-10-06 18:00', sha: SHA_A }, newest: { timestamp: '2026-10-07 09:00', sha: SHA_B },
+    });
+    assert.deepEqual(prelaunchBuild(markdown, SHA_B).entry, { timestamp: '2026-10-07 09:00', sha: SHA_B });
+    assert.equal(prelaunchBuild(markdown, SHA_C).entry, null, 'a channel-1 entry isn\'t a prelaunch build');
+    assert.deepEqual(prelaunchBuild(null, SHA_A), { sha: SHA_A, entry: null, newest: null });
+});
+
+test('ticket 53: prelaunchBuild matches an entry\'s short commit, but never a shorter prefix than 7 characters', () => {
+    const entry = sha => `${RELEASES_TEMPLATE.replace('## Releases\n', `## Releases\n\n### 2026-10-06 14:30 UTC · channel 1895766 (ReelFlies_CA) · ReelFlies CA\n\n- Commit: \`${sha}\` on \`master\`\n`)}`;
+    assert.deepEqual(prelaunchBuild(entry(SHA_A.slice(0, 7)), SHA_A).entry, { timestamp: '2026-10-06 14:30', sha: SHA_A.slice(0, 7) });
+    assert.equal(prelaunchBuild(entry('aaaaaa'), SHA_A).entry, null);
+});
+
+test('ticket 53: describePrelaunch says whether the commit ran on prelaunch, and names the newest prelaunch build when it didn\'t', () => {
+    assert.equal(
+        describePrelaunch({ sha: SHA_A, entry: { timestamp: '2026-10-06 18:00', sha: SHA_A }, newest: { timestamp: '2026-10-07 09:00', sha: SHA_B } }),
+        'aaaaaaa ran on prelaunch (1895766) in its 2026-10-06 18:00 UTC release: ticket 56 reads that entry\'s Lighthouse line',
+    );
+    assert.equal(
+        describePrelaunch({ sha: SHA_C, entry: null, newest: { timestamp: '2026-10-07 09:00', sha: SHA_B } }),
+        `ccccccc never ran on prelaunch (1895766): RELEASES.md has no 1895766 entry of it. The newest prelaunch build is bbbbbbb (2026-10-07 09:00 UTC); the paired release pushes that commit: git switch --detach ${SHA_B}`,
+    );
+    assert.equal(
+        describePrelaunch({ sha: SHA_C, entry: null, newest: null }),
+        'ccccccc never ran on prelaunch (1895766): RELEASES.md records no 1895766 release',
+    );
+    assert.equal(
+        describePrelaunch({ sha: SHA_C, error: 'origin/master has no RELEASES.md' }),
+        'can\'t tell whether ccccccc ran on prelaunch (1895766): origin/master has no RELEASES.md',
+    );
+});
+
+test('ticket 53: the push summary says whether the commit ran on prelaunch, and a summary without the check has no such line', () => {
+    const prelaunch = { sha: SHA_C, entry: null, newest: { timestamp: '2026-10-07 09:00', sha: SHA_B } };
+    const summary = formatPushSummary({
+        ...release, channel: 1, channelName: 'reelflies.ca', variation: 'ReelFlies CA channel 1', prelaunch,
+    });
+    assert.match(summary, /\n {2}prelaunch {3}ccccccc never ran on prelaunch \(1895766\): .* git switch --detach bbbbbbb0{32}2(\n|$)/);
+    assert.doesNotMatch(formatPushSummary(release), /prelaunch /);
 });

@@ -1,0 +1,15 @@
+[
+    {
+        "type": "tab",
+        "label": "Content",
+        "sections": [
+            {
+                "label": "Shipping promise (no links)",
+                "settings": [
+                    { "type": "input", "label": "Long line, from 801px wide", "id": "long_text", "default": "Free standard shipping in Canada on fly orders over $60. Fly boxes and gear not included." },
+                    { "type": "input", "label": "Short line, on phones", "id": "short_text", "default": "Free standard shipping on fly orders over $60" }
+                ]
+            }
+        ]
+    }
+]

@@ -5,6 +5,7 @@
 // no files.
 //
 //   import { formatPushSummary, formatReleaseEntry, addReleaseEntry, releasedThemeUuids, releaseEntries, lastRelease } from './release-log.mjs';
+//   import { prelaunchBuild, describePrelaunch } from './release-log.mjs';   // ticket 53: did the commit run on 1895766?
 //   import { describeConfirmation, describePairedRelease } from './release-log.mjs'; // W0-1
 //   import { releaseBuilds, formatMyThemesRow, addMyThemesRow, myThemesRows } from './release-log.mjs'; // W0-3
 //
@@ -14,14 +15,15 @@
 //     base: { sha, timestamp } | null, baseNote }, guard: { values, newSwitches },
 //   verify: { problems } | null, operator,
 //   confirmation: { mode: 'typed' } | { mode: 'nonprod', channel }, calendar: { line },
-//   pairedChannel1: { phase, since, t28, flip, status } | null, lighthouse }
+//   pairedChannel1: { phase, since, t28, flip, status } | null, lighthouse, prelaunch }
 // step1.base is the channel's last release, which step 1 compared with; baseNote says why there was
 // none. previousThemeUuid, confirmation, calendar and pairedChannel1 are W0-1's: the theme the
 // channel ran just before the push (step 5's capture), how step 5 was confirmed, the release
 // calendar's describePhase line, and the paired channel-1 release pending from T-28 (ticket 56).
 // lighthouse is ticket 17's: the plan (release-lighthouse.mjs lighthousePlan) until step 6b runs,
 // then its outcome; the entry records its line after Verify, and a record without it (an entry from
-// before the hook) has none.
+// before the hook) has none. prelaunch is ticket 53's, on a channel-1 push only: whether the commit
+// has a 1895766 entry (prelaunchBuild), which the push summary shows and the entry doesn't record.
 
 import { formatBytes } from './lib/format.mjs';
 import { describeLiveTheme } from './release-capture.mjs';
@@ -263,9 +265,38 @@ export function myThemesRows(markdown) {
 // W0-2: the channel's newest entry, or null when RELEASES.md records no release on it. Newest by
 // its time, because a union merge of two release logs can leave an older entry further down; of two
 // in the same minute, the one further down.
+const newestOf = entries => entries.reduce((newest, entry) => (!newest || entry.timestamp >= newest.timestamp ? entry : newest), null);
+
 export function lastRelease(markdown, channel) {
-    const entries = releaseEntries(markdown).filter(entry => entry.channel === Number(channel));
-    return entries.reduce((newest, entry) => (!newest || entry.timestamp >= newest.timestamp ? entry : newest), null);
+    return newestOf(releaseEntries(markdown).filter(entry => entry.channel === Number(channel)));
+}
+
+// --- Ticket 53: whether the commit a channel-1 push sends ran on prelaunch ------------------
+
+const PRELAUNCH = 1895766;
+const brief = entry => entry && { timestamp: entry.timestamp, sha: entry.sha };
+
+// The 1895766 (prelaunch) build of `sha`: { sha, entry, newest }, where entry is the newest 1895766
+// entry of that commit and newest the newest 1895766 entry of any commit, each { timestamp, sha } or
+// null. The paired channel-1 release pushes the commit the 1895766 build ran (ticket 56:37), and
+// ticket 56 reads that entry's Lighthouse line. An entry's commit matches when it is `sha` or a
+// prefix of it of at least 7 characters.
+export function prelaunchBuild(markdown, sha) {
+    const prelaunch = releaseEntries(markdown).filter(entry => entry.channel === PRELAUNCH && entry.sha);
+    const ofSha = prelaunch.filter(entry => entry.sha.length >= 7 && sha.startsWith(entry.sha));
+    return { sha, entry: brief(newestOf(ofSha)), newest: brief(newestOf(prelaunch)) };
+}
+
+// One line for prelaunchBuild's result, or for { sha, error } when RELEASES.md couldn't be read.
+export function describePrelaunch({
+    sha, entry, newest, error,
+}) {
+    const commit = sha.slice(0, 7);
+    if (error) return `can't tell whether ${commit} ran on prelaunch (${PRELAUNCH}): ${error}`;
+    if (entry) return `${commit} ran on prelaunch (${PRELAUNCH}) in its ${entry.timestamp} UTC release: ticket 56 reads that entry's Lighthouse line`;
+    const never = `${commit} never ran on prelaunch (${PRELAUNCH})`;
+    if (!newest) return `${never}: RELEASES.md records no ${PRELAUNCH} release`;
+    return `${never}: RELEASES.md has no ${PRELAUNCH} entry of it. The newest prelaunch build is ${newest.sha.slice(0, 7)} (${newest.timestamp} UTC); the paired release pushes that commit: git switch --detach ${newest.sha}`;
 }
 
 export function formatPushSummary(release) {
@@ -286,6 +317,7 @@ export function formatPushSummary(release) {
             : describeConfirmation(release.confirmation, false)),
         line('calendar', release.calendar.line.replace(/^Release calendar: /, '')),
         ...(release.pairedChannel1 ? [line('channel 1', `paired release ${describePairedRelease(release.pairedChannel1)}`)] : []),
+        ...(release.prelaunch ? [line('prelaunch', describePrelaunch(release.prelaunch))] : []),
         ...(release.lighthouse ? [line('lighthouse', describeLighthouse(release.lighthouse))] : []),
     ].join('\n');
 }

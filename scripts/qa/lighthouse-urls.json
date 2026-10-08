@@ -1,7 +1,35 @@
 {
     "version": 1,
-    "about": "Ticket 17's Lighthouse URLs: one list per channel, covering the six page kinds (home, species, fly-type, product, cart, search). A key is a kind, or kind@name for a second page of one kind. A kind a channel can't pin yet goes in notPinnedYet with the reason, and is reported on every run; pin it and delete the reason when it can. budget \"self\" holds a page to its own last accepted run only. Ticket 53 adds channel 1's tree-1 list (Option A). scripts/qa/README.md, \"Lighthouse\".",
+    "about": "Ticket 17's Lighthouse URLs: one list per channel, covering the six page kinds (home, species, fly-type, product, cart, search). A key is a kind, or kind@name for a second page of one kind. A kind a channel can't pin yet goes in notPinnedYet with the reason, and is reported on every run; pin it and delete the reason when it can. budget \"self\" holds a page to its own last accepted run only. Channel 1 is live reelflies.ca on tree 1 (ticket 53, Option A), which ticket 56 runs after the channel-1 push. scripts/qa/README.md, \"Lighthouse\".",
     "channels": {
+        "1": {
+            "note": "Ticket 53 (Option A): live reelflies.ca on tree 1, until the Flip. release.sh's step 6b doesn't run it (the gate runs on prelaunch); ticket 56 does, after the channel-1 push session has placed the channel-1 widgets: QA_BASE_URL=https://reelflies.ca QA_CHANNEL=1 npm run qa:lighthouse, with the analytics tags blocked. Every page is held to the full budget. Paths from tree 1 as lane G re-read it on 2026-10-07.",
+            "urls": {
+                "home": {
+                    "path": "/",
+                    "note": "Held to the full budget: by T-28 tickets 46-49 have landed, and the push session places the channel-1 copies of the home sections (ticket 53)."
+                },
+                "fly-type": {
+                    "path": "/flies/dry-flies/",
+                    "note": "Dry Flies (298), a Fly Type one level under Flies on tree 1 and in the channel-1 menu ids; the grouped menu's rail is built on it (wave 2)."
+                },
+                "product": {
+                    "path": "/realistic-flying-hot-butt-hopper-brown/",
+                    "note": "Product 6178, with Fly Sizes: the gates' channel-1 product pin (pages.mjs), the reference design's hero product, and ticket 11's old-theme baseline page on reelflies.ca."
+                },
+                "cart": {
+                    "path": "/cart.php",
+                    "note": "The empty cart: no action, so loading it changes nothing (a Lighthouse run makes no cart write)."
+                },
+                "search": {
+                    "path": "/search.php?search_query=adams",
+                    "note": "The same search as prelaunch's: Adams, the reference design's product, which channel 1 lists."
+                }
+            },
+            "notPinnedYet": {
+                "species": "Tree 1 has no Species pages and no Species root: they arrive with tree 4 at the Flip, when 1895766 becomes reelflies.ca (ticket 53)."
+            }
+        },
         "1895766": {
             "urls": {
                 "home": {

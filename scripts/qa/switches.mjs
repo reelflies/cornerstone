@@ -42,8 +42,10 @@ export const SWITCHES = {
     rf_rise: {
         ticket: '27',
         module: 'the rise ring on the cart count',
-        markers: [],
-        chunks: [],
+        // The ring on the header's count (components/reelflies/header.html), and rise.js, which
+        // reelflies/global.js loads only with context.rfRise. The stock count pill stays either way.
+        markers: ['data-rf-rise'],
+        chunks: ['rf-rise'],
     },
 
     rf_cart_state: {
