@@ -47,6 +47,22 @@ Every theme push to a storefront goes through `scripts/release.sh` ([docs/releas
 - Operator: Shaun Bathgate
 - Confirmation: non-interactive (agent), `--confirm-nonprod 1895766`
 
+### 2026-10-08 23:02 UTC · channel 1895766 (ReelFlies_CA) · ReelFlies CA
+
+- Theme: ReelFlies 6.22.0, uuid `3ed5e690-a59a-013f-6d0e-1a758bdc9f24`
+- New uuid: yes; before the push the channel ran theme `9781b9a0-a4ae-013f-3d64-06627e5707c7`
+- Commit: `ec525dbeef28a041bca5d5d491fc22de83e59e65` on `master`
+- Bundle: `reelflies-ca-6.22.0-ec525db.zip`, 11,819,768 B, sha256 `4968c9865c54bf3c175cea42cd7bcf3e62e680d641e0ef978e883eb1f0cee885`
+- main.js: 247,022 B
+- Step 1: no Theme Styles edits since the last release
+- Changed in repo: `footer-backgroundColor`, `homepage_featured_products_count`, `homepage_new_products_count`, `homepage_top_products_count`, `shop_by_brand_show_footer`, `show_powered_by`, `social_icon_placement_bottom` (since `3ee4c18`, the channel's last release)
+- rf_* values pushed: `rf_cart_state` = true, `rf_menu_exclude_ids` = "", `rf_menu_species_root_id` = "", `rf_menu_type_ids` = "", `rf_price_unit_exclude` = "", `rf_quick_add` = true, `rf_region_prompt` = false, `rf_rise` = true, `rf_ship_expedited_from` = "", `rf_ship_free_threshold` = "60", `rf_ship_standard_rate` = "", `rf_store_same_as` = ""
+- New switches: none
+- Verify: the live saved settings match config.json
+- Lighthouse: pending host batch
+- Operator: Shaun Bathgate
+- Confirmation: non-interactive (agent), `--confirm-nonprod 1895766`
+
 ## Switch toggles
 
 Log every module switch (`rf_*`) toggled in a storefront's Theme Styles here, one row per toggle, in this format. From T-14 to T+30, switch toggles and widget unpublishing are the only changes allowed, apart from P1 fixes through `scripts/release.sh` (SCOPE-3).
@@ -62,3 +78,26 @@ Every theme the release tooling deletes from My Themes, one row each, written by
 
 | Time (UTC) | Action | Theme uuid | Name and version | Commit | Zip sha256 | Operator |
 |---|---|---|---|---|---|---|
+| 2026-10-08 23:03 | deleted (--prune-only) | `58abad50-a3c0-013f-e2b6-2ec98cc9ce73` | ReelFlies 6.22.0 | `5d0d0cb8ca42405d8555de6a84f20843060d7cde` | `367071ace794697e59a36129ba4f958a2d27daf85aa9bf73411d42c6cfc763dc` | Shaun Bathgate (no terminal) |
+
+## Store writes
+
+Every write to the store through the store-write helper (`scripts/store/`, W0-11; [docs/store-writes.md](docs/store-writes.md)), mirrored by the orchestrator from `~/reelflies/store-snapshots/log.jsonl` with `node scripts/store/log.mjs --since <date>` in each release-log PR (build pipeline, section 6.5). One row per write, with its result; the snapshot and plan columns are the first 8 characters of their sha256. Don't edit the rows by hand.
+
+| Date | Channel | Object | Id | Action | Outcome | Ticket | Operator | Snapshot | Plan |
+|---|---|---|---|---|---|---|---|---|---|
+| 2026-10-07 18:59 UTC | 1895766 | widget-templates | – | create | failed (422): 422: Bad Request (template: is not valid HTML) | 46 | rook on t46/hero-apply-1895766 | 4aeecbee | 3c3f7962 |
+| 2026-10-07 20:30 UTC | 1895766 | widget-templates | – | create | ok (200) | 46 | rook on t46/hero-record-1895766 | 4aeecbee | 3b52cd0b |
+| 2026-10-07 20:30 UTC | 1895766 | widgets | – | create | ok (200) | 46 | rook on t46/hero-record-1895766 | 4aeecbee | 3b52cd0b |
+| 2026-10-07 20:30 UTC | 1895766 | placements | – | create | ok (200) | 46 | rook on t46/hero-record-1895766 | 4aeecbee | 3b52cd0b |
+| 2026-10-08 21:56 UTC | 1895766 | widget-templates | – | create | ok (200) | 27 | rook on t47/widgets-record-1895766 | 562d7d4f | 6a53f3f4 |
+| 2026-10-08 21:56 UTC | 1895766 | widgets | – | create | ok (200) | 27 | rook on t47/widgets-record-1895766 | 562d7d4f | 6a53f3f4 |
+| 2026-10-08 21:56 UTC | 1895766 | placements | – | create | ok (200) | 27 | rook on t47/widgets-record-1895766 | 562d7d4f | 6a53f3f4 |
+| 2026-10-08 21:57 UTC | 1895766 | widget-templates | d3450052-6ffb-4af6-b352-9d699f189749 | update | ok (200) | 47 | rook on t47/widgets-record-1895766 | 37d39ed7 | c89f5701 |
+| 2026-10-08 21:57 UTC | 1895766 | widgets | bb752cde-1287-4a17-a7bf-c97d95eb21f9 | update | ok (200) | 47 | rook on t47/widgets-record-1895766 | 37d39ed7 | c89f5701 |
+| 2026-10-08 21:57 UTC | 1895766 | widget-templates | – | create | ok (200) | 47 | rook on t47/widgets-record-1895766 | 37d39ed7 | c89f5701 |
+| 2026-10-08 21:57 UTC | 1895766 | widgets | – | create | ok (200) | 47 | rook on t47/widgets-record-1895766 | 37d39ed7 | c89f5701 |
+| 2026-10-08 21:57 UTC | 1895766 | placements | – | create | ok (200) | 47 | rook on t47/widgets-record-1895766 | 37d39ed7 | c89f5701 |
+| 2026-10-08 23:04 UTC | 1895766 | placements | 3b9959da-caa5-41ba-ab67-886c48f70e22 | update | ok (200) | 46 | rook on t47/activate-home-1895766 | 8c8414a2 | 00ab227c |
+| 2026-10-08 23:04 UTC | 1895766 | placements | 5359abf9-f3ed-4fdf-9c36-47a8ce5c78f2 | update | ok (200) | 27 | rook on t47/activate-home-1895766 | f9178a7b | 62c84e87 |
+| 2026-10-08 23:04 UTC | 1895766 | placements | cf87c3e2-ae65-48f9-8db5-b5b8d16bc76a | update | ok (200) | 47 | rook on t47/activate-home-1895766 | e08f4ca0 | 63892ba4 |
