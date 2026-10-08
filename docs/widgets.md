@@ -8,29 +8,45 @@ The sync never writes to the store itself. It reads the channel with GETs only a
 
 | Path | What |
 |---|---|
-| `widgets/<name>/template.html` | The template, uploaded as the widget template `rf-<name>`. It reads its `widget_configuration` at the top level and its query's result as `_.data`. It may include `widgets/_shared/` partials, which the sync inlines (a store template can't include partials). What the store gets is below. |
+| `widgets/<name>/template.html` | The template, uploaded as the widget template `rf-<name>`. It reads its `widget_configuration` at the top level and its query's result as `_.data`. It may include `widgets/_shared/` partials, which the sync pastes in place (a store template can't include partials). What the store gets is below. |
 | `widgets/<name>/schema.json` | Its Page Builder schema: an array with one `tab`, holding sections of settings. |
 | `widgets/<name>/query.graphql` | Optional: its `storefront_api_query`. |
 | `widgets/<name>/channels/<channel>.json` | The widget on one channel: `channel_id`, its `configuration` (every schema setting's value there, and nothing else), its `placement` (`template_file`, `region`, `sort_order`, `status`) and the `uuids` the store gave its template, widget and placement (`null` until it makes them). |
 | `widgets/<name>/fixtures/` | Its fixture renders and element shots (W0-9, [scripts/qa/README.md](../scripts/qa/README.md#widgets)). Never synced. Each shot fixture's baselines are made for every variation the gates render, ReelFlies CA and ReelFlies CA channel 1 (`QA_VARIATION="<variation>" npx playwright test --config scripts/qa/playwright.config.mjs widget-screens -g 'widget <name>' --update-snapshots` for each), because a `QA_CHANNEL=1` run shoots every widget too; `scripts/qa/widget-baselines.test.mjs` fails CI when one is missing. |
 
-### What the store gets
-
-- **Comments are emptied.** Each Handlebars comment reaches the store as `{{!}}`, keeping its `~` flags (`emptyComments` in `scripts/widgets/source.mjs`).
-  - Handlebars' own parser finds the comments and only their text changes, so the store renders exactly what the fixture renderer does. The sync checks this by parsing the result again.
-  - It refuses a template whose comments Handlebars places wrongly; a U+2028 or U+2029 character can cause that.
-  - The store refused the hero's first upload, whose comment named `<width>`, `<path>` and `<channel>`, as "not valid HTML". Most likely it reads comment text when it checks a template's HTML.
-  - Because every comment is emptied before anything else reads the template, a note may name tags or partials, in a template or a `_shared` partial.
-- **Void elements close.** Write `<img … />`, `<br />` and the like, as BigCommerce's own examples do, because the store doesn't document its check.
-- **The tests check it.** `scripts/widgets/source.test.mjs` checks every widget. Each needs at least one fixture. Its store copy keeps no comment text, closes every void element, and renders as its files do with each fixture.
-- **The store adds `"_": { "id": <the widget's uuid> }`** to each widget's `widget_configuration`, which a template reads as `{{_.id}}`. The sync leaves it out when it compares.
-- **The store saves each template with `"template_engine": "handlebars_v3"`.** The API doesn't document a way to ask for v4. The fixture renderer renders with v4 (`config.json`'s `handlebars_v4`).
-  - Plain mustaches, `{{#if}}` and `{{#each}}` render the same in both.
-  - The `{{#*inline}}` partials the sync makes from `_shared` partials are a Handlebars 4 feature. The first widget that calls a `_shared` partial (ticket 48) must check on 1895766 that it renders before relying on it.
-
 Styles go in the theme's ReelFlies layer, `assets/scss/reelflies/_<name>.scss`, with `rf-` classes and no inline CSS (build pipeline, decision 6), so every channel's copy looks the same. The partial is imported from your ticket's own slot line in `assets/scss/reelflies/_index.scss` (ticket 25's scaffold): uncomment it and point it at `_<name>.scss`, as 46's line, `@import "home-lead"; // 46 home hero`, does.
 
 Words and links are widget fields, never typed into the template, so a channel's copy can differ: channel 1 carries tree-1 paths (ticket 53).
+
+### What the store gets
+
+- **The store renders widget templates with Handlebars 3.** It saves each one with `"template_engine": "handlebars_v3"`, and the Widgets API takes no engine: its reference lists `template_engine` in responses only (create takes `name`, `template`, `schema`, `storefront_api_query` and `channel_id`; update adds `create_new_version`). So the fixture renderer renders widgets with Handlebars 3 too, Paper's own build of it (`scripts/widgets/engine.mjs`), and render tests and widget shots render as the store does. Theme pages and partials stay on `config.json`'s `handlebars_v4`.
+  - **`../` inside `{{#if}}` or `{{#unless}}` goes one level further up than in v4,** because Handlebars 3 counts the block as a level: with `{ heading: "Hi", show: true }`, `{{#if show}}{{../heading}}{{/if}}` renders `Hi` in v3 and nothing in v4. Inside `{{#each}}`, `{{#if name}}{{../label}}{{/if}}` reads the item's `label` in v3 and the outer one in v4. Write for v3; a fixture render shows it.
+  - **Handlebars 4's own forms don't parse:** `{{#*inline}}`, decorators (`{{* …}}`) and `{{#> partial}}` blocks. The sync refuses a template Handlebars 3 can't parse, naming the file and its line.
+  - **The sync stops** when a recorded template on the channel reports any other engine, so a change on the store's side shows up in the next dry run or `--verify`. `--unpublish` still goes ahead.
+- **Comments are emptied.** Each Handlebars comment reaches the store as `{{!}}`, keeping its `~` flags (`emptyComments` in `scripts/widgets/source.mjs`).
+  - Handlebars' own parser finds the comments and only their text changes, so the store copy renders as the file does. The sync checks this by parsing the result again.
+  - It refuses a template whose comments Handlebars places wrongly; a U+2028 or U+2029 character can cause that.
+  - The store refused the hero's first upload, whose comment named `<width>`, `<path>` and `<channel>`, as "not valid HTML". Most likely it reads comment text when it checks a template's HTML.
+  - Because every comment is emptied before anything else reads the template, a note may name tags or partials, in a template or a `_shared` partial.
+- **`_shared` partials are pasted in place** (`scripts/widgets/paste.mjs`), because a store template can't include partials and Handlebars 3 can't define inline ones. Each call, `{{> _shared/<partial> key=value …}}`, is replaced by the partial's body:
+  - The body is printed from Handlebars 3's parse of the partial file, as it renders on its own: its standalone lines and `~` already applied, its comments gone, and empty `{{!}}` comments before each block tag and round the body, so no whitespace rule changes where it lands.
+  - Each hash argument is replaced by its value where the body reads it, because Handlebars renders a partial with the hash laid over the caller's context, and the pasted body sits in that context. A string or number read as `{{key}}` becomes its text, escaped as `{{key}}` would escape it.
+  - A call alone on its line: Handlebars drops the line break after it and keeps its indent once (Paper compiles with `preventIndent`). The copy keeps that line break and drops the one the partial file ends with, so end a partial with markup and a line break, or call it inside a line (`<li>{{> _shared/card product=node}}</li>`).
+  - Refused, naming the file:
+    - `../` in a partial or in a hash value
+    - a hash argument read inside a block other than `{{#if}}` or `{{#unless}}`, or used as a block (`{{#key}}`)
+    - a hash argument with a helper's name, or a block param in the partial with a hash argument's name or a name a hash value reads
+    - `this` in a partial called with hash arguments
+    - a name in the partial that is a block param where it is called (a partial can't see the caller's block params; its pasted body would)
+    - a literal hash argument read with a path after it (`{{key.x}}`), or printed when it isn't a string or a number
+    - a context argument (`{{> _shared/x foo}}`), a dynamic partial, or a partial inside a partial
+    - an escaped `\{{`, and a partial Handlebars 3 can't parse
+  - An error in a partial names the partial's file, with its own line numbers.
+  - The sync checks each paste on Handlebars 3's parse trees: the printed body parses to the partial's own tree, and the copy to the template's tree with each call's output in its place. The cases are in `scripts/widgets/paste.test.mjs`.
+- **Void elements close.** Write `<img … />`, `<br />` and the like, as BigCommerce's own examples do, because the store doesn't document its check. The test reads each tag as the HTML tokenizer does: `/>` counts only after a quote, whitespace or the bare tag name, so `<img src=x/>` and `<br/ >` aren't closed.
+- **The tests check it.** `scripts/widgets/source.test.mjs` checks every widget. Each needs at least one fixture. Its store copy keeps no comment text, closes every void element, parses with Handlebars 3, and renders as its files do with each fixture, both rendered with the store's engine.
+- **The store adds `"_": { "id": <the widget's uuid> }`** to each widget's `widget_configuration`, which a template reads as `{{_.id}}`. The sync leaves it out when it compares, and refuses a schema setting whose id is `_`.
 
 ## The routine
 

@@ -14,7 +14,7 @@ import assert from 'node:assert/strict';
 import { findTags } from '../raw-html/html.mjs';
 import { unbalancedTags } from './html-checks.mjs';
 import {
-    DEFAULT_VARIATION, THEME_DIR, WIDGET_ID, readFixture, renderPartial, renderWidget, themeConfig, widgetCases,
+    DEFAULT_VARIATION, THEME_DIR, WIDGET_ENGINE, WIDGET_ID, readFixture, renderPartial, renderWidget, themeConfig, widgetCases,
 } from './render.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -209,6 +209,31 @@ describe('a widget template rendered from fixture JSON', () => {
 
     it('fails on a widget that has no template.html, naming the folder', async () => {
         await assert.rejects(renderWidget('rf-render-nothing', {}, { root: WIDGETS }), /rf-render-nothing\/template\.html/);
+    });
+});
+
+describe('the engines', () => {
+    // ../ inside {{#if}}: Handlebars 3 counts the {{#if}} as a level, Handlebars 4 doesn't
+    // (BigCommerce's Stencil tech-stack page: "any instances of ../ in templates must be checked").
+    const DEPTH = '<p>{{#if show}}<b>{{../heading}}</b>{{/if}}</p>';
+    const context = { show: true, heading: 'Hi' };
+
+    it('render a widget with the store\'s engine, Handlebars 3, as the store saves widget templates', async () => {
+        assert.equal(WIDGET_ENGINE, 'handlebars-v3');
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-widgets-'));
+        tempDirs.push(root);
+        fs.mkdirSync(path.join(root, 'w'));
+        fs.writeFileSync(path.join(root, 'w/template.html'), DEPTH);
+        assert.equal(await renderWidget('w', { configuration: context }, { root }), '<p><b>Hi</b></p>');
+    });
+
+    it('render a theme partial with config.json\'s engine, Handlebars 4, as stencil start does', async () => {
+        assert.equal(themeConfig().template_engine, 'handlebars_v4');
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-render-'));
+        tempDirs.push(dir);
+        fs.mkdirSync(path.join(dir, 'components/reelflies'), { recursive: true });
+        fs.writeFileSync(path.join(dir, 'components/reelflies/rf-depth.html'), DEPTH);
+        assert.equal(await renderPartial('components/reelflies/rf-depth', context, { templates: [dir] }), '<p><b></b></p>');
     });
 });
 

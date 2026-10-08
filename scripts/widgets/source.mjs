@@ -7,13 +7,13 @@
 // A widget's folder (scripts/qa/README.md, "Widgets"):
 //
 //   widgets/<name>/template.html          the template, uploaded as widget template rf-<name>, with
-//                                         _shared partials inlined and each comment emptied
+//                                         each comment emptied and _shared partials pasted
 //   widgets/<name>/schema.json            its Page Builder schema (an array of tabs)
 //   widgets/<name>/query.graphql          optional: its storefront_api_query
 //   widgets/<name>/channels/<id>.json     the widget on one channel: its widget_configuration,
 //                                         its placement, and the uuids the store gave it
 //   widgets/<name>/fixtures/              the fixture renders and element shots (W0-9); never synced
-//   widgets/_shared/<partial>.html        markup two widgets share, inlined before upload
+//   widgets/_shared/<partial>.html        markup two widgets share, pasted in before upload (paste.mjs)
 //
 // A channel file:
 //
@@ -30,9 +30,11 @@ import { createRequire } from 'module';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { channelsNamed } from '../store/channel.mjs';
+import { parseForStore, pasteShared } from './paste.mjs';
 
 const require = createRequire(import.meta.url);
-// The Handlebars build Paper renders widgets with (config.json's handlebars_v4), for its parser.
+// Handlebars 4's parser, for parseWithoutProcessing, which finds each comment where it is
+// written (Handlebars 3 has no such parse). Its comments lex as Handlebars 3's do.
 const Handlebars = require('@bigcommerce/handlebars-v4'); // eslint-disable-line import/no-extraneous-dependencies
 
 export const WIDGETS_DIR = fileURLToPath(new URL('../../widgets/', import.meta.url)).replace(/\/$/, '');
@@ -43,7 +45,6 @@ export const PLACEMENT_STATUSES = ['active', 'inactive'];
 
 const NAME = /^[a-z0-9][a-z0-9-]*$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const SHARED_CALL = /\{\{>\s*([^\s}]+)/g;
 const isObject = value => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const show = value => JSON.stringify(value);
 
@@ -106,8 +107,8 @@ const parsedShape = source => JSON.stringify(Handlebars.parseWithoutProcessing(s
 });
 
 // The template with each comment emptied to {{!}}, keeping its ~ flags ({{~!}}, {{!~}}, {{~!~}}).
-// Only the comments' text changes, which it checks by parsing the result again, so the store
-// renders exactly what the fixture renderer renders, whitespace and standalone lines included.
+// Only the comments' text changes, which it checks by parsing the result again, so the copy
+// renders as the file does, whitespace and standalone lines included.
 // The store most likely reads the text inside comments when it checks a template's HTML: it
 // refused the hero's first upload, whose comment names <width>, <path> and <channel>, as "not
 // valid HTML" (2026-10-07).
@@ -117,34 +118,6 @@ export function emptyComments(source) {
         .reduce((text, { start, end, strip }) => `${text.slice(0, start)}{{${strip.open ? '~' : ''}!${strip.close ? '~' : ''}}}${text.slice(end)}`, source);
     if (parsedShape(emptied) !== parsedShape(source)) throw new Error('emptying its comments would change more than their text, so it isn\'t uploaded');
     return emptied;
-}
-
-// The template with each {{> _shared/<partial>}} it calls defined at its end as an inline
-// partial, {{#*inline "_shared/<partial>"}}…{{/inline}}, because a store widget template can't
-// include partials. The calls stay as they are, hash arguments and all, so the store renders
-// what the fixture renderer renders (it registers widgets/_shared/ as partials). A call to any
-// other partial is refused: the store has no theme partials for a widget.
-export function inlineShared(source, root = WIDGETS_DIR) {
-    const names = [];
-    for (const [, name] of source.matchAll(SHARED_CALL)) {
-        const partial = name.replace(/^["']|["']$/g, '');
-        if (!partial.startsWith('_shared/')) throw new Error(`a store widget can't include the theme partial ${partial}: only widgets/_shared/ partials are inlined`);
-        if (!names.includes(partial)) names.push(partial);
-    }
-    const definitions = names.map(partial => {
-        const file = path.join(root, `${partial}.html`);
-        if (!/^_shared\/[a-z0-9][a-z0-9-]*$/.test(partial) || !fs.existsSync(file)) throw new Error(`${relative(root, file)} doesn't exist (called as {{> ${partial}}})`);
-        const body = fs.readFileSync(file, 'utf8');
-        // A note may name a partial: only a call outside the comments counts.
-        if (/\{\{>/.test(emptyComments(body))) throw new Error(`${relative(root, file)} includes another partial: shared partials are inlined one level deep`);
-        return `{{#*inline "${partial}"}}\n${body}${body.endsWith('\n') ? '' : '\n'}{{/inline}}\n`;
-    });
-    // Appended, so the template's own lines don't move: Handlebars sets up a block's inline
-    // partials before it renders the block, wherever they stand in it. Each {{#*inline}} and
-    // {{/inline}} stands alone on its line, so Handlebars drops those lines' newlines, and the
-    // partial's body keeps its own (a comment line in it is dropped as in a partial file).
-    if (!definitions.length) return source;
-    return `${source}${source.endsWith('\n') ? '' : '\n'}${definitions.join('')}`;
 }
 
 // make(), with any error it throws prefixed by `where`.
@@ -157,7 +130,9 @@ const naming = (where, make) => {
 };
 
 // The ids a widget_configuration holds: every setting's, in tabs, sections, hidden groups and
-// conditional settings. An array setting holds its items under its own id.
+// conditional settings. An array setting holds its items under its own id. readWidget refuses
+// "_": the store adds "_": { "id": <the widget's uuid> } to each widget_configuration, and a template
+// reads the widget's id and query result as _.id and _.data, so a setting can't have it.
 const settingIds = schema => {
     const ids = [];
     const walk = node => {
@@ -174,8 +149,8 @@ const settingIds = schema => {
     return ids;
 };
 
-// A widget as the store should hold it: its template (with _shared partials inlined and each
-// comment emptied), schema and query, and the names its template and widget take on every channel.
+// A widget as the store should hold it: its template (each comment emptied and _shared partials
+// pasted in), schema and query, and the names its template and widget take on every channel.
 export function readWidget(name, { root = WIDGETS_DIR } = {}) {
     if (!NAME.test(name)) throw new Error(`"${name}" isn't a widget name: a folder in widgets/ (lower-case letters, digits and -)`);
     const dir = path.join(root, name);
@@ -183,12 +158,17 @@ export function readWidget(name, { root = WIDGETS_DIR } = {}) {
     if (!fs.existsSync(templateFile)) throw new Error(`${relative(root, templateFile)} doesn't exist: a widget's template is widgets/<name>/template.html`);
     const schema = readJson(path.join(dir, 'schema.json'), `${relative(root, path.join(dir, 'schema.json'))}`);
     if (!Array.isArray(schema)) throw new Error(`${relative(root, path.join(dir, 'schema.json'))} must be a JSON array of tabs (the Page Builder schema)`);
+    const settings = settingIds(schema);
+    if (settings.includes('_')) throw new Error(`${relative(root, path.join(dir, 'schema.json'))}: the setting id "_" is the store's own key (it gives each widget "_": { "id": <uuid> }, and a template reads _.id and _.data): name the setting anything else`);
     const queryFile = path.join(dir, 'query.graphql');
-    // Its own comments are emptied first, so a partial a note names is neither inlined nor refused;
-    // then the inlined _shared partials' comments, whose lines count after the template's.
+    // Handlebars 3, the store's engine, must parse the file as written, so an error carries its
+    // own line numbers. Then its comments are emptied, and each _shared partial it calls is pasted
+    // in (an error in a partial names the partial's file and lines).
     const where = relative(root, templateFile);
-    const own = naming(where, () => emptyComments(fs.readFileSync(templateFile, 'utf8')));
-    const template = naming(`${where} with its _shared partials inlined after it`, () => emptyComments(inlineShared(own, root)));
+    const source = fs.readFileSync(templateFile, 'utf8');
+    naming(where, () => parseForStore(source));
+    const own = naming(where, () => emptyComments(source));
+    const template = naming(where, () => pasteShared(own, { root }));
     return {
         name,
         dir,
@@ -197,7 +177,7 @@ export function readWidget(name, { root = WIDGETS_DIR } = {}) {
         widgetName: `rf-${name}`,
         template,
         schema,
-        settings: settingIds(schema),
+        settings,
         query: fs.existsSync(queryFile) ? fs.readFileSync(queryFile, 'utf8').trim() : '',
     };
 }
