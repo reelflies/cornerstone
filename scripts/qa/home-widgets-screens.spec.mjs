@@ -20,7 +20,7 @@ import { expect, test } from '@playwright/test';
 import { QA_OVERLAY, QA_VARIATION } from './storefront.mjs';
 import { homeCases, openHomePage } from './render/home-page.mjs';
 import { worstContrastOverPhoto } from './render/photo-contrast.mjs';
-import { photoKey } from './raw-html/assertions/home-photo-once.mjs';
+import { REPEAT_ATTRIBUTE, photoKey } from './raw-html/assertions/home-photo-once.mjs';
 
 test.skip(Boolean(QA_OVERLAY), `the home widgets render from their fixtures, not under an overlay (QA_OVERLAY=${QA_OVERLAY})`);
 
@@ -48,6 +48,28 @@ const boxes = (page, selector) => page.locator(selector).evaluateAll(elements =>
         top: rect.top + window.scrollY, bottom: rect.bottom + window.scrollY, left: rect.left, right: rect.right, width: rect.width, height: rect.height,
     };
 }));
+
+// Every <img> on the page, with the photo it shows (its currentSrc), and whether it repeats a photo
+// on purpose: data-rf-photo-repeat on the <img> or on a <source> of its <picture>, where
+// home-photo-once reads it (ticket 49's crop of the Dry banner).
+const photosOnPage = page => page.locator('img').evaluateAll((elements, attribute) => elements.map(element => {
+    const sources = element.parentElement && element.parentElement.tagName === 'PICTURE' ? [...element.parentElement.querySelectorAll('source')] : [];
+    return {
+        src: element.currentSrc,
+        loading: element.getAttribute('loading'),
+        fetchpriority: element.getAttribute('fetchpriority'),
+        className: element.className,
+        complete: element.complete && element.naturalWidth > 0,
+        repeat: [element, ...sources].some(node => node.hasAttribute(attribute)),
+    };
+}), REPEAT_ATTRIBUTE);
+
+// The photos shown more than once, each named as home-photo-once names a file. An allowed repeat
+// isn't counted.
+const shownTwice = images => {
+    const keys = images.filter(({ src, repeat }) => src && !repeat).map(({ src }) => photoKey(src));
+    return keys.filter((key, index) => keys.indexOf(key) !== index);
+};
 
 test.describe('the home page\'s cards and tiles (widgets/home-lead, widgets/link-tiles)', () => {
     for (const [crop, fixtures] of [['the square crops', {}], ['ticket 14\'s 4:5 frames', { 'home-lead': 'frames' }]]) {
@@ -97,12 +119,9 @@ test.describe('the home page\'s cards and tiles (widgets/home-lead, widgets/link
 
     test('shows no photo twice; the hero\'s is the one fetchpriority="high", the cards load eagerly and the tiles lazily', async ({ page }) => {
         await open(page);
-        const images = await page.locator('img').evaluateAll(elements => elements.map(element => ({
-            src: element.currentSrc, loading: element.getAttribute('loading'), fetchpriority: element.getAttribute('fetchpriority'), className: element.className, complete: element.complete && element.naturalWidth > 0,
-        })));
-        const photos = images.filter(({ src }) => src).map(({ src }) => photoKey(src));
-        expect(photos.length, 'every photo loaded').toBe(images.length);
-        expect(photos.filter((key, index) => photos.indexOf(key) !== index), 'no photo twice').toEqual([]);
+        const images = await photosOnPage(page);
+        expect(images.filter(({ src }) => src).length, 'every photo loaded').toBe(images.length);
+        expect(shownTwice(images), 'no photo twice').toEqual([]);
         expect(images.filter(({ fetchpriority }) => fetchpriority === 'high').map(({ className }) => className)).toEqual(['rf-hero__img rf-hero__img--mirror']);
         const cards = images.filter(({ className }) => className.startsWith('rf-type-card__img'));
         const tiles = images.filter(({ className }) => className === 'rf-link-tile__img');
@@ -111,6 +130,25 @@ test.describe('the home page\'s cards and tiles (widgets/home-lead, widgets/link
         for (const card of cards) expect([card.loading, card.fetchpriority]).toEqual([null, null]);
         for (const tile of tiles) expect(tile.loading).toBe('lazy');
         expect(images.every(({ complete }) => complete), 'every photo loaded').toBe(true);
+    });
+
+    test('counts a photo shown twice, unless the repeat carries data-rf-photo-repeat, as home-photo-once does (ticket 49\'s crop)', async ({ page }, testInfo) => {
+        test.skip(!desktop(testInfo), 'the rule doesn\'t depend on the width');
+        await open(page);
+        // A second copy of the Dry card's photo after the tiles, marked or not.
+        const repeatDryPhoto = marked => page.evaluate(([isMarked, attribute]) => new Promise(resolve => {
+            const copy = document.createElement('img');
+            copy.alt = '';
+            if (isMarked) copy.setAttribute(attribute, '');
+            copy.addEventListener('load', resolve);
+            copy.addEventListener('error', resolve);
+            copy.src = document.querySelector('.rf-type-card__img').currentSrc;
+            document.querySelector('.rf-link-tiles').after(copy);
+        }), [marked, REPEAT_ATTRIBUTE]);
+        await repeatDryPhoto(true);
+        expect(shownTwice(await photosOnPage(page)), 'the marked crop isn\'t counted').toEqual([]);
+        await repeatDryPhoto(false);
+        expect(shownTwice(await photosOnPage(page)), 'an unmarked repeat is').toEqual([photoKey(await page.locator('.rf-type-card__img').first().evaluate(element => element.currentSrc))]);
     });
 
     test('keeps the cards\' text 4.5:1 or better over the scrim and the photo', async ({ page }, testInfo) => {
