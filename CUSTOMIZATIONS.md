@@ -141,7 +141,7 @@ From the review's upgrade-safe layering plan and the design session ([ADR 0001](
 
 Added by the design session (spec, "Hook count"), with the ticket that adds each:
 
-- Ticket 27 needed no hook in `navigation.html`: its header no longer includes it. Ticket 28 needed none in `navigation-menu.html` or `navigation-list.html`: ticket 27's `components/reelflies/header.html` renders the grouped menu (`components/reelflies/menu.html`) in `#menu` when a menu id is set, and includes the stock `navigation-menu.html`, unchanged, when both are empty (the fallback). Ticket 29 builds on the grouped menu, so it shouldn't need them either.
+- Ticket 27 needed no hook in `navigation.html`: its header no longer includes it. Ticket 28 needed none in `navigation-menu.html` or `navigation-list.html`: ticket 27's `components/reelflies/header.html` renders the grouped menu (`components/reelflies/menu.html`) in `#menu` when a menu id is set, and includes the stock `navigation-menu.html`, unchanged, when both are empty (the fallback). Ticket 29 needed none either: its rail behaviour is in `menu.js`, its styles in `_rail.scss` and its banner strip in `components/reelflies/menu-banner.html`, included from the grouped menu's own `menu-item.html`.
 - `templates/components/category/sidebar.html` (32) and `faceted-search/facets/multi.html` (33)
 - `templates/components/products/description-tabs.html` and `tabs.html` (39)
 - `templates/pages/cart.html`, `templates/components/cart/totals.html` and `cart/status-messages.html` (41)
