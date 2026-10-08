@@ -1,0 +1,10 @@
+{
+    "description": "The strip as ReelFlies_CA (1895766) gets it, under the theme's header (chrome): the long line from 801px and the short one on phones. Its configuration is channels/1895766.json's, which shipping-strip.test.mjs checks.",
+    "page": "pages/home",
+    "region": "header_bottom--global",
+    "chrome": true,
+    "configuration": {
+        "long_text": "Free standard shipping in Canada on fly orders over $60. Fly boxes and gear not included.",
+        "short_text": "Free standard shipping on fly orders over $60"
+    }
+}

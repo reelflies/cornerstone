@@ -1,0 +1,456 @@
+// =============================================================================
+// HEADER (ticket 27; spec modules 2 and 4; O04, O05, O22, R3)
+// =============================================================================
+//
+// The ReelFlies header, templates/components/reelflies/header.html, from the reference's
+// .header, .hd-row, .shop-btn, .search and .navUser rules (plan/design/src/reference.src.html:140
+// -165, the step-downs at :756 and the phone rules at :771-790), first tried on ticket 26's spike.
+//
+// - Phones (below Cornerstone's medium, 801px): a 56px sticky bar (--rf-header-h), Menu, the logo
+//   centred, a search link and the bag. Stock fixed its 55px bar and padded the body to match
+//   (layouts/header/_header.scss:36-44, foundation/global/_global.scss:17-22); a sticky bar needs
+//   no padding, and the shipping strip after it scrolls away under it.
+// - From 801px: one row of the logo, "Shop flies", the search field, Account and Cart, which
+//   scrolls away with the page as the reference's does, so --rf-header-h is 0 there.
+// - scroll-padding-top keeps a focused element clear of the sticky bar (WCAG 2.4.11, story 67).
+// - The cart count is the navUser-indicator setting (#5D705C, ticket 25), and its rise ring
+//   plays once when the count goes up (rise.js), never under reduced motion.
+//
+// -----------------------------------------------------------------------------
+
+$rf-header-max:     1240px;     // the row's width, as the reference's
+$rf-header-label:   900px;      // Account's label shows from here; below it is an icon (UX-20)
+$rf-header-roomy:   1101px;     // the wider gap between the row's parts, from here
+$rf-count-colour:   stencilColor("navUser-indicator-backgroundColor");
+
+@mixin rf-visually-hidden {
+    border: 0;
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+}
+
+@mixin rf-visually-shown {
+    clip: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    position: static;
+    white-space: normal;
+    width: auto;
+}
+
+html {
+    scroll-padding-top: var(--rf-header-h);
+}
+
+body {
+    padding-top: 0; // stock padded the body for its fixed 55px bar
+}
+
+
+// The bar and the row
+// -----------------------------------------------------------------------------
+
+.header.rf-header {
+    background: var(--rf-paper);
+    border-bottom: 0;
+    box-shadow: inset 0 -1px 0 var(--rf-tile-2); // the divider, inside the 56px
+    display: block;
+    height: auto;
+    position: sticky;
+    top: 0;
+    width: 100%;
+    z-index: zIndex("higher");
+
+    @include breakpoint("medium") {
+        position: relative;
+    }
+}
+
+.rf-header .rf-icon {
+    flex: none;
+    height: 20px;
+    width: 20px;
+}
+
+.rf-header-row {
+    align-items: center;
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: var(--rf-target-row) minmax(0, 1fr) auto;
+    height: var(--rf-header-h);
+    margin: 0 auto;
+    max-width: $rf-header-max;
+    padding: 0 6px;
+
+    @include breakpoint("medium") {
+        gap: 14px;
+        grid-template-columns: auto auto minmax(0, 1fr) auto;
+        height: auto;
+        padding: 12px var(--rf-gutter);
+    }
+
+    @media (min-width: $rf-header-roomy) {
+        gap: 20px;
+    }
+}
+
+
+// Menu (phones): icon over its label, "Menu" or "Close" as aria-expanded says
+// -----------------------------------------------------------------------------
+
+.rf-header-menu {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: var(--rf-radius-pill);
+    color: var(--rf-ink);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    height: var(--rf-target-row);
+    justify-content: center;
+    padding: 0;
+    width: var(--rf-target-row);
+
+    @include breakpoint("medium") {
+        display: none;
+    }
+}
+
+.rf-header-menu-label {
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1;
+    margin-top: 1px;
+}
+
+.rf-header-menu[aria-expanded="true"] .rf-header-menu-icon--menu,
+.rf-header-menu[aria-expanded="true"] .rf-header-menu-label--menu,
+.rf-header-menu:not([aria-expanded="true"]) .rf-header-menu-icon--close,
+.rf-header-menu:not([aria-expanded="true"]) .rf-header-menu-label--close {
+    display: none;
+}
+
+
+// The logo: a link in a <div>, centred on phones and first on desktop. The 133x95 PNG is 78px
+// wide on desktop until ticket 14's master file (decision 17), and 40px tall on phones, the
+// phone bar's cap, as on the reference page; the master's horizontal lockup replaces it there.
+// -----------------------------------------------------------------------------
+
+.header-logo.rf-header-logo {
+    font-size: 0;
+    height: auto;
+    justify-self: center;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+
+    @include breakpoint("medium") {
+        justify-self: start;
+    }
+}
+
+.rf-header-logo .rf-header-logo-link {
+    border-radius: var(--rf-radius-small);
+    display: block;
+    height: auto;
+    margin: 0;
+    width: auto;
+}
+
+.rf-header-logo-image {
+    display: block;
+    height: 40px;
+    object-fit: contain;
+    width: auto;
+
+    @include breakpoint("medium") {
+        height: 56px;
+        width: 78px;
+    }
+}
+
+.rf-header-logo .rf-header-logo-text {
+    color: var(--rf-ink);
+    font-size: 20px;
+    padding: 0;
+}
+
+
+// "Shop flies" (desktop): the menu's button, with the edge border (#879186, 3.3:1)
+// -----------------------------------------------------------------------------
+
+.rf-header-shop {
+    align-items: center;
+    background: var(--rf-paper);
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-pill);
+    color: var(--rf-ink);
+    cursor: pointer;
+    display: none;
+    font-size: 16px;
+    font-weight: 600;
+    gap: 8px;
+    height: var(--rf-target-buy);
+    padding: 0 16px 0 18px;
+    white-space: nowrap;
+
+    &:hover,
+    &[aria-expanded="true"] {
+        background: var(--rf-tile);
+    }
+
+    @include breakpoint("medium") {
+        display: inline-flex;
+    }
+
+    .rf-header-chev {
+        height: 16px;
+        transition: transform var(--rf-t-fast) ease-out;
+        width: 16px;
+    }
+
+    &[aria-expanded="true"] .rf-header-chev {
+        transform: rotate(180deg);
+    }
+}
+
+
+// The search form (components/reelflies/search-form.html): a pill field. The header's is on
+// screen from 801px; ticket 30's phone row uses the same form.
+// -----------------------------------------------------------------------------
+
+.rf-search-form {
+    margin: 0;
+    position: relative;
+}
+
+.rf-search-form .rf-search-form-input {
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--rf-paper);
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-pill);
+    box-sizing: border-box;
+    color: var(--rf-ink);
+    font-size: 16px;
+    height: var(--rf-target-buy);
+    margin: 0;
+    padding: 0 50px 0 18px;
+    width: 100%;
+
+    &::placeholder {
+        color: var(--rf-dun);
+        opacity: 1;
+    }
+}
+
+.rf-search-form-go {
+    background: transparent;
+    border: 0;
+    border-radius: var(--rf-radius-pill);
+    color: var(--rf-ink);
+    cursor: pointer;
+    display: grid;
+    height: 36px;
+    place-items: center;
+    position: absolute;
+    right: 4px;
+    top: 4px;
+    width: 36px;
+
+    &:hover {
+        background: var(--rf-tile);
+    }
+}
+
+.rf-header-search {
+    display: none;
+    justify-self: center;
+    max-width: 520px;
+    width: 100%;
+
+    @include breakpoint("medium") {
+        display: block;
+    }
+}
+
+
+// Account and Cart, and the phone's search link
+// -----------------------------------------------------------------------------
+
+.rf-header-user {
+    align-items: center;
+    display: flex;
+    gap: 2px;
+    justify-self: end;
+}
+
+.rf-header-action {
+    align-items: center;
+    border-radius: var(--rf-radius-pill);
+    color: var(--rf-ink);
+    display: inline-flex;
+    font-weight: 500;
+    gap: 8px;
+    justify-content: center;
+    min-height: var(--rf-target-row);
+    min-width: var(--rf-target-row);
+    padding: 0 4px;
+    text-decoration: none;
+
+    &:hover {
+        background: var(--rf-tile);
+        color: var(--rf-ink);
+    }
+
+    @include breakpoint("medium") {
+        min-height: var(--rf-target-buy);
+        padding: 0 12px;
+    }
+}
+
+.rf-header-search-link {
+    @include breakpoint("medium") {
+        display: none;
+    }
+}
+
+.rf-header-account {
+    display: none;
+
+    @include breakpoint("medium") {
+        display: inline-flex;
+    }
+}
+
+// The labels are always in the links' names; on screen, Cart's from 801px and Account's from
+// 900px. Below that each link is its icon.
+.rf-header-label {
+    @include rf-visually-hidden;
+}
+
+.rf-header-label--cart {
+    @include breakpoint("medium") {
+        @include rf-visually-shown;
+    }
+}
+
+.rf-header-account .rf-header-label {
+    @media (min-width: $rf-header-label) {
+        @include rf-visually-shown;
+    }
+}
+
+
+// The cart count, and the rise ring on it (R3)
+// -----------------------------------------------------------------------------
+
+.rf-header-count {
+    display: inline-grid;
+    position: relative;
+
+    // Out of the row while the count is 0 and the stock pill hidden, so the link keeps no gap
+    // for it (a browser without :has() keeps 8px there).
+    &:not(:has(.countPill--positive)) {
+        display: none;
+    }
+}
+
+.rf-header-cart .countPill {
+    background-color: $rf-count-colour;
+    border-radius: var(--rf-radius-pill);
+    color: var(--rf-buy-ink);
+    display: none;
+    font: 600 13px/24px var(--rf-font);
+    height: 24px;
+    margin: 0;
+    min-width: 24px;
+    padding: 0 7px;
+    text-align: center;
+    width: auto;
+
+    &.countPill--positive {
+        display: inline-block;
+    }
+}
+
+.rf-rise {
+    border: 1px solid $rf-count-colour;
+    border-radius: var(--rf-radius-pill);
+    bottom: -2px;
+    left: -2px;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    right: -2px;
+    top: -2px;
+
+    &.is-rising {
+        animation: rf-rise 300ms ease-out 1;
+    }
+}
+
+@keyframes rf-rise {
+    from {
+        opacity: 0.9;
+        transform: scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: scale(2.4);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rf-rise {
+        display: none;
+    }
+}
+
+
+// #menu: the phone drawer (stock, until ticket 28), and on desktop the panel "Shop flies"
+// opens (header.js) until ticket 28's grouped panel
+// -----------------------------------------------------------------------------
+
+.navPages-container.rf-header-drawer {
+    &.is-open {
+        background: var(--rf-paper);
+        bottom: auto;
+        height: calc(100vh - var(--rf-header-h));
+        height: calc(100dvh - var(--rf-header-h));
+        padding-top: 0;
+        position: absolute;
+        top: 100%;
+    }
+
+    @include breakpoint("medium") {
+        display: none;
+
+        // Stock sets bottom: 0 and height: 100% on the container (_navPages.scss), which would
+        // squeeze an absolute panel to nothing.
+        &.rf-is-panel-open {
+            background: var(--rf-paper);
+            bottom: auto;
+            box-shadow: var(--rf-pop);
+            display: block;
+            height: auto;
+            left: 0;
+            padding: 8px var(--rf-gutter);
+            position: absolute;
+            right: 0;
+            top: 100%;
+            z-index: zIndex("high");
+        }
+    }
+}
+
+@import "shipping-strip"; // the shipping strip widget's styles (widgets/shipping-strip)

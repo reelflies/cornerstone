@@ -257,8 +257,8 @@ The screenshots and axe open each state in `UI_STATES` on the pins it names, at 
 
 | State | Opens | At | On | Owner |
 |---|---|---|---|---|
-| `drawer-open` | the phone menu: stock Cornerstone's Menu toggle and `#menu` today | `phone-375` | `home` (ReelFlies_CA) | 28 points it at the grouped drawer |
-| `panel-open` | the desktop menu panel: stock Cornerstone's sub-menu of the first top-level category today, opened from the keyboard | `desktop-1280` | `category` (channel 1) | 28 points it at the "Shop flies" panel |
+| `drawer-open` | the phone menu: ticket 27's Menu button, which drives the stock toggle, and the stock `#menu` | `phone-375` | `home` (ReelFlies_CA) | 28 points it at the grouped drawer |
+| `panel-open` | the desktop menu panel: ticket 27's "Shop flies" opens the stock menu as a panel, then the stock sub-menu of the first top-level category opens, both from the keyboard | `desktop-1280` | `category` (channel 1) | 28 points it at its grouped panel |
 | `sheet-open` | a slot for the quick-add sheet and popover | | | 43 adds it |
 
 - **A state shot** is the viewport as it shows with the state open, because a fixed drawer or sheet covers the viewport rather than the page. A state can ask for `fullPage: true`. It has the page's masks and stylesheet. Its baseline is `<key>~<state>-<project>-<platform>.png`, covered on the `Baselines:` line by its page kind.
@@ -452,7 +452,7 @@ Every pinned page, at 375 and 1280, runs with the tags WCAG 2.0–2.2 A and AA p
 - A listed issue that no longer occurs is reported as fixed, so the entry can be removed.
 - An entry's `templates` are page kinds or `kind@name` pins. Its optional `states` limits it to the page with one of those UI states open; without it, it covers the page in every state.
 - **The list holds three entries, all with the stock desktop sub-menu open** (`panel-open` on channel 1's category page; W0-8, 2026-10-06): `aria-hidden-focus`, `color-contrast` and `target-size`. Ticket 28 replaces the sub-menu with its panel and removes them. The closed stock templates had no serious or critical issues on ReelFlies_CA (home, cart, 404, brand) or on the channel-1 product and category pages on 2026-10-05, and the stock phone menu open (`drawer-open`) has none.
-- The moderate issues found were no `<main>` landmark, content outside landmarks, heading order and duplicate landmarks. Ticket 25 gave every template one `<main>`, which `skin.spec.mjs` checks with axe's two landmark rules on every pin. Heading order on the cart and search pages is left for the tickets that rebuild them (41 and 30), and content outside landmarks for the header and footer tickets (27 and 50).
+- The moderate issues found were no `<main>` landmark, content outside landmarks, heading order and duplicate landmarks. Ticket 25 gave every template one `<main>`, which `skin.spec.mjs` checks with axe's two landmark rules on every pin. Heading order on the cart and search pages is left for the tickets that rebuild them (41 and 30), and content outside landmarks for the footer ticket (50). Ticket 27's header is the banner landmark, and the shipping strip's region sits in its own labelled region landmark, which `header.spec.mjs` checks with axe's `region` rule.
 
 ## Screenshots (`screens.spec.mjs`)
 
@@ -535,7 +535,7 @@ export default {
 - `markupOnly(html)` returns the HTML with comments removed and those text-only elements emptied, their tags kept, so a text search sees only markup (`rf-live-region` uses it).
 - `scriptsOfType(html, type)` returns script contents, such as JSON-LD.
 
-**Tests:** add a fixture page to `raw-html/fixtures/` and a case to `raw-html/raw-html.test.mjs`, or a test file of your own beside it (ticket 25's is `page-frame.test.mjs`), with a failing fixture and a passing one. Or put them in `assertions/<id>.test.mjs` beside the assertion, which keeps a ticket's tests out of the shared file; the loader skips `*.test.mjs`, and `home-hero.test.mjs` builds its pages from a widget's render. Every fixture page runs every registered assertion, so a fixture of a whole page carries what every page has: `<html lang="en-CA">`, the en-CA content language, the Onest preload, a favicon link and one `og:image` in the head, the icon sheet and the live region right after `<body>`, and one `<main>`. CI runs them through `npm run test:scripts`. `raw-html/fetch.test.mjs` checks that the preview cookie reaches `QA_BASE_URL` and never a host a redirect points at.
+**Tests:** add a fixture page to `raw-html/fixtures/` and a case to `raw-html/raw-html.test.mjs`, or a test file of your own beside it (ticket 25's is `page-frame.test.mjs`), with a failing fixture and a passing one. Or put them in `assertions/<id>.test.mjs` beside the assertion, which keeps a ticket's tests out of the shared file; the loader skips `*.test.mjs`, `home-hero.test.mjs` builds its pages from a widget's render, and `rf-header.test.mjs` from the header's. Every fixture page runs every registered assertion, so a fixture of a whole page carries what every page has: `<html lang="en-CA">`, the en-CA content language, the Onest preload, a favicon link and one `og:image` in the head, the icon sheet and the live region right after `<body>`, the ReelFlies header (its logo `<div>`, its Menu `<button>` and its row) with the strip's region landmark after it, and one `<main>`. CI runs them through `npm run test:scripts`. `raw-html/fetch.test.mjs` checks that the preview cookie reaches `QA_BASE_URL` and never a host a redirect points at.
 
 **The assertions today** judge the page as served. None reads the repo's record of a widget (`widgets/<name>/channels/<channel>.json`), so a widget placed or unpublished on 1895766 never fails the gate on every branch until that file's PR merges (build pipeline, section 6.6). Whether the store holds what the repo records is the sync's check, `widgets-sync.mjs --verify` ([docs/widgets.md](../../docs/widgets.md)).
 
@@ -551,13 +551,15 @@ export default {
 | `rf-fonts` | 25 | one preload of `fonts/onest-latin-var.woff2`, `as="font"`, `type="font/woff2"` and `crossorigin`, and no link to Google Fonts (stock asked it for Karla and Montserrat) |
 | `rf-brand-head` | 25 | a favicon link with an href, and exactly one `og:image`: the page's own (a product's), or the ReelFlies default share image |
 | `autocomplete` | 25 | on `login` and `create-account` only: the sign-in fields carry `email` and `current-password`, and every store form field its token by `data-field-type` (`TOKENS`). The account and address forms need a signed-in customer, so `render/partials/autocomplete.test.mjs` renders them from fixtures |
-| `home-one-h1` | 46 | at most one `<h1>` on the home page (the stock logo today, none on ticket 27's branch before the hero is placed), and with the hero on the page, exactly one: the hero's |
+| `home-one-h1` | 46 | at most one `<h1>` on the home page (none since ticket 27 made the logo a `<div>`, until the hero is placed), and with the hero on the page, exactly one: the hero's |
 | `home-hero` | 46 | when the page has the hero: its `<img>` has a srcset (320w to 1600w), sizes, width and height, and is the page's only `fetchpriority="high"`; its `<h1>` has text; its two buttons are `<a href>`. A page without the hero passes |
 | `home-no-carousel` | 46 | no stock carousel (`.heroCarousel`) on the home page |
+| `rf-header` | 27 | one ReelFlies `<header data-rf-header>` holding no `<h1>`; the logo a `<div data-rf-logo>` holding one link, and no `.header-logo` an `<h1>`; the Menu control a `<button>` with `aria-expanded` and a visible label; no Compare, Gift Certificates or wish list link in the header row (the phone drawer is ticket 28's) |
+| `max-one-h1` | 27 | at most one `<h1>` on every page |
+| `strip-region` | 27 | one `header_bottom--global` region, after the header, inside `<div data-rf-strip-region role="region">` with an accessible name; the shipping strip (`data-rf-strip`), when it is there, holds no link. Another channel's widget in the region isn't judged |
 
 **Still to come:**
 
-- no page with more than one `<h1>`, and the logo never inside one (ticket 27)
 - the tree-4 nav links in the header `<nav>` (28)
 - facet links with `_bc_fsnf=1` and `rel="nofollow"` (33)
 - the structured data's contents (40). The home page is already fetched wherever it is pinned.
@@ -596,6 +598,26 @@ QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs skin.
 ```
 
 It isn't part of `qa:prepush`, so a release doesn't run it. Ticket 54 folds the focus, reflow and reduced-motion checks into its runner.
+
+## The header (`header.spec.mjs`)
+
+Ticket 27's checks in a browser (spec modules 2, 4 and 19; stories 4, 9, 57, 67 and 68), on every page pinned for `QA_CHANNEL`, at 375 and 1280:
+
+- **At 1280:** one row holding the logo, "Shop flies", a visible search field, Account and Cart, in that order, and no Saved, Compare or Gift Certificates link. "Shop flies" opens the stock menu as a panel under the row until ticket 28, and Escape closes it with focus back on the button.
+- **At 375:** a 56px bar that stays at the top as the page scrolls. Menu is a `<button>` named "Menu" with `aria-expanded`; open, it is named "Close", the drawer shows and `<html data-rf-open>` holds `drawer`; Escape closes it with focus back on the button.
+- **Focus:** tabbing through the category pins (home where the channel has none), at both widths, never leaves the focused element under the sticky bar (`tabThrough` and `focusProblems` from `page-checks.mjs`).
+- **axe:** no serious or critical issue in the header or the strip's landmark with the drawer or panel closed and open, and no node of axe's `region` rule inside them.
+- **No script error:** the stock scripts that bound to the stock header's markup (`quick-search.js`, `cart-preview.js`'s dropdown) find nothing, and throw nothing.
+- **The rise ring:** with `rf_rise` on, `rise.js` loads, the ring plays once when the count goes up (`bumpCart`), and not under reduced motion; under `QA_OVERLAY=rf_rise-off` there is no ring and no `rf-rise` chunk.
+
+```sh
+export QA_PORT=3500
+npx playwright test --config scripts/qa/playwright.config.mjs header.spec
+QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs header.spec
+QA_OVERLAY=rf_rise-off npx playwright test --config scripts/qa/playwright.config.mjs header.spec
+```
+
+Like the skin's, it isn't in `qa:prepush`. A ticket that changes the header (28, 29, 30) runs it.
 
 ## Fixture renders (`render/`)
 
@@ -706,6 +728,8 @@ A widget whose layout makes promises a shot can't prove has its own Playwright s
 - its text 4.5:1 or better over the scrim and the photo on desktop, at 801 and 1280 px. The text is made transparent, each line box is shot, and the lightest pixel behind it is read back through a canvas; each ratio is a test annotation.
 - ticket 25's focus ring on both buttons from the keyboard: #23272B on phones, where they sit on the white page, and the gold bead from 801px, where they sit on the scrim, each 3:1 or better against every pixel round it (read the same way, with the ring hidden)
 - no serious or critical axe issues in the widget
+
+`shipping-strip-screens.spec.mjs` (ticket 27) checks the shipping strip on its fixture page, with the theme's header round it (`"chrome": true`): it sits after the header inside the "Shipping and prices" region landmark, shows the long line from 801px and the short one on phones, holds no link, scrolls away under the 56px sticky phone bar, and has no serious or critical axe issue and nothing outside a landmark.
 
 ### Worked example
 
@@ -941,7 +965,8 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - Playwright runs `scripts/qa/*.spec.mjs` with this folder's config.
 - `harness-selftest.spec.mjs` runs with `qa:axe`, `qa:screens`, `qa:quick-view`, `qa:reflow`, `qa:motion` and `qa:focus`, and in every row of `qa:matrix`, on pages it serves itself. It proves that a pinned page answering with the wrong status fails the run without being asked again, that one answering 5xx twice or 429 four times fails, and that dismissing the cookie banner leaves nothing hovered. Its 5xx and 429 retry cases answer the pinned 404 page (or the channel's first page) with a 500, or a 429 with `Retry-After: 1`, once and then let the request through, so the second answer is the storefront's real one.
 - `widget-screens.spec.mjs` runs with `qa:screens`, because the script's `screens` filter matches its name.
-- `home-lead-screens.spec.mjs` runs with `qa:screens` too, for the same reason.
+- `home-lead-screens.spec.mjs` and `shipping-strip-screens.spec.mjs` run with `qa:screens` too, for the same reason.
+- `header.spec.mjs` (ticket 27) runs only when named, like `skin.spec.mjs`: no npm script's filter matches it.
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
 - `storefront.test.mjs` also covers `QA_PORT`, the start log's name, the locks a gate holds (and the ports checked again after a slot wait), trusting only the server a gate started, and stopping that server when the gate is stopped by a signal. `playwright-config.test.mjs` covers that the config reads `QA_PORT` and holds the locks only in the runner, `prepush.test.mjs` what `qa:prepush` checks before its first gate, `serve.test.mjs` the locks around a `stencil start` by hand, and `scripts/lib/lock.test.mjs` the locks themselves: the stale rules, waiting, the three slots across processes, the signals, `RF_LOCK_ROOT`, and the command line `release.sh` uses.
 - `pages.test.mjs` covers W0-8's pins, baseline names (against the baseline-scope check's parser), UI states, overlays and custom layouts; `overlays.test.mjs` the overlay files, the patch and the throwaway worktree (in git repos of its own); `custom-layouts.test.mjs` the merge into `config.stencil.json`; `playwright-config.test.mjs` the overlay's refusals, ports and folder, and the custom-layouts step before `stencil start`; `storefront.test.mjs` the overlay marker check, and that only an overlay run's own worktree moves a `stencil start` out of the checkout (an `RF_QA_THEME_DIR` left in the shell never does; `prepush.test.mjs` too).
