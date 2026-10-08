@@ -1,0 +1,37 @@
+{{!--
+    The phone drawer's footer (ticket 28; spec module 4; O05, UX-19, SEO-15), the last part of the
+    grouped menu (menu.html). From 801px only the Hook size chart link shows, at the foot of the
+    desktop rail, as on the reference page.
+
+    - Account: the account page signed in, sign-in otherwise. The phone bar has no Account link
+      (ticket 27), so the drawer is where phones reach it, as the reference's drawer does.
+    - Shipping & Returns and Contact us, ticket 22's Web Pages, linked only when the channel has a
+      visible page at that path (ticket 50's rule for the footer), so no link points at a page
+      the channel lacks: ReelFlies_CA has none until ticket 22's pages are written.
+    - Hook size chart (/fly-hook-size-chart/, ticket 35).
+    - The blog as "Fly fishing articles" (SEO-15), while the store's blog is on. Ticket 07's probe
+      15: /blog/ and its posts answer 200 on 1895766 and channel 1.
+    - "Call" as text, with the store's phone number a tel: link beside it.
+    - Signed in, Sign out, which the phone bar doesn't have (ticket 27).
+--}}
+<div class="rf-menu-foot" data-rf-menu-foot>
+    <ul class="rf-menu-foot-list">
+        <li><a class="rf-menu-foot-link" href="{{#if customer}}{{urls.account.index}}{{else}}{{urls.auth.login}}{{/if}}">{{lang 'common.account'}}</a></li>
+        {{#each pages as |rfPage|}}
+        {{#contains rfPage.url '/shipping-returns/'}}<li><a class="rf-menu-foot-link" href="{{rfPage.url}}">{{lang 'reelflies.menu.shipping'}}</a></li>{{/contains}}
+        {{/each}}
+        {{#each pages as |rfPage|}}
+        {{#contains rfPage.url '/contact-us/'}}<li><a class="rf-menu-foot-link" href="{{rfPage.url}}">{{lang 'reelflies.menu.contact'}}</a></li>{{/contains}}
+        {{/each}}
+        <li class="rf-menu-foot-chart"><a class="rf-menu-foot-link" href="/fly-hook-size-chart/">{{lang 'reelflies.menu.hook_chart'}}</a></li>
+        {{#if settings.blog_enabled}}
+        <li><a class="rf-menu-foot-link" href="/blog/">{{lang 'reelflies.menu.articles'}}</a></li>
+        {{/if}}
+        {{#if settings.phone_number}}
+        <li class="rf-menu-foot-call">{{> components/reelflies/icon name='phone'}}<span>{{lang 'reelflies.menu.call'}} <a href="tel:+{{strReplace settings.phone_number ' ' ''}}">{{settings.phone_number}}</a></span></li>
+        {{/if}}
+        {{#if customer}}
+        <li><a class="rf-menu-foot-link" href="{{urls.auth.logout}}">{{lang 'common.logout'}}</a></li>
+        {{/if}}
+    </ul>
+</div>

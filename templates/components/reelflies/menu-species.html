@@ -1,0 +1,12 @@
+{{!--
+    The grouped menu's Species group (ticket 28; menu.html): a divider, then Flies by Species
+    (rf_cat, the category rf_menu_species_root_id names) as the only row of a list with no group
+    label (UX-2). Its pane lists the root's children, the Species names, and never their Fly
+    Type pages (decision 3).
+--}}
+<div class="rf-menu-group rf-menu-group--species">
+    <div class="rf-menu-sep" aria-hidden="true"></div>
+    <ul class="rf-menu-list" aria-label="{{lang 'reelflies.menu.species'}}">
+        {{> components/reelflies/menu-item rf_cat=rf_cat}}
+    </ul>
+</div>

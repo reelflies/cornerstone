@@ -22,7 +22,8 @@ export const GLOBAL_MODULES = [
     () => import(/* webpackChunkName: "rf-header" */ './header').then(module => module.default()),
     context => context.rfRise && import(/* webpackChunkName: "rf-rise" */ './rise').then(module => module.default(context)),
 
-    // 28 grouped menu and phone drawer
+    // 28 grouped menu and phone drawer: the rows' and the rail's panes (menu.js), only where the grouped menu renders
+    () => document.querySelector('[data-rf-menu]') && import(/* webpackChunkName: "rf-menu" */ './menu').then(module => module.default()),
 
     // 30 quick search
 
