@@ -44,10 +44,15 @@
     --rf-fs-h1: clamp(30px, 1.8cqi + 16px, 44px);
     --rf-fs-h2: clamp(24px, 1cqi + 16px, 32px);
 
-    // Shape: 16px tiles and panels, 20px banners, pills for controls
+    // Shape: 16px tiles and panels, 20px banners, pills for controls. Then the reference's two
+    // smaller radii (ticket 26's finding 9): 12px for product thumbnails, the cart photo,
+    // callouts, status lines and the home tiles; 8px for the logo's link and quick-search
+    // thumbnails.
     --rf-radius-tile: 16px;
     --rf-radius-banner: 20px;
     --rf-radius-pill: 999px;
+    --rf-radius-mid: 12px;
+    --rf-radius-small: 8px;
 
     // Space: the page gutter and the gap between sections
     --rf-gutter: clamp(16px, 2.6cqi, 32px);
@@ -61,6 +66,15 @@
     --rf-target-buy: 44px;
     --rf-target-row: 48px;
     --rf-target-min: 24px;
+
+    // The sticky header: how much of the top of the viewport it covers (ticket 26's finding 9).
+    // The phone bar is 56px; from 801px the header scrolls away with the page, so 0. Ticket 27
+    // sets scroll-padding-top from it, and ticket 38 offsets its sticky bar by it.
+    --rf-header-h: 56px;
+
+    @include breakpoint("medium") {
+        --rf-header-h: 0px;
+    }
 
     // Image scrims, neutral #1C1D1F: cards darken from the bottom to 42% of their height,
     // category banners from the left to 65% of their width (CD-6)

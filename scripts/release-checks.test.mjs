@@ -1,16 +1,18 @@
 // The stops that only a real release reaches (ticket 05). release-sh.test.mjs can't reach them,
 // because every fixture run needs --dry-run, so they're tested here, offline: the setup refusals,
-// the My Themes cap, the typed channel id and step 5's gate before the push, and W0-1's
-// --confirm-nonprod with a calendar object for each phase.
+// the My Themes cap, the typed channel id and step 5's gate before the push, W0-1's
+// --confirm-nonprod with a calendar object for each phase, and ticket 53's operator rule for the
+// channel-1 target (a terminal, never an agent's shell) and its typed question.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PassThrough } from 'node:stream';
 import {
-    confirmChannel, confirmNonprodRefusals, LIVE_CHANNELS, pairedChannel1Release, pushConfirmation, pushGate, realReleaseStops,
-    setupProblems, themeCapProblems,
+    confirmChannel, confirmNonprodRefusals, isProductionTarget, LIVE_CHANNELS, operatorProblems, operatorRefusal, pairedChannel1Release, pushConfirmation,
+    pushGate, realReleaseStops, setupProblems, themeCapProblems, typedQuestion,
 } from './release-checks.mjs';
 import { parseCalendar, phaseOn } from './lib/release-calendar.mjs';
+import { findTarget } from './release-targets.mjs';
 
 // --- Setup and the My Themes cap: a dry run warns, a real release stops ---
 
@@ -404,4 +406,73 @@ test('W0-1: without the flag, step 5 never checks origin/master: the typed promp
     assert.equal(confirm, typed);
     await gateWith(confirm, []);
     assert.equal(originChecked, false);
+});
+
+// --- Ticket 53: the guarded channel-1 target: typed only, by an operator, never an agent -------
+
+// The real entry from release-targets.mjs, not a copy, so a change to it is tested here.
+const REAL_CHANNEL_1 = findTarget(1);
+const io = ({ stdin = true, stdout = true } = {}) => ({ stdin: { isTTY: stdin }, stdout: { isTTY: stdout } });
+const OPERATOR = { ...io(), env: { HOME: '/Users/shaun', PATH: '/usr/bin' } };
+
+test('ticket 53: channel 1 is a production target by its entry and by its id; 1895766 isn\'t until the Flip', () => {
+    assert.equal(isProductionTarget(REAL_CHANNEL_1), true);
+    assert.equal(isProductionTarget({ ...REAL_CHANNEL_1, production: false }), true, 'a copied entry saying production: false is still live reelflies.ca by its id');
+    assert.equal(isProductionTarget({ id: 7, name: 'New' }), true, 'a target that doesn\'t declare production: false counts as production');
+    assert.equal(isProductionTarget(findTarget(1895766)), false);
+});
+
+test('ticket 53: --confirm-nonprod is refused on the real channel-1 entry, by its id and as a production target, in every phase', () => {
+    for (const date of ['2026-10-06', '2027-01-25', '2027-02-01', '2027-02-08', '2027-03-01']) {
+        const reasons = confirmNonprodRefusals({ options: agent({ channel: 1, confirmNonprod: 1 }), target: REAL_CHANNEL_1, phase: on(date) });
+        assert.match(reasons[0], /^channel 1 is live reelflies\.ca: its push is confirmed only by typing the channel id at the terminal/, date);
+    }
+    assert.deepEqual(confirmNonprodRefusals({ options: agent({ channel: 1, confirmNonprod: null }), target: REAL_CHANNEL_1, phase: on('2027-02-08') }), [], 'a typed channel-1 push isn\'t limited by the calendar: Shaun types it');
+    assert.equal(pairedChannel1Release({ target: REAL_CHANNEL_1, phase: on('2027-02-03') }), null, 'a channel-1 push is itself the paired release');
+});
+
+test('ticket 53: an operator typing at a terminal may release to channel 1', () => {
+    assert.deepEqual(operatorProblems({ target: REAL_CHANNEL_1, ...OPERATOR }), []);
+});
+
+test('ticket 53: channel 1 needs a terminal on stdin and stdout, so the typed prompt is read and seen by a person', () => {
+    assert.deepEqual(operatorProblems({ target: REAL_CHANNEL_1, ...OPERATOR, ...io({ stdin: false }) }), ['stdin isn\'t a terminal']);
+    assert.deepEqual(operatorProblems({ target: REAL_CHANNEL_1, ...OPERATOR, ...io({ stdout: false }) }), ['stdout isn\'t a terminal: don\'t pipe or redirect the release\'s output']);
+    const noTTY = operatorProblems({
+        target: REAL_CHANNEL_1, ...OPERATOR, stdin: {}, stdout: {},
+    });
+    assert.equal(noTTY.length, 2, 'a stream with no isTTY is no terminal');
+});
+
+test('ticket 53: channel 1 is refused in a shell Claude Code started, whatever its terminal, so no agent run reaches it', () => {
+    for (const value of ['1', '', 'true']) {
+        const problems = operatorProblems({ target: REAL_CHANNEL_1, ...io(), env: { ...OPERATOR.env, CLAUDECODE: value } });
+        assert.deepEqual(problems, ['this is an agent\'s shell: Claude Code set CLAUDECODE in it'], `CLAUDECODE=${JSON.stringify(value)}`);
+    }
+    const agentRun = operatorProblems({ target: REAL_CHANNEL_1, ...io({ stdin: false, stdout: false }), env: { CLAUDECODE: '1' } });
+    assert.equal(agentRun.length, 3, 'every reason is listed at once');
+});
+
+test('ticket 53: the operator rule covers every production target and no non-production one', () => {
+    const agentRun = { ...io({ stdin: false, stdout: false }), env: { CLAUDECODE: '1' } };
+    assert.deepEqual(operatorProblems({ target: findTarget(1895766), ...agentRun }), [], 'agents push to 1895766 with --confirm-nonprod (W0-1)');
+    assert.equal(operatorProblems({ target: { id: 7, name: 'New' }, ...agentRun }).length, 3, 'deny by default');
+    assert.equal(operatorProblems({ target: { ...REAL_CHANNEL_1, production: false }, ...agentRun }).length, 3, 'channel 1 by its id');
+});
+
+test('ticket 53: the refusal names the channel, says it is the operator\'s alone, and lists each reason', () => {
+    const text = operatorRefusal(REAL_CHANNEL_1, ['stdin isn\'t a terminal', 'this is an agent\'s shell: Claude Code set CLAUDECODE in it']);
+    assert.match(text, /^channel 1 \(reelflies\.ca\) is live reelflies\.ca: only an operator typing at their own terminal releases to it, dry runs included, never an agent \(ticket 53\): stdin isn't a terminal; this is an agent's shell: Claude Code set CLAUDECODE in it$/);
+});
+
+test('ticket 53: step 5\'s question names live reelflies.ca, the variation and the rf_* values channel 1 has never had', () => {
+    assert.equal(
+        typedQuestion({ target: REAL_CHANNEL_1, variation: 'ReelFlies CA channel 1', newSwitches: [] }),
+        'Type the channel id (1) to push to live reelflies.ca (channel 1) with variation "ReelFlies CA channel 1": ',
+    );
+    assert.equal(
+        typedQuestion({ target: REAL_CHANNEL_1, variation: 'ReelFlies CA channel 1', newSwitches: ['rf_rise', 'rf_quick_add'] }),
+        'Type the channel id (1) to push to live reelflies.ca (channel 1) with variation "ReelFlies CA channel 1" and the 2 rf_* value(s) it has never had, listed above as new switches: ',
+    );
+    assert.equal(typedQuestion({ target: findTarget(1895766), variation: 'ReelFlies CA', newSwitches: ['rf_rise'] }), 'Type the channel id (1895766) to push: ', '1895766\'s prompt is unchanged');
 });

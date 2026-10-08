@@ -2992,6 +2992,12 @@
         "type": "heading",
         "content": "i18n.RfHeader"
       },
+      {
+        "type": "checkbox",
+        "label": "i18n.RfRise",
+        "force_reload": true,
+        "id": "rf_rise"
+      },
 
       {
         "type": "heading",

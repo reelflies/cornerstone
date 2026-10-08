@@ -1,8 +1,9 @@
-// Ticket 53, Option A: the channel-1 variation only (wave 1, lane B). Channel 1 is live
-// reelflies.ca on tree 1. Its variation, "ReelFlies CA channel 1" (decision 10's interim name),
-// is as thin as "ReelFlies CA" and "ReelFlies US": it holds only what differs on channel 1, which
-// today is tree 1's menu ids. Merging it applies nothing to channel 1: no release target takes it,
-// and ticket 56 pushes it there after Shaun approves it and its ids (53:7).
+// Ticket 53, Option A: the channel-1 variation (wave 1, lane B). Channel 1 is live reelflies.ca on
+// tree 1. Its variation, "ReelFlies CA channel 1" (decision 10's interim name), is as thin as
+// "ReelFlies CA" and "ReelFlies US": it holds only what differs on channel 1, which today is tree
+// 1's menu ids. Merging it applies nothing to channel 1: only ticket 53's guarded channel-1 target
+// takes it (wave 2, lane F: typed by Shaun at his own terminal, never an agent), and ticket 56
+// pushes it there after Shaun approves it and its ids (53:7).
 //
 // From this ticket on, channel-1 gate runs render that variation, and their baselines live in
 // scripts/qa/baselines/1-reelflies-ca-channel-1/ (build pipeline, wave 1, lane B).
@@ -84,9 +85,14 @@ describe('config.json: the channel-1 variation', () => {
     });
 });
 
-describe('no release target takes the channel-1 variation (ticket 56 pushes it, after Shaun approves)', () => {
-    it('refuses channel 1, which only ticket 53\'s guarded target will push', () => {
-        assert.throws(() => resolveTarget({ channel: '1', variation: NAME }, config), /channel 1 is live reelflies\.ca/);
+describe('only the guarded channel-1 target takes the channel-1 variation (ticket 56 pushes it, after Shaun approves)', () => {
+    it('is channel 1\'s only variation, and channel 1 is production, typed only', () => {
+        const target = resolveTarget({ channel: '1', variation: NAME }, config);
+        assert.equal(target.name, 'reelflies.ca');
+        assert.deepEqual(target.variations, [NAME]);
+        assert.equal(target.production, true);
+        assert.deepEqual(target.confirmation, ['typed']);
+        assert.throws(() => resolveTarget({ channel: '1', variation: 'ReelFlies CA' }, config), /isn't released to channel 1: reelflies\.ca takes "ReelFlies CA channel 1"/);
     });
 
     it('refuses the variation on ReelFlies_CA', () => {
@@ -94,7 +100,7 @@ describe('no release target takes the channel-1 variation (ticket 56 pushes it, 
     });
 });
 
-// Spec seam 5: the release guard on the channel-1 variation, as ticket 53's target will run it.
+// Spec seam 5: the release guard on the channel-1 variation, as ticket 53's target runs it.
 describe('the release guard and step 1 on the channel-1 variation (seam 5)', () => {
     const repo = effectiveSettings(config, NAME);
     // Channel 1 runs Hero-2024 until ticket 56's push: its Theme Styles hold no rf_* key.

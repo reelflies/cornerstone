@@ -1,0 +1,62 @@
+// =============================================================================
+// SHIPPING STRIP (ticket 27; spec module 2, O04)
+// =============================================================================
+//
+// Styles for the Widgets API template widgets/shipping-strip/template.html, which the store
+// renders in header_bottom--global, after the header (components/reelflies/header.html wraps
+// that region in the labelled landmark). Widget styles live in the theme, not in the widget
+// (build pipeline, decision 6), so every channel's copy looks the same. Imported at the end of
+// _header.scss, ticket 27's one slot in _index.scss (a slot holds one import), so the header's
+// variables are in scope here: the strip lines up with the header row ($rf-header-max).
+//
+// From the reference's .strip rules (plan/design/src/reference.src.html:215-219, :789): the
+// shipping promise on the soft tile, the long line from 801px and the short one on phones.
+//
+// -----------------------------------------------------------------------------
+
+.rf-strip {
+    background: var(--rf-tile);
+    color: var(--rf-ink);
+    font-size: 14px;
+    line-height: 20px;
+}
+
+.rf-strip-in {
+    align-items: center;
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 24px;
+    justify-content: space-between;
+    margin: 0 auto;
+    max-width: $rf-header-max;
+    padding: 9px var(--rf-gutter);
+}
+
+.rf-strip-line {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    margin: 0;
+}
+
+.rf-strip-line--long {
+    display: none;
+
+    @include breakpoint("medium") {
+        display: flex;
+    }
+}
+
+.rf-strip-line--short {
+    @include breakpoint("medium") {
+        display: none;
+    }
+}
+
+.rf-strip-icon {
+    color: var(--rf-sage);
+    flex: none;
+    height: 20px;
+    width: 20px;
+}
