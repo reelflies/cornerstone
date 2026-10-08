@@ -10,9 +10,10 @@
 // - homeCases({ channel, fixtures }) lists each widget whose channels/<channel>.json places it on
 //   pages/home, with the fixture named in `fixtures` (default: "default"), in the order the
 //   store renders them: by region as home.html has them, then by placement sort_order.
-// - renderHomePage(cases, { variation, chrome }) renders templates/pages/home.html inside the
-//   theme's own body, with the header and footer unless chrome is false, and each widget in its
-//   region in the store's wrapper.
+// - renderHomePage(cases, { variation, chrome, context }) renders templates/pages/home.html inside
+//   the theme's own body, with the header and footer unless chrome is false, and each widget in its
+//   region in the store's wrapper. context is more store data for the page, such as the
+//   shipping_messages home.html prints.
 // - openHomePage(page, cases, options) opens it in Playwright on widget-page.mjs's made-up origin:
 //   no request reaches the store, and each store image URL is answered from the fixtures/files/
 //   folder of the widgets on the page.
@@ -63,14 +64,16 @@ export function homeCases({ channel = 1895766, fixtures = {}, root = WIDGETS_DIR
 }
 
 // The home page, every widget in its region in the store's wrapper, in the cases' order.
-export async function renderHomePage(cases, { variation = DEFAULT_VARIATION, chrome = true, themeDir = THEME_DIR } = {}) {
+export async function renderHomePage(cases, {
+    variation = DEFAULT_VARIATION, chrome = true, themeDir = THEME_DIR, context = {},
+} = {}) {
     const regions = {};
     for (const [index, widgetCase] of cases.entries()) {
         const html = await renderWidget(widgetCase.widget, widgetCase.fixture, { root: widgetCase.root }); // eslint-disable-line no-await-in-loop
         const { region } = widgetCase.placement;
         regions[region] = `${regions[region] || ''}<div data-widget-id="${fixedId(index + 1, 1)}" data-placement-id="${fixedId(index + 1, 2)}" data-placement-status="ACTIVE">${html}</div>`;
     }
-    return renderPartial(HOME_TEMPLATE, { rf_fixture_chrome: chrome }, {
+    return renderPartial(HOME_TEMPLATE, { ...context, rf_fixture_chrome: chrome }, {
         variation, themeDir, overrides: { 'layout/base': LAYOUT }, regions,
     });
 }

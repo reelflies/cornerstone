@@ -561,6 +561,7 @@ export default {
 | `home-cards-tiles` | 47 | when the page has the Fly Type cards (`.rf-type-card`) or tiles (`.rf-link-tile`): each is one `<a href>` to a page with no link, button or form control inside it, holding one `<img>` with `alt=""`, src, srcset, sizes, width and height; the cards' photos eager with no `fetchpriority`, the tiles' `loading="lazy"`. A page without them passes |
 | `home-photo-once` | 47 | no photo twice on the home page: a file is named by its path after the size segment, a `<picture>` and its `<img>` are one photo, and lazy `data-src` counts. An element with `data-rf-photo-repeat` (ticket 49's crop of the Dry banner) isn't counted |
 | `home-no-stock-strips` | 47 | no stock featured, most popular or new products strip on the home page (`config.json` sets the three `homepage_*_count` to 0) |
+| `home-nothing-between` | 47 | when the page has both the Fly Type cards (`.rf-type-cards`) and the tiles (`.rf-home-tiles`): nothing between them but end tags and empty `<div>` wrappers (and `<script>`, `<style>` or `<template>`). A widget there (any `data-widget-id` but the tiles' own wrapper), any other element, or any text fails it: a Page Builder widget in `home_below_carousel` or `home_below_featured_products`, one before the tiles in `home_below_top_products` or after the hero in `home_below_menu`, or a store shipping message. The tiles before the cards fail too. A page without both passes |
 
 **Still to come:**
 
