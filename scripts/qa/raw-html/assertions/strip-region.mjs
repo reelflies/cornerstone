@@ -26,6 +26,7 @@ export function stripRegionProblems(html) {
     if (!(landmark.attrs['aria-label'] || '').trim()) problems.push('the strip\'s landmark has no accessible name (aria-label)');
     const header = elementSource(html, 'header', attrs => 'data-rf-header' in attrs);
     if (header && header.includes('data-rf-strip-region')) problems.push('the strip\'s landmark is inside the <header>: it belongs after it, so it scrolls away under the sticky phone bar');
+    else if (header && html.indexOf('data-rf-strip-region') < html.indexOf(header)) problems.push('the strip\'s landmark comes before the <header>: it belongs after it, under the bar');
     const strip = elementSource(html, 'div', attrs => 'data-rf-strip' in attrs);
     if (strip) {
         const links = findTags(strip, 'a').map(tag => tag.attrs.href || '(no href)');

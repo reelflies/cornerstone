@@ -139,6 +139,12 @@ describe('strip-region', () => {
         assert.match(stripRegionProblems(frame(inside)).join('\n'), /inside the <header>/);
     });
 
+    it('fails the landmark before the <header>: it belongs after it', () => {
+        const wrapper = elementSource(header, 'div', attrs => 'data-rf-strip-region' in attrs);
+        const ahead = header.replace(wrapper, '').replace('<header', `${wrapper}<header`);
+        assert.match(stripRegionProblems(frame(ahead)).join('\n'), /before the <header>/);
+    });
+
     it('fails the strip with a link, and leaves another channel\'s widget in the region alone', () => {
         const linked = swap('over $60</p>', 'over $60 <a href="https://reelflies.com/">Shop in USD</a></p>');
         assert.match(stripRegionProblems(frame(linked)).join('\n'), /the shipping strip holds a link \(https:\/\/reelflies\.com\/\)/);

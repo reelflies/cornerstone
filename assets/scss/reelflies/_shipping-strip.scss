@@ -6,7 +6,8 @@
 // renders in header_bottom--global, after the header (components/reelflies/header.html wraps
 // that region in the labelled landmark). Widget styles live in the theme, not in the widget
 // (build pipeline, decision 6), so every channel's copy looks the same. Imported at the end of
-// _header.scss, ticket 27's one slot in _index.scss.
+// _header.scss, ticket 27's one slot in _index.scss (a slot holds one import), so the header's
+// variables are in scope here: the strip lines up with the header row ($rf-header-max).
 //
 // From the reference's .strip rules (plan/design/src/reference.src.html:215-219, :789): the
 // shipping promise on the soft tile, the long line from 801px and the short one on phones.
@@ -28,7 +29,7 @@
     gap: 4px 24px;
     justify-content: space-between;
     margin: 0 auto;
-    max-width: 1240px;
+    max-width: $rf-header-max;
     padding: 9px var(--rf-gutter);
 }
 
