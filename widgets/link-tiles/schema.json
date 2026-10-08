@@ -1,0 +1,65 @@
+[
+    {
+        "type": "tab",
+        "label": "Content",
+        "sections": [
+            {
+                "label": "Tiles: shared",
+                "settings": [
+                    { "type": "input", "label": "Name of the tile list, for screen readers", "id": "tiles_label", "default": "More fly types and collections" },
+                    { "type": "input", "label": "Image CDN base, up to /images/stencil", "id": "image_base", "default": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil" },
+                    { "type": "input", "label": "Photo width in px (the files' own; product photos are 3:2)", "id": "photo_width", "default": "1024" },
+                    { "type": "input", "label": "Photo height in px (the files' own)", "id": "photo_height", "default": "683" }
+                ]
+            },
+            {
+                "label": "Tile 1",
+                "settings": [
+                    { "type": "input", "label": "Name", "id": "tile1_name", "default": "Eggs & Worms" },
+                    { "type": "input", "label": "Link (a path on this storefront)", "id": "tile1_url", "default": "/eggs-worms/" },
+                    { "type": "input", "label": "Photo path after the size segment (for example products/<id>/<image id>/<file>)", "id": "tile1_photo", "default": "products/5101/5675/Glo-Bug-Pink__15852.1683224794.jpg" }
+                ]
+            },
+            {
+                "label": "Tile 2",
+                "settings": [
+                    { "type": "input", "label": "Name", "id": "tile2_name", "default": "Warmwater Flies" },
+                    { "type": "input", "label": "Link (a path on this storefront)", "id": "tile2_url", "default": "/warmwater-flies/" },
+                    { "type": "input", "label": "Photo path after the size segment (for example products/<id>/<image id>/<file>)", "id": "tile2_photo", "default": "products/5300/7715/monster-streamer-trout2__75966.1732217781.jpg" }
+                ]
+            },
+            {
+                "label": "Tile 3",
+                "settings": [
+                    { "type": "input", "label": "Name", "id": "tile3_name", "default": "Saltwater Flies" },
+                    { "type": "input", "label": "Link (a path on this storefront)", "id": "tile3_url", "default": "/saltwater-flies/" },
+                    { "type": "input", "label": "Photo path after the size segment (for example products/<id>/<image id>/<file>)", "id": "tile3_photo", "default": "products/3857/7541/crazy-charly-pink-copy__16533.1700837768.jpg" }
+                ]
+            },
+            {
+                "label": "Tile 4",
+                "settings": [
+                    { "type": "input", "label": "Name", "id": "tile4_name", "default": "Flies by Species" },
+                    { "type": "input", "label": "Link (a path on this storefront)", "id": "tile4_url", "default": "/species/" },
+                    { "type": "input", "label": "Photo path after the size segment (for example products/<id>/<image id>/<file>)", "id": "tile4_photo", "default": "products/5490/7717/green-machine-silver__87528.1732217881.jpg" }
+                ]
+            },
+            {
+                "label": "Tile 5",
+                "settings": [
+                    { "type": "input", "label": "Name", "id": "tile5_name", "default": "Fly Selections & Assortments" },
+                    { "type": "input", "label": "Link (a path on this storefront)", "id": "tile5_url", "default": "/fly-selections-assortments/" },
+                    { "type": "input", "label": "Photo path after the size segment (for example products/<id>/<image id>/<file>)", "id": "tile5_photo", "default": "products/5445/5173/30-nymph-assortment__43187.1540056038.jpg" }
+                ]
+            },
+            {
+                "label": "Tile 6",
+                "settings": [
+                    { "type": "input", "label": "Name", "id": "tile6_name", "default": "Fly Gear" },
+                    { "type": "input", "label": "Link (a path on this storefront)", "id": "tile6_url", "default": "/fly-gear/" },
+                    { "type": "input", "label": "Photo path after the size segment (for example products/<id>/<image id>/<file>)", "id": "tile6_photo", "default": "products/4398/7875/large-box-with-logo__49912.1766759364.jpg" }
+                ]
+            }
+        ]
+    }
+]

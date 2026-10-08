@@ -43,6 +43,8 @@ $rf-focus-ring:       #23272b; // the focus ring on light grounds (15:1 on white
 $rf-focus-ring-dark:  #f2c14e; // the gold bead ring on forest grounds (7.2:1)
 $rf-bead-soft:        #fdf3d7;
 $rf-scrim:            28, 29, 31; // #1C1D1F, neutral image scrims, as rgba() channels
+$rf-on-photo-soft:    #e6e9ec; // labels, counts and sublines on a scrim over a photo (the home cards)
+$rf-tile-border:      #dde2dc; // the home tiles' 1px border (CD-11)
 
 // On the forest footer (ticket 50; the reference's footer colours)
 $rf-forest-text:      #d3d9d2; // text, links and icons (8.5:1 on forest)
@@ -66,3 +68,4 @@ $rf-font-stack:   "Onest", "Onest Fallback", system-ui, sans-serif;
 
 $rf-t-fast:       150ms; // hover and focus
 $rf-t-mid:        200ms; // drawers and dropdowns
+$rf-t-photo:      300ms; // a photo's zoom on hover (the reference's home cards)

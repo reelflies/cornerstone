@@ -1,0 +1,24 @@
+{{!--
+    The row of six bordered tiles on the home page (ticket 47; spec module 7, R5, CD-11, UX-14),
+    placed first in home_below_top_products, so with the three big cards in the home lead above
+    them all six Fly Types sit in the first two desktop screens. Synced to each channel by
+    scripts/widgets-sync.mjs; styled by the theme's ReelFlies layer
+    (assets/scss/reelflies/_home-tiles.scss), so nothing here is inline CSS.
+
+    - Every word, link and photo path is a widget field (schema.json; each channel's values are in
+      channels/<channel>.json), so channel 1's copy can carry tree-1 paths (ticket 53).
+    - Each tile is widgets/_shared/link-tile.html, pasted in by the sync: one link holding a white
+      product photo (alt="", lazy, with a srcset, sizes, width and height) and the tile's name.
+    - Six across from 1261px, three across (3x2) from 801px to 1260px so the longer names stay
+      readable, and a two-column grid on phones, never a sideways scroller (UX-3, HOME-3).
+--}}
+<div class="rf-home-tiles">
+    <ul class="rf-link-tiles" aria-label="{{tiles_label}}">
+        {{> _shared/link-tile url=tile1_url name=tile1_name photo=tile1_photo base=image_base photo_width=photo_width photo_height=photo_height}}
+        {{> _shared/link-tile url=tile2_url name=tile2_name photo=tile2_photo base=image_base photo_width=photo_width photo_height=photo_height}}
+        {{> _shared/link-tile url=tile3_url name=tile3_name photo=tile3_photo base=image_base photo_width=photo_width photo_height=photo_height}}
+        {{> _shared/link-tile url=tile4_url name=tile4_name photo=tile4_photo base=image_base photo_width=photo_width photo_height=photo_height}}
+        {{> _shared/link-tile url=tile5_url name=tile5_name photo=tile5_photo base=image_base photo_width=photo_width photo_height=photo_height}}
+        {{> _shared/link-tile url=tile6_url name=tile6_name photo=tile6_photo base=image_base photo_width=photo_width photo_height=photo_height}}
+    </ul>
+</div>

@@ -1,8 +1,8 @@
 {{!--
     The home lead (ticket 46; spec module 6, O21): the photo hero that holds the home page's only
-    H1, placed in home_below_menu. Ticket 47 adds the three big cards after the hero, in this
-    template. Synced to each channel by scripts/widgets-sync.mjs; styled by the theme's ReelFlies
-    layer (assets/scss/reelflies/_home-lead.scss), so nothing here is inline CSS.
+    H1, placed in home_below_menu, then the three big Fly Type cards (ticket 47), in one template
+    (HOME-2). Synced to each channel by scripts/widgets-sync.mjs; styled by the theme's ReelFlies
+    layer (assets/scss/reelflies/_home-lead.scss and _home-tiles.scss), so nothing here is inline CSS.
 
     - Every word and link is a widget field (schema.json; each channel's values are in
       channels/<channel>.json), so channel 1's copy can carry tree-1 paths (ticket 53).
@@ -11,6 +11,10 @@
       fetchpriority="high": the only one on the home page (SEO-8). The path is a text field
       (HOME-2's fallback until ticket 07's probe 13).
     - Both buttons are links to real pages, never controls that open the menu (UX-3, CD-1).
+    - Each card is widgets/_shared/type-card.html, pasted in by the sync. Its count is the
+      storefront query's product count for the card's link (HOME-4): _.data.site.card1 to card3,
+      each a route's node. The widget has no query yet, so no card shows a count until tree 4
+      exists on the channel (docs/widgets.md, "The cards").
 --}}
 <div class="rf-home-lead">
     <div class="container">
@@ -34,5 +38,10 @@
                 </div>
             </div>
         </div>
+        <ul class="rf-type-cards" aria-label="{{cards_label}}">
+            {{> _shared/type-card url=card1_url label=card1_label name=card1_name cta=card1_cta banner=card1_banner frame=card1_frame focus=card1_focus count=_.data.site.card1.node.products.collectionInfo.totalItems base=image_base banner_width=card_banner_width banner_height=card_banner_height frame_width=card_frame_width frame_height=card_frame_height count_suffix=card_count_suffix}}
+            {{> _shared/type-card url=card2_url label=card2_label name=card2_name cta=card2_cta banner=card2_banner frame=card2_frame focus=card2_focus count=_.data.site.card2.node.products.collectionInfo.totalItems base=image_base banner_width=card_banner_width banner_height=card_banner_height frame_width=card_frame_width frame_height=card_frame_height count_suffix=card_count_suffix}}
+            {{> _shared/type-card url=card3_url label=card3_label name=card3_name cta=card3_cta banner=card3_banner frame=card3_frame focus=card3_focus count=_.data.site.card3.node.products.collectionInfo.totalItems base=image_base banner_width=card_banner_width banner_height=card_banner_height frame_width=card_frame_width frame_height=card_frame_height count_suffix=card_count_suffix}}
+        </ul>
     </div>
 </div>

@@ -561,6 +561,10 @@ export default {
 | `rf-footer` | 50 | exactly one `<footer>`, the ReelFlies one (`data-rf-footer`); the outside-Canada line with a real `<a href="https://reelflies.com/">`; the promise line and the copyright, in `lang/en.json`'s words; no "Powered by" anywhere on the page and no Brands column; and either the Shop column or, with both menu ids empty, the stock Categories column. The Shop list declares the ids it was given (`data-rf-menu-type-ids`, `data-rf-menu-species-root-id`), and its links (`data-rf-menu-id`) must be exactly those, in that order, so an id the channel's tree doesn't hold fails, as does a Shop column with no links (ids of only spaces); and every phone link is `tel:+1` and ten digits, so a store phone typed in a form the footer can't dial fails. Its element readers (`elementsHtml`, `outerHtml`, `textOf`, `decodeHtml`) are `html.mjs`'s, shared with 27's, 28's and 33's assertions |
 | `rf-menu-banner` | 29 | the grouped menu's images are only its panes' banners, one at most per pane and before its `<h2>`: `loading="lazy"` (so a phone, the closed panel and a closed pane download nothing), `alt=""`, a srcset of two or more candidates, sizes, a width and a height, and no `fetchpriority`. Pages without the grouped menu pass |
 | `rf-menu` | 28 | when the menu ids are set: one grouped `<nav data-rf-menu>` with a name, inside the ReelFlies header, with no stock navigation (`.navPages`), no stock quick-search form and no `data-menu` on its `#menu`; every link has an href and every category link `data-rf-category`; no "All …" or "Shop all" link; each pane hidden, with an id, opened by one `type="button"` with `aria-expanded="false"`, and headed by an `<h2>` holding its one link. With both ids empty the stock navigation renders, and it passes. Which URLs the nav must hold is `menu.spec.mjs`'s curl test, below |
+| `home-cards-tiles` | 47 | when the page has the Fly Type cards (`.rf-type-card`) or tiles (`.rf-link-tile`): each is one `<a href>` to a page with no link, button or form control inside it, holding one `<img>` with `alt=""`, src, srcset, sizes, width and height; the cards' photos eager with no `fetchpriority`, the tiles' `loading="lazy"`. A page without them passes |
+| `home-photo-once` | 47 | no photo twice on the home page: a file is named by its path after the size segment, a `<picture>` and its `<img>` are one photo, and lazy `data-src` counts. An element with `data-rf-photo-repeat` (ticket 49's crop of the Dry banner) isn't counted |
+| `home-no-stock-strips` | 47 | no stock featured, most popular or new products strip on the home page (`config.json` sets the three `homepage_*_count` to 0) |
+| `home-nothing-between` | 47 | when the page has both the Fly Type cards (`.rf-type-cards`) and the tiles (`.rf-home-tiles`): nothing between them but end tags and empty `<div>` wrappers (and `<script>`, `<style>` or `<template>`). A widget there (any `data-widget-id` but the tiles' own wrapper), any other element, or any text fails it: a Page Builder widget in `home_below_carousel` or `home_below_featured_products`, one before the tiles in `home_below_top_products` or after the hero in `home_below_menu`, or a store shipping message. The tiles before the cards fail too. A page without both passes |
 
 **Still to come:**
 
@@ -671,6 +675,8 @@ The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixtu
 | `render/render.mjs` | `renderPartial` and `renderWidget`, `readFixture`, `widgetCases`, `themeConfig` |
 | `render/html-checks.mjs` | `unbalancedTags(html)`: elements closed in the wrong place, closed with nothing open, or never closed |
 | `render/widget-page.mjs` | the fixture page a widget shot is taken on |
+| `render/home-page.mjs` | the whole home page with every widget a channel places on `pages/home`, each from a fixture, in its region and placement order: `homeCases`, `renderHomePage` and `openHomePage` (ticket 47; `home-widgets-screens.spec.mjs`, below) |
+| `render/photo-contrast.mjs` | `worstContrastOverPhoto(page, selector)`: a line of text against the lightest pixel behind it, for text on a scrim over a photo, which axe can't judge (the hero's and the cards', tickets 46 and 47) |
 | `widget-screens.spec.mjs` | the widget element shots |
 | `render/example/` | the worked example below |
 
@@ -707,7 +713,7 @@ The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixtu
 | `widgets/<name>/template.html` | the widget template |
 | `widgets/<name>/fixtures/<case>.json` | its fixtures |
 | `widgets/<name>/fixtures/files/` | the images its fixture data points at |
-| `widgets/_shared/<partial>.html` | markup two widgets share (ticket 48's product card), included as `{{> _shared/<partial> key=value …}}`. A store widget template can't include partials, and the store's Handlebars 3 can't define inline ones, so the sync pastes each call's body in place before upload ([docs/widgets.md](../../docs/widgets.md#what-the-store-gets), "What the store gets"). |
+| `widgets/_shared/<partial>.html` | markup two widgets share (ticket 48's product card), or that one widget repeats (ticket 47's `type-card`, three times in `home-lead`, and `link-tile`, six times in `link-tiles`), included as `{{> _shared/<partial> key=value …}}`. A store widget template can't include partials, and the store's Handlebars 3 can't define inline ones, so the sync pastes each call's body in place before upload ([docs/widgets.md](../../docs/widgets.md#what-the-store-gets), "What the store gets"). |
 | `widgets/<name>/schema.json` | its Page Builder schema (ticket 46) |
 | `widgets/<name>/query.graphql` | optional: its `storefront_api_query` |
 | `widgets/<name>/channels/<channel>.json` | the widget on one channel: its `widget_configuration`, placement and recorded uuids. A shot fixture should carry its channel's configuration, as `home-lead`'s does (`render/widgets/home-lead.test.mjs` checks it). |
@@ -773,6 +779,16 @@ A widget whose layout makes promises a shot can't prove has its own Playwright s
 - no serious or critical axe issues in the widget
 
 `shipping-strip-screens.spec.mjs` (ticket 27) checks the shipping strip on its fixture page, with the theme's header round it (`"chrome": true`): it sits after the header inside the "Shipping and prices" region landmark, shows the long line from 801px and the short one on phones, holds no link, scrolls away under the 56px sticky phone bar, and has no serious or critical axe issue and nothing outside a landmark.
+
+`home-widgets-screens.spec.mjs` (ticket 47) checks what only the whole home page shows. `render/home-page.mjs` renders `templates/pages/home.html` with the theme's header and footer, and every widget whose `channels/1895766.json` places it on `pages/home`, each from a fixture, in its region in placement order (the hero and the cards in `home_below_menu`, the tiles in `home_below_top_products`). Requests are answered as for an element shot, from the widgets' `fixtures/files/`. It checks:
+
+- at 1280, all six Fly Types (the three cards and the first three tiles) end within the first 1,600px (HOME-3), with the square crops and again with ticket 14's 4:5 frames (`home-lead`'s `frames` fixture, stand-in files); three cards across, the tiles in one row, and nothing between them
+- at 375 and 320, the cards stacked 16:10, the tiles in two columns of three rows, and `document.scrollingElement.scrollWidth` equal to the viewport's width (story 71)
+- every photo loaded, none twice (a photo marked `data-rf-photo-repeat` isn't counted, as in `home-photo-once`), the hero's the one `fetchpriority="high"`, the cards' eager and the tiles' lazy
+- each card's label, name and count 4.5:1 or better over its scrim and photo at 320, 375, 801, 1024 and 1280 (the `counts` fixture), read through the pixels as for the hero (`render/photo-contrast.mjs`)
+- each card's text block inside the card at 320, 375, 801, 1024 and 1280, with the `counts` fixture and again with a name that wraps, and the card never shorter than its photo's shape
+- each card and tile one link with nothing focusable inside, showing ticket 25's ring from the keyboard
+- no serious or critical axe issues in the widgets
 
 ### Worked example
 
@@ -1009,6 +1025,7 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - `harness-selftest.spec.mjs` runs with `qa:axe`, `qa:screens`, `qa:quick-view`, `qa:reflow`, `qa:motion` and `qa:focus`, and in every row of `qa:matrix`, on pages it serves itself. It proves that a pinned page answering with the wrong status fails the run without being asked again, that one answering 5xx twice or 429 four times fails, and that dismissing the cookie banner leaves nothing hovered. Its 5xx and 429 retry cases answer the pinned 404 page (or the channel's first page) with a 500, or a 429 with `Retry-After: 1`, once and then let the request through, so the second answer is the storefront's real one.
 - `widget-screens.spec.mjs` runs with `qa:screens`, because the script's `screens` filter matches its name.
 - `home-lead-screens.spec.mjs` and `shipping-strip-screens.spec.mjs` run with `qa:screens` too, for the same reason.
+- `home-widgets-screens.spec.mjs` runs with `qa:screens` too, for the same reason.
 - `header.spec.mjs` (ticket 27), `menu.spec.mjs` (ticket 28) and `rail.spec.mjs` (ticket 29) run only when named, like `skin.spec.mjs`: no npm script's filter matches them. They wait for their scripts with `chunkLoaded` from `states.mjs`.
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
 - `storefront.test.mjs` also covers `QA_PORT`, the start log's name, the locks a gate holds (and the ports checked again after a slot wait), trusting only the server a gate started, and stopping that server when the gate is stopped by a signal. `playwright-config.test.mjs` covers that the config reads `QA_PORT` and holds the locks only in the runner, `prepush.test.mjs` what `qa:prepush` checks before its first gate, `serve.test.mjs` the locks around a `stencil start` by hand, and `scripts/lib/lock.test.mjs` the locks themselves: the stale rules, waiting, the three slots across processes, the signals, `RF_LOCK_ROOT`, and the command line `release.sh` uses.

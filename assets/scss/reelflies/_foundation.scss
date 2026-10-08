@@ -58,9 +58,10 @@
     --rf-gutter: clamp(16px, 2.6cqi, 32px);
     --rf-section: clamp(48px, 6cqi, 88px);
 
-    // Motion: hover and focus, then drawers and dropdowns
+    // Motion: hover and focus, then drawers and dropdowns, then a photo's zoom on hover
     --rf-t-fast: #{$rf-t-fast};
     --rf-t-mid: #{$rf-t-mid};
+    --rf-t-photo: #{$rf-t-photo};
 
     // Targets: buy buttons and Fly Size pills, phone menu rows, and the WCAG 2.5.8 minimum
     --rf-target-buy: 44px;
@@ -77,7 +78,9 @@
     }
 
     // Image scrims, neutral #1C1D1F: cards darken from the bottom to 42% of their height,
-    // category banners from the left to 65% of their width (CD-6)
+    // category banners from the left to 65% of their width (CD-6). The home page's Fly Type
+    // cards don't use --rf-scrim-card: on a square crop it left their label at 3:1, so their scrim
+    // sits behind the text block instead (_home-tiles.scss, docs/widgets.md "Scrim"; ticket 47).
     --rf-scrim-card: linear-gradient(to top, rgba(#{$rf-scrim}, 0.8) 0%, rgba(#{$rf-scrim}, 0) 42%);
     --rf-scrim-banner: linear-gradient(to right, rgba(#{$rf-scrim}, 0.82) 0%, rgba(#{$rf-scrim}, 0) 65%);
 
