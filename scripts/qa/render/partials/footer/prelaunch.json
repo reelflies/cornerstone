@@ -1,0 +1,27 @@
+{
+    "description": "ReelFlies_CA (1895766) before refactor 13 and ticket 22's writes, as stencil start -c 1895766 ?debug=context showed it on 2026-10-07: no categories, only the Blog among its Web Pages, and both menu ids empty in \"ReelFlies CA\". The footer falls back to the stock Categories column.",
+    "categories": [],
+    "pages": [
+        { "name": "Blog", "url": "https://reelflies_ca-1895766.mybigcommerce.com/blog/" }
+    ],
+    "settings": {
+        "store_name": "ReelFlies.ca",
+        "address": "Digital Barn Ltd.\n93 Broadway St. \nTillsonburg\nON, N4G3P5 \nCanada\n\nwww.ReelFlies.ca",
+        "phone_number": "1 866 250 4071",
+        "show_newsletter_box": 1,
+        "blog_enabled": true,
+        "gift_certificates_enabled": true
+    },
+    "urls": {
+        "home": "https://reelflies_ca-1895766.mybigcommerce.com/",
+        "subscribe": { "action": "https://reelflies_ca-1895766.mybigcommerce.com/subscribe.php" },
+        "gift_certificate": { "purchase": "https://reelflies_ca-1895766.mybigcommerce.com/giftcertificates.php" }
+    },
+    "social_media": [
+        { "name": "Facebook", "url": "https://www.facebook.com/reelflies.ca/", "position": 0, "display_name": "facebook" },
+        { "name": "Instagram", "url": "https://www.instagram.com/reelflies/", "position": 1, "display_name": "instagram" },
+        { "name": "Pinterest", "url": "https://www.pinterest.ca/reelflies/", "position": 2, "display_name": "pinterest" },
+        { "name": "Twitter", "url": "https://twitter.com/reelfliescanada", "position": 3, "display_name": "twitter" },
+        { "name": "YouTube", "url": "https://www.youtube.com/user/reelflies01", "position": 4, "display_name": "youtube" }
+    ]
+}

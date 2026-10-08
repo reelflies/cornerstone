@@ -11,7 +11,7 @@ import { fileURLToPath } from 'url';
 import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    FOCUS_RING, FOCUS_RING_DARK, FOREST, KNOWN_FAILURES, PAIRS, checkContrast, contrast,
+    FOCUS_RING, FOCUS_RING_DARK, FOREST, FOREST_EDGE, FOREST_FIELD, FOREST_STRONG, FOREST_TEXT, KNOWN_FAILURES, PAIRS, checkContrast, contrast,
 } from './check-contrast.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -98,7 +98,7 @@ describe('a failing pair', () => {
         console.log = () => {};
         try {
             const { variations } = JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
-            assert.deepEqual(checkContrast(file), { unexpected: 2 * variations.length, unreadable: 0 }); // body-text and quick-search-text, on every variation
+            assert.deepEqual(checkContrast(file), { unexpected: 4 * variations.length, unreadable: 0 }); // body-text, quick-search-text and the footer's Subscribe button and its hover (ticket 50), on every variation
         } finally {
             console.log = log;
         }
@@ -146,5 +146,49 @@ describe('the checkout pairs (ticket 24)', () => {
         const result = run(file);
         assert.equal(result.status, 1);
         assert.match(result.stdout, /FAIL {5}checkout-button-hover: #ffffff on #7b8e7a is 3\.50:1/);
+    });
+});
+
+describe('the footer pairs (ticket 50)', () => {
+    // The footer's text, links, field and button, each on the ground _footer.scss draws it on:
+    // footer-backgroundColor, the forest ground, or the newsletter field.
+    const FOOTER_PAIRS = [
+        ['footer-text', FOREST_TEXT, 'footer-backgroundColor', 4.5],
+        ['footer-heading', FOREST_STRONG, 'footer-backgroundColor', 4.5],
+        ['footer-input-text', FOREST_STRONG, FOREST_FIELD, 4.5],
+        ['footer-subscribe', 'color-textBase', FOREST_STRONG, 4.5],
+        ['footer-subscribe-hover', 'color-textBase', 'container-fill-dark', 4.5],
+        ['focus-ring-on-footer', FOCUS_RING_DARK, 'footer-backgroundColor', 3],
+        ['footer-input-border', FOREST_EDGE, 'footer-backgroundColor', 3],
+        ['footer-input-border-on-field', FOREST_EDGE, FOREST_FIELD, 3],
+    ];
+
+    it('checks every footer colour pair, text at 4.5:1 and the ring and field border at 3:1', () => {
+        for (const pair of FOOTER_PAIRS) {
+            assert.deepEqual(PAIRS.find(([id]) => id === pair[0]), pair, `${pair[0]} is checked`);
+        }
+    });
+
+    it('checks the colours _settings.scss draws the footer with', () => {
+        assert.equal(FOREST_TEXT, scssColour('rf-forest-text'));
+        assert.equal(FOREST_STRONG, scssColour('rf-forest-strong'));
+        assert.equal(FOREST_FIELD, scssColour('rf-forest-field'));
+        assert.equal(FOREST_EDGE, scssColour('rf-forest-edge'));
+    });
+
+    it('puts the footer on the forest ground on every variation, the ground the bead is checked on', () => {
+        const config = JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
+        for (const variation of config.variations) {
+            const settings = { ...config.settings, ...variation.settings };
+            assert.equal(settings['footer-backgroundColor'], FOREST, variation.name);
+        }
+    });
+
+    it('fails the footer\'s pale text once the footer goes back to stock white', () => {
+        const file = configWith({ 'footer-backgroundColor': '#ffffff' });
+        const result = run(file);
+        assert.equal(result.status, 1);
+        assert.match(result.stdout, /FAIL {5}footer-text: #d3d9d2 on #ffffff is 1\.44:1/);
+        assert.match(result.stdout, /FAIL {5}focus-ring-on-footer: #f2c14e on #ffffff/);
     });
 });

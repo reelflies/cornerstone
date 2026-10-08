@@ -23,25 +23,12 @@
 // 2026-10-06), so only the prelaunch host's pages have facet links to check (ticket 33's
 // criterion 3, once 1895766 pins a category page).
 
-import { findTags } from '../html.mjs';
+import { decodeHtml, findTags } from '../html.mjs';
 
 export const MARKER = 'data-faceted-search-facet';
 
 // Query parameters that page, sort or search a listing rather than filter it.
 const NOT_FILTERS = new Set(['_bc_fsnf', 'page', 'sort', 'limit', 'mode', 'search_query', 'section']);
-
-const NAMED = {
-    amp: '&', lt: '<', gt: '>', quot: '"', apos: '\'',
-};
-
-// An attribute's text as a browser reads it: Handlebars writes = as &#x3D; and & as &amp;.
-export function decodeHtml(text) {
-    return text.replace(/&(?:#(\d+)|#[xX]([0-9a-fA-F]+)|([a-z]+));/g, (reference, decimal, hex, name) => {
-        if (!decimal && !hex) return NAMED[name] ?? reference;
-        const code = parseInt(decimal || hex, decimal ? 10 : 16);
-        return code <= 0x10ffff ? String.fromCodePoint(code) : reference;
-    });
-}
 
 const isPager = tag => (tag.attrs.class || '').split(/\s+/).includes('pagination-link');
 const hasFilter = url => [...url.searchParams.keys()].some(key => !NOT_FILTERS.has(key));
