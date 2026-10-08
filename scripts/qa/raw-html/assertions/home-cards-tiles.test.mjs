@@ -120,8 +120,8 @@ test('the same photo twice fails, a <picture> and its <img> are one photo, and t
 
 // Ticket 29's pane banners reuse the Fly Type banners the cards show (each pane's category image).
 // They are the menu's, not the home page's: a closed, lazy pane downloads nothing, so a banner
-// marked data-rf-menu-banner isn't counted.
-test('a menu pane banner showing a card\'s photo isn\'t counted, and the same <img> unmarked is', async () => {
+// marked data-rf-menu-banner inside a data-rf-menu-pane isn't counted.
+test('a menu pane banner showing a card\'s photo isn\'t counted inside a pane, and is unmarked or outside one', async () => {
     const banner = await renderPartial('components/reelflies/menu-banner', {
         rf_image: { data: 'https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/{:size}/i/dry-flies__36885.original.jpg', alt: '' },
     });
@@ -133,9 +133,25 @@ test('a menu pane banner showing a card\'s photo isn\'t counted, and the same <i
     const problems = repeatedPhotos(withMenu.html.replace(' data-rf-menu-banner', ''));
     assert.equal(problems.length, 1);
     assert.match(problems[0], /^the photo i\/dry-flies__36885\.original\.jpg appears twice/);
-    // Only inside a pane: the same marked <img> in the page body still counts (rf/spec on 441be5d8, minor 1).
-    const inBody = home.html.replace('<div data-content-region="home_below_top_products">', `${banner}<div data-content-region="home_below_top_products">`);
-    assert.equal(repeatedPhotos(inBody).length, 1);
+    // Only inside a pane: with the pane still in the menu, the same marked <img> in the page body
+    // counts (rf/spec on #58, minor 1; rf/standards on #58 round 2, minor 1).
+    const inBody = withMenu.html.replace('<div data-content-region="home_below_top_products">', `${banner}<div data-content-region="home_below_top_products">`);
+    const bodyProblems = repeatedPhotos(inBody);
+    assert.equal(bodyProblems.length, 1);
+    assert.match(bodyProblems[0], /^the photo i\/dry-flies__36885\.original\.jpg appears twice/);
+});
+
+// A pane's markup is replaced as text, never read as a replacement pattern (rf/standards on #58
+// round 2, minor 2): a "$&" in a category name doesn't put the banner back.
+test('a pane whose text holds "$&" or "$\'" still has its banner left out', async () => {
+    const banner = await renderPartial('components/reelflies/menu-banner', {
+        rf_image: { data: 'https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/{:size}/i/dry-flies__36885.original.jpg', alt: '' },
+    });
+    const home = await homePage();
+    for (const name of ['Flies $&amp; Gear', 'Cost $&#x27;s', 'Pay $$ less']) {
+        const html = home.html.replace(`<header>${LOGO}`, () => `<header>${LOGO}<nav id="menu"><div data-rf-menu-pane><h2>${name}</h2>${banner}</div></nav>`);
+        assert.deepEqual(repeatedPhotos(html), [], name);
+    }
 });
 
 test('lazy-loaded photos count too, and a photo inside a comment or a script doesn\'t', () => {
