@@ -263,7 +263,7 @@ The screenshots and axe open each state in `UI_STATES` on the pins it names, at 
 
 - **A state shot** is the viewport as it shows with the state open, because a fixed drawer or sheet covers the viewport rather than the page. A state can ask for `fullPage: true`. It has the page's masks and stylesheet. Its baseline is `<key>~<state>-<project>-<platform>.png`, covered on the `Baselines:` line by its page kind.
 - **Each state's `open(page)`** resolves once the state is open, and leaves the pointer off the page, so no hover state shows in the shot. A ticket that rebuilds the UI points `open` at its own, and may wait for its token in `<html data-rf-open>` (build pipeline, section 6.9). A ticket adds a state in its own slot in the registry, with its pages.
-- **axe** allows a known issue in one state only through its `states` (above, "axe"). The stock sub-menu has three, which ticket 28 removes.
+- **axe** allows a known issue in one state only through its `states` (above, "axe"). The stock sub-menu has one, which ticket 28 removes.
 - `drawer-open` and `panel-open` show live data: channel 1's sub-menu lists its live tree-1 categories, as its header already does. A change there moves the state's baseline like the page's, through a re-baseline epoch.
 
 ### Overlays (`overlays/`, `overlays.mjs`)
@@ -451,7 +451,7 @@ Every pinned page, at 375 and 1280, runs with the tags WCAG 2.0–2.2 A and AA p
 - A known issue is reported as an annotation and doesn't fail the run.
 - A listed issue that no longer occurs is reported as fixed, so the entry can be removed.
 - An entry's `templates` are page kinds or `kind@name` pins. Its optional `states` limits it to the page with one of those UI states open; without it, it covers the page in every state.
-- **The list holds three entries, all with the stock desktop sub-menu open** (`panel-open` on channel 1's category page; W0-8, 2026-10-06): `aria-hidden-focus`, `color-contrast` and `target-size`. Ticket 28 replaces the sub-menu with its panel and removes them. The closed stock templates had no serious or critical issues on ReelFlies_CA (home, cart, 404, brand) or on the channel-1 product and category pages on 2026-10-05, and the stock phone menu open (`drawer-open`) has none.
+- **The list holds one entry, with the stock desktop sub-menu open** (`panel-open` on channel 1's category page; W0-8, 2026-10-06): `aria-hidden-focus`. Ticket 28 replaces the sub-menu with its panel and removes it. Its `color-contrast` and `target-size` entries went with ticket 27, whose "Shop flies" panel holds the stock menu and in which neither occurs. The closed stock templates had no serious or critical issues on ReelFlies_CA (home, cart, 404, brand) or on the channel-1 product and category pages on 2026-10-05, and the stock phone menu open (`drawer-open`) has none.
 - The moderate issues found were no `<main>` landmark, content outside landmarks, heading order and duplicate landmarks. Ticket 25 gave every template one `<main>`, which `skin.spec.mjs` checks with axe's two landmark rules on every pin. Heading order on the cart and search pages is left for the tickets that rebuild them (41 and 30), and content outside landmarks for the footer ticket (50). Ticket 27's header is the banner landmark, and the shipping strip's region sits in its own labelled region landmark, which `header.spec.mjs` checks with axe's `region` rule.
 
 ## Screenshots (`screens.spec.mjs`)
