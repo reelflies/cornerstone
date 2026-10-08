@@ -154,6 +154,17 @@ test('a pane whose text holds "$&" or "$\'" still has its banner left out', asyn
     }
 });
 
+// A pane banner served as a <picture> goes with its <source> elements, which would otherwise
+// attach to the next <img> on the page (rf/skeptic on #58 round 2, minor 1).
+test('a pane banner inside a <picture> goes with its sources', async () => {
+    const home = await homePage();
+    const picture = '<picture><source srcset="https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/640w/i/dry-flies__36885.original.jpg 640w" media="(min-width: 801px)">'
+        + '<img src="https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/320w/i/dry-flies__36885.original.jpg" alt="" data-rf-menu-banner></picture>';
+    const html = home.html.replace(`<header>${LOGO}`, () => `<header>${LOGO}<nav id="menu"><div data-rf-menu-pane><h2>Dry Flies</h2>${picture}</div></nav>`);
+    assert.deepEqual(repeatedPhotos(html), []);
+    assert.ok(!photosOn(html).some(photo => photo.keys.includes('i/dry-flies__36885.original.jpg') && /rf-hero/.test(photo.raw)), 'no source lands on the hero');
+});
+
 test('lazy-loaded photos count too, and a photo inside a comment or a script doesn\'t', () => {
     const img = 'https://cdn11.bigcommerce.com/s-x/images/stencil/320w/products/1/2/fly.jpg';
     assert.equal(repeatedPhotos(`<img src="${img}"><img data-src="${img.replace('320w', '640w')}">`).length, 1);

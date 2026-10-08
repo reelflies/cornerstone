@@ -56,7 +56,7 @@ const boxes = (page, selector) => page.locator(selector).evaluateAll(elements =>
 // a <source> of its <picture>, where home-photo-once reads it (ticket 49's crop of the Dry banner).
 // A pane's banner is its category's image, the card's banner for a Fly Type, and the menu's, as
 // home-photo-once judges it; a marked banner outside a pane counts.
-const photosOnPage = page => page.locator(`img:not([${MENU_PANE_ATTRIBUTE}] [${MENU_BANNER_ATTRIBUTE}])`).evaluateAll((elements, attribute) => elements.map(element => {
+const photosOnPage = page => page.locator(`img:not(div[${MENU_PANE_ATTRIBUTE}] [${MENU_BANNER_ATTRIBUTE}])`).evaluateAll((elements, attribute) => elements.map(element => {
     const sources = element.parentElement && element.parentElement.tagName === 'PICTURE' ? [...element.parentElement.querySelectorAll('source')] : [];
     return {
         src: element.currentSrc,
@@ -188,24 +188,32 @@ test.describe('the home page\'s cards and tiles (widgets/home-lead, widgets/link
     test('leaves out a menu pane\'s banner that repeats a card\'s photo, and counts a marked banner outside a pane, as home-photo-once does', async ({ page }, testInfo) => {
         test.skip(!desktop(testInfo), 'the rule doesn\'t depend on the width');
         await open(page);
+        // In a pane it is as on the storefront: a closed (hidden) pane and a lazy banner, which never
+        // loads. Outside one it loads, as a body photo would.
         const addBanner = inPane => page.evaluate(([isInPane, banner, pane]) => new Promise(resolve => {
             const copy = document.createElement('img');
             copy.alt = '';
             copy.setAttribute(banner, '');
-            copy.addEventListener('load', resolve);
-            copy.addEventListener('error', resolve);
-            copy.src = document.querySelector('.rf-type-card__img').currentSrc;
             if (isInPane) {
+                copy.loading = 'lazy';
+                copy.src = document.querySelector('.rf-type-card__img').currentSrc;
                 const holder = document.createElement('div');
                 holder.setAttribute(pane, '');
+                holder.hidden = true;
                 holder.append(copy);
                 document.body.prepend(holder);
+                resolve();
             } else {
+                copy.addEventListener('load', resolve);
+                copy.addEventListener('error', resolve);
+                copy.src = document.querySelector('.rf-type-card__img').currentSrc;
                 document.querySelector('.rf-link-tiles').after(copy);
             }
         }), [inPane, MENU_BANNER_ATTRIBUTE, MENU_PANE_ATTRIBUTE]);
         await addBanner(true);
-        expect(shownTwice(await photosOnPage(page)), 'a pane\'s banner isn\'t counted').toEqual([]);
+        const withPane = await photosOnPage(page);
+        expect(shownTwice(withPane), 'a pane\'s banner isn\'t counted').toEqual([]);
+        expect(withPane.every(({ src, complete }) => src && complete), 'every photo counted has loaded: the closed pane\'s lazy banner isn\'t among them').toBe(true);
         await addBanner(false);
         expect(shownTwice(await photosOnPage(page)), 'a marked banner outside a pane is').toEqual([photoKey(await page.locator('.rf-type-card__img').first().evaluate(element => element.currentSrc))]);
     });

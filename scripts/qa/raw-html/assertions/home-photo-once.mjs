@@ -39,13 +39,18 @@ const urlsIn = attrs => [attrs.src, attrs['data-src'], ...[attrs.srcset, attrs['
     .flatMap(set => (set || '').split(',').map(item => item.trim().split(/\s+/)[0]))]
     .filter(url => url && !url.startsWith('data:'));
 
-// The markup with each menu pane's pane banners taken out, so only the menu's own copies go.
-// Replacements are functions, so a "$&" in a pane's text is text, not a replacement pattern.
+// The markup with each menu pane's banners taken out, so only the menu's own copies go: a marked
+// <img>, with the <picture> round it and its <source> elements when it has one. Replacements are
+// functions, so a "$&" in a pane's text is text, not a replacement pattern.
+const isBanner = tag => MENU_BANNER_ATTRIBUTE in tag.attrs;
 function withoutPaneBanners(html) {
     let markup = markupOnly(html);
     for (const pane of elementsHtml(markup, 'div', attrs => MENU_PANE_ATTRIBUTE in attrs)) {
-        const kept = findTags(pane, 'img').filter(tag => MENU_BANNER_ATTRIBUTE in tag.attrs)
-            .reduce((rest, tag) => rest.replace(tag.raw, () => ''), pane);
+        let kept = pane;
+        for (const picture of elementsHtml(pane, 'picture')) {
+            if (findTags(picture, 'img').some(isBanner)) kept = kept.replace(picture, () => '');
+        }
+        for (const tag of findTags(kept, 'img').filter(isBanner)) kept = kept.replace(tag.raw, () => '');
         markup = markup.replace(pane, () => kept);
     }
     return markup;
