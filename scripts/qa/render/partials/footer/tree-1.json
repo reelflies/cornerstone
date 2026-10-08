@@ -1,0 +1,45 @@
+{
+    "description": "Channel 1 (live reelflies.ca) on tree 1, as stencil start -c 1 ?debug=context showed it on 2026-10-07: its Fly-Type-like categories one level down, under Flies (398), and no Species root. Rendered with the variation \"ReelFlies CA channel 1\", whose rf_menu_type_ids name them (ticket 53). Its Web Pages include the Blog and Gift Certificates, as channel 1's do.",
+    "categories": [
+        { "id": "398", "name": "Flies", "url": "https://reelflies.ca/flies/", "children": [
+            { "id": "438", "name": "Realistic Trout Flies", "url": "https://reelflies.ca/flies/realistic-trout-flies/", "children": [] },
+            { "id": "298", "name": "Dry Flies", "url": "https://reelflies.ca/flies/dry-flies/", "children": [] },
+            { "id": "251", "name": "Nymphs & Sub Surface Flies", "url": "https://reelflies.ca/flies/nymphs-sub-surface-flies/", "children": [] },
+            { "id": "255", "name": "Streamers & Buggers", "url": "https://reelflies.ca/flies/streamers-buggers/", "children": [] },
+            { "id": "272", "name": "Saltwater, Warmwater & Salmon", "url": "https://reelflies.ca/flies/saltwater-warmwater-salmon/", "children": [] }
+        ] },
+        { "id": "399", "name": "Fly Selections & Fly Boxes", "url": "https://reelflies.ca/fly-selections-fly-boxes/", "children": [
+            { "id": "256", "name": "Bulk Fly Selections", "url": "https://reelflies.ca/fly-selections-fly-boxes/bulk-fly-selections/", "children": [] }
+        ] },
+        { "id": "400", "name": "Fly Gear", "url": "https://reelflies.ca/fly-gear/", "children": [] }
+    ],
+    "pages": [
+        { "name": "About Us", "url": "https://reelflies.ca/about-us/" },
+        { "name": "Shipping & Returns", "url": "https://reelflies.ca/shipping-returns/" },
+        { "name": "Contact Us", "url": "https://reelflies.ca/contact-us/" },
+        { "name": "Blog", "url": "https://reelflies.ca/blog/" },
+        { "name": "Privacy Policy", "url": "https://reelflies.ca/privacy-policy/" },
+        { "name": "Gift Certificates", "url": "/giftcertificates.php" },
+        { "name": "Coupon Codes", "url": "https://reelflies.ca/coupon-codes/" }
+    ],
+    "settings": {
+        "store_name": "ReelFlies.ca",
+        "address": "Digital Barn Ltd.\n93 Broadway St. \nTillsonburg\nON, N4G3P5 \nCanada\n\nwww.ReelFlies.ca",
+        "phone_number": "1 866 250 4071",
+        "show_newsletter_box": 1,
+        "blog_enabled": true,
+        "gift_certificates_enabled": true
+    },
+    "urls": {
+        "home": "https://reelflies.ca/",
+        "subscribe": { "action": "https://reelflies.ca/subscribe.php" },
+        "gift_certificate": { "purchase": "https://reelflies.ca/giftcertificates.php" }
+    },
+    "social_media": [
+        { "name": "Facebook", "url": "https://www.facebook.com/reelflies.ca/", "position": 0, "display_name": "facebook" },
+        { "name": "Instagram", "url": "https://www.instagram.com/reelflies/", "position": 1, "display_name": "instagram" },
+        { "name": "Pinterest", "url": "https://www.pinterest.ca/reelflies/", "position": 2, "display_name": "pinterest" },
+        { "name": "Twitter", "url": "https://twitter.com/reelfliescanada", "position": 3, "display_name": "twitter" },
+        { "name": "YouTube", "url": "https://www.youtube.com/user/reelflies01", "position": 4, "display_name": "youtube" }
+    ]
+}

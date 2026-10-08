@@ -22,16 +22,18 @@
 // The drawer and panel states open ticket 28's grouped menu where its ids are set (channel 1's
 // variation), and the stock menu where they are empty (ReelFlies CA until tree 4, and the
 // overlay menu-ids-empty), from ticket 27's header: its Menu button (the stock toggle) and its
-// "Shop flies" button. Ticket 29 adds a state per pane if it needs one. A ticket adds a state in
-// its own slot below.
+// "Shop flies" button. panel-open shows the first Fly Type's pane, with its banner (ticket 29);
+// a Species pane state waits for a pinned page with a Species group (wave R1). A ticket adds a
+// state in its own slot below.
 
 /* eslint-env browser */ // the waitForFunction callbacks run in the page
 
 export const STATE_NAME = /^[a-z0-9][a-z0-9-]*$/;
 
 // Resolves once the page has fetched the ReelFlies chunk `name` (theme-bundle.chunk.<name>.js),
-// so a state opens UI whose script has loaded.
-const chunkLoaded = (page, name) => page.waitForFunction(chunk => performance.getEntriesByType('resource')
+// so a state opens UI whose script has loaded. The specs that drive the header and the menu
+// (header.spec.mjs, menu.spec.mjs, rail.spec.mjs) wait with it too.
+export const chunkLoaded = (page, name) => page.waitForFunction(chunk => performance.getEntriesByType('resource')
     .some(entry => new URL(entry.name).pathname.endsWith(`/theme-bundle.chunk.${chunk}.js`)), name);
 
 export const UI_STATES = {
@@ -80,6 +82,9 @@ export const UI_STATES = {
             if (grouped) {
                 await page.locator('#menu [data-rf-menu-pane]:not([hidden])').first().waitFor({ state: 'visible' });
                 await page.locator('#menu [data-rf-menu-toggle][aria-expanded="true"]:focus').waitFor();
+                // The shown pane's banner (ticket 29) is lazy: it loads once the pane shows.
+                await page.waitForFunction(() => [...document.querySelectorAll('#menu [data-rf-menu-pane]:not([hidden]) [data-rf-menu-banner]')]
+                    .every(image => image.complete));
                 return;
             }
             const action = page.locator('.navPages-list > .navPages-item > .navPages-action.has-subMenu').first();

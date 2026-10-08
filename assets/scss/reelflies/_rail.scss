@@ -1,0 +1,94 @@
+// =============================================================================
+// DESKTOP RAIL AND BANNER STRIP (ticket 29; spec module 3; O08, O09, UX-2)
+// =============================================================================
+//
+// The grouped panel "Shop flies" opens from 801px, which _menu.scss lays out (ticket 28) and
+// menu.js switches (hover intent, the keys and focus are script; everything here is CSS, so
+// menu.js still only toggles hidden and aria-expanded).
+//
+// - The viewport cap (UX-2): the panel ends above the viewport's bottom and scrolls inside, so
+//   the whole rail shows on a 1366x657 laptop screen. #menu is placed absolutely in the header
+//   (_header.scss), so 100% of its height is the header's: calc(100vh - 100%) is the viewport
+//   below the header, and the card takes at most that, less a 16px margin. A pane taller than the
+//   space scrolls with the rail inside the card. The page's own scroll only shortens the space
+//   (the desktop header isn't sticky), so the panel never runs past the viewport.
+// - The rail's right edge is the card's background, attached to its content (local), so it runs
+//   the whole scrolled height, where ticket 28's ::before stopped at the card's first screen.
+// - The banner strip (O09; menu-banner.html): the category's image a third of the pane wide
+//   beside its heading, at 16:7, no taller than 120px, so the child links start within 200px of
+//   the panel's top. Below 801px it isn't shown, so the drawer downloads nothing (it is lazy).
+// - Short screens: under 760px tall the rail items are 38px, not 42px, and the groups closer,
+//   so tree 4's rail (six Fly Types, Flies by Species and three More) fits 1366x657 whole.
+//
+// -----------------------------------------------------------------------------
+
+$rf-panel-margin:   16px;   // between the panel and the viewport's bottom
+$rf-banner-max:     120px;  // the banner's height at most (O09)
+
+.rf-menu-banner {
+    display: none; // phones: the drawer shows no banner, and so downloads none
+}
+
+@include breakpoint("medium") {
+    .navPages-container.rf-header-drawer.rf-header-drawer--grouped.rf-is-panel-open {
+        box-sizing: border-box;
+        height: calc(100vh - 100%);
+        padding-bottom: $rf-panel-margin;
+    }
+
+    .rf-menu {
+        background: linear-gradient(var(--rf-tile-2), var(--rf-tile-2)) $rf-rail 0 / 1px 100% no-repeat local, var(--rf-paper);
+        max-height: 100%;
+        min-height: unquote("min(400px, 100%)"); // CSS min(), which this Sass would compute and refuse
+        overflow-y: auto;
+        overscroll-behavior: contain;
+
+        &::before {
+            content: none;
+        }
+    }
+
+    // The pane: its heading and the banner side by side, then the children across both
+    .rf-menu-pane {
+        align-content: start;
+        column-gap: 24px;
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+        row-gap: 12px;
+    }
+
+    .rf-menu-heading {
+        align-self: start;
+        grid-column: 1;
+        grid-row: 1;
+        margin: 0;
+    }
+
+    .rf-menu-banner {
+        aspect-ratio: 16 / 7;
+        background: var(--rf-tile);
+        border-radius: var(--rf-radius-mid);
+        display: block;
+        grid-column: 2;
+        grid-row: 1;
+        height: auto;
+        max-height: $rf-banner-max;
+        object-fit: cover;
+        width: 100%;
+    }
+
+    .rf-menu-kids {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (min-width: $screen-medium) and (max-height: 759px) {
+    .rf-menu-toggle,
+    .rf-menu-name--plain {
+        min-height: 38px;
+    }
+
+    .rf-menu-group + .rf-menu-group {
+        margin-top: 4px;
+    }
+}

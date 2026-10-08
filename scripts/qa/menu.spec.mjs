@@ -41,6 +41,7 @@ import { pageKind } from './pages.mjs';
 import {
     links, menuProblems, menuSource, railFromHtml,
 } from './raw-html/assertions/rf-menu.mjs';
+import { chunkLoaded } from './states.mjs';
 import { HEADERS, QA_OVERLAY, QA_VARIATION } from './storefront.mjs';
 import { readFixture, widgetCases } from './render/render.mjs';
 import { openWidget } from './render/widget-page.mjs';
@@ -62,8 +63,6 @@ const box = locator => locator.evaluate(element => {
         top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right, width: rect.width, height: rect.height,
     };
 });
-const chunkLoaded = (page, name) => page.waitForFunction(chunk => performance.getEntriesByType('resource')
-    .some(entry => new URL(entry.name).pathname.endsWith(`/theme-bundle.chunk.${chunk}.js`)), name);
 
 // The page's own store data, from stencil start's ?debug=context. It carries the storefront API
 // token, so nothing here prints or keeps it: only the categories and the menu settings are read.

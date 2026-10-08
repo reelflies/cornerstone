@@ -8,6 +8,8 @@
       (rf-menu-pane-<id>, hidden until menu.js opens it). The button's name is "Show <name>"; its
       visible text is the name from 801px, where it is the rail item, and a chevron on phones.
       The pane's <h2> is the link to the category, then its children, never their children.
+      Where the categories data has the category's image, the pane opens with it as its banner
+      strip, desktop only (menu-banner.html; ticket 29, O09).
     - With rf_more, the children already in the rail (a Fly Type or the Species root) stay out
       of the pane, and a category left with none is a plain link, as one with no children is.
 --}}
@@ -30,6 +32,7 @@
         </button>
     </div>
     <div class="rf-menu-pane" id="rf-menu-pane-{{rf_cat.id}}" data-rf-menu-pane hidden>
+        {{#if rf_cat.image.data}}{{> components/reelflies/menu-banner rf_image=rf_cat.image}}{{/if}}
         <h2 class="rf-menu-heading"><a href="{{rf_cat.url}}" data-rf-category="{{rf_cat.id}}">{{rf_cat.name}}{{> components/reelflies/icon name='chevron-down' class='rf-menu-heading-chev'}}</a></h2>
         <ul class="rf-menu-kids">
             {{#each rf_cat.children as |rfKid|}}
