@@ -31,8 +31,8 @@
         "status": "inactive"
     },
     "uuids": {
-        "template": null,
-        "widget": null,
-        "placement": null
+        "template": "54d04253-b34f-4211-9a7b-4482589dddb1",
+        "widget": "1646c024-8f6e-492c-a744-bbd0c7e93d86",
+        "placement": "cf87c3e2-ae65-48f9-8db5-b5b8d16bc76a"
     }
 }
