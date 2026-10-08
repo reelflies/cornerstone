@@ -653,6 +653,8 @@ The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixtu
 | `render/render.mjs` | `renderPartial` and `renderWidget`, `readFixture`, `widgetCases`, `themeConfig` |
 | `render/html-checks.mjs` | `unbalancedTags(html)`: elements closed in the wrong place, closed with nothing open, or never closed |
 | `render/widget-page.mjs` | the fixture page a widget shot is taken on |
+| `render/home-page.mjs` | the whole home page with every widget a channel places on `pages/home`, each from a fixture, in its region and placement order: `homeCases`, `renderHomePage` and `openHomePage` (ticket 47; `home-widgets-screens.spec.mjs`, below) |
+| `render/photo-contrast.mjs` | `worstContrastOverPhoto(page, selector)`: a line of text against the lightest pixel behind it, for text on a scrim over a photo, which axe can't judge (the hero's and the cards', tickets 46 and 47) |
 | `widget-screens.spec.mjs` | the widget element shots |
 | `render/example/` | the worked example below |
 
@@ -689,7 +691,7 @@ The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixtu
 | `widgets/<name>/template.html` | the widget template |
 | `widgets/<name>/fixtures/<case>.json` | its fixtures |
 | `widgets/<name>/fixtures/files/` | the images its fixture data points at |
-| `widgets/_shared/<partial>.html` | markup two widgets share (ticket 48's product card), included as `{{> _shared/<partial> key=value …}}`. A store widget template can't include partials, and the store's Handlebars 3 can't define inline ones, so the sync pastes each call's body in place before upload ([docs/widgets.md](../../docs/widgets.md#what-the-store-gets), "What the store gets"). |
+| `widgets/_shared/<partial>.html` | markup two widgets share (ticket 48's product card), or that one widget repeats (ticket 47's `type-card`, three times in `home-lead`, and `link-tile`, six times in `link-tiles`), included as `{{> _shared/<partial> key=value …}}`. A store widget template can't include partials, and the store's Handlebars 3 can't define inline ones, so the sync pastes each call's body in place before upload ([docs/widgets.md](../../docs/widgets.md#what-the-store-gets), "What the store gets"). |
 | `widgets/<name>/schema.json` | its Page Builder schema (ticket 46) |
 | `widgets/<name>/query.graphql` | optional: its `storefront_api_query` |
 | `widgets/<name>/channels/<channel>.json` | the widget on one channel: its `widget_configuration`, placement and recorded uuids. A shot fixture should carry its channel's configuration, as `home-lead`'s does (`render/widgets/home-lead.test.mjs` checks it). |
@@ -760,7 +762,7 @@ A widget whose layout makes promises a shot can't prove has its own Playwright s
 
 - at 1280, all six Fly Types (the three cards and the first three tiles) end within the first 1,600px (HOME-3), with the square crops and again with ticket 14's 4:5 frames (`home-lead`'s `frames` fixture, stand-in files); three cards across, the tiles in one row, and nothing between them
 - at 375 and 320, the cards stacked 16:10, the tiles in two columns of three rows, and `document.scrollingElement.scrollWidth` equal to the viewport's width (story 71)
-- every photo loaded, none twice, the hero's the one `fetchpriority="high"`, the cards' eager and the tiles' lazy
+- every photo loaded, none twice (a photo marked `data-rf-photo-repeat` isn't counted, as in `home-photo-once`), the hero's the one `fetchpriority="high"`, the cards' eager and the tiles' lazy
 - each card's label, name and count 4.5:1 or better over its scrim and photo at 320, 375, 801, 1024 and 1280 (the `counts` fixture), read through the pixels as for the hero (`render/photo-contrast.mjs`)
 - each card's text block inside the card at 320, 375, 801, 1024 and 1280, with the `counts` fixture and again with a name that wraps, and the card never shorter than its photo's shape
 - each card and tile one link with nothing focusable inside, showing ticket 25's ring from the keyboard

@@ -189,7 +189,10 @@ test('no card field holds a typed count or price: counts come only from the quer
     }
 });
 
-test('the card links are the approved tree\'s Fly Type paths (plan/design/src/store-data.json, menu, until refactor 06\'s new-tree.json)', () => {
+// A pin, not a check against the tree: the approved tree lives outside the repo
+// (plan/design/src/store-data.json, menu, until refactor 06's new-tree.json), so these paths were
+// checked against it by hand, and a change to ReelFlies_CA's links has to change CARDS too.
+test('ReelFlies_CA\'s card links are pinned to the planned Fly Type paths in CARDS', () => {
     const cards = configuration(path.join(DIR, 'channels', '1895766.json'), /^card\d_url$/);
     assert.deepEqual(Object.values(cards), CARDS.map(({ href }) => href));
 });

@@ -9,8 +9,8 @@
       channels/<channel>.json), so channel 1's copy can carry tree-1 paths (ticket 53).
     - Each tile is widgets/_shared/link-tile.html, pasted in by the sync: one link holding a white
       product photo (alt="", lazy, with a srcset, sizes, width and height) and the tile's name.
-    - Six across on desktop and a two-column grid on phones, never a sideways scroller (UX-3,
-      HOME-3).
+    - Six across from 1261px, three across (3x2) from 801px to 1260px so the longer names stay
+      readable, and a two-column grid on phones, never a sideways scroller (UX-3, HOME-3).
 --}}
 <div class="rf-home-tiles">
     <ul class="rf-link-tiles" aria-label="{{tiles_label}}">
