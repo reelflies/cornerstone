@@ -8,7 +8,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { readFixture, renderWidget, WIDGETS_DIR } from '../../render/render.mjs';
+import {
+    readFixture, renderPartial, renderWidget, WIDGETS_DIR,
+} from '../../render/render.mjs';
 import { checkPage, loadAssertions } from '../../raw-html.mjs';
 import cardsTiles, { cardsTilesProblems, linksWithClass } from './home-cards-tiles.mjs';
 import photoOnce, { photoKey, photosOn, repeatedPhotos } from './home-photo-once.mjs';
@@ -114,6 +116,23 @@ test('the same photo twice fails, a <picture> and its <img> are one photo, and t
     const crop = '<img src="https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/800w/i/dry-flies__36885.original.jpg" alt="" data-rf-photo-repeat>';
     assert.deepEqual(repeatedPhotos((await homePage({ lead, tiles: `${tiles}${crop}` })).html), []);
     assert.equal(repeatedPhotos((await homePage({ lead, tiles: `${tiles}${crop.replace(' data-rf-photo-repeat', '')}` })).html).length, 1);
+});
+
+// Ticket 29's pane banners reuse the Fly Type banners the cards show (each pane's category image).
+// They are the menu's, not the home page's: a closed, lazy pane downloads nothing, so a banner
+// marked data-rf-menu-banner isn't counted.
+test('a menu pane banner showing a card\'s photo isn\'t counted, and the same <img> unmarked is', async () => {
+    const banner = await renderPartial('components/reelflies/menu-banner', {
+        rf_image: { data: 'https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/{:size}/i/dry-flies__36885.original.jpg', alt: '' },
+    });
+    assert.match(banner, /data-rf-menu-banner/);
+    const home = await homePage();
+    const withMenu = { ...home, html: home.html.replace(`<header>${LOGO}`, `<header>${LOGO}<nav id="menu"><div data-rf-menu-pane>${banner}</div></nav>`) };
+    assert.deepEqual(repeatedPhotos(withMenu.html), []);
+    assert.deepEqual(failures(withMenu, photoOnce), []);
+    const problems = repeatedPhotos(withMenu.html.replace(' data-rf-menu-banner', ''));
+    assert.equal(problems.length, 1);
+    assert.match(problems[0], /^the photo i\/dry-flies__36885\.original\.jpg appears twice/);
 });
 
 test('lazy-loaded photos count too, and a photo inside a comment or a script doesn\'t', () => {

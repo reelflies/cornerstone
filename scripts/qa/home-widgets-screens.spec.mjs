@@ -20,7 +20,7 @@ import { expect, test } from '@playwright/test';
 import { QA_OVERLAY, QA_VARIATION } from './storefront.mjs';
 import { homeCases, openHomePage } from './render/home-page.mjs';
 import { worstContrastOverPhoto } from './render/photo-contrast.mjs';
-import { REPEAT_ATTRIBUTE, photoKey } from './raw-html/assertions/home-photo-once.mjs';
+import { MENU_BANNER_ATTRIBUTE, REPEAT_ATTRIBUTE, photoKey } from './raw-html/assertions/home-photo-once.mjs';
 
 test.skip(Boolean(QA_OVERLAY), `the home widgets render from their fixtures, not under an overlay (QA_OVERLAY=${QA_OVERLAY})`);
 
@@ -49,10 +49,12 @@ const boxes = (page, selector) => page.locator(selector).evaluateAll(elements =>
     };
 }));
 
-// Every <img> on the page, with the photo it shows (its currentSrc), and whether it repeats a photo
-// on purpose: data-rf-photo-repeat on the <img> or on a <source> of its <picture>, where
-// home-photo-once reads it (ticket 49's crop of the Dry banner).
-const photosOnPage = page => page.locator('img').evaluateAll((elements, attribute) => elements.map(element => {
+// Every <img> on the page but ticket 29's menu pane banners, with the photo it shows (its
+// currentSrc), and whether it repeats a photo on purpose: data-rf-photo-repeat on the <img> or on
+// a <source> of its <picture>, where home-photo-once reads it (ticket 49's crop of the Dry banner).
+// A pane banner is its category's image, the card's banner for a Fly Type, and the menu's, as
+// home-photo-once judges it.
+const photosOnPage = page => page.locator(`img:not([${MENU_BANNER_ATTRIBUTE}])`).evaluateAll((elements, attribute) => elements.map(element => {
     const sources = element.parentElement && element.parentElement.tagName === 'PICTURE' ? [...element.parentElement.querySelectorAll('source')] : [];
     return {
         src: element.currentSrc,

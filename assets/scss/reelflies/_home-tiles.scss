@@ -242,7 +242,7 @@ $rf-cards-gap:          clamp(14px, 1.8vw, 24px);
 .rf-link-tile {
     background: $rf-paper;
     border: 1px solid $rf-tile-border;
-    border-radius: 12px;
+    border-radius: var(--rf-radius-mid);
     color: stencilColor("color-textHeading");
     display: flex;
     flex-direction: column;
