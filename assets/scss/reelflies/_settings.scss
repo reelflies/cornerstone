@@ -34,14 +34,24 @@ $rf-success:      stencilColor("color-success");                        // #1E7A
 // Colours Theme Styles has no key for
 // -----------------------------------------------------------------------------
 //
-// scripts/check-contrast.mjs checks the rings (FOCUS_RING, FOCUS_RING_DARK, FOREST), and its test
-// keeps those values equal to these.
+// scripts/check-contrast.mjs checks the rings (FOCUS_RING, FOCUS_RING_DARK, FOREST) and the footer's
+// colours on its forest ground (FOREST_TEXT, FOREST_STRONG, FOREST_FIELD, FOREST_EDGE), and its
+// test keeps those values equal to these.
 
-$rf-forest:           #2f382f; // forest charcoal: the footer and forest bands (ticket 50 sets footer-backgroundColor)
+$rf-forest:           #2f382f; // forest charcoal: the forest bands; the footer's is footer-backgroundColor, the same (ticket 50)
 $rf-focus-ring:       #23272b; // the focus ring on light grounds (15:1 on white)
 $rf-focus-ring-dark:  #f2c14e; // the gold bead ring on forest grounds (7.2:1)
 $rf-bead-soft:        #fdf3d7;
 $rf-scrim:            28, 29, 31; // #1C1D1F, neutral image scrims, as rgba() channels
+$rf-on-photo-soft:    #e6e9ec; // labels, counts and sublines on a scrim over a photo (the home cards)
+$rf-tile-border:      #dde2dc; // the home tiles' 1px border (CD-11)
+
+// On the forest footer (ticket 50; the reference's footer colours)
+$rf-forest-text:      #d3d9d2; // text, links and icons (8.5:1 on forest)
+$rf-forest-strong:    #ffffff; // headings, hovers, the payment icons and the Subscribe button (12.2:1)
+$rf-forest-field:     #273027; // the newsletter field's ground
+$rf-forest-edge:      #8c978b; // the field's border (4.0:1 on forest, 4.5:1 on the field)
+$rf-forest-rule:      #4a554a; // the base row's divider, decorative
 
 
 // Type
@@ -58,3 +68,4 @@ $rf-font-stack:   "Onest", "Onest Fallback", system-ui, sans-serif;
 
 $rf-t-fast:       150ms; // hover and focus
 $rf-t-mid:        200ms; // drawers and dropdowns
+$rf-t-photo:      300ms; // a photo's zoom on hover (the reference's home cards)

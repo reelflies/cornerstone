@@ -40,10 +40,12 @@ const routesFor = ({ templates, widgets, placements }) => ({
 });
 
 // A scratch widgets folder holding a copy of the hero as it was before its first apply (no uuids
-// recorded; the real file records the store's since 2026-10-07), so a test can edit its channel file.
+// recorded; the real file records the store's since 2026-10-07), so a test can edit its channel file,
+// and the _shared partials its template calls (ticket 47's cards).
 function copyHero() {
     const root = fs.mkdtempSync(path.join(tmp, 'widgets-'));
     fs.cpSync(path.resolve('widgets/home-lead'), path.join(root, 'home-lead'), { recursive: true });
+    fs.cpSync(path.resolve('widgets/_shared'), path.join(root, '_shared'), { recursive: true });
     const file = path.join(root, 'home-lead', 'channels', '1895766.json');
     const data = JSON.parse(fs.readFileSync(file, 'utf8'));
     fs.writeFileSync(file, `${JSON.stringify({ ...data, uuids: { template: null, widget: null, placement: null } }, null, 4)}\n`);

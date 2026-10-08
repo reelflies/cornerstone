@@ -1,0 +1,18 @@
+{{!--
+    One bordered tile of the home page's row of six (ticket 47; R5, CD-11, UX-14), pasted into
+    widgets/link-tiles/template.html once per tile by the sync.
+
+    - The whole tile is one link: a white product photo in a 3:2 box (object-fit: contain), then
+      the name with an arrow drawn by the theme's CSS. The photo is decorative (alt=""), lazy, with
+      a srcset from base and the path after the size segment, sizes, width and height.
+
+    Arguments: url, name, photo, photo_width, photo_height and base (the CDN up to /images/stencil).
+--}}
+<li class="rf-link-tiles__item">
+    <a class="rf-link-tile" href="{{url}}">
+        <span class="rf-link-tile__media">
+            <img class="rf-link-tile__img" src="{{base}}/320w/{{photo}}" srcset="{{base}}/160w/{{photo}} 160w, {{base}}/320w/{{photo}} 320w, {{base}}/480w/{{photo}} 480w, {{base}}/640w/{{photo}} 640w" sizes="(max-width: 800px) calc(50vw - 29px), (max-width: 1260px) calc(32vw - 16px), 172px" width="{{photo_width}}" height="{{photo_height}}" alt="" loading="lazy" />
+        </span>
+        <span class="rf-link-tile__name">{{name}}</span>
+    </a>
+</li>

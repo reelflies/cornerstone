@@ -1,0 +1,242 @@
+// =============================================================================
+// FOOTER (ticket 50; spec module 20; O19)
+// =============================================================================
+//
+// Styles for templates/components/reelflies/footer.html, on the forest ground that
+// footer-backgroundColor gives the stock .footer (#2F382F). Text and links are $rf-forest-text,
+// headings and hovers $rf-forest-strong (_settings.scss), and the focus ring is the gold bead
+// (.rf-on-dark, ticket 25). scripts/check-contrast.mjs checks each pair.
+//
+// - Phones (below 551px): the columns stack, one under another, with no sideways scroll at
+//   320px (story 71).
+// - From 551px: two columns, with Contact and the newsletter across both.
+// - From 801px: two by two.
+// - From 1001px: four columns, the newsletter the widest, as the reference.
+//
+// -----------------------------------------------------------------------------
+
+.rf-footer {
+    border-top: 0;
+    color: $rf-forest-text;
+    font-size: 1rem;
+    line-height: 1.55;
+    padding: 0;
+
+    a {
+        color: $rf-forest-text;
+        text-decoration: none;
+
+        &:hover {
+            color: $rf-forest-strong;
+            text-decoration: underline;
+        }
+    }
+}
+
+.rf-footer__inner {
+    margin: 0 auto;
+    max-width: 1240px;
+    padding: clamp(40px, 5vw, 64px) var(--rf-gutter) 28px;
+}
+
+.rf-footer__cols {
+    display: grid;
+    gap: 28px 20px;
+    grid-template-columns: minmax(0, 1fr);
+
+    @include breakpoint("small") {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @include breakpoint("medium") {
+        gap: 32px;
+    }
+
+    @media (min-width: 1001px) {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.4fr);
+    }
+}
+
+.rf-footer__col--contact,
+.rf-footer__col--newsletter {
+    @include breakpoint("small") {
+        grid-column: 1 / -1;
+    }
+
+    @include breakpoint("medium") {
+        grid-column: auto;
+    }
+}
+
+.rf-footer__heading {
+    color: $rf-forest-strong;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    line-height: 1.5;
+    margin: 0 0 12px;
+    text-transform: none;
+}
+
+.rf-footer__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    a {
+        display: inline-block;
+        padding: 5px 0;
+    }
+}
+
+.rf-footer__address {
+    font-style: normal;
+    line-height: 28px;
+    margin: 0 0 4px;
+}
+
+.rf-footer__line {
+    margin: 0 0 8px;
+}
+
+
+// Social row: Cornerstone's social links (components/common/social-links.html) as 44px targets
+// -----------------------------------------------------------------------------
+
+.rf-footer__social {
+    margin: 8px 0 0 -11px;
+
+    .socialLinks {
+        display: flex;
+        flex-wrap: wrap;
+        margin: 0;
+    }
+
+    .socialLinks .socialLinks-item {
+        margin: 0;
+    }
+
+    .socialLinks .icon {
+        align-items: center;
+        display: inline-flex;
+        height: 44px;
+        justify-content: center;
+        width: 44px;
+
+        svg {
+            fill: $rf-forest-text;
+            height: 22px;
+            width: 22px;
+        }
+
+        &:hover svg {
+            fill: $rf-forest-strong;
+        }
+    }
+}
+
+
+// Newsletter: a visible label, the field and the Subscribe button on one row
+// -----------------------------------------------------------------------------
+
+.rf-footer__form {
+    margin: 4px 0 0;
+}
+
+.rf-footer__label {
+    color: $rf-forest-strong;
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin: 0 0 6px;
+}
+
+.rf-footer__field {
+    display: flex;
+    gap: 8px;
+}
+
+.rf-footer__email {
+    background: $rf-forest-field;
+    border: 1px solid $rf-forest-edge;
+    border-radius: var(--rf-radius-pill);
+    color: $rf-forest-strong;
+    flex: 1;
+    font: inherit;
+    height: 44px;
+    margin: 0;
+    min-width: 0;
+    padding: 0 16px;
+}
+
+.rf-footer__subscribe {
+    background: $rf-forest-strong;
+    border: 0;
+    border-radius: var(--rf-radius-pill);
+    color: $rf-ink;
+    cursor: pointer;
+    flex: none;
+    font: inherit;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    min-height: 44px;
+    padding: 0 20px;
+    transition: background-color var(--rf-t-fast) ease;
+
+    &:hover {
+        background: $rf-tile;
+    }
+}
+
+.rf-footer__fine {
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    margin: 10px 0 0;
+}
+
+
+// The base row: payment icons, the promise and copyright, and the outside-Canada line
+// -----------------------------------------------------------------------------
+
+.rf-footer__base {
+    align-items: center;
+    border-top: 1px solid $rf-forest-rule;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 0.875rem;
+    gap: 12px 24px;
+    justify-content: space-between;
+    margin-top: 40px;
+    padding-top: 20px;
+
+    p {
+        margin: 0;
+    }
+
+    // Cornerstone's payment icons (components/common/payment-icons.html), in white
+    .footer-payment-icons {
+        gap: 8px;
+        justify-content: flex-start;
+        margin: 0;
+    }
+
+    .footer-payment-icons .footer-payment-icon {
+        height: 32px;
+        margin: 0;
+        width: 48px;
+    }
+
+    .footer-payment-icons svg {
+        fill: $rf-forest-strong;
+    }
+}
+
+.rf-footer__country {
+    flex-basis: 100%;
+
+    // A link inside a sentence is underlined, so it doesn't rest on colour alone (WCAG 1.4.1)
+    a {
+        color: $rf-forest-strong;
+        text-decoration: underline;
+    }
+}
