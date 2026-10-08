@@ -1,0 +1,390 @@
+{
+    "description": "Tree 2 on reelflies.com (1855224) as Menu Display Depth 3 renders it: the ids, names, URLs (made relative) and order of the categories global, read on 2026-10-07 from a local `stencil start -c 1855224 -v \"ReelFlies US\"` `?debug=context` (GET only; only the categories were kept). The Fly-Type-like categories sit one level down, under Flies (447), and tree 2 has no Species root. Render it with the variation ReelFlies US, whose rf_menu_type_ids are Flies (447)'s children (build pipeline, decision 5).",
+    "categories": [
+        {
+            "id": "447",
+            "name": "Flies",
+            "url": "/flies/",
+            "children": [
+                {
+                    "id": "535",
+                    "name": "Realistic Trout Flies",
+                    "url": "/flies/realistic-trout-flies/",
+                    "children": [
+                        {
+                            "id": "537",
+                            "name": "Realistic Dry Flies",
+                            "url": "/flies/realistic-trout-flies/realistic-dry-flies/",
+                            "children": []
+                        },
+                        {
+                            "id": "540",
+                            "name": "Realistic Gammarus Flies",
+                            "url": "/flies/realistic-trout-flies/realistic-gammarus-flies/",
+                            "children": []
+                        },
+                        {
+                            "id": "538",
+                            "name": "Realistic Nymphs",
+                            "url": "/flies/realistic-trout-flies/realistic-nymphs/",
+                            "children": []
+                        },
+                        {
+                            "id": "539",
+                            "name": "Realistic Terrestrials",
+                            "url": "/flies/realistic-trout-flies/realistic-terrestrials/",
+                            "children": []
+                        },
+                        {
+                            "id": "536",
+                            "name": "**Clearance Flies**",
+                            "url": "/flies/realistic-trout-flies/clearance-flies/",
+                            "children": []
+                        }
+                    ]
+                },
+                {
+                    "id": "450",
+                    "name": "Dry Flies",
+                    "url": "/flies/dry-flies/",
+                    "children": [
+                        {
+                            "id": "533",
+                            "name": "Attractors & Stimulators",
+                            "url": "/flies/dry-flies/attractors-stimulators/",
+                            "children": []
+                        },
+                        {
+                            "id": "532",
+                            "name": "Caddis Dry Flies",
+                            "url": "/flies/dry-flies/caddis-dry-flies/",
+                            "children": []
+                        },
+                        {
+                            "id": "525",
+                            "name": "Classic Dry Flies",
+                            "url": "/flies/dry-flies/classic-dry-flies/",
+                            "children": []
+                        },
+                        {
+                            "id": "534",
+                            "name": "Damsel Dry Flies",
+                            "url": "/flies/dry-flies/damsel-dry-flies/",
+                            "children": []
+                        },
+                        {
+                            "id": "526",
+                            "name": "Emergers & Cripples",
+                            "url": "/flies/dry-flies/emergers-cripples/",
+                            "children": []
+                        },
+                        {
+                            "id": "528",
+                            "name": "Foam Flies, Hoppers & Foam Terrestrials",
+                            "url": "/flies/dry-flies/foam-flies-hoppers-foam-terrestrials/",
+                            "children": []
+                        },
+                        {
+                            "id": "522",
+                            "name": "Mayfly Dry Flies",
+                            "url": "/flies/dry-flies/mayfly-dry-flies/",
+                            "children": []
+                        },
+                        {
+                            "id": "531",
+                            "name": "Midges, Gnats & Spiders",
+                            "url": "/flies/dry-flies/midges-gnats-spiders/",
+                            "children": []
+                        },
+                        {
+                            "id": "523",
+                            "name": "Olive Dry Flies",
+                            "url": "/flies/dry-flies/olive-dry-flies/",
+                            "children": []
+                        },
+                        {
+                            "id": "529",
+                            "name": "Parachute Dry Flies",
+                            "url": "/flies/dry-flies/parachute-dry-flies/",
+                            "children": []
+                        },
+                        {
+                            "id": "530",
+                            "name": "Stonefly Dry Flies",
+                            "url": "/flies/dry-flies/stonefly-dry-flies/",
+                            "children": []
+                        },
+                        {
+                            "id": "524",
+                            "name": "Tenkara Flies",
+                            "url": "/flies/dry-flies/tenkara-flies/",
+                            "children": []
+                        },
+                        {
+                            "id": "527",
+                            "name": "Terrestrials & Hoppers",
+                            "url": "/flies/dry-flies/terrestrials-hoppers/",
+                            "children": []
+                        }
+                    ]
+                },
+                {
+                    "id": "458",
+                    "name": "Nymphs & Sub Surface Flies",
+                    "url": "/flies/nymphs-sub-surface-flies/",
+                    "children": [
+                        {
+                            "id": "460",
+                            "name": "Beadhead Nymphs",
+                            "url": "/flies/nymphs-sub-surface-flies/beadhead-nymphs/",
+                            "children": []
+                        },
+                        {
+                            "id": "488",
+                            "name": "Euro Nymphs",
+                            "url": "/flies/nymphs-sub-surface-flies/euro-nymphs/",
+                            "children": []
+                        },
+                        {
+                            "id": "485",
+                            "name": "Caddis Emerger, Larva & Pupa",
+                            "url": "/flies/nymphs-sub-surface-flies/caddis-emerger-larva-pupa/",
+                            "children": []
+                        },
+                        {
+                            "id": "487",
+                            "name": "Chironomids",
+                            "url": "/flies/nymphs-sub-surface-flies/chironomids/",
+                            "children": []
+                        },
+                        {
+                            "id": "484",
+                            "name": "Crayfish",
+                            "url": "/flies/nymphs-sub-surface-flies/crayfish/",
+                            "children": []
+                        },
+                        {
+                            "id": "480",
+                            "name": "Damsel & Dragon Nymphs",
+                            "url": "/flies/nymphs-sub-surface-flies/damsel-dragon-nymphs/",
+                            "children": []
+                        },
+                        {
+                            "id": "474",
+                            "name": "Eggs, Worms & Scuds",
+                            "url": "/flies/nymphs-sub-surface-flies/eggs-worms-scuds/",
+                            "children": []
+                        },
+                        {
+                            "id": "459",
+                            "name": "Hare's Ear Nymph",
+                            "url": "/flies/nymphs-sub-surface-flies/hares-ear-nymph/",
+                            "children": []
+                        },
+                        {
+                            "id": "486",
+                            "name": "Hexagenia Nymphs",
+                            "url": "/flies/nymphs-sub-surface-flies/hexagenia-nymphs/",
+                            "children": []
+                        },
+                        {
+                            "id": "481",
+                            "name": "Mayfly Nymphs & Emergers",
+                            "url": "/flies/nymphs-sub-surface-flies/mayfly-nymphs-emergers/",
+                            "children": []
+                        },
+                        {
+                            "id": "479",
+                            "name": "Midges & Gnats Nymphs",
+                            "url": "/flies/nymphs-sub-surface-flies/midges-gnats-nymphs/",
+                            "children": []
+                        },
+                        {
+                            "id": "483",
+                            "name": "Searching Nymphs",
+                            "url": "/flies/nymphs-sub-surface-flies/searching-nymphs/",
+                            "children": []
+                        },
+                        {
+                            "id": "470",
+                            "name": "Stonefly Nymphs",
+                            "url": "/flies/nymphs-sub-surface-flies/stonefly-nymphs/",
+                            "children": []
+                        },
+                        {
+                            "id": "482",
+                            "name": "Stream R Nymphs",
+                            "url": "/flies/nymphs-sub-surface-flies/stream-r-nymphs/",
+                            "children": []
+                        },
+                        {
+                            "id": "471",
+                            "name": "Wet Flies & Soft Hackle",
+                            "url": "/flies/nymphs-sub-surface-flies/wet-flies-soft-hackle/",
+                            "children": []
+                        }
+                    ]
+                },
+                {
+                    "id": "489",
+                    "name": "Streamers & Buggers",
+                    "url": "/flies/streamers-buggers/",
+                    "children": [
+                        {
+                            "id": "494",
+                            "name": "BH Buggers & Leeches",
+                            "url": "/flies/streamers-buggers/bh-buggers-leeches/",
+                            "children": []
+                        },
+                        {
+                            "id": "499",
+                            "name": "CH Buggers & Leeches",
+                            "url": "/flies/streamers-buggers/ch-buggers-leeches/",
+                            "children": []
+                        },
+                        {
+                            "id": "495",
+                            "name": "CH Muddlers, Zuddlers & Sculpins",
+                            "url": "/flies/streamers-buggers/ch-muddlers-zuddlers-sculpins/",
+                            "children": []
+                        },
+                        {
+                            "id": "490",
+                            "name": "Baitfish & Shiners",
+                            "url": "/flies/streamers-buggers/baitfish-shiners/",
+                            "children": []
+                        },
+                        {
+                            "id": "497",
+                            "name": "Buggers, Leeches & Worms",
+                            "url": "/flies/streamers-buggers/buggers-leeches-worms/",
+                            "children": []
+                        },
+                        {
+                            "id": "491",
+                            "name": "Damsels & Dragons",
+                            "url": "/flies/streamers-buggers/damsels-dragons/",
+                            "children": []
+                        },
+                        {
+                            "id": "498",
+                            "name": "Muddler Minnows, & Sculpins",
+                            "url": "/flies/streamers-buggers/muddler-minnows-sculpins/",
+                            "children": []
+                        },
+                        {
+                            "id": "496",
+                            "name": "Streamers & Bucktails",
+                            "url": "/flies/streamers-buggers/streamers-bucktails/",
+                            "children": []
+                        },
+                        {
+                            "id": "493",
+                            "name": "Zonkers & Zuddlers",
+                            "url": "/flies/streamers-buggers/zonkers-zuddlers/",
+                            "children": []
+                        },
+                        {
+                            "id": "492",
+                            "name": "**NEW 2018 Fishing Flies**",
+                            "url": "/flies/streamers-buggers/new-2018-fishing-flies/",
+                            "children": []
+                        },
+                        {
+                            "id": "504",
+                            "name": "2017 Reelflies Fishing Flies",
+                            "url": "/flies/streamers-buggers/2017-reelflies-fishing-flies/",
+                            "children": []
+                        },
+                        {
+                            "id": "500",
+                            "name": "ReelFlies Signature Flies",
+                            "url": "/flies/streamers-buggers/reelflies-signature-flies/",
+                            "children": []
+                        }
+                    ]
+                },
+                {
+                    "id": "505",
+                    "name": "Saltwater, Warmwater & Salmon",
+                    "url": "/flies/saltwater-warmwater-salmon/",
+                    "children": [
+                        {
+                            "id": "517",
+                            "name": "Atlantic Salmon Flies",
+                            "url": "/flies/saltwater-warmwater-salmon/atlantic-salmon-flies/",
+                            "children": []
+                        },
+                        {
+                            "id": "506",
+                            "name": "Bass & Pan Fish",
+                            "url": "/flies/saltwater-warmwater-salmon/bass-pan-fish/",
+                            "children": []
+                        },
+                        {
+                            "id": "516",
+                            "name": "Pike & Muskie Flies",
+                            "url": "/flies/saltwater-warmwater-salmon/pike-muskie-flies/",
+                            "children": []
+                        },
+                        {
+                            "id": "511",
+                            "name": "Saltwater Baitfish Flies",
+                            "url": "/flies/saltwater-warmwater-salmon/saltwater-baitfish-flies/",
+                            "children": []
+                        },
+                        {
+                            "id": "512",
+                            "name": "Barracuda Flies",
+                            "url": "/flies/saltwater-warmwater-salmon/barracuda-flies/",
+                            "children": []
+                        },
+                        {
+                            "id": "514",
+                            "name": "Bonefish & Permit",
+                            "url": "/flies/saltwater-warmwater-salmon/bonefish-permit/",
+                            "children": []
+                        },
+                        {
+                            "id": "520",
+                            "name": "Snook & Redfish",
+                            "url": "/flies/saltwater-warmwater-salmon/snook-redfish/",
+                            "children": []
+                        },
+                        {
+                            "id": "513",
+                            "name": "Tarpon Flies",
+                            "url": "/flies/saltwater-warmwater-salmon/tarpon-flies/",
+                            "children": []
+                        },
+                        {
+                            "id": "521",
+                            "name": "In Store Sales",
+                            "url": "/flies/saltwater-warmwater-salmon/in-store-sales/",
+                            "children": []
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "457",
+            "name": "Fly Selections & Assortments",
+            "url": "/fly-selections-assortments/",
+            "children": [
+                {
+                    "id": "541",
+                    "name": "Bulk Fly Selections",
+                    "url": "/fly-selections-fly-boxes/bulk-fly-selections/",
+                    "children": []
+                },
+                {
+                    "id": "543",
+                    "name": "Mini Fly Selections",
+                    "url": "/fly-selections-fly-boxes/mini-fly-selections/",
+                    "children": []
+                }
+            ]
+        }
+    ]
+}

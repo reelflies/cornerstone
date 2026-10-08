@@ -1,8 +1,8 @@
 // The grouped menu and the phone drawer's markup (ticket 28; spec modules 3 and 4; O05-O08,
 // SEO-3, BUILD-2, UX-2): components/common/header.html rendered from fixture store data the way
-// stencil start renders it (W0-9), on tree 4 as refactor 13 plans it and on tree 1 with the
-// channel-1 variation's ids. scripts/qa/menu-urls.mjs states the rules; these tests hold the
-// template to them. The browser checks (the panel at 1280, the drawer at 375) are
+// stencil start renders it (W0-9), on tree 4 as refactor 13 plans it, on tree 1 with the
+// channel-1 variation's ids, and on .com's tree 2 with ReelFlies US's (decision 5).
+// scripts/qa/menu-urls.mjs states the rules; these tests hold the template to them. The browser checks (the panel at 1280, the drawer at 375) are
 // menu.spec.mjs's, and the raw HTML on the storefront is the rf-menu assertion's.
 //
 //   node --test scripts/qa/render/partials/menu.test.mjs
@@ -26,7 +26,9 @@ import {
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const TREE_4 = readFixture(path.join(HERE, 'menu/tree-4.json'));
 const TREE_1 = readFixture(path.join(HERE, 'menu/tree-1.json'));
+const TREE_2 = readFixture(path.join(HERE, 'menu/tree-2.json'));
 const CHANNEL_1 = 'ReelFlies CA channel 1';
+const US = 'ReelFlies US';
 
 const PAGES = [
     { name: 'About Us', url: 'https://reelflies.ca/about-us/' },
@@ -65,6 +67,7 @@ const render = (fixture, context = {}, options = {}) => renderPartial('component
 }, options);
 const tree4 = (context, options) => render(TREE_4, context, options);
 const tree1 = (context, options) => render(TREE_1, context, { variation: CHANNEL_1, ...options });
+const tree2 = (context, options) => render(TREE_2, context, { variation: US, ...options });
 const text = html => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 // Handlebars writes = as &#x3D; in an attribute, as stock's own {{urls.auth.logout}}; a browser reads =.
 const decode = value => String(value).replace(/&#x3D;/g, '=').replace(/&amp;/g, '&').replace(/&#x27;/g, '\'');
@@ -223,6 +226,51 @@ describe('the grouped menu on tree 1, with the channel-1 variation (Option A)', 
         const expected = expectedUrls(TREE_1.categories, settingsOf(TREE_1, CHANNEL_1));
         assert.ok(expected.length > 50);
         assert.deepEqual(expected.filter(url => !found.includes(url)), []);
+    });
+});
+
+// Build pipeline decision 5 (tagged 28): ReelFlies US gets tree 2's menu ids, Flies (447)'s
+// children read through stencil start -c 1855224, so Shaun's .com preview shows the grouped menu
+// with .com's real categories. .com isn't a release target, so the release guard never reads them.
+describe('the grouped menu on tree 2, with ReelFlies US (decision 5: the .com preview)', () => {
+    const FLIES = '447';
+    const fliesChildren = TREE_2.categories.find(category => category.id === FLIES).children.map(category => category.id);
+
+    it('names every child of Flies (447) in ReelFlies US, and no Species root (tree 2 has none)', () => {
+        const { settings } = themeConfig(US);
+        assert.equal(typeof settings.rf_menu_type_ids, 'string', 'paper\'s trim reads anything but a string as empty');
+        const ids = settings.rf_menu_type_ids.split(',');
+        assert.deepEqual([...ids].sort(), [...fliesChildren].sort());
+        assert.equal(settings.rf_menu_species_root_id, '');
+    });
+
+    it('groups Flies (447)\'s children in the variation\'s order, as on channel 1, then More: Flies and Fly Selections & Assortments', async () => {
+        const html = await tree2();
+        assert.deepEqual(menuProblems(html), []);
+        assert.deepEqual(rail(html), [
+            {
+                label: 'Fly types', divider: false, rows: ['Dry Flies', 'Nymphs & Sub Surface Flies', 'Streamers & Buggers', 'Saltwater, Warmwater & Salmon', 'Realistic Trout Flies'],
+            },
+            { label: 'More from ReelFlies', divider: false, rows: ['Flies', 'Fly Selections & Assortments'] },
+        ]);
+    });
+
+    it('links every URL the rules expect', async () => {
+        const found = hrefs(menuSource(await tree2()));
+        const expected = expectedUrls(TREE_2.categories, settingsOf(TREE_2, US));
+        assert.ok(expected.length > 50);
+        assert.deepEqual(expected.filter(url => !found.includes(url)), []);
+    });
+});
+
+describe('the menu ids in config.json', () => {
+    it('are strings in the base settings and every variation: paper\'s trim reads a number as empty', () => {
+        const config = JSON.parse(fs.readFileSync(path.join(THEME_DIR, 'config.json'), 'utf8'));
+        for (const [name, settings] of [['settings', config.settings], ...config.variations.map(variation => [variation.name, variation.settings])]) {
+            for (const key of ['rf_menu_type_ids', 'rf_menu_species_root_id', 'rf_menu_exclude_ids']) {
+                if (key in settings) assert.equal(typeof settings[key], 'string', `${name} ${key}`);
+            }
+        }
     });
 });
 
