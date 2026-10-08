@@ -109,13 +109,12 @@ To publish again, set the placement's `status` back to `"active"` in the channel
 ## The hero (`widgets/home-lead`)
 
 - **Placement:** `pages/home`, `home_below_menu`, `sort_order` 0, `"active"` on 1895766 since checkpoint 02 (2026-10-08 23:04 UTC, plan `00ab227c`), once the release of `ec525dbe` carried 27 and `_home-lead.scss` (ReelFlies (3), theme `3ed5e690`). The stock logo was the home page's `<h1>` (`header.html:19-22`) until ticket 27 made it a `<div>`, so an active hero on a theme older than 27 gives the page two.
-- **When it goes active,** in this order:
-  1. Ticket 27 merges. Its branch has no `<h1>` on home while the hero is inactive, which `home-one-h1` allows.
-  2. A release carrying 27 and `_home-lead.scss` is live on 1895766 (a checkpoint release, or one mid-wave). Before that, the prelaunch home page would show two `<h1>`s, or a hero without its styles, and so would Page Builder's preview.
-  3. Set the placement `"active"` in a worktree, then sync, plan, apply and `--verify`, and open the PR with the channel file (the routine above).
-  4. Check, and note on the review page: the hero is 300px tall or less at 1280 on the prelaunch home page and in Page Builder's preview (CD-1), its region adds 0px to the page shots (W0-5; if it doesn't, add `[data-layout-id]` to `HIDDEN` in `pages.mjs`), and the raw-HTML check passes on `master` (`home-hero` and `home-one-h1` now check the hero).
-  - A branch older than 27 then has two `<h1>`s on home, the stock logo's and the hero's, and `home-one-h1` fails it. It rebases onto `master`, which it has to do before merging anyway.
-  - The shipping strip goes active in the same step (below), so one PR carries both channel files.
+- **How it went active** (checkpoint 02, 2026-10-08), in the order it needed:
+  1. Ticket 27 merged (#53), so the stock logo was a `<div>` and home had no `<h1>` while the hero was inactive, which `home-one-h1` allows.
+  2. The checkpoint-02 release of `ec525dbe` put 27 and `_home-lead.scss` live on 1895766. Before that, the prelaunch home page would have shown two `<h1>`s, or a hero without its styles, and so would Page Builder's preview.
+  3. The placement was set `"active"` in a worktree, then synced, planned (`00ab227c`), applied and `--verify`'d, with the strip and the tiles in the same step; #62 carries the channel files.
+  4. Checked: the hero is 300px tall at 1280 on a render of 1895766's live data (CD-1), the page has one `<h1>`, and every widget region measures 0px in the page shots. The shots still moved by a 1px re-flow inside the footer, re-recorded in the epoch PR #63, because adding `[data-layout-id]` to `HIDDEN` changes nothing. The raw-HTML check passes with the hero active (`home-hero`, `home-one-h1`). Page Builder's preview is left to Shaun, on review-02.
+  - A branch older than 27 now has two `<h1>`s on home, the stock logo's and the hero's, and `home-one-h1` fails it. It rebases onto `master`, which it has to do before merging anyway.
 - **Photo:** decision 4's Bass & Pan Fish stone banner, mirrored. Its path is a text field (HOME-2's fallback until ticket 07's probe 13 says whether a template can read an image-manager file name): `image_base` is the CDN base up to `/images/stencil`, and `image_path` the path after the size segment. The srcset is built from both at 320 to 1600 px wide.
   - Today `image_path` is the live category image `s/bass-panfish__24775.original.jpg`, so no upload is needed.
   - Before the Flip, when the category tree changes, put the frame in the Image Manager and set `image_path` to `image-manager/<file>`, so the hero doesn't depend on a category's image (revisitable). Ticket 57's checks carry it, with refactor 13's tree change as the trigger.
@@ -135,7 +134,7 @@ Ticket 27's widget (spec module 2, O04): the shipping promise under the header o
   - The $60 is copy. A widget can't read `rf_ship_free_threshold` (ticket 39's setting), so a new threshold changes both.
   - The $99 courier offer isn't mentioned (ticket 13: open; interim, it doesn't carry over).
 - **The first write** was the orchestrator's after wave 2 (2026-10-08; the routine above, with `--ticket 27 --widget shipping-strip`): plan `6a53f3f4` created the template `rf-shipping-strip`, its widget and its placement, inactive; `--record` and `--verify` followed, and PR #60 carried the channel file.
-- **When it goes active,** with the hero, once a release carrying ticket 27 is live on 1895766: before that, the prelaunch theme has no landmark round the region and no strip styles, so the store would show the bare text under the old header. Set its placement `"active"` in the same worktree as the hero's, sync, plan, apply and `--verify`, and open one PR with both channel files.
+- **It went active with the hero** (plan `62c84e87`, #62), after the checkpoint-02 release put ticket 27 live: before that, the prelaunch theme had no landmark round the region and no strip styles, so the store would have shown the bare text under the old header.
 - **Channel 1:** ticket 53 makes its copy with `--only content`, and ticket 56 places it in the push session. Channel 1 already has a widget of its own in `header_bottom--global` (an announcement bar from the live theme), which renders inside the same landmark on channel-1 gate runs; replacing it is ticket 53's.
 - **Checks:** `scripts/qa/render/widgets/shipping-strip.test.mjs` (the fields, no link, no `<use>` of the icon sheet, the landmark on its fixture page), its element shots in both gated variations (`widget-screens.spec.mjs`), and `shipping-strip-screens.spec.mjs` (one line at a time, scrolling away under the phone bar, axe), all on its fixture page with the theme's header round it (`"chrome": true`).
 
