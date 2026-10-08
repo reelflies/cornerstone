@@ -3015,6 +3015,12 @@
         "force_reload": true,
         "id": "rf_menu_species_root_id"
       },
+      {
+        "type": "text",
+        "label": "i18n.RfMenuExcludeIds",
+        "force_reload": true,
+        "id": "rf_menu_exclude_ids"
+      },
 
       {
         "type": "heading",

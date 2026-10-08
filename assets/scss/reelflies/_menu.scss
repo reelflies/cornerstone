@@ -1,0 +1,380 @@
+// =============================================================================
+// GROUPED MENU AND PHONE DRAWER (ticket 28; spec modules 3 and 4; O05-O08, UX-2, UX-19)
+// =============================================================================
+//
+// templates/components/reelflies/menu.html: one <nav> in #menu, laid out by CSS alone as the
+// phone drawer (below 801px) and as the desktop panel "Shop flies" opens (from 801px). From the
+// reference's .drawer, .dr-* (plan/design/src/reference.src.html:200-213, :786-788) and .mega,
+// .rail, .detail rules (:177-198, :584-587).
+//
+// - Phones: the groups as 48px rows, each split into its name (the link, padded to 48px) and a
+//   48px chevron button that opens its pane in place, on the tile colour. The pane's heading is
+//   hidden there, because the row's name is the link. The footer's rows follow.
+// - From 801px: a card under the header row, the rail 300px wide on the left. Each row's button
+//   is the rail item (its name shows; the name link hides), and its pane sits beside the rail:
+//   the heading as the link, then the children in two columns. Only the footer's Hook size
+//   chart link shows, at the foot of the rail. Hover intent, the arrow keys, the banner strip
+//   and the viewport cap are ticket 29's (_rail.scss).
+// - menu.js sets hidden and aria-expanded; the layout reads only them.
+//
+// -----------------------------------------------------------------------------
+
+$rf-rail:         300px;    // the desktop rail's width, as the reference's
+$rf-menu-max:     1176px;   // the desktop card's width, as the reference's .mega
+
+.rf-menu-pane[hidden] {
+    display: none;
+}
+
+
+// Phones: the drawer
+// -----------------------------------------------------------------------------
+
+.navPages-container.rf-header-drawer--grouped.is-open {
+    overflow: hidden; // the nav scrolls inside it
+}
+
+.rf-menu {
+    background: var(--rf-paper);
+    border-top: 1px solid var(--rf-tile-2);
+    box-sizing: border-box;
+    color: var(--rf-ink);
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 8px 0 16px;
+}
+
+.rf-menu-label {
+    color: var(--rf-dun);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.3;
+    margin: 0;
+    padding: 14px 16px 6px;
+}
+
+.rf-menu-list,
+.rf-menu-kids,
+.rf-menu-foot-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.rf-menu-sep {
+    background: var(--rf-tile-2);
+    height: 1px;
+    margin: 8px 16px;
+}
+
+.rf-menu-row {
+    align-items: center;
+    display: flex;
+}
+
+.rf-menu-name,
+.rf-menu-foot-link {
+    align-items: center;
+    box-sizing: border-box;
+    color: var(--rf-ink);
+    display: flex;
+    flex: 1 1 auto;
+    font-size: 17px;
+    min-height: var(--rf-target-row);
+    min-width: 0;
+    padding: 0 16px;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+
+    &:hover {
+        color: var(--rf-ink);
+    }
+
+    @media (hover: hover) {
+        &:hover {
+            background: var(--rf-tile);
+        }
+    }
+}
+
+.rf-menu-toggle {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: var(--rf-radius-pill);
+    color: var(--rf-dun);
+    cursor: pointer;
+    display: grid;
+    flex: none;
+    height: var(--rf-target-row);
+    margin: 0 4px 0 0;
+    padding: 0;
+    place-items: center;
+    width: var(--rf-target-row);
+    -webkit-tap-highlight-color: transparent;
+
+    // Only where a pointer hovers: on touch, :hover sticks to the last row tapped.
+    @media (hover: hover) {
+        &:hover {
+            background: var(--rf-tile);
+        }
+    }
+}
+
+// The button's name is "Show <category>"; on phones it shows only its chevron.
+.rf-menu-toggle-show,
+.rf-menu-toggle-name {
+    @include rf-visually-hidden;
+}
+
+.rf-menu-chev {
+    height: 20px;
+    transition: transform var(--rf-t-fast) ease-out;
+    width: 20px;
+
+    .rf-menu-toggle[aria-expanded="true"] & {
+        transform: rotate(180deg);
+    }
+}
+
+.rf-menu-row:has(.rf-menu-toggle[aria-expanded="true"]) .rf-menu-name {
+    font-weight: 600;
+}
+
+.rf-menu-pane {
+    background: var(--rf-tile);
+    border-radius: var(--rf-radius-mid);
+    margin: 0 16px 8px;
+    padding: 4px 0;
+}
+
+.rf-menu-heading {
+    display: none; // the row's name is the link on phones
+}
+
+.rf-menu-kids a {
+    align-items: center;
+    color: var(--rf-ink);
+    display: flex;
+    font-size: 16px;
+    min-height: var(--rf-target-row);
+    padding: 0 14px;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+
+    &:hover {
+        color: var(--rf-ink);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+}
+
+.rf-menu-foot {
+    border-top: 1px solid var(--rf-tile-2);
+    margin-top: 10px;
+    padding-top: 6px;
+}
+
+.rf-menu-foot-call {
+    align-items: center;
+    color: var(--rf-ink);
+    display: flex;
+    font-size: 17px;
+    gap: 8px;
+    min-height: var(--rf-target-row);
+    padding: 0 16px;
+
+    .rf-icon {
+        color: var(--rf-dun);
+        height: 20px;
+        width: 20px;
+    }
+
+    a {
+        align-items: center;
+        color: var(--rf-ink);
+        display: inline-flex;
+        min-height: var(--rf-target-row);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+}
+
+
+// From 801px: the panel "Shop flies" opens
+// -----------------------------------------------------------------------------
+
+@include breakpoint("medium") {
+    // A card under the header row; the container round it lets clicks beside the card through
+    // to the page, so header.js closes the panel as on a click anywhere else outside it.
+    .navPages-container.rf-header-drawer.rf-header-drawer--grouped.rf-is-panel-open {
+        background: transparent;
+        box-shadow: none;
+        padding: 8px var(--rf-gutter) 0;
+        pointer-events: none;
+    }
+
+    .rf-menu {
+        border-radius: var(--rf-radius-tile);
+        border-top: 0;
+        box-shadow: var(--rf-pop);
+        height: auto;
+        margin: 0 auto;
+        max-width: $rf-menu-max;
+        min-height: 400px;
+        overflow: visible;
+        padding: 14px 10px 12px;
+        pointer-events: auto;
+        position: relative;
+
+        // The rail's right edge, the full height of the card
+        &::before {
+            background: var(--rf-tile-2);
+            bottom: 0;
+            content: "";
+            left: $rf-rail;
+            position: absolute;
+            top: 0;
+            width: 1px;
+        }
+    }
+
+    .rf-menu-group,
+    .rf-menu-foot {
+        width: $rf-rail - 20px;
+    }
+
+    .rf-menu-group + .rf-menu-group {
+        margin-top: 8px;
+    }
+
+    .rf-menu-label {
+        padding: 8px 12px 6px;
+    }
+
+    .rf-menu-sep {
+        margin: 0 12px 8px;
+    }
+
+    // The rail item: the row's button, with its name. The name link is the pane's heading.
+    .rf-menu-row > .rf-menu-name {
+        display: none;
+    }
+
+    .rf-menu-toggle,
+    .rf-menu-name--plain {
+        border-radius: 10px;
+        color: var(--rf-ink);
+        font-size: 16px;
+        min-height: 42px;
+        padding: 0 12px;
+    }
+
+    .rf-menu-toggle {
+        display: flex;
+        height: auto;
+        justify-content: space-between;
+        margin: 0;
+        text-align: left;
+        width: 100%;
+
+        &[aria-expanded="true"] {
+            background: var(--rf-tile);
+            font-weight: 600;
+        }
+    }
+
+    .rf-menu-toggle-name {
+        @include rf-visually-shown;
+    }
+
+    .rf-menu-chev {
+        color: var(--rf-dun);
+        height: 16px;
+        transform: rotate(-90deg);
+        width: 16px;
+
+        .rf-menu-toggle[aria-expanded="true"] & {
+            transform: rotate(-90deg);
+        }
+    }
+
+    // The pane beside the rail
+    .rf-menu-pane {
+        background: transparent;
+        border-radius: 0;
+        left: $rf-rail + 1px;
+        margin: 0;
+        padding: 20px 24px 26px;
+        position: absolute;
+        right: 0;
+        top: 0;
+    }
+
+    .rf-menu-heading {
+        display: block;
+        font-size: 22px;
+        font-weight: 600;
+        line-height: 1.2;
+        margin: 0 0 10px;
+
+        a {
+            align-items: center;
+            color: var(--rf-ink);
+            display: inline-flex;
+            gap: 6px;
+            min-height: var(--rf-target-buy);
+            text-decoration: none;
+
+            &:hover {
+                text-decoration: underline;
+                text-underline-offset: 3px;
+            }
+        }
+    }
+
+    .rf-menu-heading-chev {
+        color: var(--rf-dun);
+        height: 18px;
+        transform: rotate(-90deg);
+        width: 18px;
+    }
+
+    .rf-menu-kids {
+        column-gap: 28px;
+        columns: 2 200px;
+
+        li {
+            break-inside: avoid;
+        }
+
+        a {
+            min-height: 40px;
+            padding: 8px 0;
+        }
+    }
+
+    // The foot of the rail: the Hook size chart link only
+    .rf-menu-foot {
+        margin-top: 12px;
+        padding: 12px 12px 2px;
+    }
+
+    .rf-menu-foot-list > li:not(.rf-menu-foot-chart) {
+        display: none;
+    }
+
+    .rf-menu-foot-link {
+        display: inline-flex;
+        font-size: 14px;
+        min-height: var(--rf-target-min);
+        padding: 0;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+
+        &:hover {
+            background: transparent;
+        }
+    }
+}

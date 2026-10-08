@@ -14,15 +14,19 @@ import { pageKind } from './pages.mjs';
 
 export const KNOWN_ISSUES = [
     // Stock Cornerstone's desktop sub-menu, open (the panel-open state on channel 1's category
-    // page, 2026-10-06), inside ticket 27's "Shop flies" panel since 2026-10-07. Ticket 28
-    // replaces it with the grouped panel. The sub-menu's color-contrast and target-size issues
-    // no longer occur in ticket 27's panel (axe, 2026-10-07), so their entries went.
+    // page, 2026-10-06), inside ticket 27's "Shop flies" panel since 2026-10-07. Ticket 28's
+    // grouped panel has no such sub-menus and doesn't raise it (axe, 2026-10-07), so on a plain
+    // channel-1 run it is reported as fixed. It stays for the stock fallback, which renders
+    // while both menu ids are empty: the overlay menu-ids-empty on channel 1. A stock template
+    // is left as it is (ADR 0001), and no channel pins a category page with empty ids once
+    // tree 4 has its ids (wave R1); remove the entry then. The sub-menu's color-contrast and
+    // target-size issues went with ticket 27's panel.
     {
         rule: 'aria-hidden-focus',
         templates: ['category'],
         states: ['panel-open'],
         ticket: 28,
-        why: 'the closed sub-menus beside the open one keep aria-hidden="true" while their links stay focusable',
+        why: 'the stock fallback (both menu ids empty): the closed sub-menus beside the open one keep aria-hidden="true" while their links stay focusable',
     },
 ];
 
