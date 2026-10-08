@@ -17,10 +17,12 @@
 //   in place of stock's count of rendered cards (quick-search.js:56-58).
 // - While a dropdown is open, <html data-rf-open> holds "search" (open-state.js), which ticket
 //   52's outside-Canada prompt waits on (GEO-3). One dropdown is open at a time.
-// - Escape, a click or focus outside the form, or fewer than 3 characters close it, and drop a
-//   search still waiting, so a late answer opens nothing; focusing the field again shows the last
-//   results again, without a new request or announcement. A failed search closes it and is asked
-//   again at the next keystroke, even for the same words.
+// - Escape, a click or focus outside the form, a submit, or fewer than 3 characters close it, and
+//   drop a search still waiting, so a late answer opens nothing; focusing the field again, or
+//   editing back to the words on show, shows their results again, without a new request or
+//   announcement. A failed search closes it and is asked again at the next keystroke, even for
+//   the same words. An answer with no results in it (a 429, a 5xx or a challenge page, which
+//   stencil-utils resolves like any other) is a failed search, and none of it reaches the page.
 // - On phones, the header's search icon becomes a toggle (data-rf-search-toggle) that opens the
 //   header's form as the bar's second row, as the reference's does. Without script it stays the
 //   link to the search page (data-rf-search-link).
@@ -176,8 +178,9 @@ export function bindQuickSearch(form, {
     };
 
     // Drops the search still waiting for its 400 ms or for its answer, so nothing opens or speaks
-    // after the shopper has left: Escape, or a click or focus outside the form (which includes
-    // the phone header's toggle closing the row). The words on show stay the ones asked for.
+    // after the shopper has left: Escape, a click or focus outside the form (which includes the
+    // phone header's toggle closing the row), or a submit. The words on show stay the ones asked
+    // for.
     const cancel = () => {
         clearTimeout(timer);
         timer = null;
@@ -192,13 +195,26 @@ export function bindQuickSearch(form, {
         markOpen(OPEN_TOKEN, doc.documentElement);
     };
 
+    // A search that brought back no results: closes, and is asked again at the next keystroke,
+    // even for the same words. The results on show, if any, stay to be shown again.
+    const fail = () => {
+        wanted = null;
+        controller.close();
+    };
+
+    // The answer is parsed in an inert <template>, where its styles apply to nothing and its
+    // scripts and images don't run or load, and only its results come out. stencil-utils
+    // resolves whatever the store answers, so a 429, a 5xx or a challenge page arrives here as
+    // HTML with no results in it: a failed search.
     const render = (query, html) => {
-        box.innerHTML = html;
-        const results = box.querySelector('[data-rf-qs-results]');
+        const parsed = doc.createElement('template');
+        parsed.innerHTML = typeof html === 'string' ? html : '';
+        const results = parsed.content.querySelector('[data-rf-qs-results]');
         if (!results) {
-            controller.close();
+            fail();
             return;
         }
+        box.replaceChildren(results);
         const list = box.querySelector('[data-rf-qs-categories]');
         if (list) {
             const label = results.getAttribute('data-rf-qs-category-label') || '';
@@ -228,9 +244,7 @@ export function bindQuickSearch(form, {
         answer.then(html => {
             if (id === sequence) render(query, html);
         }, () => {
-            if (id !== sequence) return;
-            wanted = null; // so the next keystroke asks again, even for the same words
-            controller.close();
+            if (id === sequence) fail();
         });
     };
 
@@ -244,7 +258,14 @@ export function bindQuickSearch(form, {
             controller.close();
             return;
         }
-        if (query === wanted) return; // nothing new to ask, such as a trailing space
+        // The words on show, such as with a trailing space, or edited back to after a newer search
+        // was dropped or failed: their results again, and nothing newer still on its way.
+        if (query === shown) {
+            cancel();
+            open();
+            return;
+        }
+        if (query === wanted) return; // asked for already
         wanted = query;
         clearTimeout(timer);
         timer = setTimeout(() => {
@@ -275,7 +296,7 @@ export function bindQuickSearch(form, {
     });
 
     listen(form, 'submit', event => {
-        clearTimeout(timer);
+        cancel(); // the page is on its way to the search page: nothing opens or speaks over it
         if (input.value.trim()) return; // a real GET to the search page
         event.preventDefault();
         focusField();

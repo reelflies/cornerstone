@@ -365,6 +365,48 @@ describe('the dropdown', () => {
         expect(announce).toHaveBeenCalledTimes(1);
     });
 
+    // stencil-utils resolves any answer it gets, so a 429, a 5xx or a challenge page arrives as
+    // HTML with no results in it (rf/skeptic on f4773362, minor 2).
+    it('treats an answer with no results in it as a failed search: nothing of it reaches the page, and the same words are asked again', async () => {
+        const errorPage = '<!doctype html><html><head><title>429 Too Many Requests</title><style>body { display: none }</style></head>'
+            + '<body><h1>Too Many Requests</h1><img src="/challenge.png" alt=""></body></html>';
+        request.mockImplementationOnce(() => Promise.resolve(errorPage));
+        type(els.input, 'caddis');
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        await settle();
+        expect(dropdown().hidden).toBe(true);
+        expect(dropdown().childElementCount).toBe(0);
+        expect(document.body.querySelector('style, img')).toBe(null);
+        expect(isOpen(OPEN_TOKEN)).toBe(false);
+        expect(announce).not.toHaveBeenCalled();
+
+        type(els.input, 'caddis ');
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        await settle();
+        expect(request).toHaveBeenCalledTimes(2);
+        expect(dropdown().hidden).toBe(false);
+        expect(announce).toHaveBeenCalledWith('3 results for “caddis”');
+    });
+
+    it('keeps the results on show when a newer search\'s answer holds none, and puts only the results in the dropdown', async () => {
+        request.mockImplementationOnce(query => Promise.resolve(`<style>.rf-qs { color: red }</style>${results({ query })}<script>window.rfLeak = 1</script>`));
+        type(els.input, 'caddis');
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        await settle();
+        expect(dropdown().querySelectorAll(':scope > *')).toHaveLength(1);
+        expect(dropdown().firstElementChild.hasAttribute('data-rf-qs-results')).toBe(true);
+        expect(document.body.querySelector('style, script')).toBe(null);
+
+        request.mockImplementationOnce(() => Promise.resolve('<h1>Service Unavailable</h1>'));
+        type(els.input, 'caddis pupa');
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        await settle();
+        expect(dropdown().hidden).toBe(true);
+        type(els.input, 'caddis');
+        expect(dropdown().hidden).toBe(false);
+        expect(dropdown().querySelector('[data-rf-qs-heading]').textContent).toBe('3 results for “caddis”');
+    });
+
     it('sets the open state while open, and clears it when it closes (GEO-3)', async () => {
         type(els.input, 'caddis');
         jest.advanceTimersByTime(DEBOUNCE_MS);
@@ -465,6 +507,35 @@ describe('the dropdown', () => {
         expect(announce).toHaveBeenCalledTimes(1);
     });
 
+    // Editing back to the words on show, after Escape or a click outside dropped a newer search,
+    // shows their results again (rf/standards and rf/skeptic on f4773362, minor 1).
+    it('opens the last results again when the words are edited back to them, without a new request or announcement', async () => {
+        type(els.input, 'caddis');
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        await settle();
+        type(els.input, 'caddis p');
+        key(els.input, 'Escape');
+        expect(dropdown().hidden).toBe(true);
+
+        type(els.input, 'caddis');
+        expect(dropdown().hidden).toBe(false);
+        expect(isOpen(OPEN_TOKEN)).toBe(true);
+        expect(dropdown().querySelector('[data-rf-qs-heading]').textContent).toBe('3 results for “caddis”');
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        await settle();
+        expect(request).toHaveBeenCalledTimes(1);
+        expect(announce).toHaveBeenCalledTimes(1);
+
+        type(els.input, 'caddis la');
+        els.outside.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(dropdown().hidden).toBe(true);
+        type(els.input, 'caddis');
+        expect(dropdown().hidden).toBe(false);
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        await settle();
+        expect(request).toHaveBeenCalledTimes(1);
+    });
+
     it('opens again on focus with the last results, without a new request or announcement', async () => {
         type(els.input, 'caddis');
         jest.advanceTimersByTime(DEBOUNCE_MS);
@@ -497,6 +568,31 @@ describe('the dropdown', () => {
         type(els.input, '   ');
         expect(submit()).toBe(true);
         expect(document.activeElement).toBe(els.input);
+    });
+
+    // The page is on its way to the search page: a late answer opens and says nothing over it
+    // (rf/skeptic on f4773362, minor 3).
+    it('drops a search on its way, or still waiting for its 400 ms, when the form is submitted', async () => {
+        const submit = () => els.form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        let answer;
+        request.mockImplementationOnce(() => new Promise(resolve => { answer = resolve; }));
+        type(els.input, 'caddis');
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        expect(request).toHaveBeenCalledTimes(1);
+        submit();
+        answer(results({ query: 'caddis' }));
+        await settle();
+        expect(dropdown().hidden).toBe(true);
+        expect(isOpen(OPEN_TOKEN)).toBe(false);
+        expect(announce).not.toHaveBeenCalled();
+
+        type(els.input, 'nymph');
+        jest.advanceTimersByTime(DEBOUNCE_MS - 1);
+        submit();
+        jest.advanceTimersByTime(1000);
+        await settle();
+        expect(request).toHaveBeenCalledTimes(1);
+        expect(dropdown().hidden).toBe(true);
     });
 
     it('stops listening when stopped', () => {
