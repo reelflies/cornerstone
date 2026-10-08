@@ -8,7 +8,10 @@
 //   checkoutProblems(readCheckout({ git: gitIn(), fetch: true }))   // before step 1: [] or one line per problem
 //   stepFiveOrigin({ git: gitIn(), sha })                            // step 5: { problems, note }
 //
-// A typed push isn't checked: the person at the terminal decides what goes out (docs/releasing.md).
+// A typed push to a non-production target isn't checked: the person at the terminal decides what
+// goes out (docs/releasing.md). A push to a live storefront (ticket 53's channel 1) sends merged code
+// only, but not only the tip, so the paired release can push the commit the 1895766 build ran:
+//   mergedCheckoutProblems(readMergedCheckout({ git: gitIn(), fetch: true }))  // before step 1
 
 import { execFileSync } from 'child_process';
 
@@ -91,6 +94,37 @@ export function checkoutProblems({
 }
 
 const isAncestor = (git, sha, tip) => !('error' in tryGit(git, 'merge-base', '--is-ancestor', sha, tip));
+
+// Ticket 53: readCheckout, plus whether HEAD is in origin/master's history (merged: true, false, or
+// null when either commit can't be read) and, when it is, how many commits origin/master's tip is
+// ahead of it (behind).
+export function readMergedCheckout({ git, fetch }) {
+    const checkout = readCheckout({ git, fetch });
+    if (!checkout.head || !checkout.originMaster) return { ...checkout, merged: null, behind: null };
+    const merged = isAncestor(git, checkout.head, checkout.originMaster);
+    const count = merged ? tryGit(git, 'rev-list', '--count', `${checkout.head}..${checkout.originMaster}`).out : undefined;
+    return { ...checkout, merged, behind: count === undefined ? null : Number(count) };
+}
+
+// Ticket 53: before step 1 of a push to a live storefront (channel 1), why this checkout can't send
+// it, or []. Only merged code goes live, but not only origin/master's tip: the paired channel-1
+// release pushes the commit the 1895766 build ran (ticket 56:37), and the release-log PR that
+// records that build always merges after it. So HEAD must be in a freshly fetched origin/master's
+// history, on master or a detached HEAD (git switch --detach <sha>); another branch is refused even
+// at a merged commit, so the operator names the commit on purpose.
+export function mergedCheckoutProblems({
+    fetchError, branch, head, originMaster, merged,
+}) {
+    if (fetchError) return [`couldn't fetch origin's master (${fetchError}), so this release can't check that it sends merged code only`];
+    const problems = [];
+    if (branch !== 'master' && branch !== 'HEAD') {
+        problems.push(`this checkout is on ${branch ? `branch ${branch}` : 'no branch git can read'}: run the release from the main clone, on master or detached at a merged commit (git switch --detach <sha>)`);
+    }
+    if (!originMaster) problems.push('there is no origin/master to compare with');
+    else if (!head) problems.push('git can\'t read this checkout\'s HEAD');
+    else if (merged !== true) problems.push(`HEAD ${short(head)} isn't in origin/master's history (its tip is ${short(originMaster)}): only merged code goes live`);
+    return problems;
+}
 
 // Step 5: fetches again. origin/master may have moved on while the release built and ran its gates
 // (another PR merged). The push still sends `sha`, the commit prepare checked at origin/master's tip,

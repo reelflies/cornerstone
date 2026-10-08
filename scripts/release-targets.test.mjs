@@ -1,8 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import {
     buildPushArgs, CONFIRM_NONPROD, CONFIRM_TYPED, findTarget, RELEASE_TARGETS,
 } from './release-targets.mjs';
+
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 test('the push command names one zip, one variation and one channel', () => {
     assert.deepEqual(
@@ -46,7 +50,8 @@ test('ticket 53: live reelflies.ca (channel 1) is a target for "ReelFlies CA cha
     assert.deepEqual(target.variations, ['ReelFlies CA channel 1']);
     assert.equal(target.slug, 'ca-channel-1');
     assert.equal(target.liveFile, 'config.ca-channel-1.live.json');
-    assert.match(target.liveFile, /^config\.[^/]+\.live\.json$/, '.gitignore ignores config.*.live.json, which holds the live settings');
+    // The capture holds the live settings (Cavio's held a token), so git must ignore it.
+    assert.equal(spawnSync('git', ['check-ignore', '-q', '--no-index', target.liveFile], { cwd: ROOT }).status, 0, `.gitignore ignores ${target.liveFile}`);
     assert.notEqual(target.liveFile, findTarget(1895766).liveFile);
     assert.notEqual(target.slug, findTarget(1895766).slug);
 });

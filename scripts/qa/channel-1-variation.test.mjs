@@ -100,7 +100,7 @@ describe('only the guarded channel-1 target takes the channel-1 variation (ticke
     });
 });
 
-// Spec seam 5: the release guard on the channel-1 variation, as ticket 53's target will run it.
+// Spec seam 5: the release guard on the channel-1 variation, as ticket 53's target runs it.
 describe('the release guard and step 1 on the channel-1 variation (seam 5)', () => {
     const repo = effectiveSettings(config, NAME);
     // Channel 1 runs Hero-2024 until ticket 56's push: its Theme Styles hold no rf_* key.

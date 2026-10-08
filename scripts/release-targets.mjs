@@ -21,8 +21,9 @@ export const CONFIRM_NONPROD = 'nonprod';
 //                  that day).
 //
 // A production target is released only by an operator typing at their own terminal, never by an
-// agent, dry runs included (ticket 53; release-checks.mjs operatorProblems), and only from master at
-// origin/master's tip, so only merged code reaches it.
+// agent, dry runs included (ticket 53; release-checks.mjs operatorProblems), and only from merged
+// code: HEAD in origin/master's history, on master or detached at it (release-origin.mjs
+// mergedCheckoutProblems), so the paired release can push the commit the 1895766 build ran.
 export const RELEASE_TARGETS = {
     // Ticket 53 (Option A): live reelflies.ca on tree 1, until the Flip. Its own variation, with tree
     // 1's menu ids, typed by Shaun (ticket 56 pushes it by T-28). This replaces ticket 05's "never

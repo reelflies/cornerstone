@@ -5,7 +5,7 @@
 //   import {
 //       setupProblems, themeCapProblems, realReleaseStops, confirmChannel, pushGate,
 //       confirmNonprodRefusals, hasConfirmNonprod, pairedChannel1Release, pushConfirmation, LIVE_CHANNELS,
-//       isProductionTarget, operatorProblems, operatorRefusal, typedQuestion,   // ticket 53
+//       isProductionTarget, operatorProblems, operatorRefusal, typedQuestion, AGENT_SHELL_VARIABLE,   // ticket 53
 //   } from './release-checks.mjs';
 //
 // setupProblems and themeCapProblems return one line per problem. realReleaseStops turns them into

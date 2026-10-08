@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-    checkoutProblems, gitIn, ORIGIN_MASTER, readCheckout, RELEASE_TOOLING, stepFiveOrigin,
+    checkoutProblems, gitIn, mergedCheckoutProblems, ORIGIN_MASTER, readCheckout, readMergedCheckout, RELEASE_TOOLING, stepFiveOrigin,
 } from './release-origin.mjs';
 import { originRepo } from './release-origin-fixture.mjs';
 
@@ -102,6 +102,105 @@ test('outside a git repository nothing can be read, and the check refuses', () =
     const checkout = readCheckout({ git: gitIn(dir), fetch: false });
     assert.equal(checkout.head, null);
     assert.ok(checkoutProblems(checkout).length > 0);
+});
+
+// --- Ticket 53: a push to a live storefront sends merged code, not only the tip ------------------
+
+// The paired channel-1 release pushes the commit the 1895766 build ran (docs/releasing.md, the
+// release calendar; ticket 56:37), and the release-log PR that records that build always merges
+// after it. So channel 1 takes any commit in origin/master's history, on master or detached at it.
+
+test('ticket 53: mergedCheckoutProblems takes master at the tip, and master or a detached HEAD behind it', () => {
+    const sha = 'a'.repeat(40);
+    const tip = 'b'.repeat(40);
+    assert.deepEqual(mergedCheckoutProblems({
+        fetchError: null, branch: 'master', head: tip, originMaster: tip, merged: true,
+    }), []);
+    assert.deepEqual(mergedCheckoutProblems({
+        fetchError: null, branch: 'master', head: sha, originMaster: tip, merged: true,
+    }), []);
+    assert.deepEqual(mergedCheckoutProblems({
+        fetchError: null, branch: 'HEAD', head: sha, originMaster: tip, merged: true,
+    }), []);
+});
+
+test('ticket 53: mergedCheckoutProblems refuses an unmerged commit, another branch, no origin/master or a failed fetch', () => {
+    const sha = 'a'.repeat(40);
+    const tip = 'b'.repeat(40);
+    assert.deepEqual(mergedCheckoutProblems({
+        fetchError: null, branch: 'master', head: sha, originMaster: tip, merged: false,
+    }), ['HEAD aaaaaaa isn\'t in origin/master\'s history (its tip is bbbbbbb): only merged code goes live']);
+    assert.deepEqual(mergedCheckoutProblems({
+        fetchError: null, branch: 'HEAD', head: sha, originMaster: tip, merged: false,
+    }), ['HEAD aaaaaaa isn\'t in origin/master\'s history (its tip is bbbbbbb): only merged code goes live']);
+    assert.deepEqual(mergedCheckoutProblems({
+        fetchError: null, branch: 't99/old-ticket', head: sha, originMaster: tip, merged: true,
+    }), ['this checkout is on branch t99/old-ticket: run the release from the main clone, on master or detached at a merged commit (git switch --detach <sha>)']);
+    assert.deepEqual(mergedCheckoutProblems({
+        fetchError: null, branch: 'master', head: sha, originMaster: null, merged: null,
+    }), ['there is no origin/master to compare with']);
+    assert.deepEqual(mergedCheckoutProblems({
+        fetchError: 'fatal: unable to access', branch: 'master', head: sha, originMaster: tip, merged: true,
+    }), ['couldn\'t fetch origin\'s master (fatal: unable to access), so this release can\'t check that it sends merged code only']);
+});
+
+test('ticket 53: readMergedCheckout reads the tip as merged, with nothing behind it', () => {
+    const repo = fixture();
+    const checkout = readMergedCheckout({ git: gitIn(repo.clone), fetch: true });
+    assert.deepEqual(checkout, {
+        fetchError: null, branch: 'master', head: repo.head, originMaster: repo.head, merged: true, behind: 0,
+    });
+    assert.deepEqual(mergedCheckoutProblems(checkout), []);
+});
+
+test('ticket 53: an older merged commit passes once the fetch shows the merges after it, detached or on a master not yet pulled', () => {
+    const repo = fixture();
+    repo.mergeOnOrigin({ 'RELEASES.md': 'the build\'s log\n' }, 'release log');
+    const merged = repo.mergeOnOrigin({ 'README.md': 'later\n' });
+    const onMaster = readMergedCheckout({ git: gitIn(repo.clone), fetch: true });
+    assert.equal(onMaster.originMaster, merged);
+    assert.equal(onMaster.merged, true);
+    assert.equal(onMaster.behind, 2);
+    assert.deepEqual(mergedCheckoutProblems(onMaster), []);
+    assert.match(checkoutProblems(onMaster)[0], /isn't origin\/master's tip/, 'an agent push still needs the tip');
+
+    repo.git('pull', '-q', '--ff-only', 'origin', 'master');
+    repo.git('switch', '-q', '--detach', repo.head);
+    const detached = readMergedCheckout({ git: gitIn(repo.clone), fetch: true });
+    assert.equal(detached.branch, 'HEAD');
+    assert.equal(detached.head, repo.head);
+    assert.deepEqual(mergedCheckoutProblems(detached), []);
+});
+
+test('ticket 53: a commit origin doesn\'t have is refused, on master or detached, and so is a rewritten origin/master', () => {
+    const repo = fixture();
+    fs.writeFileSync(path.join(repo.clone, 'README.md'), 'not merged\n');
+    repo.git('commit', '-q', '-am', 'local only');
+    const local = readMergedCheckout({ git: gitIn(repo.clone), fetch: true });
+    assert.equal(local.merged, false);
+    assert.equal(local.behind, null);
+    assert.deepEqual(mergedCheckoutProblems(local), [`HEAD ${short(local.head)} isn't in origin/master's history (its tip is ${short(repo.head)}): only merged code goes live`]);
+    repo.git('switch', '-q', '--detach');
+    assert.equal(mergedCheckoutProblems(readMergedCheckout({ git: gitIn(repo.clone), fetch: true })).length, 1);
+
+    const rewrittenRepo = fixture();
+    const rewritten = rewrittenRepo.rewriteOrigin();
+    assert.deepEqual(mergedCheckoutProblems(readMergedCheckout({ git: gitIn(rewrittenRepo.clone), fetch: true })), [
+        `HEAD ${short(rewrittenRepo.head)} isn't in origin/master's history (its tip is ${short(rewritten)}): only merged code goes live`,
+    ]);
+});
+
+test('ticket 53: another branch is refused even at a merged commit, and a failed fetch is refused', () => {
+    const repo = fixture();
+    repo.git('switch', '-q', '-c', 't99/old-ticket');
+    assert.deepEqual(mergedCheckoutProblems(readMergedCheckout({ git: gitIn(repo.clone), fetch: true })), [
+        'this checkout is on branch t99/old-ticket: run the release from the main clone, on master or detached at a merged commit (git switch --detach <sha>)',
+    ]);
+    repo.git('switch', '-q', 'master');
+    repo.git('remote', 'set-url', 'origin', path.join(repo.root, 'missing.git'));
+    const problems = mergedCheckoutProblems(readMergedCheckout({ git: gitIn(repo.clone), fetch: true }));
+    assert.equal(problems.length, 1);
+    assert.match(problems[0], /^couldn't fetch origin's master \(.*missing\.git.*\), so this release can't check that it sends merged code only$/);
 });
 
 // --- Step 5: origin/master may move on while the release builds ---------------------------------

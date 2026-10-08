@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 // The node steps of scripts/release.sh (tickets 05 and 15). release.sh calls one step at a time:
 //
-//   node scripts/release.mjs prepare <release.sh arguments>   refusals, step 1 (capture, diff, live contrast), the guard
+//   node scripts/release.mjs prepare <release.sh arguments>   refusals, step 1 (capture, diff, live contrast), the guard;
+//                                                             on a production target (channel 1, ticket 53) the refusals
+//                                                             include the operator rule and merged code only
 //   node scripts/release.mjs state <key>                      prints one value from the release state
 //   node scripts/release.mjs validate-config                  step 3: config.json against stencil-cli's schema
 //   node scripts/release.mjs bundle-info <zip>                step 4: records the zip's bytes and sha256
 //   node scripts/release.mjs dry-run-report                   a dry run's push summary, command and log entry
 //   node scripts/release.mjs pre-push                         step 5: summary, confirmation (typed, or W0-1's
-//                                                             --confirm-nonprod), then the gate
+//                                                             --confirm-nonprod; the operator rule again on a
+//                                                             production target), then the gate
 //   node scripts/release.mjs push-args                        step 5: the push arguments, NUL-separated, once the gate passed
 //   node scripts/release.mjs redact                           step 5: filters tokens out of the push output
 //   node scripts/release.mjs verify                           step 6: capture again and compare
@@ -30,7 +33,8 @@
 //   RF_RELEASE_TREE_FIXTURE=<file>   a JSON array of the channel's category ids, instead of the
 //                                    catalogue API, for the guard's menu id rule
 //   RF_RELEASE_LOG_FIXTURE=<file>    a release log to read instead of RELEASES.md: the channel's last
-//                                    release (W0-2) and the themes the release pushed
+//                                    release (W0-2) and the themes the release pushed; and instead of
+//                                    origin/master's RELEASES.md for channel 1's prelaunch line (ticket 53)
 //   RF_RELEASE_BASE_FIXTURE=<file>   a theme config to use as config.json at the commit of the
 //                                    channel's last release, instead of reading it with git (W0-2)
 //   RF_RELEASE_CALENDAR_FIXTURE=<file>  a release calendar to read instead of
@@ -68,11 +72,11 @@ import {
     cookieSecrets, describeLighthouse, lighthouseEnv, lighthouseOutcome, lighthousePlan, resultsDirFor, runCommand, stopReason,
 } from './release-lighthouse.mjs';
 import {
-    addMyThemesRow, addReleaseEntry, describePairedRelease, formatMyThemesRow, formatPushSummary, formatReleaseEntry, lastRelease, myThemesRows,
-    releasedThemeUuids, releaseEntries,
+    addMyThemesRow, addReleaseEntry, describePairedRelease, describePrelaunch, formatMyThemesRow, formatPushSummary, formatReleaseEntry, lastRelease, myThemesRows,
+    prelaunchBuild, releasedThemeUuids, releaseEntries,
 } from './release-log.mjs';
 import {
-    checkoutProblems, gitIn, readCheckout, stepFiveOrigin,
+    checkoutProblems, gitIn, mergedCheckoutProblems, ORIGIN_MASTER, readCheckout, readMergedCheckout, stepFiveOrigin,
 } from './release-origin.mjs';
 import {
     describePlan, describeRunProblems, DRY_RUN_MINUTES, dryRunProblems, dryRunRecord, planPrune, releasesEditProblems, REQUIRED_CHANNELS, runPrune, uncommittedProblems,
@@ -210,32 +214,72 @@ function calendarFields(options, target, phase) {
     };
 }
 
-// Why the checkout must be master at origin/master's tip, and what passing it means: for an agent
-// push (W0-1), and for a push to a production target (ticket 53).
-const ORIGIN_NONPROD = {
-    needs: '--confirm-nonprod needs this checkout on master at origin/master\'s tip, so that origin/master\'s calendar and targets judge it',
-    ok: 'the calendar and targets that judge --confirm-nonprod are origin/master\'s',
-};
-const originLive = target => ({
-    needs: `a push to channel ${target.id} (${target.name}), a live storefront, needs this checkout on master at origin/master's tip, so that only merged code reaches it`,
-    ok: `only merged code goes live on ${target.name}`,
-});
-
 // An agent push runs only from master at origin/master's tip, so the calendar and targets that judge
-// --confirm-nonprod are origin/master's, never a stale checkout's (release-origin.mjs); so does a push
-// to a production target (ticket 53), so only merged code reaches live reelflies.ca. A real release
-// refuses otherwise, and a dry run warns. A dry run on the test-only overrides stays offline: it
-// compares with origin/master as last fetched.
-function originStep(options, why) {
+// --confirm-nonprod are origin/master's, never a stale checkout's (release-origin.mjs). A real
+// release refuses otherwise, and a dry run warns. A dry run on the test-only overrides stays
+// offline: it compares with origin/master as last fetched.
+function originStep(options) {
     const offline = OVERRIDES.some(name => process.env[name]);
     if (offline) say('fixture', 'origin/master as last fetched: a dry run on the test-only overrides doesn\'t fetch');
     const checkout = readCheckout({ git: gitIn(), fetch: !offline });
     const problems = checkoutProblems(checkout);
     if (problems.length) {
-        stopOrWarn([`${why.needs}: ${problems.join('; ')}`], options.dryRun, refuse);
+        stopOrWarn([`--confirm-nonprod needs this checkout on master at origin/master's tip, so that origin/master's calendar and targets judge it: ${problems.join('; ')}`], options.dryRun, refuse);
         return;
     }
-    say('origin', `master at origin/master's tip ${checkout.head.slice(0, 7)}${offline ? '' : ', fetched just now'}: ${why.ok}`);
+    say('origin', `master at origin/master's tip ${checkout.head.slice(0, 7)}${offline ? '' : ', fetched just now'}: the calendar and targets that judge --confirm-nonprod are origin/master's`);
+}
+
+// Ticket 53: a push to a production target (channel 1, live reelflies.ca) sends merged code only:
+// HEAD in a freshly fetched origin/master's history, on master or detached at it
+// (release-origin.mjs mergedCheckoutProblems). Not only the tip: the paired channel-1 release
+// pushes the commit the 1895766 build ran, which the release-log PR has already left behind. A real
+// release refuses otherwise, and a dry run warns. Returns the checkout.
+function mergedOriginStep(options, target) {
+    const offline = OVERRIDES.some(name => process.env[name]);
+    if (offline) say('fixture', 'origin/master as last fetched: a dry run on the test-only overrides doesn\'t fetch');
+    const checkout = readMergedCheckout({ git: gitIn(), fetch: !offline });
+    const problems = mergedCheckoutProblems(checkout);
+    if (problems.length) {
+        stopOrWarn([`a push to channel ${target.id} (${target.name}), a live storefront, sends merged code only: ${problems.join('; ')}`], options.dryRun, refuse);
+        return checkout;
+    }
+    const head = `HEAD ${checkout.head.slice(0, 7)} ${checkout.branch === 'HEAD' ? '(detached)' : 'on master'}`;
+    const where = checkout.head === checkout.originMaster
+        ? 'origin/master\'s tip'
+        : `in origin/master's history, ${checkout.behind} commit(s) behind its tip ${checkout.originMaster.slice(0, 7)}`;
+    say('origin', `${head} is ${where}${offline ? '' : ', fetched just now'}: only merged code goes live on ${target.name}`);
+    return checkout;
+}
+
+// The release log the prelaunch check reads: origin/master's RELEASES.md, where each build's
+// release-log PR records it, or the test fixture. { markdown, source } or { error }.
+function readPrelaunchLog() {
+    const fixture = process.env.RF_RELEASE_LOG_FIXTURE;
+    if (fixture) {
+        try {
+            return { markdown: fs.readFileSync(fixture, 'utf8'), source: `release log from ${fixture}, RF_RELEASE_LOG_FIXTURE` };
+        } catch (error) {
+            return { error: `can't read the release log fixture ${fixture}: ${error.message}` };
+        }
+    }
+    try {
+        return { markdown: gitIn()('show', `${ORIGIN_MASTER}:${RELEASES}`), source: `origin/master's ${RELEASES}` };
+    } catch (error) {
+        return { error: `origin/master's ${RELEASES} can't be read: ${String(error.stderr || error.message).trim().split('\n')[0]}` };
+    }
+}
+
+// Ticket 53: on channel 1, whether HEAD ran on prelaunch (1895766), and if not, which commit did
+// last. A report that never stops the release: the paired release pushes the 1895766 build's commit
+// (ticket 56:37), and ticket 56 reads that entry's Lighthouse line. The push summary repeats it at
+// step 5. Returns the result for the state, or null on any other target.
+function prelaunchStep(target, checkout) {
+    if (Number(target.id) !== 1 || !checkout.head) return null;
+    const { markdown, source, error } = readPrelaunchLog();
+    const prelaunch = error ? { sha: checkout.head, error } : prelaunchBuild(markdown, checkout.head);
+    say('prelaunch', `${describePrelaunch(prelaunch)}${source ? ` (${source})` : ''}`);
+    return prelaunch;
 }
 
 // The fixtures with which a dry run reads nothing from the store and stops before the build: the
@@ -264,20 +308,21 @@ function operatorStep(target) {
 // --confirm-nonprod the checkout must be master at origin/master's tip, and the flag is refused on a
 // production target and from T-21 (release-checks.mjs confirmNonprodRefusals), so a refused run
 // captures nothing; step 5 checks both again before the push. A production target (ticket 53)
-// refuses the flag before anything is fetched, then needs an operator at a terminal, then master at
-// origin/master's tip.
+// refuses the flag before anything is fetched, then needs an operator at a terminal, then merged
+// code; on channel 1 it also says whether the commit ran on prelaunch.
 function confirmationStep(options, target) {
     heading('Confirmation and the release calendar');
     const phase = readPhase({ fixtures: true });
     const fields = calendarFields(options, target, phase);
     say('calendar', fields.calendar.line);
     const production = isProductionTarget(target);
-    if (hasConfirmNonprod(options) && !production) originStep(options, ORIGIN_NONPROD);
+    if (hasConfirmNonprod(options) && !production) originStep(options);
     const reasons = confirmNonprodRefusals({ options, target, phase });
     if (reasons.length) throw refuse(`--confirm-nonprod refused: ${reasons.join('; ')}`);
+    let prelaunch = null;
     if (production) {
         operatorStep(target);
-        originStep(options, originLive(target));
+        prelaunch = prelaunchStep(target, mergedOriginStep(options, target));
     }
     say('confirm', hasConfirmNonprod(options)
         ? `non-interactive (agent): --confirm-nonprod ${options.confirmNonprod} replaces step 5's typed channel id; step 5's gate still captures the channel again and checks everything before the push`
@@ -286,7 +331,7 @@ function confirmationStep(options, target) {
         say('paired', `a paired channel-1 release is ${describePairedRelease(fields.pairedChannel1)}. The ${RELEASES} entry records it for Shaun.`);
     }
     say('lighthouse', describeLighthouse(fields.lighthouse));
-    return fields;
+    return prelaunch ? { ...fields, prelaunch } : fields;
 }
 
 function checkSetup(options) {
@@ -681,6 +726,7 @@ function releaseRecord(state, { themeUuid = null, verified = null } = {}) {
         calendar: state.calendar,
         pairedChannel1: state.pairedChannel1,
         lighthouse: state.lighthouse,
+        prelaunch: state.prelaunch || null, // ticket 53: the push summary's prelaunch line, on channel 1
     };
 }
 
@@ -702,10 +748,15 @@ function dryRunReport() {
 }
 
 // Today's phase, read again at step 5 from the committed calendar: a release can run past
-// midnight into another phase. The target comes from release-targets.mjs again, not the state file.
+// midnight into another phase. The target comes from release-targets.mjs again, not the state file,
+// and so does the variation it takes (ticket 53): an edited state file can't send another
+// variation's settings, such as tree 4's menu ids, to channel 1.
 function stepFiveCalendar(state) {
     try {
         const target = findTarget(state.channel);
+        if (!target.variations.includes(state.variation)) {
+            throw new Error(`the release state's variation "${state.variation}" isn't released to channel ${target.id}: ${target.name} takes ${target.variations.map(name => `"${name}"`).join(', ')}`);
+        }
         const phase = readPhase({ fixtures: false });
         return { target, phase, fields: calendarFields(state, target, phase) };
     } catch (error) {

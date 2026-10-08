@@ -66,8 +66,30 @@ test('ticket 53: the channel-1 target needs the variation in config.json', () =>
     assert.throws(() => resolveTarget({ channel: 1, variation: 'ReelFlies CA channel 1' }, without), /"ReelFlies CA channel 1" isn't a variation in config\.json/);
 });
 
-test('ticket 53: --confirm-nonprod 1 parses, and is refused later by the target and the live-channel list', () => {
+// The refusal itself is release-checks.mjs's (confirmNonprodRefusals, by the live-channel list and
+// as a production target), tested in release-checks.test.mjs and through release.sh.
+test('ticket 53: --confirm-nonprod 1 parses here; the target and the live-channel list refuse it after parsing', () => {
     assert.equal(parseReleaseArgs(['--channel', '1', '--variation', 'ReelFlies CA channel 1', '--confirm-nonprod', '1']).confirmNonprod, 1);
+});
+
+test('ticket 53: -c, stencil\'s own channel flag, is refused: channel 1 is named only with --channel', () => {
+    assert.throws(() => parseReleaseArgs(['-c', '1', '--variation', 'ReelFlies CA channel 1', '--dry-run']), /^Error: -c: name the channel with --channel <id>$/);
+});
+
+// A literal deny rule in Claude Code's settings matches the command's text, so the channel id has one
+// spelling: its digits alone, with no space or leading zero (rf/safety and rf/skeptic on PR #48).
+test('ticket 53: a channel id is taken only as written canonically, so "01", " 1" or "1 " never stands for channel 1', () => {
+    assert.equal(parseReleaseArgs(['--channel', '1', '--variation', 'ReelFlies CA channel 1']).channel, 1);
+    assert.equal(parseReleaseArgs(['--channel=1895766', '--variation', 'ReelFlies CA']).channel, 1895766);
+    for (const spelling of ['01', '001', ' 1', '1 ', '0', '01895766']) {
+        assert.throws(
+            () => parseReleaseArgs([`--channel=${spelling}`, '--variation', 'ReelFlies CA channel 1']),
+            new RegExp(`^Error: --channel "${spelling}" isn't a channel id as written: give the id's digits alone, with no space or leading zero$`),
+            JSON.stringify(spelling),
+        );
+    }
+    assert.throws(() => parseReleaseArgs(['--channel', '+1', '--variation', 'ReelFlies CA channel 1']), /"\+1" isn't a channel id/);
+    assert.throws(() => parseReleaseArgs(['--channel', '01', '--variation', 'ReelFlies CA channel 1']), /--channel "01" isn't a channel id as written/);
 });
 
 test('W0-3: --prune-only runs on its own, with or without --dry-run', () => {
