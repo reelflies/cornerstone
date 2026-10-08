@@ -3,12 +3,14 @@
     rendered with this template, which assets/js/theme/reelflies/quick-search.js asks for
     (stencil-utils' api.search.search with template 'reelflies/quick-results') and puts in the
     dropdown under the search form. It replaces stock's full product cards with no total
-    (components/search/quick-results.html, which stays for stock quick-search.js until ticket 28).
+    (components/search/quick-results.html, which stays for stock quick-search.js and the stock
+    navigation's form, in ticket 28's fallback while both menu ids are empty).
 
     1. The count heading: the real total, pagination.product_results.total, or that nothing matched.
        quick-search.js announces its words once through the shared live region.
     2. data-rf-qs-categories, empty here: quick-search.js puts up to 2 categories from the nav in
-       it, each labelled with data-rf-qs-category-label.
+       it, each labelled with data-rf-qs-category-label, and each starting with a copy of the
+       data-rf-qs-category-tile template: the reference's arrow tile in the thumbnail column.
     3. Up to 8 compact product rows, with the price; _search.scss shows 6 of them on phones.
     4. "See all N results"; quick-search.js points it at the search page for the query typed.
 
@@ -23,6 +25,7 @@
             {{{lang 'reelflies.search.none' query=(sanitize forms.search.query)}}}
         {{~/if~}}
     </p>
+    <template data-rf-qs-category-tile><span class="rf-qs-thumb rf-qs-thumb--category">{{> components/reelflies/icon name='chevron-down' class='rf-qs-category-chev'}}</span></template>
     <ul class="rf-qs-list rf-qs-categories" data-rf-qs-categories hidden></ul>
     {{#if product_results.products}}
     <ul class="rf-qs-list rf-qs-products">

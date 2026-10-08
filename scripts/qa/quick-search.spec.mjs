@@ -5,9 +5,10 @@
 //
 // - Typing a pattern name into the visible field (the phone row at 375, the header's at 1280)
 //   sends one request, 400 ms after the last key, and shows the count heading, up to 2 categories
-//   labelled as categories, at most 6 product rows at 375 and 8 at 1280, each with its price, and
-//   "See all N results" with the heading's N. ReelFlies_CA has no products until refactor 14, so
-//   the rows are checked on channel 1 (QA_CHANNEL=1); on 1895766 the heading says nothing matched.
+//   labelled as categories, each with its arrow tile, at most 6 product rows at 375 and 8 at
+//   1280, each with its price, and "See all N results" with the heading's N. ReelFlies_CA has no
+//   products until refactor 14, so the rows are checked on channel 1 (QA_CHANNEL=1); on 1895766
+//   the heading says nothing matched.
 // - The heading's words are announced once, through the shared live region.
 // - With the dropdown open, <html data-rf-open> holds "search"; Escape closes it, clears it, and
 //   leaves focus in the field; axe finds no aria-allowed-attr, or any serious or critical issue,
@@ -114,6 +115,9 @@ test(`${SEARCH_PIN}: typing a pattern name shows the count, up to 2 categories, 
         const link = categories.nth(i);
         await expect(link).toHaveAccessibleName(/caddis.*, category$/i); // eslint-disable-line no-await-in-loop
         await expect(link.locator('.rf-qs-kind')).toBeVisible(); // eslint-disable-line no-await-in-loop
+        // The reference's arrow tile, from the template the store rendered with its icon partial
+        await expect(link.locator('.rf-qs-thumb--category svg[aria-hidden="true"] use')).toHaveAttribute('href', '#rf-icon-chevron-down'); // eslint-disable-line no-await-in-loop
+        await expect(link.locator('.rf-qs-thumb--category')).toBeVisible(); // eslint-disable-line no-await-in-loop
         expect(await link.getAttribute('href')).not.toMatch(/search\.php/); // eslint-disable-line no-await-in-loop
     }
 

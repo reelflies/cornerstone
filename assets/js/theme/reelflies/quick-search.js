@@ -9,22 +9,25 @@
 //   quick-search.js:70-73), it asks the search page for components/reelflies/quick-results.html.
 //   That template renders the count heading, the product rows and "See all N results"; this
 //   puts up to 2 matching categories under the heading, matched here against the names in the
-//   server-rendered nav (data-rf-category, build pipeline 6.9; the stock .navPages-action links
-//   until ticket 28's nav lands).
+//   server-rendered nav (data-rf-category on ticket 28's grouped menu, build pipeline 6.9; the
+//   stock .navPages-action links in its fallback, while both menu ids are empty).
 // - One accessible model, the simple one (critique, the header search finding): a plain search
 //   input with no combobox attributes, the results after it in tab order inside its form, and the
 //   heading's words announced once per search through the shared live region (live-region.js),
 //   in place of stock's count of rendered cards (quick-search.js:56-58).
 // - While a dropdown is open, <html data-rf-open> holds "search" (open-state.js), which ticket
 //   52's outside-Canada prompt waits on (GEO-3). One dropdown is open at a time.
-// - Escape, a click or focus outside the form, or fewer than 3 characters close it; focusing the
-//   field again shows the last results again, without a new request or announcement.
+// - Escape, a click or focus outside the form, or fewer than 3 characters close it, and drop a
+//   search still waiting, so a late answer opens nothing; focusing the field again shows the last
+//   results again, without a new request or announcement. A failed search closes it and is asked
+//   again at the next keystroke, even for the same words.
 // - On phones, the header's search icon becomes a toggle (data-rf-search-toggle) that opens the
 //   header's form as the bar's second row, as the reference's does. Without script it stays the
 //   link to the search page (data-rf-search-link).
 //
-// Stock quick-search.js still binds the drawer's stock form (navigation-menu.html:2-4) until
-// ticket 28 rebuilds the drawer; the two never share a form.
+// Stock quick-search.js still binds the stock navigation's form (navigation-menu.html:2-4),
+// which renders only in ticket 28's fallback, while both menu ids are empty: on ReelFlies_CA
+// until wave R1 sets tree 4's ids. The two never share a form.
 
 import utils from '@bigcommerce/stencil-utils';
 import { announce as announceInRegion } from './live-region';
@@ -44,7 +47,7 @@ export const SEARCH_OPEN_CLASS = 'rf-is-search-open';
 
 // A name or a query as words: lower case, accents folded, split on anything but letters and digits.
 export function words(text) {
-    return String(text ?? '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    return String(text ?? '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
         .split(/[^a-z0-9]+/)
         .filter(Boolean);
 }
@@ -102,14 +105,19 @@ export function searchRequest(query) {
     });
 }
 
-function categoryItem(doc, category, label) {
+// One category row, as the reference's: a copy of the results' arrow tile (`tile`, the
+// data-rf-qs-category-tile template's content, when there is one) in the thumbnail column, then
+// the name and the muted word on one line. Its name reads "<name>, category".
+function categoryItem(doc, category, label, tile) {
     const item = doc.createElement('li');
     item.className = 'rf-qs-item rf-qs-item--category';
     const link = doc.createElement('a');
     link.className = 'rf-qs-link rf-qs-category';
     link.setAttribute('href', category.url);
+    const text = doc.createElement('span');
+    text.className = 'rf-qs-category-text';
     const name = doc.createElement('span');
-    name.className = 'rf-qs-name';
+    name.className = 'rf-qs-category-name';
     name.textContent = category.name;
     const kind = doc.createElement('span');
     kind.className = 'rf-qs-kind';
@@ -117,7 +125,9 @@ function categoryItem(doc, category, label) {
     comma.className = 'is-srOnly';
     comma.textContent = ', ';
     kind.append(comma, label);
-    link.append(name, kind);
+    text.append(name, kind);
+    if (tile) link.append(doc.importNode(tile, true));
+    link.append(text);
     item.append(link);
     return item;
 }
@@ -165,6 +175,16 @@ export function bindQuickSearch(form, {
         },
     };
 
+    // Drops the search still waiting for its 400 ms or for its answer, so nothing opens or speaks
+    // after the shopper has left: Escape, or a click or focus outside the form (which includes
+    // the phone header's toggle closing the row). The words on show stay the ones asked for.
+    const cancel = () => {
+        clearTimeout(timer);
+        timer = null;
+        sequence += 1;
+        wanted = shown;
+    };
+
     const open = () => {
         if (!box.hidden) return;
         onOpen(controller);
@@ -182,8 +202,10 @@ export function bindQuickSearch(form, {
         const list = box.querySelector('[data-rf-qs-categories]');
         if (list) {
             const label = results.getAttribute('data-rf-qs-category-label') || '';
+            const template = box.querySelector('template[data-rf-qs-category-tile]');
+            const tile = template && template.content.firstElementChild;
             const matched = matchCategories(query, categories());
-            list.replaceChildren(...matched.map(category => categoryItem(doc, category, label)));
+            list.replaceChildren(...matched.map(category => categoryItem(doc, category, label, tile)));
             list.hidden = matched.length === 0;
         }
         const all = box.querySelector('[data-rf-qs-all]');
@@ -206,7 +228,9 @@ export function bindQuickSearch(form, {
         answer.then(html => {
             if (id === sequence) render(query, html);
         }, () => {
-            if (id === sequence) controller.close();
+            if (id !== sequence) return;
+            wanted = null; // so the next keystroke asks again, even for the same words
+            controller.close();
         });
     };
 
@@ -242,7 +266,9 @@ export function bindQuickSearch(form, {
     });
 
     listen(form, 'keydown', event => {
-        if (event.key !== 'Escape' || box.hidden) return;
+        if (event.key !== 'Escape') return;
+        cancel();
+        if (box.hidden) return; // nothing on show: the header's toggle may close its row
         event.preventDefault(); // keeps the field's text, and tells the header's toggle it was used
         controller.close();
         focusField();
@@ -256,7 +282,9 @@ export function bindQuickSearch(form, {
     });
 
     const outside = event => {
-        if (!form.contains(event.target)) controller.close();
+        if (form.contains(event.target)) return;
+        cancel();
+        controller.close();
     };
     listen(doc, 'click', outside);
     listen(doc, 'focusin', outside);

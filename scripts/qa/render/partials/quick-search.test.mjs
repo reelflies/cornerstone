@@ -68,6 +68,22 @@ describe('quick-results.html', () => {
         assert.deepEqual(unbalancedTags(html), []);
     });
 
+    // The reference draws each category with a tile holding an arrow in the thumbnail column
+    // (.qs .th.cat, reference.src.html:717-718, :1327; rf/skeptic round 1, minor 3).
+    it('carries the category rows\' arrow tile as a <template> for quick-search.js to copy', async () => {
+        const html = await results({ products: [product(1)], total: 1 });
+        const tile = elementSource(html, 'template', attrs => 'data-rf-qs-category-tile' in attrs);
+        assert.ok(tile, 'one template, data-rf-qs-category-tile');
+        const [span] = findTags(tile, 'span');
+        assert.match(span.attrs.class, /(^|\s)rf-qs-thumb--category(\s|$)/);
+        const [svg] = findTags(tile, 'svg');
+        assert.equal(svg.attrs['aria-hidden'], 'true', 'the arrow is decorative: the link\'s name is the category\'s');
+        assert.equal(findTags(tile, 'use')[0].attrs.href, '#rf-icon-chevron-down', 'the icon sheet\'s chevron, turned to point right, as ticket 28\'s rail does');
+        assert.equal(text(tile), '');
+        assert.ok(html.indexOf('data-rf-qs-category-tile') < html.indexOf('data-rf-qs-categories'));
+        assert.equal((await results({ products: [], total: 0 })).includes('data-rf-qs-category-tile'), true, 'there with no products too: categories can match');
+    });
+
     it('says "1 result" for one', async () => {
         const html = await results({ products: [product(1)], total: 1 });
         assert.equal(text(elementSource(html, 'p', attrs => 'data-rf-qs-heading' in attrs)), '1 result for “caddis”');

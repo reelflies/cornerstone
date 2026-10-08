@@ -14,6 +14,7 @@ function results({ total = 3, query = 'caddis', rows = 3 } = {}) {
     const items = Array.from({ length: rows }, (_, i) => `<li class="rf-qs-product"><a class="rf-qs-link" href="/fly-${i}/"><span class="rf-qs-name">Fly ${i}</span><span class="rf-qs-price">$0.95</span></a></li>`).join('');
     return `<div class="rf-qs-results" data-rf-qs-results data-rf-qs-total="${total}" data-rf-qs-category-label="category">
         <p class="rf-qs-heading" data-rf-qs-heading>${heading}</p>
+        <template data-rf-qs-category-tile><span class="rf-qs-thumb rf-qs-thumb--category"><svg class="rf-icon rf-qs-category-chev" aria-hidden="true" focusable="false"><use href="#rf-icon-chevron-down"></use></svg></span></template>
         <ul class="rf-qs-categories" data-rf-qs-categories hidden></ul>
         ${total ? `<ul class="rf-qs-products">${items}</ul><a class="rf-qs-all" href="/search.php" data-rf-qs-all>See all ${total} results</a>` : ''}
     </div>`;
@@ -77,7 +78,8 @@ function type(input, value) {
     input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
-const key = (target, name) => target.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true }));
+// A real keydown can be cancelled; the dropdown's Escape cancels it to tell the header's toggle.
+const key = (target, name) => target.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true }));
 
 // Lets the request's promise and the render after it run, under fake timers.
 async function settle() {
@@ -248,6 +250,35 @@ describe('the dropdown', () => {
         expect(box.querySelector('[data-rf-qs-all]').getAttribute('href')).toBe('/search.php?search_query=caddis');
     });
 
+    // The reference's category row: an arrow tile in the thumbnail column, then the name and the
+    // muted word (rf/skeptic round 1, minor 3).
+    it('starts each category row with a copy of the results\' arrow tile, leaving its name alone', async () => {
+        type(els.input, 'caddis');
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        await settle();
+        const links = [...dropdown().querySelectorAll('[data-rf-qs-categories] a')];
+        expect(links).toHaveLength(2);
+        links.forEach(link => {
+            const tile = link.firstElementChild;
+            expect(tile.classList.contains('rf-qs-thumb--category')).toBe(true);
+            expect(tile.querySelector('svg').getAttribute('aria-hidden')).toBe('true');
+            expect(tile.textContent).toBe('');
+        });
+        expect(links[0].textContent.replace(/\s+/g, ' ').trim()).toBe('Caddis Dry Flies, category');
+        expect(links[0].querySelector('.rf-qs-category-text .rf-qs-kind')).not.toBe(null);
+        expect(links[0].querySelector('.rf-qs-category-text').textContent).toBe('Caddis Dry Flies, category');
+    });
+
+    it('still lists the categories when the results carry no tile', async () => {
+        request.mockImplementation(query => Promise.resolve(results({ query }).replace(/<template[\s\S]*?<\/template>/, '')));
+        type(els.input, 'caddis');
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        await settle();
+        const links = [...dropdown().querySelectorAll('[data-rf-qs-categories] a')];
+        expect(links.map(link => link.textContent.replace(/\s+/g, ' ').trim())).toEqual(['Caddis Dry Flies, category', 'Caddis Emerger, Larva & Pupa, category']);
+        expect(dropdown().querySelector('.rf-qs-thumb--category')).toBe(null);
+    });
+
     it('writes category names as text, never as markup', async () => {
         quick.stop();
         els = page({ nav: '<nav><a data-rf-category href="/x/">Caddis &lt;img src=x onerror=alert(1)&gt;</a></nav>' });
@@ -317,6 +348,23 @@ describe('the dropdown', () => {
         expect(isOpen(OPEN_TOKEN)).toBe(false);
     });
 
+    // A flaky phone connection shouldn't leave the field quiet (rf/skeptic round 1, minor 2).
+    it('asks again for the same words after a failed search', async () => {
+        request.mockImplementationOnce(() => Promise.reject(new Error('offline')));
+        type(els.input, 'caddis');
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        await settle();
+        expect(dropdown().hidden).toBe(true);
+
+        type(els.input, 'caddis ');
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        await settle();
+        expect(request).toHaveBeenCalledTimes(2);
+        expect(request).toHaveBeenLastCalledWith('caddis');
+        expect(dropdown().hidden).toBe(false);
+        expect(announce).toHaveBeenCalledTimes(1);
+    });
+
     it('sets the open state while open, and clears it when it closes (GEO-3)', async () => {
         type(els.input, 'caddis');
         jest.advanceTimersByTime(DEBOUNCE_MS);
@@ -366,6 +414,55 @@ describe('the dropdown', () => {
         expect(dropdown().hidden).toBe(false);
         els.outside.focus();
         expect(dropdown().hidden).toBe(true);
+    });
+
+    // A search still waiting when the shopper leaves the field is dropped: no dropdown opens, no
+    // open state is set and nothing is announced (rf/skeptic round 1, minor 1).
+    it('drops a search still waiting for its 400 ms when focus or a click goes outside the form', async () => {
+        type(els.input, 'caddis');
+        jest.advanceTimersByTime(DEBOUNCE_MS - 100);
+        els.outside.focus();
+        els.outside.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        jest.advanceTimersByTime(1000);
+        await settle();
+        expect(request).not.toHaveBeenCalled();
+        expect(dropdown().hidden).toBe(true);
+        expect(isOpen(OPEN_TOKEN)).toBe(false);
+        expect(announce).not.toHaveBeenCalled();
+    });
+
+    it('drops the answer to a search sent before focus or a click went outside the form', async () => {
+        let answer;
+        request.mockImplementationOnce(() => new Promise(resolve => { answer = resolve; }));
+        type(els.input, 'caddis');
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        expect(request).toHaveBeenCalledTimes(1);
+        els.outside.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        answer(results({ query: 'caddis' }));
+        await settle();
+        expect(dropdown().hidden).toBe(true);
+        expect(isOpen(OPEN_TOKEN)).toBe(false);
+        expect(announce).not.toHaveBeenCalled();
+    });
+
+    it('drops a waiting search on Escape, and asks again when the same words are typed', async () => {
+        let answer;
+        request.mockImplementationOnce(() => new Promise(resolve => { answer = resolve; }));
+        type(els.input, 'caddis');
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        key(els.input, 'Escape');
+        answer(results({ query: 'caddis' }));
+        await settle();
+        expect(dropdown().hidden).toBe(true);
+        expect(isOpen(OPEN_TOKEN)).toBe(false);
+        expect(announce).not.toHaveBeenCalled();
+
+        type(els.input, 'caddis ');
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        await settle();
+        expect(request).toHaveBeenCalledTimes(2);
+        expect(dropdown().hidden).toBe(false);
+        expect(announce).toHaveBeenCalledTimes(1);
     });
 
     it('opens again on focus with the last results, without a new request or announcement', async () => {
@@ -473,6 +570,7 @@ describe('the phone header\'s search toggle', () => {
     afterEach(() => {
         if (started) started.stop();
         started = null;
+        document.documentElement.removeAttribute('data-rf-open');
         document.body.innerHTML = '';
     });
 
@@ -493,6 +591,53 @@ describe('the phone header\'s search toggle', () => {
         els.toggle.click();
         expect(els.toggle.getAttribute('aria-expanded')).toBe('false');
         expect(els.header.classList.contains('rf-is-search-open')).toBe(false);
+    });
+
+    // The forms are bound before the toggle, so the dropdown's Escape runs first and marks the
+    // event used (rf/standards round 1, minor 4).
+    it('takes the first Escape for the dropdown open in the row, and the second for the row', async () => {
+        jest.useFakeTimers();
+        const els = header();
+        const request = jest.fn(query => Promise.resolve(results({ query })));
+        started = startQuickSearch({}, { request, announce: () => {} });
+        els.toggle.click();
+        type(els.input, 'caddis');
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        await settle();
+        const box = document.querySelector('[data-rf-qs]');
+        expect(box.hidden).toBe(false);
+
+        key(els.input, 'Escape');
+        expect(box.hidden).toBe(true);
+        expect(els.header.classList.contains('rf-is-search-open')).toBe(true);
+        expect(els.toggle.getAttribute('aria-expanded')).toBe('true');
+        expect(document.activeElement).toBe(els.input);
+
+        key(els.input, 'Escape');
+        expect(els.header.classList.contains('rf-is-search-open')).toBe(false);
+        expect(els.toggle.getAttribute('aria-expanded')).toBe('false');
+        expect(document.activeElement).toBe(els.toggle);
+        jest.useRealTimers();
+    });
+
+    it('opens no dropdown in the row after the toggle has closed it, when the answer comes late', async () => {
+        jest.useFakeTimers();
+        const els = header();
+        let answer;
+        const request = jest.fn(() => new Promise(resolve => { answer = resolve; }));
+        const announce = jest.fn();
+        started = startQuickSearch({}, { request, announce });
+        els.toggle.click();
+        type(els.input, 'caddis');
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        els.toggle.click();
+        expect(els.header.classList.contains('rf-is-search-open')).toBe(false);
+        answer(results({ query: 'caddis' }));
+        await settle();
+        expect(document.querySelector('[data-rf-qs]').hidden).toBe(true);
+        expect(isOpen(OPEN_TOKEN)).toBe(false);
+        expect(announce).not.toHaveBeenCalled();
+        jest.useRealTimers();
     });
 
     it('closes the row on Escape from the field, with focus back on the toggle', () => {

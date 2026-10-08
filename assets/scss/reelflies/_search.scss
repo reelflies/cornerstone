@@ -17,7 +17,10 @@
 //
 // -----------------------------------------------------------------------------
 
-$rf-qs-phone-max:   800px;      // below Cornerstone's medium breakpoint (801px): the phone layout
+// The phone layout: below Cornerstone's medium breakpoint ($screen-medium, 801px). It is the exact
+// opposite of breakpoint("medium"), so no width between 800 and 801px (zoom, fractional scaling)
+// falls between the two layouts.
+$rf-qs-phone:       "not all and (min-width: #{$screen-medium})";
 $rf-qs-phone-rows:  6;
 $rf-qs-thumb:       56px;
 
@@ -85,12 +88,14 @@ $rf-qs-thumb:       56px;
     }
 }
 
-// One line: the name, then the muted word, wrapping as words do
+// A category row, as the reference's (.qs .th.cat, :717-718): a tile holding an arrow in the
+// thumbnail column, then the name and the muted word on one line, wrapping as words do
 .rf-qs-category {
-    display: block;
+    grid-template-columns: $rf-qs-thumb minmax(0, 1fr);
+}
+
+.rf-qs-category-text {
     line-height: 1.3;
-    min-height: var(--rf-target-buy);
-    padding: 12px 6px;
 }
 
 .rf-qs-kind {
@@ -112,6 +117,23 @@ $rf-qs-thumb:       56px;
         object-fit: contain;
         width: $rf-qs-thumb;
     }
+}
+
+// The category row's tile: the arrow on the tile colour, the size of a product photo (3:2)
+.rf-qs-thumb--category {
+    align-items: center;
+    aspect-ratio: 3 / 2;
+    background: var(--rf-tile);
+    color: var(--rf-dun);
+    display: grid;
+    justify-items: center;
+}
+
+// The icon sheet's chevron, turned to point right, as ticket 28's rail does (_menu.scss)
+.rf-qs-category-chev {
+    height: 18px;
+    transform: rotate(-90deg);
+    width: 18px;
 }
 
 .rf-qs-name {
@@ -143,7 +165,7 @@ $rf-qs-thumb:       56px;
     }
 }
 
-@media (max-width: $rf-qs-phone-max) {
+@media #{$rf-qs-phone} {
     .rf-qs-products .rf-qs-item:nth-child(n + #{$rf-qs-phone-rows + 1}) {
         display: none;
     }
@@ -193,7 +215,7 @@ $rf-qs-thumb:       56px;
     }
 }
 
-@media (max-width: $rf-qs-phone-max) {
+@media #{$rf-qs-phone} {
     .rf-header.rf-is-search-open {
         .rf-header-row {
             grid-template-rows: var(--rf-header-h) auto;
