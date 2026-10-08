@@ -11,8 +11,7 @@
 import path from 'path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { findTags } from '../../raw-html/html.mjs';
-import { elementSource } from '../../raw-html/assertions/rf-header.mjs';
+import { findTags, outerHtml } from '../../raw-html/html.mjs';
 import { menuProblems, menuSource } from '../../raw-html/assertions/rf-menu.mjs';
 import { bannerProblems } from '../../raw-html/assertions/rf-menu-banner.mjs';
 import { unbalancedTags } from '../html-checks.mjs';
@@ -43,7 +42,7 @@ function withImages(fixture, ids) {
 }
 
 const render = (fixture, options) => renderPartial('components/common/header', { ...STORE, ...fixture }, options);
-const paneSource = (html, id) => elementSource(menuSource(html), 'div', attrs => attrs.id === `rf-menu-pane-${id}`);
+const paneSource = (html, id) => outerHtml(menuSource(html), 'div', attrs => attrs.id === `rf-menu-pane-${id}`);
 const banners = html => findTags(menuSource(html), 'img');
 
 describe('the banner strip on tree 4', () => {

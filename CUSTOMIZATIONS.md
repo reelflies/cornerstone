@@ -141,13 +141,15 @@ From the review's upgrade-safe layering plan and the design session ([ADR 0001](
 
 Added by the design session (spec, "Hook count"), with the ticket that adds each:
 
-- Ticket 27 needed no hook in `navigation.html`: its header no longer includes it. Ticket 28 needed none in `navigation-menu.html` or `navigation-list.html`: ticket 27's `components/reelflies/header.html` renders the grouped menu (`components/reelflies/menu.html`) in `#menu` when a menu id is set, and includes the stock `navigation-menu.html`, unchanged, when both are empty (the fallback). Ticket 29 needed none either: its rail behaviour is in `menu.js`, its styles in `_rail.scss` and its banner strip in `components/reelflies/menu-banner.html`, included from the grouped menu's own `menu-item.html`.
 - `templates/components/category/sidebar.html` (32) and `faceted-search/facets/multi.html` (33)
 - `templates/components/products/description-tabs.html` and `tabs.html` (39)
 - `templates/pages/cart.html`, `templates/components/cart/totals.html` and `cart/status-messages.html` (41)
 - `templates/components/products/schema.html` (40)
 
-Not needed after all, so not counted toward the ADR's 25–30: ticket 30 needed no hook in `templates/components/common/quick-search.html`, `components/search/quick-results.html` or `assets/js/theme/global/quick-search.js`, which the review expected: ticket 27's header carries the ReelFlies search form (`components/reelflies/search-form.html`), which stock `quick-search.js` doesn't bind, and quick search renders its own `components/reelflies/quick-results.html` through the search API. The stock three stay for the stock navigation's form (`nav-menu-quick-search`), which renders only in ticket 28's fallback, when both menu ids are empty.
+Not needed after all, so not counted toward the ADR's 25–30:
+
+- Ticket 27 needed no hook in `navigation.html`: its header no longer includes it. Ticket 28 needed none in `navigation-menu.html` or `navigation-list.html`: ticket 27's `components/reelflies/header.html` renders the grouped menu (`components/reelflies/menu.html`) in `#menu` when a menu id is set, and includes the stock `navigation-menu.html`, unchanged, when both are empty (the fallback). Ticket 29 needed none either: its rail behaviour is in `menu.js`, its styles in `_rail.scss` and its banner strip in `components/reelflies/menu-banner.html`, included from the grouped menu's own `menu-item.html`.
+- Ticket 30 needed no hook in `templates/components/common/quick-search.html`, `components/search/quick-results.html` or `assets/js/theme/global/quick-search.js`, which the review expected: ticket 27's header carries the ReelFlies search form (`components/reelflies/search-form.html`), which stock `quick-search.js` doesn't bind, and quick search renders its own `components/reelflies/quick-results.html` through the search API. The stock three stay for the stock navigation's form (`nav-menu-quick-search`), which renders only in ticket 28's fallback, when both menu ids are empty.
 
 ## Upgrading to a new Cornerstone release
 

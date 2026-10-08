@@ -73,6 +73,8 @@ test('the hero is found by its element, never by text in a script or a comment',
     assert.match(found, /<\/div>$/);
     assert.ok(found.includes('rf-hero__actions'));
     assert.equal(heroHtml('<script>var x = \'<div class="rf-hero">\';</script><!-- <div class="rf-hero"> -->'), null);
+    // The class as a whole word, anywhere in the list, and the <div> to its own end tag.
+    assert.equal(heroHtml('<div class="rf-hero__media"><div class="x rf-hero y"><div></div></div><p>after</p></div>'), '<div class="x rf-hero y"><div></div></div>');
 });
 
 test('each broken promise of the hero is named', async () => {

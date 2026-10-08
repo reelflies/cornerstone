@@ -13,7 +13,7 @@
 //   space scrolls with the rail inside the card. The page's own scroll only shortens the space
 //   (the desktop header isn't sticky), so the panel never runs past the viewport.
 // - The rail's right edge is the card's background, attached to its content (local), so it runs
-//   the whole scrolled height, where ticket 28's ::before stopped at the card's first screen.
+//   the whole scrolled height; a ::before would stop at the card's first screen.
 // - The banner strip (O09; menu-banner.html): the category's image a third of the pane wide
 //   beside its heading, at 16:7, no taller than 120px, so the child links start within 200px of
 //   the panel's top. Below 801px it isn't shown, so the drawer downloads nothing (it is lazy).
@@ -42,10 +42,6 @@ $rf-banner-max:     120px;  // the banner's height at most (O09)
         min-height: unquote("min(400px, 100%)"); // CSS min(), which this Sass would compute and refuse
         overflow-y: auto;
         overscroll-behavior: contain;
-
-        &::before {
-            content: none;
-        }
     }
 
     // The pane: its heading and the banner side by side, then the children across both

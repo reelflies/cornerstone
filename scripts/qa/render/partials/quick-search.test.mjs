@@ -17,8 +17,7 @@ import path from 'path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import templateAssembler from '@bigcommerce/stencil-cli/lib/template-assembler.js'; // eslint-disable-line import/extensions, import/no-extraneous-dependencies
-import { findTags } from '../../raw-html/html.mjs';
-import { elementSource } from '../../raw-html/assertions/rf-header.mjs';
+import { findTags, outerHtml } from '../../raw-html/html.mjs';
 import { unbalancedTags } from '../html-checks.mjs';
 import { renderPartial, THEME_DIR } from '../render.mjs';
 
@@ -53,7 +52,7 @@ const results = ({ products = [], total = products.length, query = 'caddis' } = 
 describe('quick-results.html', () => {
     it('opens with the count heading, from the real total, then the empty categories list (story 3)', async () => {
         const html = await results({ products: [product(1), product(2)], total: 203 });
-        const heading = elementSource(html, 'p', attrs => 'data-rf-qs-heading' in attrs);
+        const heading = outerHtml(html, 'p', attrs => 'data-rf-qs-heading' in attrs);
         assert.equal(text(heading), '203 results for “caddis”');
         const [root] = findTags(html, 'div');
         assert.ok('data-rf-qs-results' in root.attrs);
@@ -72,7 +71,7 @@ describe('quick-results.html', () => {
     // (.qs .th.cat, reference.src.html:717-718, :1327; rf/skeptic round 1, minor 3).
     it('carries the category rows\' arrow tile as a <template> for quick-search.js to copy', async () => {
         const html = await results({ products: [product(1)], total: 1 });
-        const tile = elementSource(html, 'template', attrs => 'data-rf-qs-category-tile' in attrs);
+        const tile = outerHtml(html, 'template', attrs => 'data-rf-qs-category-tile' in attrs);
         assert.ok(tile, 'one template, data-rf-qs-category-tile');
         const [span] = findTags(tile, 'span');
         assert.match(span.attrs.class, /(^|\s)rf-qs-thumb--category(\s|$)/);
@@ -86,8 +85,8 @@ describe('quick-results.html', () => {
 
     it('says "1 result" for one', async () => {
         const html = await results({ products: [product(1)], total: 1 });
-        assert.equal(text(elementSource(html, 'p', attrs => 'data-rf-qs-heading' in attrs)), '1 result for “caddis”');
-        assert.equal(text(elementSource(html, 'a', attrs => 'data-rf-qs-all' in attrs)), 'See the result');
+        assert.equal(text(outerHtml(html, 'p', attrs => 'data-rf-qs-heading' in attrs)), '1 result for “caddis”');
+        assert.equal(text(outerHtml(html, 'a', attrs => 'data-rf-qs-all' in attrs)), 'See the result');
     });
 
     it('renders at most 8 compact rows: a 3:2 thumbnail, the name and the price, each a link to its product (story 2)', async () => {
@@ -95,7 +94,7 @@ describe('quick-results.html', () => {
         const rows = findTags(html, 'a').filter(tag => /\brf-qs-product\b/.test(tag.attrs.class || ''));
         assert.equal(rows.length, 8);
         assert.match(rows[0].attrs.href, /^https:\/\/reelflies\.ca\/elk-hair-caddis-1\//);
-        const row = elementSource(html, 'a', attrs => /\brf-qs-product\b/.test(attrs.class || ''));
+        const row = outerHtml(html, 'a', attrs => /\brf-qs-product\b/.test(attrs.class || ''));
         assert.equal(text(row), 'Elk Hair Caddis 1 $0.95');
         const [img] = findTags(row, 'img');
         assert.equal(img.attrs.alt, '', 'the name is the link\'s text');
@@ -110,28 +109,28 @@ describe('quick-results.html', () => {
         const html = await results({ products: [product(1)], total: 203 });
         const all = findTags(html, 'a').find(tag => 'data-rf-qs-all' in tag.attrs);
         assert.equal(all.attrs.href, '/search.php', 'quick-search.js adds the query');
-        assert.equal(text(elementSource(html, 'a', attrs => 'data-rf-qs-all' in attrs)), 'See all 203 results');
+        assert.equal(text(outerHtml(html, 'a', attrs => 'data-rf-qs-all' in attrs)), 'See all 203 results');
     });
 
     it('says nothing matched, with no rows and no "See all"', async () => {
         const html = await results({ products: [], total: 0, query: 'zzzz' });
-        assert.equal(text(elementSource(html, 'p', attrs => 'data-rf-qs-heading' in attrs)), 'No results for “zzzz”');
+        assert.equal(text(outerHtml(html, 'p', attrs => 'data-rf-qs-heading' in attrs)), 'No results for “zzzz”');
         assert.equal(findTags(html, 'a').length, 0);
         assert.deepEqual(unbalancedTags(html), []);
     });
 
     it('keeps the store\'s escaping of the query, and strips any tag left in it', async () => {
         const html = await results({ products: [product(1)], total: 2, query: '&lt;b&gt; bh &amp; &quot;leech&quot;' });
-        const heading = elementSource(html, 'p', attrs => 'data-rf-qs-heading' in attrs);
+        const heading = outerHtml(html, 'p', attrs => 'data-rf-qs-heading' in attrs);
         assert.match(heading, /2 results for “&lt;b&gt; bh &amp; &quot;leech&quot;”/);
         assert.equal(findTags(heading, 'b').length, 0);
         const raw = await results({ products: [product(1)], total: 2, query: '<img src=x onerror=alert(1)>caddis' });
-        assert.equal(findTags(elementSource(raw, 'p', attrs => 'data-rf-qs-heading' in attrs), 'img').length, 0);
+        assert.equal(findTags(outerHtml(raw, 'p', attrs => 'data-rf-qs-heading' in attrs), 'img').length, 0);
     });
 
     it('shows the price with tax when the store shows it, and a price range as its ends', async () => {
         const taxed = await results({ products: [product(1, { price: { with_tax: { formatted: '$1.09' }, without_tax: { formatted: '$0.95' } } })] });
-        assert.match(text(elementSource(taxed, 'span', attrs => /\brf-qs-price\b/.test(attrs.class || ''))), /^\$1\.09$/);
+        assert.match(text(outerHtml(taxed, 'span', attrs => /\brf-qs-price\b/.test(attrs.class || ''))), /^\$1\.09$/);
         const range = await results({
             products: [product(1, {
                 price: {
@@ -140,14 +139,14 @@ describe('quick-results.html', () => {
                 },
             })],
         }, { theme_settings: { price_ranges: true } });
-        assert.equal(text(elementSource(range, 'span', attrs => /\brf-qs-price\b/.test(attrs.class || ''))), '$0.95–$1.25');
+        assert.equal(text(outerHtml(range, 'span', attrs => /\brf-qs-price\b/.test(attrs.class || ''))), '$0.95–$1.25');
     });
 
     it('hides prices from guests when the store does', async () => {
         const html = await results({ products: [product(1)] }, { settings: { hide_price_from_guests: true } });
-        assert.equal(text(elementSource(html, 'span', attrs => /\brf-qs-price\b/.test(attrs.class || ''))), 'Log in for pricing');
+        assert.equal(text(outerHtml(html, 'span', attrs => /\brf-qs-price\b/.test(attrs.class || ''))), 'Log in for pricing');
         const signedIn = await results({ products: [product(1)] }, { settings: { hide_price_from_guests: true }, customer: { id: 1 } });
-        assert.equal(text(elementSource(signedIn, 'span', attrs => /\brf-qs-price\b/.test(attrs.class || ''))), '$0.95');
+        assert.equal(text(outerHtml(signedIn, 'span', attrs => /\brf-qs-price\b/.test(attrs.class || ''))), '$0.95');
     });
 
     it('falls back to the default product image for a product with none', async () => {
@@ -197,7 +196,7 @@ describe('the phone header\'s search link and toggle', () => {
         assert.equal(toggle.attrs['aria-expanded'], 'false');
         assert.equal(toggle.attrs['aria-controls'], 'rf-search-form-header');
         assert.ok(findTags(html, 'form').some(tag => tag.attrs.id === 'rf-search-form-header'), 'it controls the header\'s form');
-        assert.equal(text(elementSource(html, 'button', attrs => 'data-rf-search-toggle' in attrs)), 'Search');
+        assert.equal(text(outerHtml(html, 'button', attrs => 'data-rf-search-toggle' in attrs)), 'Search');
     });
 });
 

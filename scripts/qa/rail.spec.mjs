@@ -35,8 +35,7 @@ import {
 } from './fixtures.mjs';
 import { findCategory } from './menu-urls.mjs';
 import { pageKind } from './pages.mjs';
-import { findTags } from './raw-html/html.mjs';
-import { elementSource } from './raw-html/assertions/rf-header.mjs';
+import { findTags, outerHtml } from './raw-html/html.mjs';
 import { menuSource } from './raw-html/assertions/rf-menu.mjs';
 import { chunkLoaded } from './states.mjs';
 import { HEADERS, QA_OVERLAY, QA_VARIATION } from './storefront.mjs';
@@ -313,7 +312,7 @@ test(`${MAIN_PIN}: no banner is downloaded at 375, with the panel closed, or for
     const nav = menuSource(await (await request.get(pinPath(MAIN_PIN), { headers: HEADERS })).text());
     test.skip(!nav, 'the stock fallback renders: both menu ids are empty in this run');
     const banners = findTags(nav, 'div').filter(tag => 'data-rf-menu-pane' in tag.attrs).flatMap(tag => {
-        const [image] = findTags(elementSource(nav, 'div', attrs => attrs.id === tag.attrs.id) || '', 'img');
+        const [image] = findTags(outerHtml(nav, 'div', attrs => attrs.id === tag.attrs.id) || '', 'img');
         return image ? [{ pane: tag.attrs.id, file: imageFile(image.attrs.src) }] : [];
     });
     test.skip(!banners.length, 'no pane has an image in this run');

@@ -222,22 +222,10 @@ $rf-menu-max:     1176px;   // the desktop card's width, as the reference's .meg
         height: auto;
         margin: 0 auto;
         max-width: $rf-menu-max;
-        min-height: 400px;
-        overflow: visible;
         padding: 14px 10px 12px;
         pointer-events: auto;
         position: relative;
-
-        // The rail's right edge, the full height of the card
-        &::before {
-            background: var(--rf-tile-2);
-            bottom: 0;
-            content: "";
-            left: $rf-rail;
-            position: absolute;
-            top: 0;
-            width: 1px;
-        }
+        // The rail's right edge, the card's height and its scrolling are _rail.scss's (ticket 29).
     }
 
     .rf-menu-group,

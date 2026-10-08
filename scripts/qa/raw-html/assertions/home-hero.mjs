@@ -10,7 +10,7 @@
 // build pipeline removes. Whether the store holds what the repo records is the sync's check,
 // run after each apply: node scripts/widgets-sync.mjs --channel <id> --verify (docs/widgets.md).
 
-import { findTags, markupOnly } from '../html.mjs';
+import { findTags, outerHtml } from '../html.mjs';
 
 export const HERO_CLASS = 'rf-hero';
 const WIDTHS = [320, 480, 640, 960, 1280, 1600];
@@ -19,19 +19,7 @@ const classes = tag => (tag.attrs.class || '').split(/\s+/);
 
 // The outer HTML of the first <div> with the class, counting nested divs, or null. Comments
 // and the text of scripts and styles don't count, as for findTags.
-export function heroHtml(source) {
-    const html = markupOnly(source);
-    const start = html.search(new RegExp(`<div\\b[^>]*\\bclass="(?:[^"]*\\s)?${HERO_CLASS}(?:\\s[^"]*)?"`));
-    if (start === -1) return null;
-    const tags = /<div\b[^>]*>|<\/div\s*>/gi;
-    tags.lastIndex = start;
-    let depth = 0;
-    for (let match = tags.exec(html); match; match = tags.exec(html)) {
-        depth += match[0][1] === '/' ? -1 : 1;
-        if (depth === 0) return html.slice(start, tags.lastIndex);
-    }
-    return html.slice(start);
-}
+export const heroHtml = source => outerHtml(source, 'div', attrs => (attrs.class || '').split(/\s+/).includes(HERO_CLASS));
 
 const text = html => html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 
