@@ -1045,7 +1045,11 @@
         },
 
         "search": {
-            "_slot": ""
+            "_slot": "",
+            "count": "{count, plural, one {# result} other {# results}} for “{query}”",
+            "none": "No results for “{query}”",
+            "category": "category",
+            "see_all": "{count, plural, one {See the result} other {See all # results}}"
         },
 
         "card": {

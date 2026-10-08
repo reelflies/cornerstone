@@ -136,7 +136,6 @@ From the review's upgrade-safe layering plan and the design session ([ADR 0001](
 - `templates/components/products/card.html` and `options/set-rectangle.html`
 - `templates/components/products/product-view.html` and `templates/components/common/responsive-img.html`
 - `templates/pages/category.html`
-- `templates/components/search/quick-results.html` and `assets/js/theme/global/quick-search.js`
 - `assets/js/theme/common/product-details.js` and `assets/js/theme/cart.js`
 - `templates/pages/errors/404.html`
 
@@ -147,6 +146,8 @@ Added by the design session (spec, "Hook count"), with the ticket that adds each
 - `templates/components/products/description-tabs.html` and `tabs.html` (39)
 - `templates/pages/cart.html`, `templates/components/cart/totals.html` and `cart/status-messages.html` (41)
 - `templates/components/products/schema.html` (40)
+
+Not needed after all, so not counted toward the ADR's 25–30: ticket 30 needed no hook in `templates/components/common/quick-search.html`, `components/search/quick-results.html` or `assets/js/theme/global/quick-search.js`, which the review expected: ticket 27's header carries the ReelFlies search form (`components/reelflies/search-form.html`), which stock `quick-search.js` doesn't bind, and quick search renders its own `components/reelflies/quick-results.html` through the search API. The stock three stay for the stock navigation's form (`nav-menu-quick-search`), which renders only in ticket 28's fallback, when both menu ids are empty.
 
 ## Upgrading to a new Cornerstone release
 

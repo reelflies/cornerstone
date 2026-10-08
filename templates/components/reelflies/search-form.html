@@ -9,12 +9,16 @@
       and a crawler sees a plain form.
     - `name` makes its ids unique: each form on a page passes its own.
     - No data-search-quick or data-quick-search-form: stock quick-search.js leaves it alone, and
-      ticket 30's quick search binds to it instead.
+      ticket 30's quick search (assets/js/theme/reelflies/quick-search.js) binds to it instead,
+      adding its dropdown at the end of the form, after the button, so the results come after the
+      field in tab order. The input gets no combobox attributes (the simple model).
+    - The form's id, rf-search-form-<name>, is what the phone header's search toggle controls.
+    - The icon is passed class='' so it doesn't take the form's own `class` from this context.
 --}}
-<form class="rf-search-form{{#if class}} {{class}}{{/if}}" role="search" action="{{urls.search}}" method="get" data-rf-search-form="{{name}}">
+<form class="rf-search-form{{#if class}} {{class}}{{/if}}" id="rf-search-form-{{name}}" role="search" action="{{urls.search}}" method="get" data-rf-search-form="{{name}}">
     <label class="is-srOnly" for="rf-search-{{name}}">{{lang 'reelflies.header.search_label'}}</label>
     <input class="rf-search-form-input" id="rf-search-{{name}}" name="search_query" type="search" placeholder="{{lang 'reelflies.header.search_placeholder'}}" autocomplete="off">
     <button class="rf-search-form-go" type="submit">
-        {{> components/reelflies/icon name='search'}}<span class="is-srOnly">{{lang 'common.search'}}</span>
+        {{> components/reelflies/icon name='search' class=''}}<span class="is-srOnly">{{lang 'common.search'}}</span>
     </button>
 </form>

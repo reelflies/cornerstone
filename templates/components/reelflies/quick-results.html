@@ -1,0 +1,57 @@
+{{!--
+    Quick search's results (ticket 30; spec module 5; O18; stories 2 and 3): the search page
+    rendered with this template, which assets/js/theme/reelflies/quick-search.js asks for
+    (stencil-utils' api.search.search with template 'reelflies/quick-results') and puts in the
+    dropdown under the search form. It replaces stock's full product cards with no total
+    (components/search/quick-results.html, which stays for stock quick-search.js and the stock
+    navigation's form, in ticket 28's fallback while both menu ids are empty).
+
+    1. The count heading: the real total, pagination.product_results.total, or that nothing matched.
+       quick-search.js announces its words once through the shared live region.
+    2. data-rf-qs-categories, empty here: quick-search.js puts up to 2 categories from the nav in
+       it, each labelled with data-rf-qs-category-label, and each starting with a copy of the
+       data-rf-qs-category-tile template: the reference's arrow tile in the thumbnail column.
+    3. Up to 8 compact product rows, with the price; _search.scss shows 6 of them on phones.
+    4. "See all N results"; quick-search.js points it at the search page for the query typed.
+
+    The query comes HTML-escaped from the store (forms.search.query), as stock's does, so it is
+    written with triple braces after sanitize, as stock's quick-results.html:20 does.
+--}}
+<div class="rf-qs-results" data-rf-qs-results data-rf-qs-total="{{pagination.product_results.total}}" data-rf-qs-category-label="{{lang 'reelflies.search.category'}}">
+    <p class="rf-qs-heading" data-rf-qs-heading>
+        {{~#if pagination.product_results.total~}}
+            {{{lang 'reelflies.search.count' count=pagination.product_results.total query=(sanitize forms.search.query)}}}
+        {{~else~}}
+            {{{lang 'reelflies.search.none' query=(sanitize forms.search.query)}}}
+        {{~/if~}}
+    </p>
+    <template data-rf-qs-category-tile><span class="rf-qs-thumb rf-qs-thumb--category">{{> components/reelflies/icon name='chevron-down' class='rf-qs-category-chev'}}</span></template>
+    <ul class="rf-qs-list rf-qs-categories" data-rf-qs-categories hidden></ul>
+    {{#if product_results.products}}
+    <ul class="rf-qs-list rf-qs-products">
+        {{#each (limit product_results.products 8)}}
+        <li class="rf-qs-item rf-qs-item--product">
+            <a class="rf-qs-link rf-qs-product" href="{{url}}">
+                <span class="rf-qs-thumb">
+                    <img src="{{getImage image 'productthumb_size' (cdn @root.theme_settings.default_image_product)}}" alt="" width="56" height="37" loading="lazy" decoding="async">
+                </span>
+                <span class="rf-qs-name">{{name}}</span>
+                <span class="rf-qs-price">
+                    {{~#or @root.customer (unless @root.settings.hide_price_from_guests)~}}
+                        {{~#and price.price_range (if @root.theme_settings.price_ranges '==' true)~}}
+                            {{~#if price.price_range.min.with_tax}}{{price.price_range.min.with_tax.formatted}}–{{price.price_range.max.with_tax.formatted}}{{else}}{{price.price_range.min.without_tax.formatted}}–{{price.price_range.max.without_tax.formatted}}{{/if~}}
+                        {{~else~}}
+                            {{~#if price.with_tax}}{{price.with_tax.formatted}}{{else}}{{price.without_tax.formatted}}{{/if~}}
+                        {{~/and~}}
+                        {{!-- 31: the "/ fly" unit, components/reelflies/price-unit.html, goes here (build pipeline 6.2) --}}
+                    {{~else~}}
+                        {{lang 'common.login_for_pricing'}}
+                    {{~/or~}}
+                </span>
+            </a>
+        </li>
+        {{/each}}
+    </ul>
+    <a class="rf-qs-all" href="{{urls.search}}" data-rf-qs-all>{{lang 'reelflies.search.see_all' count=pagination.product_results.total}}</a>
+    {{/if}}
+</div>

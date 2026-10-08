@@ -1,6 +1,16 @@
 {{!--
-    The phone search row (spec module 4): an empty slot that ticket 27's header includes right
-    after </header>, and ticket 30 fills with a visible search row on the home and category pages,
-    in normal flow, using components/reelflies/search-form with its own name (build pipeline 6.2).
-    Until then the phone header's search icon is a link to the search page.
+    The phone search row (ticket 30; spec module 4; O05, UX-4; story 1), included by ticket 27's
+    header right after </header>. On home, category and search pages (and the custom category
+    templates, pages/custom/category/…) it renders a full-width search field, the search form with
+    its own name, as a second header row in normal flow, so it scrolls away under the sticky bar.
+    Styles: assets/scss/reelflies/_search.scss, which shows it below Cornerstone's medium
+    breakpoint (801px) only. Quick search binds to it like the header's form (quick-search.js).
+    Every other page renders nothing here; the header keeps its search icon on all of them.
 --}}
+{{~#inArray (split 'pages/home,pages/category,pages/search' ',') template}}{{assignVar 'rf_phone_search' 1}}{{/inArray~}}
+{{~#startsWith 'pages/custom/category/' template}}{{assignVar 'rf_phone_search' 1}}{{/startsWith~}}
+{{#if (getVar 'rf_phone_search')}}
+<div class="rf-phone-search" data-rf-phone-search>
+    {{> components/reelflies/search-form name='phone' class='rf-phone-search-form'}}
+</div>
+{{/if}}
