@@ -1,0 +1,18 @@
+{
+    "channel_id": 1895766,
+    "configuration": {
+        "long_text": "Free standard shipping in Canada on fly orders over $60. Fly boxes and gear not included.",
+        "short_text": "Free standard shipping on fly orders over $60"
+    },
+    "placement": {
+        "template_file": "pages/home",
+        "region": "header_bottom--global",
+        "sort_order": 0,
+        "status": "inactive"
+    },
+    "uuids": {
+        "template": null,
+        "widget": null,
+        "placement": null
+    }
+}

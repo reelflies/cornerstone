@@ -117,6 +117,15 @@ test('on any other channel the gate doesn\'t run: it runs on prelaunch, and tick
     assert.equal(lighthousePlan({ channel: '1895766', phase: 'build', cookie: COOKIE }).result, 'run', 'a channel id may come as a string');
 });
 
+test('ticket 53: after a channel-1 push the reason points at channel 1\'s own list, which ticket 56 runs on live reelflies.ca', () => {
+    for (const phase of ['build', 'T-28', 'T-21']) {
+        const plan = lighthousePlan({ channel: 1, phase, cookie: COOKIE });
+        assert.equal(plan.result, 'not-run', phase);
+        assert.match(plan.reason, /ticket 56 runs channel 1's own list in scripts\/qa\/lighthouse-urls\.json on live reelflies\.ca after the push, with the analytics tags blocked/, phase);
+    }
+    assert.doesNotMatch(lighthousePlan({ channel: 42, phase: 'build', cookie: COOKIE }).reason, /channel 1's own list/);
+});
+
 test('after a push whose verify found problems, or read no theme uuid, nothing is measured: "pending host batch"', () => {
     const problems = lighthousePlan({
         channel: 1895766, phase: 'build', cookie: COOKIE, verify: { problems: ['the channel runs theme x, not the new one'], themeUuid: UUID },

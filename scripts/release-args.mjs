@@ -73,12 +73,17 @@ function readFlags(argv) {
     return found;
 }
 
+// The channel id is taken only as written canonically: its digits alone, with no space or leading
+// zero (ticket 53). Claude Code's deny rules match a command's text, so "--channel 01" or
+// "--channel ' 1'" mustn't stand for channel 1 where a rule for "--channel 1" wouldn't match.
 function readChannel(channels) {
     if (!channels.length) throw new Error('name one channel with --channel <id>');
     if (channels.length > 1) throw new Error(`one channel per release: --channel was given ${channels.length} times`);
-    const channel = channels[0].trim();
+    const written = channels[0];
+    const channel = written.trim();
     if (/[\s,;]/.test(channel)) throw new Error(`one channel per release: "${channel}" is a list`);
     if (!/^\d+$/.test(channel)) throw new Error(`"${channel}" isn't a channel id`);
+    if (!/^[1-9]\d*$/.test(written)) throw new Error(`--channel "${written}" isn't a channel id as written: give the id's digits alone, with no space or leading zero`);
     return Number(channel);
 }
 

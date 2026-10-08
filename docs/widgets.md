@@ -14,7 +14,7 @@ The sync never writes to the store itself. It reads the channel with GETs only a
 | `widgets/<name>/channels/<channel>.json` | The widget on one channel: `channel_id`, its `configuration` (every schema setting's value there, and nothing else), its `placement` (`template_file`, `region`, `sort_order`, `status`) and the `uuids` the store gave its template, widget and placement (`null` until it makes them). |
 | `widgets/<name>/fixtures/` | Its fixture renders and element shots (W0-9, [scripts/qa/README.md](../scripts/qa/README.md#widgets)). Never synced. Each shot fixture's baselines are made for every variation the gates render, ReelFlies CA and ReelFlies CA channel 1 (`QA_VARIATION="<variation>" npx playwright test --config scripts/qa/playwright.config.mjs widget-screens -g 'widget <name>' --update-snapshots` for each), because a `QA_CHANNEL=1` run shoots every widget too; `scripts/qa/widget-baselines.test.mjs` fails CI when one is missing. |
 
-Styles go in the theme's ReelFlies layer, `assets/scss/reelflies/_<name>.scss`, with `rf-` classes and no inline CSS (build pipeline, decision 6), so every channel's copy looks the same. The partial is imported from your ticket's own slot line in `assets/scss/reelflies/_index.scss` (ticket 25's scaffold): uncomment it and point it at `_<name>.scss`, as 46's line, `@import "home-lead"; // 46 home hero`, does.
+Styles go in the theme's ReelFlies layer, `assets/scss/reelflies/_<name>.scss`, with `rf-` classes and no inline CSS (build pipeline, decision 6), so every channel's copy looks the same. The partial is imported from your ticket's own slot line in `assets/scss/reelflies/_index.scss` (ticket 25's scaffold): uncomment it and point it at `_<name>.scss`, as 46's line, `@import "home-lead"; // 46 home hero`, does. A slot holds one import (`scripts/qa/scaffold.test.mjs`), so when your slot already imports another partial of your ticket's, import the widget's partial at the end of that one, as ticket 27's `_header.scss` imports `_shipping-strip.scss`.
 
 Words and links are widget fields, never typed into the template, so a channel's copy can differ: channel 1 carries tree-1 paths (ticket 53).
 
@@ -108,19 +108,36 @@ To publish again, set the placement's `status` back to `"active"` in the channel
 
 ## The hero (`widgets/home-lead`)
 
-- **Placement:** `pages/home`, `home_below_menu`, `sort_order` 0, recorded `"inactive"` on 1895766 for now. The stock logo is the home page's `<h1>` (`header.html:19-22`) until ticket 27 makes it a `<div>`, so an active hero would give the page two.
+- **Placement:** `pages/home`, `home_below_menu`, `sort_order` 0, recorded `"inactive"` on 1895766 for now. The stock logo was the home page's `<h1>` (`header.html:19-22`) until ticket 27 made it a `<div>`, so an active hero on a theme older than 27 gives the page two.
 - **When it goes active,** in this order:
   1. Ticket 27 merges. Its branch has no `<h1>` on home while the hero is inactive, which `home-one-h1` allows.
   2. A release carrying 27 and `_home-lead.scss` is live on 1895766 (a checkpoint release, or one mid-wave). Before that, the prelaunch home page would show two `<h1>`s, or a hero without its styles, and so would Page Builder's preview.
   3. Set the placement `"active"` in a worktree, then sync, plan, apply and `--verify`, and open the PR with the channel file (the routine above).
   4. Check, and note on the review page: the hero is 300px tall or less at 1280 on the prelaunch home page and in Page Builder's preview (CD-1), its region adds 0px to the page shots (W0-5; if it doesn't, add `[data-layout-id]` to `HIDDEN` in `pages.mjs`), and the raw-HTML check passes on `master` (`home-hero` and `home-one-h1` now check the hero).
   - A branch older than 27 then has two `<h1>`s on home, the stock logo's and the hero's, and `home-one-h1` fails it. It rebases onto `master`, which it has to do before merging anyway.
+  - The shipping strip goes active in the same step (below), so one PR carries both channel files.
 - **Photo:** decision 4's Bass & Pan Fish stone banner, mirrored. Its path is a text field (HOME-2's fallback until ticket 07's probe 13 says whether a template can read an image-manager file name): `image_base` is the CDN base up to `/images/stencil`, and `image_path` the path after the size segment. The srcset is built from both at 320 to 1600 px wide.
   - Today `image_path` is the live category image `s/bass-panfish__24775.original.jpg`, so no upload is needed.
   - Before the Flip, when the category tree changes, put the frame in the Image Manager and set `image_path` to `image-manager/<file>`, so the hero doesn't depend on a category's image (revisitable). Ticket 57's checks carry it, with refactor 13's tree change as the trigger.
 - **Copy:** the H1 and subline are SEO-11's, with decision 14's figures ("nearly 2,000", "$0.75"), rechecked at the T-14 content freeze (HOME-4; ticket 57), in the subline and the meta description alike.
 - **Buttons:** `/dry-flies/` and `/species/` on 1895766. Both are tree-4 pages: tree 4 has no categories until refactor 13 (`research/07-prelaunch-probes.md`), and `/species/` is ticket 34's hub. Until then both links answer 404 on 1895766, so a link check on the home page (ticket 54's link-200 spec) expects that until refactor 13 and ticket 34.
 - **Home title and meta description** are channel settings, not widget fields. The title is `content/settings/1895766/storefront-seo.json`, a changes file for the store-write helper. The meta description is a DRAFT until Shaun approves it, so it waits in `content/drafts/1895766/storefront-seo-meta.json`, which isn't a changes file: once he approves it, a PR moves it into one.
+
+## The shipping strip (`widgets/shipping-strip`)
+
+Ticket 27's widget (spec module 2, O04): the shipping promise under the header on every page, and nothing else. There is no link to ReelFlies.com: that is ticket 52's prompt and ticket 50's footer.
+
+- **Placement:** `header_bottom--global`, `sort_order` 0, recorded `"inactive"` on 1895766 with its uuids `null` until the first write. A placement in a global region still names a template file, here `pages/home`; the widget shows on every page that has the region, which is every page.
+- **Where the theme puts it:** `components/reelflies/header.html` renders `header_bottom--global` after `</header>`, inside `<div data-rf-strip-region role="region" aria-label="Shipping and prices">` (the name is the lang string `reelflies.header.strip_label`). So the widget carries no landmark of its own, it isn't content outside a landmark (axe `region`), and on phones it scrolls away under the 56px sticky bar. The raw-HTML assertion `strip-region` holds the landmark on every page, and fails a strip (`data-rf-strip`) that holds a link.
+- **Styles:** `assets/scss/reelflies/_shipping-strip.scss`, imported at the end of `_header.scss` (ticket 27's one slot in `_index.scss`, above), so it lines up with the header row through `$rf-header-max`: the long line from 801px, the short one on phones. The truck is drawn in the template, not taken from the theme's icon sheet, so the strip is whole on any channel's theme.
+- **Copy:** two fields, `long_text` and `short_text`, from ticket 13's decision 2 as ticket 27's owner-decisions comment words it: "Free standard shipping in Canada on fly orders over $60. Fly boxes and gear not included." and "Free standard shipping on fly orders over $60".
+  - The reference page's long line also opens with "Prices in Canadian dollars." Decision 2 doesn't include it, so Shaun settles it when the write is on the review page. A change is a field edit in `channels/1895766.json`, not a template change.
+  - The $60 is copy. A widget can't read `rf_ship_free_threshold` (ticket 39's setting), so a new threshold changes both.
+  - The $99 courier offer isn't mentioned (ticket 13: open; interim, it doesn't carry over).
+- **The first write,** by the orchestrator after ticket 27 merges (the routine above, with `--ticket 27 --widget shipping-strip`): the dry run plans the template `rf-shipping-strip`, its widget and its placement, inactive; then plan, apply, `--record` and `--verify`, and a PR with the channel file.
+- **When it goes active,** with the hero, once a release carrying ticket 27 is live on 1895766: before that, the prelaunch theme has no landmark round the region and no strip styles, so the store would show the bare text under the old header. Set its placement `"active"` in the same worktree as the hero's, sync, plan, apply and `--verify`, and open one PR with both channel files.
+- **Channel 1:** ticket 53 makes its copy with `--only content`, and ticket 56 places it in the push session. Channel 1 already has a widget of its own in `header_bottom--global` (an announcement bar from the live theme), which renders inside the same landmark on channel-1 gate runs; replacing it is ticket 53's.
+- **Checks:** `scripts/qa/render/widgets/shipping-strip.test.mjs` (the fields, no link, no `<use>` of the icon sheet, the landmark on its fixture page), its element shots in both gated variations (`widget-screens.spec.mjs`), and `shipping-strip-screens.spec.mjs` (one line at a time, scrolling away under the phone bar, axe), all on its fixture page with the theme's header round it (`"chrome": true`).
 
 ## The cards (in `widgets/home-lead`)
 

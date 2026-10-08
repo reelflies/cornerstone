@@ -6096,6 +6096,9 @@
   "i18n.RfHeader": {
     "default": "Header"
   },
+  "i18n.RfRise": {
+    "default": "Rise ring on the cart count when it goes up"
+  },
 
   "i18n.RfMenu": {
     "default": "Menu"

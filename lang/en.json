@@ -1019,7 +1019,15 @@
     },
     "reelflies": {
         "header": {
-            "_slot": ""
+            "_slot": "",
+            "menu": "Menu",
+            "close": "Close",
+            "logo_alt": "ReelFlies home",
+            "shop": "Shop flies",
+            "search_label": "Search flies",
+            "search_placeholder": "Search flies by name",
+            "user_label": "Your account",
+            "strip_label": "Shipping and prices"
         },
 
         "menu": {

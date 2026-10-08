@@ -19,7 +19,15 @@
         <div class="is-srOnly" role="status" aria-live="polite" aria-atomic="true" data-rf-live-region></div>
         <svg data-src="https://cdn11.bigcommerce.com/s-fixture/img/icon-sprite.svg" class="icons-svg-sprite"></svg>
         <a href="#main-content" class="skip-to-main-link">Skip to main content</a>
-        <header class="header" role="banner"></header>
+        <header class="header" role="banner" data-rf-header>
+            <div class="rf-header-row" data-rf-header-row>
+                <button class="rf-header-menu" type="button" data-mobile-menu-toggle="menu" aria-controls="menu" aria-expanded="false"><span>Menu</span><span>Close</span></button>
+                <div class="header-logo rf-header-logo" data-rf-logo><a class="header-logo__link rf-header-logo-link" href="https://reelflies.ca/" data-header-logo-link><img src="https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/250x100/reelflies-logo.png" alt="ReelFlies home" width="78" height="56"></a></div>
+                <nav class="rf-header-user" aria-label="Your account"><a class="rf-header-action rf-header-cart" href="/cart.php">Cart <span class="countPill cart-quantity"></span></a></nav>
+            </div>
+            <div class="navPages-container rf-header-drawer" id="menu" data-menu></div>
+        </header>
+        <div class="rf-strip-region" role="region" aria-label="Shipping and prices" data-rf-strip-region><div data-content-region="header_bottom--global"></div></div>
         <!-- <main> in a comment is not markup a crawler reads -->
         <main class="body" id="main-content" data-currency-code="CAD">
             <div class="container">
