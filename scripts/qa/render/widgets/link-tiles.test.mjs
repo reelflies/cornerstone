@@ -42,7 +42,9 @@ test('it is placed first in home_below_top_products on ReelFlies_CA, inactive un
     assert.deepEqual(channelFile.placement, {
         template_file: 'pages/home', region: 'home_below_top_products', sort_order: 10, status: 'inactive',
     });
-    assert.deepEqual(channelFile.uuids, { template: null, widget: null, placement: null }, 'the store hasn\'t made it yet');
+    // Recorded by --record after the first write (2026-10-08, plan c89f5701); --verify compares them with the store.
+    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+    for (const name of ['template', 'widget', 'placement']) assert.match(channelFile.uuids[name], UUID, `its ${name} is recorded`);
     assert.equal(fixture.region, channelFile.placement.region);
 });
 
