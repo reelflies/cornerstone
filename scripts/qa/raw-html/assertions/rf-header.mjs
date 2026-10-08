@@ -11,8 +11,9 @@
 // - The header row links to no Compare, Gift Certificates or wish list page (stock O04; UX-20).
 //   The phone drawer (#menu) is ticket 28's, so only the row is read.
 //
-// elementSource and headerRowSource are shared with the other ticket 27 assertions and the
-// header's render tests.
+// elementSource and headerRowSource are shared with this ticket's tests and the header's render
+// tests, and elementSource with ticket 28's rf-menu assertion and menu render test. New readers
+// import outerHtml from html.mjs.
 
 import { findTags, outerHtml } from '../html.mjs';
 
