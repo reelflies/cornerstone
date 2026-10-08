@@ -11,7 +11,10 @@
 //   data-rf-menu-species-root-id), and its links (data-rf-menu-id) must be exactly those ids, in
 //   that order: an id that the channel's tree doesn't hold, which menu-links.html skips, fails here
 //   (story 64; BUILD-2). So on prelaunch, once tree 4's ids are set (wave R1), the curl run proves
-//   the six Fly Types and Flies by Species are server-rendered links in rf_menu_type_ids order.
+//   the six Fly Types and Flies by Species are server-rendered links in rf_menu_type_ids order. A
+//   Shop column with no links fails too, which ids of only spaces would otherwise pass.
+// - each phone link (tel:) is tel:+1 and ten digits, a North American number in E.164, so a store
+//   phone typed in a form the footer can't dial (with an extension, say) fails here, not silently.
 //
 // The fixture test (render/partials/footer.test.mjs) holds the copy itself and the columns' links.
 
@@ -29,6 +32,7 @@ export const COM_URL = 'https://reelflies.com/';
 const idList = value => decodeHtml(value || '').split(',').map(id => id.trim()).filter(Boolean);
 const escape = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const COPYRIGHT = new RegExp(escape(STRINGS.copyright).replace(escape('{year}'), '\\d{4}'));
+const TEL = /^tel:\+1\d{10}$/;
 
 function shopProblems(footer) {
     const shop = outerHtml(footer, 'ul', attrs => 'data-rf-footer-shop' in attrs);
@@ -41,6 +45,7 @@ function shopProblems(footer) {
     const anchors = findTags(shop, 'a');
     const got = anchors.map(tag => tag.attrs['data-rf-menu-id'] ?? '?');
     const problems = [];
+    if (!anchors.length) problems.push('a Shop column with no links: the menu ids resolve to nothing (only spaces, or no id the channel\'s tree holds)');
     if (got.join() !== expected.join()) problems.push(`the Shop links are ${got.join(', ')}, not the ids declared, ${expected.join(', ')}: an id the channel's tree doesn't hold, or links out of order (data-rf-menu-id)`);
     anchors.filter(tag => !decodeHtml(tag.attrs.href || '').trim()).forEach(tag => problems.push(`a Shop link with no URL: ${tag.raw}`));
     return problems;
@@ -49,7 +54,7 @@ function shopProblems(footer) {
 export default {
     id: 'rf-footer',
     ticket: 50,
-    description: 'the ReelFlies footer once: the outside-Canada link to reelflies.com, the promise and copyright, the Shop column (ids in order) or the stock Categories column, no "Powered by" and no Brands column',
+    description: 'the ReelFlies footer once: the outside-Canada link to reelflies.com, the promise and copyright, the Shop column (ids in order, at least one link) or the stock Categories column, phone links tel:+1 and ten digits, no "Powered by" and no Brands column',
     check(page) {
         const problems = [];
         const footers = findTags(page.html, 'footer');
@@ -68,6 +73,8 @@ export default {
         }
         if (!text.includes(STRINGS.promise)) problems.push(`the promise line "${STRINGS.promise}" isn't in the footer`);
         if (!COPYRIGHT.test(text)) problems.push(`the copyright "${STRINGS.copyright}" isn't in the footer`);
+        findTags(footer, 'a').map(tag => decodeHtml(tag.attrs.href || '').trim()).filter(href => /^tel:/i.test(href) && !TEL.test(href))
+            .forEach(href => problems.push(`the phone link ${href} isn't tel:+1 and ten digits: the store profile's phone number is in a form the footer can't dial`));
         return [...problems, ...shopProblems(footer)];
     },
 };

@@ -121,6 +121,19 @@ describe('the Shop column', () => {
         assert.deepEqual(unbalancedTags(html), []);
         assert.deepEqual(rfFooter.check(page(html)), []);
     });
+
+    it('falls back to the stock Categories column when both ids are only spaces, as the grouped menu does', async () => {
+        const html = await render('tree-4', { theme_settings: { rf_menu_type_ids: ' ', rf_menu_species_root_id: '  ' } });
+        assert.equal(part(html, 'ul', 'data-rf-footer-shop'), null, 'no Shop heading over an empty list');
+        assert.notEqual(part(html, 'ul', 'data-rf-footer-categories'), null);
+        assert.deepEqual(rfFooter.check(page(html)), []);
+    });
+
+    it('resolves nothing from an id stored as a number, which rf-footer then fails, so config.json keeps them strings (below)', async () => {
+        const html = await render('tree-4', { theme_settings: { rf_menu_species_root_id: 700 } });
+        assert.deepEqual(linkTexts(part(html, 'ul', 'data-rf-footer-shop')), ['Dry Flies', 'Nymphs', 'Streamers', 'Eggs & Worms', 'Warmwater Flies', 'Saltwater Flies']);
+        assert.match(rfFooter.check(page(html)).join('\n'), /not the ids declared, 601, 602, 603, 604, 605, 606, 700/);
+    });
 });
 
 describe('the Help column', () => {
@@ -158,6 +171,29 @@ describe('the Contact column', () => {
         assert.equal(phone.href, 'tel:+18662504071');
         assert.ok(linkTexts(contact).includes('1 866 250 4071'));
         assert.match(textOf(contact), /Walk-ins by appointment/);
+    });
+
+    it('dials the store phone as tel:+1 and ten digits, however its spaces, dashes, dots, brackets and country code are typed', async () => {
+        const typed = {
+            '1 866 250 4071': 'tel:+18662504071',
+            '+1 866 250 4071': 'tel:+18662504071',
+            '1-866-250-4071': 'tel:+18662504071',
+            '+1 (866) 250-4071': 'tel:+18662504071',
+            '(519) 842-5555': 'tel:+15198425555',
+            '519.842.5555': 'tel:+15198425555',
+        };
+        const pages = await Promise.all(Object.keys(typed).map(phone => render('tree-4', { settings: { phone_number: phone } })));
+        Object.entries(typed).forEach(([phone, href], i) => {
+            const contact = column(pages[i], 'Contact');
+            assert.equal(links(contact).find(attrs => attrs.href.startsWith('tel:')).href, href, phone);
+            assert.ok(linkTexts(contact).includes(phone), `the number shows as the store profile has it: ${phone}`);
+            assert.deepEqual(rfFooter.check(page(pages[i])), [], phone);
+        });
+    });
+
+    it('gives a phone with an extension a link that rf-footer fails, rather than one that dials something else', async () => {
+        const html = await render('tree-4', { settings: { phone_number: '1 866 250 4071 ext. 2' } });
+        assert.match(rfFooter.check(page(html)).join('\n'), /tel:\+18662504071ext2/);
     });
 
     it('leaves out the address and the phone link when the store profile has none', async () => {
@@ -208,6 +244,20 @@ describe('the Newsletter column', () => {
         assert.equal(findTags(newsletter, 'button').filter(tag => tag.attrs.type === 'submit').length, 1);
     });
 
+    it('mirrors stock subscription-form.html\'s action, method, named fields and email field, so an upstream change to it fails here', async () => {
+        const stock = await renderPartial('components/common/subscription-form', fixture('tree-4'));
+        const newsletter = column(await render('tree-4'), 'Newsletter');
+        const form = html => {
+            const [{ attrs }] = findTags(html, 'form');
+            return { action: attrs.action, method: attrs.method };
+        };
+        const fields = html => findTags(html, 'input').filter(tag => tag.attrs.name).map(({ attrs }) => ({ name: attrs.name, type: attrs.type, value: attrs.value }));
+        const email = html => findTags(html, 'input').find(tag => tag.attrs.type === 'email').attrs;
+        assert.deepEqual(form(newsletter), form(stock));
+        assert.deepEqual(fields(newsletter), fields(stock));
+        for (const attribute of ['id', 'autocomplete', 'required']) assert.equal(email(newsletter)[attribute], email(stock)[attribute], attribute);
+    });
+
     it('is left out when the store turns the newsletter box off', async () => {
         const html = await render('tree-4', { settings: { show_newsletter_box: 0 } });
         assert.equal(column(html, 'Newsletter'), null);
@@ -230,6 +280,13 @@ describe('the base row', () => {
         const com = links(base).filter(attrs => attrs.href === 'https://reelflies.com/');
         assert.equal(com.length, 1);
         assert.ok('data-rf-com-link' in com[0], 'ticket 52\'s handler finds it by data-rf-com-link');
+    });
+
+    it('shows the copyright whatever show_copyright_footer says: no template reads that toggle now (CUSTOMIZATIONS.md)', async () => {
+        const base = part(await render('tree-4', { theme_settings: { show_copyright_footer: false } }), 'div', 'data-rf-footer-base');
+        assert.match(textOf(base), new RegExp(`© ${YEAR} ReelFlies\\.ca\\.`));
+        const templates = dir => fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => (entry.isDirectory() ? templates(path.join(dir, entry.name)) : [path.join(dir, entry.name)]));
+        assert.deepEqual(templates(path.join(THEME_DIR, 'templates')).filter(file => fs.readFileSync(file, 'utf8').includes('show_copyright_footer')), []);
     });
 
     it('shows no payment icons while ticket 24 has none turned on, and Cornerstone\'s icons once it does', async () => {
@@ -271,6 +328,14 @@ describe('the strings and settings', () => {
         assert.equal(footer.articles, 'Fly fishing articles');
     });
 
+    it('reads every string from reelflies.footer, but for the stock Categories column\'s own heading', () => {
+        const source = fs.readFileSync(path.join(THEME_DIR, 'templates', 'components', 'reelflies', 'footer.html'), 'utf8');
+        const keys = [...source.matchAll(/\{\{lang '([^']+)'/g)].map(([, key]) => key);
+        assert.deepEqual(keys.filter(key => !key.startsWith('reelflies.footer.')), ['footer.categories']);
+        keys.forEach(key => assert.equal(typeof key.split('.').reduce((strings, segment) => strings?.[segment], LANG), 'string', key));
+        assert.equal(LANG.reelflies.footer.gift_certificates, 'Gift Certificates');
+    });
+
     it('turns off "Powered by" and the Brands column, turns the social row on, and sets the forest ground, on every variation', () => {
         for (const { name } of JSON.parse(fs.readFileSync(path.join(THEME_DIR, 'config.json'), 'utf8')).variations) {
             const { settings } = themeConfig(name);
@@ -278,6 +343,14 @@ describe('the strings and settings', () => {
             assert.equal(settings.shop_by_brand_show_footer, false, name);
             assert.equal(settings.social_icon_placement_bottom, 'bottom_left', name);
             assert.equal(settings['footer-backgroundColor'], '#2f382f', name);
+        }
+    });
+
+    it('keeps both menu ids strings, in the base settings and every variation, as split and trim need', () => {
+        for (const { name } of JSON.parse(fs.readFileSync(path.join(THEME_DIR, 'config.json'), 'utf8')).variations) {
+            const { settings } = themeConfig(name);
+            assert.equal(typeof settings.rf_menu_type_ids, 'string', `${name}: rf_menu_type_ids`);
+            assert.equal(typeof settings.rf_menu_species_root_id, 'string', `${name}: rf_menu_species_root_id`);
         }
     });
 });

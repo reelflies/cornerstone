@@ -4,7 +4,9 @@
     Fly Types follows the settings and never the tree's position (BUILD-2). Each id is looked for
     among the page's top-level categories and one level down, so tree 1's Fly Types under Flies
     resolve as well as tree 4's top-level ones. An id the channel's tree doesn't hold renders
-    nothing, and spaces and stray commas in the list are ignored.
+    nothing, and spaces and stray commas in the list are ignored. The ids must be a string, as Theme
+    Styles stores them: split reads a number as nothing, so footer.test.mjs keeps config.json's
+    values strings, and rf-footer fails a declared id that renders no link.
 
         {{> components/reelflies/menu-links ids=theme_settings.rf_menu_type_ids}}
 

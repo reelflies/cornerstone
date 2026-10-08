@@ -3,7 +3,8 @@
 // - it sits on the forest ground, and a footer link takes the gold bead ring from the keyboard
 // - at 375 its columns stack, one under another, and at 1280 they sit side by side
 // - at 320px wide the page doesn't scroll sideways, and every footer column fits the viewport
-// - axe finds no serious or critical issue inside the footer
+// - axe finds no serious or critical issue inside the footer, and nothing in it is content
+//   outside a landmark (axe region): the footer is the contentinfo landmark
 //
 //   QA_PORT=<yours> npx playwright test --config scripts/qa/playwright.config.mjs footer.spec
 //   QA_PORT=<yours> QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs footer.spec
@@ -73,6 +74,18 @@ for (const [key, pagePath] of Object.entries(PAGES)) {
                 .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice']).analyze();
             const serious = violations.filter(violation => ['serious', 'critical'].includes(violation.impact));
             expect(serious.map(violation => `${violation.id}: ${violation.help} (${violation.nodes.map(node => node.target.join(' ')).join('; ')})`)).toEqual([]);
+        });
+
+        test('nothing in the footer is content outside a landmark (axe region)', async ({ page }) => {
+            await storefrontPage(page, key);
+            await dismissCookieBanner(page);
+            const { violations } = await new AxeBuilder({ page }).withRules(['region']).analyze();
+            const nodes = violations.flatMap(violation => violation.nodes.map(node => node.target.join(' ')));
+            const inFooter = await page.evaluate(targets => targets.filter(target => {
+                const element = document.querySelector(target);
+                return element && Boolean(element.closest('footer[data-rf-footer]'));
+            }), nodes);
+            expect(inFooter).toEqual([]);
         });
     });
 }

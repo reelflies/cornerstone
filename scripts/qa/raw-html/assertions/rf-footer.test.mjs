@@ -71,6 +71,22 @@ describe('rf-footer', () => {
         assert.match(problems(missing).join('\n'), /not the ids declared, 601, 602, 603, 604, 605, 606, 777/);
     });
 
+    it('fails a Shop column with no links, as menu ids of only spaces would give it', async () => {
+        const html = await footer();
+        const empty = html.replace(/(<ul[^>]*data-rf-footer-shop[^>]*>)[\s\S]*?(<\/ul>)/, '$1$2')
+            .replace(/data-rf-menu-type-ids="[^"]*"/, 'data-rf-menu-type-ids=" "')
+            .replace(/data-rf-menu-species-root-id="[^"]*"/, 'data-rf-menu-species-root-id=" "');
+        assert.match(problems(empty).join('\n'), /a Shop column with no links/);
+    });
+
+    it('fails a phone link that isn\'t tel:+1 and ten digits, which a store phone in another form would give', async () => {
+        const html = await footer();
+        assert.match(html, /href="tel:\+18662504071"/);
+        for (const href of ['tel:++18662504071', 'tel:+(519)842-5555', 'tel:+18662504071ext.2', 'tel:+5198425555', 'tel:']) {
+            assert.match(problems(html.replace('href="tel:+18662504071"', `href="${href}"`)).join('\n'), /the phone link/, href);
+        }
+    });
+
     it('fails a page with both the Shop column and the stock Categories column, or with neither', async () => {
         const shop = await footer();
         const stock = await footer('tree-4', { rf_menu_type_ids: '', rf_menu_species_root_id: '' });
