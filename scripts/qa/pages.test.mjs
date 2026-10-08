@@ -244,11 +244,28 @@ describe('several pins per page kind (W0-8)', () => {
         assert.equal(knownIssue('target-size', 'category', { issues, state: 'drawer-open' }), undefined);
     });
 
-    it('lists only known axe issues that name a ticket, a reason, page kinds or pins, and UI states the registry has', () => {
+    it('lets an axe known issue listed for an overlay cover the page only under that overlay (ticket 29)', () => {
+        const issues = [{
+            rule: 'aria-hidden-focus', templates: ['category'], states: ['panel-open'], overlays: ['menu-ids-empty'], ticket: 28,
+        }];
+        assert.ok(knownIssue('aria-hidden-focus', 'category', { issues, state: 'panel-open', overlay: 'menu-ids-empty' }));
+        assert.equal(knownIssue('aria-hidden-focus', 'category', { issues, state: 'panel-open' }), undefined, 'not on a plain run: the grouped panel');
+        assert.equal(knownIssue('aria-hidden-focus', 'category', { issues, state: 'panel-open', overlay: 'rf_rise-off' }), undefined);
+    });
+
+    it('scopes the stock fallback\'s aria-hidden-focus to the overlay that renders the fallback, so the grouped panel is held to it (ticket 29)', () => {
+        const entry = KNOWN_ISSUES.find(issue => issue.rule === 'aria-hidden-focus');
+        assert.ok(entry);
+        assert.deepEqual(entry.overlays, ['menu-ids-empty']);
+        assert.equal(knownIssue('aria-hidden-focus', 'category', { state: 'panel-open' }), undefined);
+    });
+
+    it('lists only known axe issues that name a ticket, a reason, page kinds or pins, and UI states and overlays the registry has', () => {
         for (const issue of KNOWN_ISSUES) {
             assert.ok(issue.why && issue.ticket && issue.templates.length, issue.rule);
             for (const key of issue.templates) assert.match(key, PAGE_KEY, `${issue.rule} ${key}`);
             for (const state of issue.states || []) assert.ok(UI_STATES[state], `${issue.rule}: ${state}`);
+            for (const overlay of issue.overlays || []) assert.ok(listOverlays().includes(overlay), `${issue.rule}: ${overlay}`);
         }
     });
 });

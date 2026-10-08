@@ -119,8 +119,10 @@ export async function storefrontPage(page, template, pagePath = pinPath(template
         window.scrollTo(0, 0);
     });
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+    // A lazy image with no box, such as a menu pane's banner while its pane or the panel is
+    // closed (ticket 29), never loads, so it isn't waited for: the wait would run its full 10 s.
     await page.evaluate(() => Promise.race([
-        Promise.all([...document.images].filter(image => !image.complete)
+        Promise.all([...document.images].filter(image => !image.complete && !(image.loading === 'lazy' && !image.getClientRects().length))
             .map(image => new Promise(resolve => {
                 image.addEventListener('load', resolve);
                 image.addEventListener('error', resolve);
