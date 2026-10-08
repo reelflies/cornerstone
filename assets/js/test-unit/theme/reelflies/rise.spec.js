@@ -33,10 +33,17 @@ describe('the rise ring\'s trigger rules', () => {
     });
 
     it('doesn\'t ring for the count the page loads with: the Cart API\'s refresh on every page load', () => {
-        // cart-preview.js:63-87: with a cart, the count from localStorage, then the Cart API's.
+        // cart-preview.js:72-103: with a cart, the count from localStorage (:77), then the Cart
+        // API's (:97-99); with none, 0 (:101-103).
         const next = riseRule({ startCount: 3, refreshPending: true });
         expect(next(5, { source: 'stock' })).toBe(false);
         expect(next(6, { source: 'stock' })).toBe(true);
+    });
+
+    it('stops waiting for the refresh once settled: the shopper\'s first tap or key press comes before any add', () => {
+        const next = riseRule({ startCount: 3, refreshPending: true });
+        next.settle();
+        expect(next(4, { source: 'stock' })).toBe(true);
     });
 
     it('doesn\'t ring when the page loaded with no count yet: the first one only sets it', () => {
@@ -126,6 +133,35 @@ describe('the rise ring on the page', () => {
         stockUpdate(4);
         expect(ring.classList.contains(RISING_CLASS)).toBe(false);
         stockUpdate(5);
+        expect(ring.classList.contains(RISING_CLASS)).toBe(true);
+    });
+
+    it('plays on the first add when the Cart API\'s refresh landed before the ring started', () => {
+        // global.js:21 sends the request before :31 asks for the rf-rise chunk, so on a cold
+        // cache the pill can already show the API's count, and no refresh event is still to come.
+        const ring = header({ count: '3' });
+        startRise({ cartId: 'c0ffee' }, { doc: document, win, jquery: $ });
+        document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+        stockUpdate(4);
+        expect(ring.classList.contains(RISING_CLASS)).toBe(true);
+    });
+
+    it('plays on the first add when the refresh failed and never came, an add made from the keyboard', () => {
+        // cart-preview.js:89 rejects on an error other than Not Found, and sends no event.
+        const ring = header({ count: '3' });
+        startRise({ cartId: 'c0ffee' }, { doc: document, win, jquery: $ });
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        stockUpdate(4);
+        expect(ring.classList.contains(RISING_CLASS)).toBe(true);
+    });
+
+    it('still skips the refresh when it lands before the shopper\'s first tap or key press', () => {
+        const ring = header({ count: '3' });
+        startRise({ cartId: 'c0ffee' }, { doc: document, win, jquery: $ });
+        stockUpdate(5);
+        document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+        expect(ring.classList.contains(RISING_CLASS)).toBe(false);
+        stockUpdate(6);
         expect(ring.classList.contains(RISING_CLASS)).toBe(true);
     });
 
