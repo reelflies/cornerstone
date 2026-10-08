@@ -25,9 +25,15 @@ const UI = 3;
 // (assets/scss/tools/_theme_focus.scss:7). check-contrast.test.mjs keeps these in step with it.
 export const FOCUS_RING = '#23272b';
 export const FOCUS_RING_DARK = '#f2c14e';
-// The forest ground ($rf-forest). Ticket 50 points the bead's pair at footer-backgroundColor when
-// it sets the footer to forest; until then the footer stays white and the ring there is the dark one.
+// The forest ground ($rf-forest) of ticket 48's bands. The footer's is footer-backgroundColor, which
+// ticket 50 sets to the same forest, so the bead is checked on both.
 export const FOREST = '#2f382f';
+// The footer's colours on its forest ground, which Theme Styles has no keys for (ticket 50;
+// _settings.scss's $rf-forest-text, -strong, -field and -edge).
+export const FOREST_TEXT = '#d3d9d2';
+export const FOREST_STRONG = '#ffffff';
+export const FOREST_FIELD = '#273027';
+export const FOREST_EDGE = '#8c978b';
 
 // [id, foreground, background, minimum]. A value starting with # is a literal
 // colour; anything else is a config.json settings key.
@@ -78,8 +84,17 @@ export const PAIRS = [
     ['checkout-discount', 'optimizedCheckout-discountBanner-textColor', 'optimizedCheckout-discountBanner-backgroundColor', TEXT],
     ['checkout-toaster', 'optimizedCheckout-loadingToaster-textColor', 'optimizedCheckout-loadingToaster-backgroundColor', TEXT],
     ['checkout-link-hover', 'optimizedCheckout-link-hoverColor', 'optimizedCheckout-body-backgroundColor', TEXT],
+    // Ticket 50: the footer, each colour on the ground it is drawn on (_footer.scss).
+    ['footer-text', FOREST_TEXT, 'footer-backgroundColor', TEXT],
+    ['footer-heading', FOREST_STRONG, 'footer-backgroundColor', TEXT],
+    ['footer-input-text', FOREST_STRONG, FOREST_FIELD, TEXT],
+    ['footer-subscribe', 'color-textBase', FOREST_STRONG, TEXT],
+    ['footer-subscribe-hover', 'color-textBase', 'container-fill-dark', TEXT],
     ['focus-ring', FOCUS_RING, 'body-bg', UI],
     ['focus-ring-on-forest', FOCUS_RING_DARK, FOREST, UI],
+    ['focus-ring-on-footer', FOCUS_RING_DARK, 'footer-backgroundColor', UI],
+    ['footer-input-border', FOREST_EDGE, 'footer-backgroundColor', UI],
+    ['footer-input-border-on-field', FOREST_EDGE, FOREST_FIELD, UI],
     ['checkout-focus', 'optimizedCheckout-colorFocus', 'optimizedCheckout-body-backgroundColor', UI],
     ['checkout-input-border', 'optimizedCheckout-formField-borderColor', 'optimizedCheckout-formField-backgroundColor', UI],
     ['checkout-control', 'optimizedCheckout-formField-inputControlColor', 'optimizedCheckout-formField-backgroundColor', UI],

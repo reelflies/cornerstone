@@ -99,7 +99,7 @@ describe('the fixture page around a widget', () => {
 
     it('with "chrome": true, renders the theme\'s header and footer round the page, so a widget can sit in a header region', async () => {
         const html = await renderWidgetPage({ ...band(), fixture: { ...band().fixture, region: 'header_bottom--global', chrome: true } });
-        assertInOrder(html, ['<header class="header"', '</header>', 'data-content-region="header_bottom--global"', `data-widget-id="${WIDGET_ID}"`, 'id="main-content"', '<footer class="footer"']);
+        assertInOrder(html, ['<header class="header"', '</header>', 'data-content-region="header_bottom--global"', `data-widget-id="${WIDGET_ID}"`, 'id="main-content"', '<footer class="footer rf-footer']);
         assert.deepEqual(findTags(html, 'script'), []);
     });
 

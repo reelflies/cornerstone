@@ -1,0 +1,27 @@
+{{!--
+    The menu-id resolver (ticket 50; build pipeline 6.2). It turns a comma-separated list of category
+    ids, such as rf_menu_type_ids, into <li><a> links in the list's order, so a menu or a list of
+    Fly Types follows the settings and never the tree's position (BUILD-2). Each id is looked for
+    among the page's top-level categories and one level down, so tree 1's Fly Types under Flies
+    resolve as well as tree 4's top-level ones. An id the channel's tree doesn't hold renders
+    nothing, and spaces and stray commas in the list are ignored.
+
+        {{> components/reelflies/menu-links ids=theme_settings.rf_menu_type_ids}}
+
+    Each link carries data-rf-menu-id, its category id. Used by the footer's Shop column (50) and
+    the dead ends' Fly Type links (51); ticket 28 may adopt it.
+--}}
+{{~#if ids~}}
+{{~#each (split ids ',') as |rfMenuId|~}}
+{{~#each @root.categories as |rfTop|~}}
+{{~#if rfTop.id '==' (trim rfMenuId)~}}
+<li><a href="{{rfTop.url}}" data-rf-menu-id="{{rfTop.id}}">{{rfTop.name}}</a></li>
+{{~/if~}}
+{{~#each rfTop.children as |rfChild|~}}
+{{~#if rfChild.id '==' (trim rfMenuId)~}}
+<li><a href="{{rfChild.url}}" data-rf-menu-id="{{rfChild.id}}">{{rfChild.name}}</a></li>
+{{~/if~}}
+{{~/each~}}
+{{~/each~}}
+{{~/each~}}
+{{~/if~}}

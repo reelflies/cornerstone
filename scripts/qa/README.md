@@ -17,6 +17,7 @@ The checks every theme change is held to (ticket 16; spec "Testing Decisions", s
 | UI states (drawer, panel) and kind@name pins | with `qa:axe` and `qa:screens` | no | yes (release.sh, through `qa:prepush`) |
 | Overlays | `QA_OVERLAY=<name> npm run qa:screens` (and `qa:axe`, `qa:raw-html`) | no | no: refused with `QA_FRESH_SERVER=1` ([Render modes](#render-modes-w0-8)) |
 | The skin in a browser (ticket 25): focus ring, skip link, landmarks, Onest, reduced motion, reflow, the default product image | `npx playwright test --config scripts/qa/playwright.config.mjs skin.spec` | no | no: run it in each ticket that changes the skin ([The skin](#the-skin-skinspecmjs)) |
+| The footer in a browser (ticket 50): the forest ground and its gold ring, the columns stacked at 375 and side by side at 1280, no sideways scroll at 320, axe inside the footer | `npx playwright test --config scripts/qa/playwright.config.mjs footer.spec` | no | no: run it in each ticket that changes the footer ([The skin](#the-skin-skinspecmjs)) |
 | Switch matrix: every pinned page with each module switch on and off (ticket 54a) | `npm run qa:matrix` | no | no: ticket 54's full pass, and each switch ticket for its own switch ([Switch matrix](#switch-matrix-and-the-extra-checks-ticket-54a)) |
 | Reflow at 320, reduced motion, the focus tab-through (ticket 54a) | `npm run qa:reflow`, `qa:motion`, `qa:focus` | no | no: in the switch matrix and ticket 54's full pass |
 | Home widget links answer 200 (ticket 54a) | `npm run qa:links` | no | no: ticket 54's full pass |
@@ -554,6 +555,7 @@ export default {
 | `home-one-h1` | 46 | at most one `<h1>` on the home page (the stock logo today, none on ticket 27's branch before the hero is placed), and with the hero on the page, exactly one: the hero's |
 | `home-hero` | 46 | when the page has the hero: its `<img>` has a srcset (320w to 1600w), sizes, width and height, and is the page's only `fetchpriority="high"`; its `<h1>` has text; its two buttons are `<a href>`. A page without the hero passes |
 | `home-no-carousel` | 46 | no stock carousel (`.heroCarousel`) on the home page |
+| `rf-footer` | 50 | exactly one `<footer>`, the ReelFlies one (`data-rf-footer`); the outside-Canada line with a real `<a href="https://reelflies.com/">`; the promise line and the copyright, in `lang/en.json`'s words; no "Powered by" anywhere on the page and no Brands column; and either the Shop column or, with both menu ids empty, the stock Categories column. The Shop list declares the ids it was given (`data-rf-menu-type-ids`, `data-rf-menu-species-root-id`), and its links (`data-rf-menu-id`) must be exactly those, in that order, so an id the channel's tree doesn't hold fails. Its helpers `elementsHtml`, `outerHtml` and `textOf` read an element's whole markup and its text |
 
 **Still to come:**
 
@@ -581,7 +583,7 @@ It exits 1 on a failed check, and 2 when the storefront can't be reached or, wit
 
 Ticket 25's checks in a browser (spec seam 1; stories 67 to 71), on every page pinned for `QA_CHANNEL`, at 375 and 1280:
 
-- **Focus ring:** one Tab, then focus on the first visible link and the first visible button; each shows the ReelFlies ring (2px solid #23272B, 2px offset, `!important` over the stock #0f7fff, on `:focus-visible` only). A mouse press on each focuses it with no ring. Stock `.button` eases `all` over 0.15s, so the check waits for the ring to settle.
+- **Focus ring:** one Tab, then focus on the first visible link and the first visible button; each shows the ReelFlies ring (2px solid #23272B, 2px offset, `!important` over the stock #0f7fff, on `:focus-visible` only), or the gold bead #F2C14E when it sits on a forest ground (`.rf-on-dark`), as the footer's do (ticket 50). A mouse press on each focuses it with no ring. Stock `.button` eases `all` over 0.15s, so the check waits for the ring to settle.
 - **Skip link:** the first Tab lands on `.skip-to-main-link`.
 - **Landmarks:** axe's `landmark-one-main` and `landmark-no-duplicate-main`, which are moderate, so the axe gate doesn't fail on them.
 - **Onest:** `onest-latin-var.woff2` is requested once, nothing goes to Google Fonts for the theme's fonts (the create-account page's reCAPTCHA loads its own Roboto, which is the store's widget), one Onest face is loaded, the body's stack starts `Onest, "Onest Fallback"`, and the root font size is 16px.
@@ -596,6 +598,8 @@ QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs skin.
 ```
 
 It isn't part of `qa:prepush`, so a release doesn't run it. Ticket 54 folds the focus, reflow and reduced-motion checks into its runner.
+
+`footer.spec.mjs` (ticket 50) runs the same way, on every page pinned for `QA_CHANNEL`: the footer on its forest ground (`footer-backgroundColor`) with the gold ring on a link from the keyboard, its columns stacked at 375 and in one row at 1280, no sideways scroll at 320 with every column inside the viewport, and no serious or critical axe issue inside it.
 
 ## Fixture renders (`render/`)
 
@@ -947,5 +951,5 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - `switches.test.mjs` covers ticket 54a's switch registry: the switches against config.json, which switches a template reads, the overlay that flips each, and the markers and chunks a landed module names. `switch-matrix.test.mjs` covers the matrix's plan, its Playwright filters, how it reads each row's JSON report, what it runs for a row and what it prints. `page-checks.test.mjs` proves the reflow, reduced-motion and focus checks in Chromium (skipped in CI, which has none), and `widget-links.test.mjs` the widget link check against a server of its own.
 - `reflow.spec.mjs`, `reduced-motion.spec.mjs`, `focus.spec.mjs` and `switch-stock.spec.mjs` run through `qa:reflow`, `qa:motion`, `qa:focus` and the switch matrix, never through `qa:axe`, `qa:screens` or `qa:prepush`, whose filters don't match them.
 - Jest runs `assets/js/test-unit/`. `jest.config.js` ignores `scripts/`, because Jest 30 would otherwise match `*.test.mjs` and `*.spec.mjs` too.
-- `screens-reference.spec.mjs` runs with `qa:screens`, because its name matches the filter, and never fails it. `review-live.spec.mjs` and `skin.spec.mjs` run only when named. None of the three is a gate. `review/manifest-reporter.test.mjs` checks both against `package.json`'s filters.
+- `screens-reference.spec.mjs` runs with `qa:screens`, because its name matches the filter, and never fails it. `review-live.spec.mjs`, `skin.spec.mjs` and `footer.spec.mjs` run only when named. None of the four is a gate. `review/manifest-reporter.test.mjs` checks the first two against `package.json`'s filters.
 - Playwright writes its report, traces and failed diffs to `scripts/qa/results/`, which is ignored by git. The manifest reporter writes `results/manifest.json` there too, and the review pages go to `results/review/`. A run with `QA_PREVIEW_COOKIE` writes no traces, so the cookie never lands there.

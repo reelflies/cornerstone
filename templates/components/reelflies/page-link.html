@@ -1,0 +1,17 @@
+{{!--
+    One Web Page link from the channel's own page list (ticket 50). Web Pages belong to one channel,
+    so a link to one is rendered only when the channel has a visible page at that path, with the
+    store's own name for it. Nothing renders when the channel has none, so no link points at a page
+    the channel lacks.
+
+        {{> components/reelflies/page-link path='/shipping-returns/'}}
+
+    `path` is the page's path with both slashes. A page matches when its URL contains it (the
+    store gives each URL in full, with the channel's host), so pass a path no other page's URL
+    contains.
+--}}
+{{~#each @root.pages as |rfPage|~}}
+{{~#contains rfPage.url ../path~}}
+<li><a href="{{rfPage.url}}">{{rfPage.name}}</a></li>
+{{~/contains~}}
+{{~/each~}}

@@ -1,0 +1,104 @@
+{{!--
+    The ReelFlies footer (ticket 50; spec module 20; O19, R7; CD-13, UX-11, SEO-15), included by
+    the one-line hook in components/common/footer.html, below the stock bottom banners. A forest
+    ground (footer-backgroundColor) with the gold focus ring (.rf-on-dark, ticket 25), four columns
+    and a base row:
+
+    - Shop: the Fly Types in rf_menu_type_ids order, then the Species root, from the menu id
+      settings and never the tree's position (BUILD-2; menu-links.html). With both ids empty it is
+      the stock Categories column, as the menu falls back too (stock footer.html:39-48).
+    - Help: the channel's own Web Pages (page-link.html), the hook size chart (ticket 35) and the
+      blog as "Fly fishing articles" (SEO-15; ticket 07's probe 15), and Gift Certificates.
+    - Contact: the store profile's address and phone number, walk-ins by appointment, and
+      Cornerstone's social links while social_icon_placement_bottom isn't bottom_none.
+    - Newsletter: the stock form's fields and action, with a visible label, and ticket 22's CASL
+      wording (content/pages/1895766/newsletter.json) from lang strings.
+    - The base row: Cornerstone's payment icons (ticket 24's show_accept_* values), the promise
+      line, the copyright, and the outside-Canada line, a real link to reelflies.com on every page
+      for every visitor (story 63; ticket 52's script may send it to the paired page).
+
+    It never renders "Powered by" or a Brands column. The raw-HTML assertion rf-footer checks it on
+    every pinned page.
+--}}
+<footer class="footer rf-footer rf-on-dark" role="contentinfo" data-rf-footer>
+    <div class="rf-footer__inner">
+        <div class="rf-footer__cols">
+            {{#or theme_settings.rf_menu_type_ids theme_settings.rf_menu_species_root_id}}
+                <article class="rf-footer__col rf-footer__col--shop" data-section-type="footer-categories">
+                    <h2 class="rf-footer__heading">{{lang 'reelflies.footer.shop'}}</h2>
+                    <ul class="rf-footer__list" data-rf-footer-shop data-rf-menu-type-ids="{{theme_settings.rf_menu_type_ids}}" data-rf-menu-species-root-id="{{theme_settings.rf_menu_species_root_id}}">
+                        {{> components/reelflies/menu-links ids=theme_settings.rf_menu_type_ids}}
+                        {{> components/reelflies/menu-links ids=theme_settings.rf_menu_species_root_id}}
+                    </ul>
+                </article>
+            {{else}}
+                <article class="rf-footer__col rf-footer__col--shop" data-section-type="footer-categories">
+                    <h2 class="rf-footer__heading">{{lang 'footer.categories'}}</h2>
+                    <ul class="rf-footer__list" data-rf-footer-categories>
+                        {{#each categories}}
+                            <li><a href="{{url}}">{{name}}</a></li>
+                        {{/each}}
+                    </ul>
+                </article>
+            {{/or}}
+
+            <article class="rf-footer__col rf-footer__col--help" data-section-type="footer-webPages">
+                <h2 class="rf-footer__heading">{{lang 'reelflies.footer.help'}}</h2>
+                <ul class="rf-footer__list">
+                    {{> components/reelflies/page-link path='/shipping-returns/'}}
+                    <li><a href="/fly-hook-size-chart/">{{lang 'reelflies.footer.hook_chart'}}</a></li>
+                    {{#if settings.blog_enabled}}
+                        <li><a href="/blog/">{{lang 'reelflies.footer.articles'}}</a></li>
+                    {{/if}}
+                    {{> components/reelflies/page-link path='/contact-us/'}}
+                    {{> components/reelflies/page-link path='/about-us/'}}
+                    {{> components/reelflies/page-link path='/privacy-policy/'}}
+                    {{#if settings.gift_certificates_enabled}}
+                        <li><a href="{{urls.gift_certificate.purchase}}">{{lang 'common.gift_cert'}}</a></li>
+                    {{/if}}
+                </ul>
+            </article>
+
+            <article class="rf-footer__col rf-footer__col--contact" data-section-type="storeInfo">
+                <h2 class="rf-footer__heading">{{lang 'reelflies.footer.contact'}}</h2>
+                {{#if settings.address}}
+                    <address class="rf-footer__address">{{nl2br settings.address}}</address>
+                {{/if}}
+                {{#if settings.phone_number}}
+                    <p class="rf-footer__line"><a href="tel:+{{strReplace settings.phone_number ' ' ''}}">{{settings.phone_number}}</a></p>
+                {{/if}}
+                <p class="rf-footer__line">{{lang 'reelflies.footer.walk_ins'}}</p>
+                {{#if theme_settings.social_icon_placement_bottom '!==' 'bottom_none'}}
+                    <div class="rf-footer__social">
+                        {{> components/common/social-links}}
+                    </div>
+                {{/if}}
+            </article>
+
+            {{#if settings.show_newsletter_box}}
+                <article class="rf-footer__col rf-footer__col--newsletter" data-section-type="newsletterSubscription">
+                    <h2 class="rf-footer__heading">{{lang 'reelflies.footer.newsletter'}}</h2>
+                    <p class="rf-footer__line">{{lang 'reelflies.footer.newsletter_line'}}</p>
+                    <form class="rf-footer__form" action="{{urls.subscribe.action}}" method="post">
+                        <input type="hidden" name="action" value="subscribe">
+                        <input type="hidden" name="nl_first_name" value="bc">
+                        <input type="hidden" name="check" value="1">
+                        <label class="rf-footer__label" for="nl_email">{{lang 'reelflies.footer.email_label'}}</label>
+                        <div class="rf-footer__field">
+                            <input class="rf-footer__email" id="nl_email" name="nl_email" type="email" value="{{customer.email}}" autocomplete="email" required aria-describedby="rf-footer-consent">
+                            <button class="rf-footer__subscribe" type="submit">{{lang 'reelflies.footer.subscribe'}}</button>
+                        </div>
+                    </form>
+                    <p class="rf-footer__fine" id="rf-footer-consent">{{lang 'reelflies.footer.newsletter_consent'}}</p>
+                </article>
+            {{/if}}
+        </div>
+
+        <div class="rf-footer__base" data-rf-footer-base>
+            {{> components/common/payment-icons}}
+            <p class="rf-footer__promise">{{lang 'reelflies.footer.promise'}} {{lang 'reelflies.footer.copyright' year=(moment format="YYYY")}}</p>
+            <p class="rf-footer__country">{{lang 'reelflies.footer.outside_canada'}} <a href="https://reelflies.com/" data-rf-com-link>{{lang 'reelflies.footer.outside_canada_link'}}</a></p>
+        </div>
+    </div>
+    {{{region name="ssl_site_seal--global"}}}
+</footer>
