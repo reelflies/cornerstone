@@ -1,0 +1,18 @@
+{{!--
+    The banner strip at the top of a desktop pane (ticket 29; O09, SEO-3, story 7), from
+    menu-item.html when the pane's category has an image in the categories data (ticket 07's
+    probe 1: on tree 1 all 61 menu categories have one):
+
+        {{> components/reelflies/menu-banner rf_image=rf_cat.image}}
+
+    - The category's own stone image, a third of the pane wide beside its heading, at the image's
+      16:7 (the store's category images are 1600x700), so it shows whole and no taller than
+      120px, and the child links start within 200px of the panel's top (UX-2). A full-width strip
+      120px tall would show a 7:1 slice of it.
+    - Desktop only: CSS hides it below 801px (_rail.scss). loading="lazy", so the closed panel, a
+      hidden pane and the phone drawer download nothing; srcset and sizes pick about 270 CSS px
+      (sizes follows _rail.scss's grid: a third of the pane, 268px from 1240px wide); width and
+      height reserve its box.
+    - alt="": the heading beside it names the category.
+--}}
+<img class="rf-menu-banner" src="{{getImageSrcset rf_image 1x='320w'}}" srcset="{{getImageSrcset rf_image 160w='160w' 320w='320w' 480w='480w' 640w='640w'}}" sizes="(min-width: 1240px) 268px, calc((100vw - 420px) / 3)" width="400" height="175" alt="" loading="lazy" decoding="async" data-rf-menu-banner>

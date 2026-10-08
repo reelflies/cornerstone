@@ -37,6 +37,7 @@ import {
     focusNotes, focusProblems, inPage, tabThrough,
 } from './page-checks.mjs';
 import { pageKind } from './pages.mjs';
+import { chunkLoaded } from './states.mjs';
 import { chunkRequested } from './switches.mjs';
 import { QA_OVERLAY, QA_VARIATION } from './storefront.mjs';
 import { widgetCases } from './render/render.mjs';
@@ -65,8 +66,7 @@ const box = locator => locator.evaluate(element => {
 });
 
 // Waits for header.js, which loads as its own chunk (rf-header) after the stock globals.
-const headerReady = page => page.waitForFunction(() => performance.getEntriesByType('resource')
-    .some(entry => new URL(entry.name).pathname.endsWith('/theme-bundle.chunk.rf-header.js')));
+const headerReady = page => chunkLoaded(page, 'rf-header');
 
 async function open(page, key) {
     await storefrontPage(page, key);

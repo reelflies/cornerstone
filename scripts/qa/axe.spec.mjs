@@ -17,6 +17,7 @@ import { QA_OVERLAY } from './storefront.mjs';
 // WCAG 2.0 to 2.2, A and AA, plus axe's best practices.
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
 const BLOCKING = ['serious', 'critical'];
+const OVERLAY = QA_OVERLAY || null;
 
 const describe = violation => `${violation.id} (${violation.impact}): ${violation.help}, on ${violation.nodes.length} element(s): ${violation.nodes.slice(0, 3).map(node => node.target.join(' ')).join(' | ')}`;
 
@@ -32,15 +33,15 @@ function check(template, pagePath, state = null) {
         const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze();
         const blocking = violations.filter(violation => BLOCKING.includes(violation.impact));
 
-        const known = blocking.filter(violation => knownIssue(violation.id, template, { state }));
+        const known = blocking.filter(violation => knownIssue(violation.id, template, { state, overlay: OVERLAY }));
         known.forEach(violation => testInfo.annotations.push({
             type: 'known axe issue',
-            description: `${describe(violation)}; ticket ${knownIssue(violation.id, template, { state }).ticket} fixes it`,
+            description: `${describe(violation)}; ticket ${knownIssue(violation.id, template, { state, overlay: OVERLAY }).ticket} fixes it`,
         }));
-        KNOWN_ISSUES.filter(issue => knownIssue(issue.rule, template, { issues: [issue], state }) && !blocking.some(violation => violation.id === issue.rule))
+        KNOWN_ISSUES.filter(issue => knownIssue(issue.rule, template, { issues: [issue], state, overlay: OVERLAY }) && !blocking.some(violation => violation.id === issue.rule))
             .forEach(issue => testInfo.annotations.push({ type: 'fixed', description: `${issue.rule} no longer occurs on ${template}${state ? ` with ${state}` : ''}: remove it from axe-known-issues.mjs` }));
 
-        const unexpected = blocking.filter(violation => !knownIssue(violation.id, template, { state })).map(describe);
+        const unexpected = blocking.filter(violation => !knownIssue(violation.id, template, { state, overlay: OVERLAY })).map(describe);
         expect(unexpected, `serious or critical axe issues on ${template}${state ? ` with ${state}` : ''} at ${testInfo.project.name}`).toEqual([]);
     });
 }
