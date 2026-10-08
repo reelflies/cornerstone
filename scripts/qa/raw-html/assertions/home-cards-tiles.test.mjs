@@ -133,6 +133,9 @@ test('a menu pane banner showing a card\'s photo isn\'t counted, and the same <i
     const problems = repeatedPhotos(withMenu.html.replace(' data-rf-menu-banner', ''));
     assert.equal(problems.length, 1);
     assert.match(problems[0], /^the photo i\/dry-flies__36885\.original\.jpg appears twice/);
+    // Only inside a pane: the same marked <img> in the page body still counts (rf/spec on 441be5d8, minor 1).
+    const inBody = home.html.replace('<div data-content-region="home_below_top_products">', `${banner}<div data-content-region="home_below_top_products">`);
+    assert.equal(repeatedPhotos(inBody).length, 1);
 });
 
 test('lazy-loaded photos count too, and a photo inside a comment or a script doesn\'t', () => {

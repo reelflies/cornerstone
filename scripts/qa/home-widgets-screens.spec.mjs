@@ -20,7 +20,9 @@ import { expect, test } from '@playwright/test';
 import { QA_OVERLAY, QA_VARIATION } from './storefront.mjs';
 import { homeCases, openHomePage } from './render/home-page.mjs';
 import { worstContrastOverPhoto } from './render/photo-contrast.mjs';
-import { MENU_BANNER_ATTRIBUTE, REPEAT_ATTRIBUTE, photoKey } from './raw-html/assertions/home-photo-once.mjs';
+import {
+    MENU_BANNER_ATTRIBUTE, MENU_PANE_ATTRIBUTE, REPEAT_ATTRIBUTE, photoKey,
+} from './raw-html/assertions/home-photo-once.mjs';
 
 test.skip(Boolean(QA_OVERLAY), `the home widgets render from their fixtures, not under an overlay (QA_OVERLAY=${QA_OVERLAY})`);
 
@@ -52,9 +54,9 @@ const boxes = (page, selector) => page.locator(selector).evaluateAll(elements =>
 // Every <img> on the page but ticket 29's menu pane banners, with the photo it shows (its
 // currentSrc), and whether it repeats a photo on purpose: data-rf-photo-repeat on the <img> or on
 // a <source> of its <picture>, where home-photo-once reads it (ticket 49's crop of the Dry banner).
-// A pane banner is its category's image, the card's banner for a Fly Type, and the menu's, as
-// home-photo-once judges it.
-const photosOnPage = page => page.locator(`img:not([${MENU_BANNER_ATTRIBUTE}])`).evaluateAll((elements, attribute) => elements.map(element => {
+// A pane's banner is its category's image, the card's banner for a Fly Type, and the menu's, as
+// home-photo-once judges it; a marked banner outside a pane counts.
+const photosOnPage = page => page.locator(`img:not([${MENU_PANE_ATTRIBUTE}] [${MENU_BANNER_ATTRIBUTE}])`).evaluateAll((elements, attribute) => elements.map(element => {
     const sources = element.parentElement && element.parentElement.tagName === 'PICTURE' ? [...element.parentElement.querySelectorAll('source')] : [];
     return {
         src: element.currentSrc,
@@ -178,6 +180,34 @@ test.describe('the home page\'s cards and tiles (widgets/home-lead, widgets/link
         expect(shownTwice(await photosOnPage(page)), 'the marked crop isn\'t counted').toEqual([]);
         await repeatDryPhoto(false);
         expect(shownTwice(await photosOnPage(page)), 'an unmarked repeat is').toEqual([photoKey(await page.locator('.rf-type-card__img').first().evaluate(element => element.currentSrc))]);
+    });
+
+    // Ticket 29's pane banners show the cards' Fly Type banners in the menu (rf/spec and
+    // rf/standards on 441be5d8, minor 2): a marked banner inside a pane isn't counted, one
+    // anywhere else is.
+    test('leaves out a menu pane\'s banner that repeats a card\'s photo, and counts a marked banner outside a pane, as home-photo-once does', async ({ page }, testInfo) => {
+        test.skip(!desktop(testInfo), 'the rule doesn\'t depend on the width');
+        await open(page);
+        const addBanner = inPane => page.evaluate(([isInPane, banner, pane]) => new Promise(resolve => {
+            const copy = document.createElement('img');
+            copy.alt = '';
+            copy.setAttribute(banner, '');
+            copy.addEventListener('load', resolve);
+            copy.addEventListener('error', resolve);
+            copy.src = document.querySelector('.rf-type-card__img').currentSrc;
+            if (isInPane) {
+                const holder = document.createElement('div');
+                holder.setAttribute(pane, '');
+                holder.append(copy);
+                document.body.prepend(holder);
+            } else {
+                document.querySelector('.rf-link-tiles').after(copy);
+            }
+        }), [inPane, MENU_BANNER_ATTRIBUTE, MENU_PANE_ATTRIBUTE]);
+        await addBanner(true);
+        expect(shownTwice(await photosOnPage(page)), 'a pane\'s banner isn\'t counted').toEqual([]);
+        await addBanner(false);
+        expect(shownTwice(await photosOnPage(page)), 'a marked banner outside a pane is').toEqual([photoKey(await page.locator('.rf-type-card__img').first().evaluate(element => element.currentSrc))]);
     });
 
     test('keeps the cards\' text 4.5:1 or better over the scrim and the photo', async ({ page }, testInfo) => {

@@ -10,16 +10,17 @@
 // - The one allowed repeat is ticket 49's crop of the Dry Flies banner, a section or more away
 //   from the Dry card: the element that repeats a photo on purpose carries
 //   data-rf-photo-repeat, and isn't counted.
-// - Ticket 29's pane banners (data-rf-menu-banner) aren't counted either. Each is its pane's
-//   category image, which is the card's banner for a Fly Type, but they are the menu's: lazy, in
-//   closed panes, desktop only.
+// - Ticket 29's pane banners (data-rf-menu-banner inside a data-rf-menu-pane) aren't counted
+//   either. Each is its pane's category image, which is the card's banner for a Fly Type, but
+//   they are the menu's: lazy, in closed panes, desktop only. A marked <img> anywhere else counts.
 //
 // Like home-hero, it judges the page as served, whatever widgets it has.
 
-import { findTags, markupOnly } from '../html.mjs';
+import { elementsHtml, findTags, markupOnly } from '../html.mjs';
 
 export const REPEAT_ATTRIBUTE = 'data-rf-photo-repeat';
 export const MENU_BANNER_ATTRIBUTE = 'data-rf-menu-banner';
+export const MENU_PANE_ATTRIBUTE = 'data-rf-menu-pane';
 const SIZE_SEGMENT = /\/images\/stencil\/[^/]+\//;
 
 // The photo a URL shows: its path after the size segment, or its whole path.
@@ -38,13 +39,24 @@ const urlsIn = attrs => [attrs.src, attrs['data-src'], ...[attrs.srcset, attrs['
     .flatMap(set => (set || '').split(',').map(item => item.trim().split(/\s+/)[0]))]
     .filter(url => url && !url.startsWith('data:'));
 
+// The markup with each menu pane's pane banners taken out, so only the menu's own copies go.
+function withoutPaneBanners(html) {
+    let markup = markupOnly(html);
+    for (const pane of elementsHtml(markup, 'div', attrs => MENU_PANE_ATTRIBUTE in attrs)) {
+        const kept = findTags(pane, 'img').filter(tag => MENU_BANNER_ATTRIBUTE in tag.attrs)
+            .reduce((rest, tag) => rest.replace(tag.raw, ''), pane);
+        markup = markup.replace(pane, kept);
+    }
+    return markup;
+}
+
 // Every photo on the page, as { keys, raw, repeat }: each <img> with the <source> elements of the
-// <picture> it closes, in page order. A menu pane banner is left out.
+// <picture> it closes, in page order. A menu pane's banner is left out.
 export function photosOn(html) {
     const photos = [];
     let sources = [];
     let inPicture = false;
-    for (const tag of findTags(markupOnly(html), 'picture|source|img')) {
+    for (const tag of findTags(withoutPaneBanners(html), 'picture|source|img')) {
         if (tag.name === 'picture') {
             inPicture = true;
             sources = [];
@@ -52,13 +64,11 @@ export function photosOn(html) {
             if (inPicture) sources.push(tag);
         } else {
             const tags = inPicture ? [...sources, tag] : [tag];
-            if (!(MENU_BANNER_ATTRIBUTE in tag.attrs)) {
-                photos.push({
-                    keys: [...new Set(tags.flatMap(({ attrs }) => urlsIn(attrs)).map(photoKey))],
-                    raw: tag.raw,
-                    repeat: tags.some(({ attrs }) => REPEAT_ATTRIBUTE in attrs),
-                });
-            }
+            photos.push({
+                keys: [...new Set(tags.flatMap(({ attrs }) => urlsIn(attrs)).map(photoKey))],
+                raw: tag.raw,
+                repeat: tags.some(({ attrs }) => REPEAT_ATTRIBUTE in attrs),
+            });
             inPicture = false;
             sources = [];
         }
@@ -81,7 +91,7 @@ export function repeatedPhotos(html) {
 export default {
     id: 'home-photo-once',
     ticket: 47,
-    description: `no photo appears twice on the home page (a <picture> and its <img> are one photo; an element with ${REPEAT_ATTRIBUTE} is ticket 49's allowed crop; ticket 29's ${MENU_BANNER_ATTRIBUTE} pane banners are the menu's)`,
+    description: `no photo appears twice on the home page (a <picture> and its <img> are one photo; an element with ${REPEAT_ATTRIBUTE} is ticket 49's allowed crop; ticket 29's ${MENU_BANNER_ATTRIBUTE} banners inside a ${MENU_PANE_ATTRIBUTE} are the menu's)`,
     pages: ['home'],
     check(page) {
         return repeatedPhotos(page.html);
