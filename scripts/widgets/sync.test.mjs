@@ -20,13 +20,14 @@ const W = 'd00dfeed-1234-4abc-8def-0123456789ab';
 const P = 'e1e1e1e1-1234-4abc-8def-0123456789ab';
 const OTHER = 'f2f2f2f2-1234-4abc-8def-0123456789ab';
 
-// The hero as the repo has it, with uuids recorded or not.
+// The hero as the repo has it, with uuids recorded or not, and its placement as it was before
+// its first apply: inactive, whatever the channel file says now (it went active at checkpoint 02).
 const hero = (uuids = { template: null, widget: null, placement: null }, placement = {}) => {
     const [entry] = entriesFor(CH, { names: ['home-lead'] });
     return {
         ...entry,
         channelFile: {
-            ...entry.channelFile, uuids, placement: { ...entry.channelFile.placement, ...placement },
+            ...entry.channelFile, uuids, placement: { ...entry.channelFile.placement, status: 'inactive', ...placement },
         },
     };
 };
