@@ -117,6 +117,33 @@ test.describe('the home page\'s cards and tiles (widgets/home-lead, widgets/link
         }
     });
 
+    test('keeps each card\'s text inside the card, which grows past its photo\'s shape only when the text needs more (counts, a two-line name)', async ({ page }, testInfo) => {
+        const widths = desktop(testInfo) ? [801, 1024, 1280] : [320, 375];
+        const shape = desktop(testInfo) ? 1 : 1.6; // the square crop, or the phones' 16:10
+        for (const width of widths) {
+            await page.setViewportSize({ width, height: 900 }); // eslint-disable-line no-await-in-loop
+            await open(page, { 'home-lead': 'counts' }); // eslint-disable-line no-await-in-loop
+            // As the counts fixture has them, then with a tree-1 name long enough to wrap (channel 1's copy, ticket 53).
+            for (const longName of [null, 'Nymphs & Sub Surface Flies']) {
+                if (longName) await page.locator('.rf-type-card__name').nth(1).evaluate((element, name) => element.replaceChildren(name), longName); // eslint-disable-line no-await-in-loop
+                const cards = await page.locator(CARD).evaluateAll(elements => elements.map(element => { // eslint-disable-line no-await-in-loop
+                    const card = element.getBoundingClientRect();
+                    const copy = element.querySelector('.rf-type-card__copy').getBoundingClientRect();
+                    return {
+                        name: element.querySelector('.rf-type-card__name').textContent, top: card.top, bottom: card.bottom, width: card.width, height: card.height, copyTop: copy.top, copyBottom: copy.bottom,
+                    };
+                }));
+                for (const card of cards) {
+                    const where = `${card.name} at ${width}px`;
+                    testInfo.annotations.push({ type: 'card text', description: `${where}: text block ${Math.round(card.copyBottom - card.copyTop)}px in a ${Math.round(card.height)}px card` });
+                    expect(card.copyTop, `${where}: the text block starts inside the card`).toBeGreaterThanOrEqual(card.top - 0.5);
+                    expect(card.copyBottom, `${where}: the text block ends inside the card`).toBeLessThanOrEqual(card.bottom + 0.5);
+                    expect(card.height, `${where}: never shorter than its photo's shape`).toBeGreaterThanOrEqual(card.width / shape - 1);
+                }
+            }
+        }
+    });
+
     test('shows no photo twice; the hero\'s is the one fetchpriority="high", the cards load eagerly and the tiles lazily', async ({ page }) => {
         await open(page);
         const images = await photosOnPage(page);

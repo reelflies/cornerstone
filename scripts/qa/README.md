@@ -762,6 +762,7 @@ A widget whose layout makes promises a shot can't prove has its own Playwright s
 - at 375 and 320, the cards stacked 16:10, the tiles in two columns of three rows, and `document.scrollingElement.scrollWidth` equal to the viewport's width (story 71)
 - every photo loaded, none twice, the hero's the one `fetchpriority="high"`, the cards' eager and the tiles' lazy
 - each card's label, name and count 4.5:1 or better over its scrim and photo at 320, 375, 801, 1024 and 1280 (the `counts` fixture), read through the pixels as for the hero (`render/photo-contrast.mjs`)
+- each card's text block inside the card at 320, 375, 801, 1024 and 1280, with the `counts` fixture and again with a name that wraps, and the card never shorter than its photo's shape
 - each card and tile one link with nothing focusable inside, showing ticket 25's ring from the keyboard
 - no serious or critical axe issues in the widgets
 
