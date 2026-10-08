@@ -14,8 +14,7 @@
 //
 // With both menu ids empty there is no grouped menu, and the page passes.
 
-import { findTags } from '../html.mjs';
-import { elementSource } from './rf-header.mjs';
+import { findTags, outerHtml } from '../html.mjs';
 import { menuSource } from './rf-menu.mjs';
 
 const BANNER = 'data-rf-menu-banner';
@@ -27,7 +26,7 @@ export function bannerProblems(html) {
     const imgs = findTags(nav, 'img');
     let inPanes = 0;
     findTags(nav, 'div').filter(tag => 'data-rf-menu-pane' in tag.attrs).forEach(tag => {
-        const pane = elementSource(nav, 'div', attrs => attrs.id === tag.attrs.id && 'data-rf-menu-pane' in attrs) || '';
+        const pane = outerHtml(nav, 'div', attrs => attrs.id === tag.attrs.id && 'data-rf-menu-pane' in attrs) || '';
         const count = findTags(pane, 'img').length;
         inPanes += count;
         if (count > 1) problems.push(`${tag.attrs.id} has ${count} images, not one banner at most`);

@@ -12,8 +12,7 @@
 //   header, at most once. On home, category and search pages that carry the header's search form
 //   it is there; on product, cart, 404, brand, Web Page, sign-in and chart pages it isn't.
 
-import { findTags, markupOnly } from '../html.mjs';
-import { elementSource } from './rf-header.mjs';
+import { findTags, markupOnly, outerHtml } from '../html.mjs';
 
 export const PHONE_ROW_ON = ['home', 'category', 'search'];
 export const PHONE_ROW_NEVER = ['product', 'cart', '404', 'brand', 'page', 'login', 'create-account', 'hook-chart'];
@@ -28,7 +27,7 @@ function formProblems(html, tag) {
     const action = (tag.attrs.action || '').trim();
     if (!action || action === '#') problems.push(`${label} has no action, so it can't submit without script`);
     if ((tag.attrs.method || 'get').toLowerCase() !== 'get') problems.push(`${label} submits with ${tag.attrs.method}, not GET`);
-    const source = elementSource(html, 'form', attrs => attrs['data-rf-search-form'] === name) || '';
+    const source = outerHtml(html, 'form', attrs => attrs['data-rf-search-form'] === name) || '';
     const fields = findTags(source, 'input').filter(input => input.attrs.name === 'search_query');
     if (fields.length !== 1) problems.push(`${label} holds ${fields.length} fields named search_query, not 1`);
     for (const inner of [tag, ...findTags(source)]) {
@@ -53,9 +52,9 @@ export function searchFormProblems(html, kind) {
     if (phone.length && PHONE_ROW_NEVER.includes(kind)) problems.push(`the phone search row is on the ${kind} page: it belongs on home, category and search pages only`);
     if (rows.length > 1) problems.push(`${rows.length} phone search rows (data-rf-phone-search), not 1`);
     if (rows.length === 1) {
-        const row = elementSource(html, 'div', attrs => 'data-rf-phone-search' in attrs) || '';
+        const row = outerHtml(html, 'div', attrs => 'data-rf-phone-search' in attrs) || '';
         if (!row.includes('data-rf-search-form="phone"')) problems.push('the phone search row holds no search form named phone');
-        const header = elementSource(html, 'header', attrs => 'data-rf-header' in attrs);
+        const header = outerHtml(html, 'header', attrs => 'data-rf-header' in attrs);
         const markup = markupOnly(html);
         if (header && header.includes('data-rf-phone-search')) problems.push('the phone search row is inside the <header>: it belongs after it, in normal flow, so it scrolls away');
         else if (header && markup.indexOf('data-rf-phone-search') < markup.indexOf(header)) problems.push('the phone search row comes before the <header>: it belongs after it');
