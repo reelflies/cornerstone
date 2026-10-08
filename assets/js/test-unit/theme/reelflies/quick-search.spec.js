@@ -366,8 +366,9 @@ describe('the dropdown', () => {
     });
 
     // stencil-utils resolves any answer it gets, so a 429, a 5xx or a challenge page arrives as
-    // HTML with no results in it (rf/skeptic on f4773362, minor 2).
-    it('treats an answer with no results in it as a failed search: nothing of it reaches the page, and the same words are asked again', async () => {
+    // HTML that isn't the results template (rf/skeptic on f4773362, minor 2). A search that
+    // matches nothing is another thing: its template says so, and opens (above).
+    it('treats an answer that isn\'t the results template as a failed search: nothing of it reaches the page, and the same words are asked again', async () => {
         const errorPage = '<!doctype html><html><head><title>429 Too Many Requests</title><style>body { display: none }</style></head>'
             + '<body><h1>Too Many Requests</h1><img src="/challenge.png" alt=""></body></html>';
         request.mockImplementationOnce(() => Promise.resolve(errorPage));
@@ -388,7 +389,7 @@ describe('the dropdown', () => {
         expect(announce).toHaveBeenCalledWith('3 results for “caddis”');
     });
 
-    it('keeps the results on show when a newer search\'s answer holds none, and puts only the results in the dropdown', async () => {
+    it('keeps the results on show when a newer search\'s answer isn\'t the results template, and puts only the results in the dropdown', async () => {
         request.mockImplementationOnce(query => Promise.resolve(`<style>.rf-qs { color: red }</style>${results({ query })}<script>window.rfLeak = 1</script>`));
         type(els.input, 'caddis');
         jest.advanceTimersByTime(DEBOUNCE_MS);
@@ -531,9 +532,30 @@ describe('the dropdown', () => {
         expect(dropdown().hidden).toBe(true);
         type(els.input, 'caddis');
         expect(dropdown().hidden).toBe(false);
+        expect(isOpen(OPEN_TOKEN)).toBe(true);
         jest.advanceTimersByTime(DEBOUNCE_MS);
         await settle();
         expect(request).toHaveBeenCalledTimes(1);
+        expect(announce).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the results on show when the words are edited back to them while a newer search is on its way, and drops its late answer', async () => {
+        type(els.input, 'caddis');
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        await settle();
+        let answerNewer;
+        request.mockImplementationOnce(() => new Promise(resolve => { answerNewer = resolve; }));
+        type(els.input, 'caddis p');
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        expect(request).toHaveBeenCalledTimes(2);
+
+        type(els.input, 'caddis');
+        answerNewer(results({ query: 'caddis p', total: 1 }));
+        await settle();
+        expect(dropdown().hidden).toBe(false);
+        expect(dropdown().querySelector('[data-rf-qs-heading]').textContent).toBe('3 results for “caddis”');
+        expect(announce).toHaveBeenCalledTimes(1);
+        expect(request).toHaveBeenCalledTimes(2);
     });
 
     it('opens again on focus with the last results, without a new request or announcement', async () => {
@@ -593,6 +615,23 @@ describe('the dropdown', () => {
         await settle();
         expect(request).toHaveBeenCalledTimes(1);
         expect(dropdown().hidden).toBe(true);
+    });
+
+    // Older words' results don't stay open under the words submitted (rf/skeptic on 84311d97, minor 1).
+    it('closes the dropdown on a submit of other words than the ones on show, and leaves it for the same words', async () => {
+        const submit = () => els.form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        type(els.input, 'caddis');
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        await settle();
+        submit();
+        expect(dropdown().hidden).toBe(false);
+
+        request.mockImplementationOnce(() => new Promise(() => {}));
+        type(els.input, 'caddis pupa');
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+        submit();
+        expect(dropdown().hidden).toBe(true);
+        expect(isOpen(OPEN_TOKEN)).toBe(false);
     });
 
     it('stops listening when stopped', () => {

@@ -17,12 +17,16 @@
 //   in place of stock's count of rendered cards (quick-search.js:56-58).
 // - While a dropdown is open, <html data-rf-open> holds "search" (open-state.js), which ticket
 //   52's outside-Canada prompt waits on (GEO-3). One dropdown is open at a time.
-// - Escape, a click or focus outside the form, a submit, or fewer than 3 characters close it, and
-//   drop a search still waiting, so a late answer opens nothing; focusing the field again, or
+// - Escape, a click or focus outside the form, or fewer than 3 characters close it, and drop a
+//   search still waiting, so a late answer opens nothing. A submit drops it too, and closes a
+//   dropdown that shows other words than the ones submitted. Focusing the field again, or
 //   editing back to the words on show, shows their results again, without a new request or
 //   announcement. A failed search closes it and is asked again at the next keystroke, even for
-//   the same words. An answer with no results in it (a 429, a 5xx or a challenge page, which
-//   stencil-utils resolves like any other) is a failed search, and none of it reaches the page.
+//   the same words.
+// - An answer that isn't the results template (no [data-rf-qs-results]: a 429, a 5xx or a
+//   challenge page, which stencil-utils resolves like any other) is a failed search, and none of
+//   it reaches the page. A search that matches nothing is not a failure: its results template
+//   says so in the heading, which opens and is announced.
 // - On phones, the header's search icon becomes a toggle (data-rf-search-toggle) that opens the
 //   header's form as the bar's second row, as the reference's does. Without script it stays the
 //   link to the search page (data-rf-search-link).
@@ -178,9 +182,9 @@ export function bindQuickSearch(form, {
     };
 
     // Drops the search still waiting for its 400 ms or for its answer, so nothing opens or speaks
-    // after the shopper has left: Escape, a click or focus outside the form (which includes the
-    // phone header's toggle closing the row), or a submit. The words on show stay the ones asked
-    // for.
+    // after the shopper has left or moved on: Escape, a click or focus outside the form (which
+    // includes the phone header's toggle closing the row), a submit, or an edit back to the words
+    // on show. The words on show stay the ones asked for.
     const cancel = () => {
         clearTimeout(timer);
         timer = null;
@@ -195,8 +199,9 @@ export function bindQuickSearch(form, {
         markOpen(OPEN_TOKEN, doc.documentElement);
     };
 
-    // A search that brought back no results: closes, and is asked again at the next keystroke,
-    // even for the same words. The results on show, if any, stay to be shown again.
+    // A search that failed, or whose answer isn't the results template: closes, and is asked again
+    // at the next keystroke, even for the same words. The results on show, if any, stay to be
+    // shown again.
     const fail = () => {
         wanted = null;
         controller.close();
@@ -205,7 +210,7 @@ export function bindQuickSearch(form, {
     // The answer is parsed in an inert <template>, where its styles apply to nothing and its
     // scripts and images don't run or load, and only its results come out. stencil-utils
     // resolves whatever the store answers, so a 429, a 5xx or a challenge page arrives here as
-    // HTML with no results in it: a failed search.
+    // HTML without [data-rf-qs-results]: a failed search.
     const render = (query, html) => {
         const parsed = doc.createElement('template');
         parsed.innerHTML = typeof html === 'string' ? html : '';
@@ -297,7 +302,9 @@ export function bindQuickSearch(form, {
 
     listen(form, 'submit', event => {
         cancel(); // the page is on its way to the search page: nothing opens or speaks over it
-        if (input.value.trim()) return; // a real GET to the search page
+        const query = input.value.trim();
+        if (query !== shown) controller.close(); // no older words' results under the ones submitted
+        if (query) return; // a real GET to the search page
         event.preventDefault();
         focusField();
     });
