@@ -1,0 +1,29 @@
+{
+    "description": "The six tiles as ReelFlies_CA (1895766) gets them: Eggs & Worms, Warmwater Flies, Saltwater Flies, Flies by Species, Fly Selections & Assortments and Fly Gear, each with the reference's product photo. Its configuration is channels/1895766.json's, which link-tiles.test.mjs checks.",
+    "page": "pages/home",
+    "region": "home_below_top_products",
+    "configuration": {
+        "tiles_label": "More fly types and collections",
+        "image_base": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil",
+        "photo_width": "1024",
+        "photo_height": "683",
+        "tile1_name": "Eggs & Worms",
+        "tile1_url": "/eggs-worms/",
+        "tile1_photo": "products/5101/5675/Glo-Bug-Pink__15852.1683224794.jpg",
+        "tile2_name": "Warmwater Flies",
+        "tile2_url": "/warmwater-flies/",
+        "tile2_photo": "products/5300/7715/monster-streamer-trout2__75966.1732217781.jpg",
+        "tile3_name": "Saltwater Flies",
+        "tile3_url": "/saltwater-flies/",
+        "tile3_photo": "products/3857/7541/crazy-charly-pink-copy__16533.1700837768.jpg",
+        "tile4_name": "Flies by Species",
+        "tile4_url": "/species/",
+        "tile4_photo": "products/5490/7717/green-machine-silver__87528.1732217881.jpg",
+        "tile5_name": "Fly Selections & Assortments",
+        "tile5_url": "/fly-selections-assortments/",
+        "tile5_photo": "products/5445/5173/30-nymph-assortment__43187.1540056038.jpg",
+        "tile6_name": "Fly Gear",
+        "tile6_url": "/fly-gear/",
+        "tile6_photo": "products/4398/7875/large-box-with-logo__49912.1766759364.jpg"
+    }
+}

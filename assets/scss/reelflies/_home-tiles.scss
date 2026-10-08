@@ -1,0 +1,272 @@
+// =============================================================================
+// HOME CARDS AND TILES (ticket 47; spec modules 6 and 7, R5, CD-2, CD-6, CD-11, HOME-1, HOME-3)
+// =============================================================================
+//
+// Styles for the three big Fly Type cards, which widgets/home-lead/template.html renders after
+// the hero in home_below_menu (widgets/_shared/type-card.html), and the row of six tiles,
+// widgets/link-tiles/template.html, first in home_below_top_products
+// (widgets/_shared/link-tile.html). Widget styles live in the theme, not in the widgets (build
+// pipeline, decision 6), so the 1895766 and channel-1 copies stay identical.
+//
+// - Cards: stacked 16:10 landscape cards on phones, three across from 801px. On desktop each is
+//   a square crop of its Fly Type banner (ticket 14's interim, option d), or ticket 14's 4:5
+//   frame once a card has one (rf-type-card--frame). The crop's focus is a class the widget
+//   field picks (rf-type-card__img--x0 to --x100), never a centred crop and never inline CSS.
+// - The text sits on a neutral scrim at the bottom of the card (CD-6). home-widgets-screens.spec.mjs
+//   reads the lightest pixel behind every line of it.
+// - Tiles: a two-column grid on phones, three across from 801px and six from 1261px, never a
+//   sideways scroller (UX-3, HOME-3). Each is a white product photo in a 3:2 box with a 1px
+//   #DDE2DC border and a 12px radius; product cards elsewhere stay borderless.
+// - Every photo's box is set by CSS before it loads (aspect-ratio), so nothing moves when it
+//   arrives (story 70).
+//
+// -----------------------------------------------------------------------------
+
+$rf-card-text:          #ffffff;
+$rf-card-text-soft:     #e6e9ec;    // the label and the count, as the hero's subline
+$rf-card-scrim:         #1c1d1f;    // the neutral scrim, rgb(28, 29, 31), as $rf-scrim (CD-6)
+$rf-card-scrim-strong:  0.8;        // behind the text (CD-6)
+$rf-card-fade:          48px;       // the scrim's fade to clear, above the text
+$rf-tile-border:        #dde2dc;    // CD-11
+$rf-cards-gap:          clamp(14px, 1.8vw, 24px);
+
+
+// The three big Fly Type cards
+// -----------------------------------------------------------------------------
+
+.rf-type-cards {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: minmax(0, 1fr);
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 0;
+
+    @include breakpoint("medium") {
+        gap: $rf-cards-gap;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-top: $rf-cards-gap;
+    }
+}
+
+.rf-type-cards__item {
+    display: flex;
+    margin: 0;
+}
+
+.rf-type-card {
+    background: $rf-forest;
+    border-radius: var(--rf-radius-tile);
+    color: $rf-card-text;
+    display: block;
+    overflow: hidden;
+    position: relative;
+    text-decoration: none;
+    width: 100%;
+
+    @include breakpoint("medium") {
+        border-radius: var(--rf-radius-banner);
+    }
+
+    &:hover {
+        color: $rf-card-text;
+
+        .rf-type-card__img {
+            transform: scale(1.03);
+        }
+
+        .rf-type-card__cta {
+            background: var(--rf-tile);
+        }
+    }
+}
+
+.rf-type-card__media {
+    display: block;
+}
+
+.rf-type-card__img {
+    aspect-ratio: 16 / 10;
+    display: block;
+    height: auto;
+    object-fit: cover;
+    transition: transform 300ms ease-out;
+    width: 100%;
+
+    @include breakpoint("medium") {
+        aspect-ratio: 1 / 1;
+    }
+}
+
+// The banner's focus, from the left edge, in steps of 5% (the widget's select field).
+@for $step from 0 through 20 {
+    .rf-type-card__img--x#{$step * 5} {
+        object-position: percentage($step * 0.05) 50%;
+    }
+}
+
+// Ticket 14's vertical 4:5 frame, composed for the card: no crop to steer.
+.rf-type-card--frame .rf-type-card__img {
+    @include breakpoint("medium") {
+        aspect-ratio: 4 / 5;
+        object-position: 50% 50%;
+    }
+}
+
+// The scrim sits behind the text block only (CD-6): neutral #1C1D1F at 0.8 behind every line of
+// text, fading to clear over the block's top padding, above the text, so the photo shows above
+// it. It is drawn on the text block itself, so it grows with the text (a longer name, a count,
+// text-only zoom), where CD-6's fixed 42% of the card would leave the label over the bare photo
+// on a square crop, whose text block is nearly half its height.
+.rf-type-card__copy {
+    align-items: flex-start;
+    background: linear-gradient(to top, rgba($rf-card-scrim, $rf-card-scrim-strong) 0, rgba($rf-card-scrim, $rf-card-scrim-strong) calc(100% - #{$rf-card-fade}), rgba($rf-card-scrim, 0) 100%);
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    left: 0;
+    padding: $rf-card-fade 18px 18px;
+    position: absolute;
+    right: 0;
+
+    @include breakpoint("medium") {
+        padding: $rf-card-fade clamp(18px, 2.2vw, 28px) clamp(18px, 2.2vw, 28px);
+    }
+}
+
+.rf-type-card__label {
+    color: $rf-card-text-soft;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.rf-type-card__name {
+    color: $rf-card-text;
+    font-family: $header-font-family;
+    font-size: clamp(28px, calc(4vw + 15px), 32px);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    margin: 0;
+    text-transform: none;
+
+    @include breakpoint("medium") {
+        font-size: clamp(26px, calc(1.6vw + 18px), 42px);
+    }
+}
+
+.rf-type-card__count {
+    color: $rf-card-text-soft;
+    font-size: 15px;
+    line-height: 1.4;
+}
+
+// The call to action is a span, not a control: the whole card is the link. It looks like the
+// reference's white pill, at least 44px tall.
+.rf-type-card__cta {
+    align-items: center;
+    background: $rf-card-text;
+    border-radius: var(--rf-radius-pill);
+    color: stencilColor("color-textHeading");
+    display: inline-flex;
+    font-family: $header-font-family;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.2;
+    margin-top: 12px;
+    min-height: 44px;
+    padding: 0 20px;
+    transition: background-color var(--rf-t-fast) ease-out;
+}
+
+
+// The row of six tiles
+// -----------------------------------------------------------------------------
+
+.rf-home-tiles {
+    margin-top: 14px;
+
+    @include breakpoint("medium") {
+        margin-top: $rf-cards-gap;
+    }
+}
+
+.rf-link-tiles {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    @include breakpoint("medium") {
+        gap: clamp(10px, 1.4vw, 16px);
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    @include breakpoint("large") {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+}
+
+.rf-link-tiles__item {
+    display: flex;
+    margin: 0;
+}
+
+.rf-link-tile {
+    background: $rf-paper;
+    border: 1px solid $rf-tile-border;
+    border-radius: 12px;
+    color: stencilColor("color-textHeading");
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    text-decoration: none;
+    transition: border-color var(--rf-t-fast) ease-out;
+    width: 100%;
+
+    &:hover {
+        border-color: $rf-edge;
+        color: stencilColor("color-textHeading");
+    }
+}
+
+.rf-link-tile__media {
+    display: block;
+}
+
+.rf-link-tile__img {
+    aspect-ratio: 3 / 2;
+    display: block;
+    height: auto;
+    object-fit: contain;
+    width: 100%;
+}
+
+// The name, with the reference's right chevron drawn in CSS, in the secondary text colour.
+.rf-link-tile__name {
+    align-items: center;
+    display: flex;
+    font-family: $header-font-family;
+    font-size: 15px;
+    font-weight: 600;
+    gap: 6px;
+    justify-content: space-between;
+    line-height: 1.25;
+    margin-top: auto;
+    padding: 8px 12px 12px;
+
+    &::after {
+        border-right: 1.6px solid $rf-dun;
+        border-top: 1.6px solid $rf-dun;
+        content: "";
+        flex: none;
+        height: 7px;
+        margin-right: 4px;
+        transform: rotate(45deg);
+        width: 7px;
+    }
+}

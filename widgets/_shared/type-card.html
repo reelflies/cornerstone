@@ -1,0 +1,39 @@
+{{!--
+    One of the home lead's three big Fly Type cards (ticket 47; spec module 6, O21, SEO-8, CD-2,
+    CD-6, HOME-1, HOME-4), pasted into widgets/home-lead/template.html once per card by the sync.
+
+    - The whole card is one link. Inside it: the photo (alt="", the name says what it is), the
+      label, the Fly Type name as an h2, the count when the query returns one, and the call to
+      action as a span, so nothing interactive sits inside the link.
+    - The photo is the Fly Type's banner, a real img with a srcset from base and the path after
+      the size segment, eager and with no fetchpriority: the hero's is the page's only one.
+      Phones crop it to 16:10 and desktop to a square (ticket 14's option d), each at the
+      object-position the focus field picks, never centred. Cropped by object-fit: cover, the
+      banner is drawn 2.29 times as wide as its box is tall, so sizes gives that drawn width
+      (about 794px for a 347px card at 1280), and a 2x screen takes the 1600w file.
+    - When frame holds ticket 14's vertical 4:5 stone frame, a picture source swaps it in from
+      801px, and the card takes the 4:5 shape there (HOME-1's final step).
+    - count is the query's product count for the card's link (HOME-4). With none, no count shows:
+      no field holds a typed number.
+
+    Arguments: url, label, name, cta, banner, banner_width, banner_height, frame, frame_width,
+    frame_height, focus, count, count_suffix and base (the CDN up to /images/stencil).
+--}}
+<li class="rf-type-cards__item">
+    <a class="rf-type-card{{#if frame}} rf-type-card--frame{{/if}}" href="{{url}}">
+        <picture class="rf-type-card__media">
+            {{#if frame}}
+            <source media="(min-width: 801px)" srcset="{{base}}/400w/{{frame}} 400w, {{base}}/800w/{{frame}} 800w, {{base}}/1200w/{{frame}} 1200w, {{base}}/1600w/{{frame}} 1600w" sizes="(max-width: 1260px) calc(32vw - 16px), 352px" width="{{frame_width}}" height="{{frame_height}}" />
+            {{/if}}
+            <img class="rf-type-card__img rf-type-card__img--x{{focus}}" src="{{base}}/800w/{{banner}}" srcset="{{base}}/400w/{{banner}} 400w, {{base}}/800w/{{banner}} 800w, {{base}}/1200w/{{banner}} 1200w, {{base}}/1600w/{{banner}} 1600w" sizes="(max-width: 800px) calc(143vw - 69px), (max-width: 1260px) calc(73vw - 37px), 805px" width="{{banner_width}}" height="{{banner_height}}" alt="" />
+        </picture>
+        <div class="rf-type-card__copy">
+            <span class="rf-type-card__label">{{label}}</span>
+            <h2 class="rf-type-card__name">{{name}}</h2>
+            {{#if count}}
+            <span class="rf-type-card__count">{{count}} {{count_suffix}}</span>
+            {{/if}}
+            <span class="rf-type-card__cta">{{cta}}</span>
+        </div>
+    </a>
+</li>

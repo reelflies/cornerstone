@@ -554,6 +554,9 @@ export default {
 | `home-one-h1` | 46 | at most one `<h1>` on the home page (the stock logo today, none on ticket 27's branch before the hero is placed), and with the hero on the page, exactly one: the hero's |
 | `home-hero` | 46 | when the page has the hero: its `<img>` has a srcset (320w to 1600w), sizes, width and height, and is the page's only `fetchpriority="high"`; its `<h1>` has text; its two buttons are `<a href>`. A page without the hero passes |
 | `home-no-carousel` | 46 | no stock carousel (`.heroCarousel`) on the home page |
+| `home-cards-tiles` | 47 | when the page has the Fly Type cards (`.rf-type-card`) or tiles (`.rf-link-tile`): each is one `<a href>` to a page with no link, button or form control inside it, holding one `<img>` with `alt=""`, src, srcset, sizes, width and height; the cards' photos eager with no `fetchpriority`, the tiles' `loading="lazy"`. A page without them passes |
+| `home-photo-once` | 47 | no photo twice on the home page: a file is named by its path after the size segment, a `<picture>` and its `<img>` are one photo, and lazy `data-src` counts. An element with `data-rf-photo-repeat` (ticket 49's crop of the Dry banner) isn't counted |
+| `home-no-stock-strips` | 47 | no stock featured, most popular or new products strip on the home page (`config.json` sets the three `homepage_*_count` to 0) |
 
 **Still to come:**
 
@@ -706,6 +709,15 @@ A widget whose layout makes promises a shot can't prove has its own Playwright s
 - its text 4.5:1 or better over the scrim and the photo on desktop, at 801 and 1280 px. The text is made transparent, each line box is shot, and the lightest pixel behind it is read back through a canvas; each ratio is a test annotation.
 - ticket 25's focus ring on both buttons from the keyboard: #23272B on phones, where they sit on the white page, and the gold bead from 801px, where they sit on the scrim, each 3:1 or better against every pixel round it (read the same way, with the ring hidden)
 - no serious or critical axe issues in the widget
+
+`home-widgets-screens.spec.mjs` (ticket 47) checks what only the whole home page shows. `render/home-page.mjs` renders `templates/pages/home.html` with the theme's header and footer, and every widget whose `channels/1895766.json` places it on `pages/home`, each from a fixture, in its region in placement order (the hero and the cards in `home_below_menu`, the tiles in `home_below_top_products`). Requests are answered as for an element shot, from the widgets' `fixtures/files/`. It checks:
+
+- at 1280, all six Fly Types (the three cards and the first three tiles) end within the first 1,600px (HOME-3), with the square crops and again with ticket 14's 4:5 frames (`home-lead`'s `frames` fixture, stand-in files); three cards across, the tiles in one row, and nothing between them
+- at 375 and 320, the cards stacked 16:10, the tiles in two columns of three rows, and `document.scrollingElement.scrollWidth` equal to the viewport's width (story 71)
+- every photo loaded, none twice, the hero's the one `fetchpriority="high"`, the cards' eager and the tiles' lazy
+- each card's label, name and count 4.5:1 or better over its scrim and photo at 320, 375, 801, 1024 and 1280 (the `counts` fixture), read through the pixels as for the hero (`render/photo-contrast.mjs`)
+- each card and tile one link with nothing focusable inside, showing ticket 25's ring from the keyboard
+- no serious or critical axe issues in the widgets
 
 ### Worked example
 
@@ -937,6 +949,7 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - `harness-selftest.spec.mjs` runs with `qa:axe`, `qa:screens`, `qa:quick-view`, `qa:reflow`, `qa:motion` and `qa:focus`, and in every row of `qa:matrix`, on pages it serves itself. It proves that a pinned page answering with the wrong status fails the run without being asked again, that one answering 5xx twice or 429 four times fails, and that dismissing the cookie banner leaves nothing hovered. Its 5xx and 429 retry cases answer the pinned 404 page (or the channel's first page) with a 500, or a 429 with `Retry-After: 1`, once and then let the request through, so the second answer is the storefront's real one.
 - `widget-screens.spec.mjs` runs with `qa:screens`, because the script's `screens` filter matches its name.
 - `home-lead-screens.spec.mjs` runs with `qa:screens` too, for the same reason.
+- `home-widgets-screens.spec.mjs` runs with `qa:screens` too, for the same reason.
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
 - `storefront.test.mjs` also covers `QA_PORT`, the start log's name, the locks a gate holds (and the ports checked again after a slot wait), trusting only the server a gate started, and stopping that server when the gate is stopped by a signal. `playwright-config.test.mjs` covers that the config reads `QA_PORT` and holds the locks only in the runner, `prepush.test.mjs` what `qa:prepush` checks before its first gate, `serve.test.mjs` the locks around a `stencil start` by hand, and `scripts/lib/lock.test.mjs` the locks themselves: the stale rules, waiting, the three slots across processes, the signals, `RF_LOCK_ROOT`, and the command line `release.sh` uses.
 - `pages.test.mjs` covers W0-8's pins, baseline names (against the baseline-scope check's parser), UI states, overlays and custom layouts; `overlays.test.mjs` the overlay files, the patch and the throwaway worktree (in git repos of its own); `custom-layouts.test.mjs` the merge into `config.stencil.json`; `playwright-config.test.mjs` the overlay's refusals, ports and folder, and the custom-layouts step before `stencil start`; `storefront.test.mjs` the overlay marker check, and that only an overlay run's own worktree moves a `stencil start` out of the checkout (an `RF_QA_THEME_DIR` left in the shell never does; `prepush.test.mjs` too).

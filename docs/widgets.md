@@ -1,6 +1,6 @@
 # Widgets: home content as code
 
-The home page's sections are Widgets API templates kept in this repo (ADR 0001), and synced to one channel at a time by `scripts/widgets-sync.mjs` (ticket 46). The first is the hero, `widgets/home-lead`. Tickets 47–49 add the cards, tiles and bands, ticket 27 the shipping strip, and ticket 53 the channel-1 copies.
+The home page's sections are Widgets API templates kept in this repo (ADR 0001), and synced to one channel at a time by `scripts/widgets-sync.mjs` (ticket 46). The first is the hero, `widgets/home-lead`, which ticket 47's three Fly Type cards share; ticket 47 adds the tiles (`widgets/link-tiles`), tickets 48 and 49 the bands, ticket 27 the shipping strip, and ticket 53 the channel-1 copies.
 
 The sync never writes to the store itself. It reads the channel with GETs only and writes a changes file; the store-write helper (`scripts/store/`, W0-11, [store-writes.md](store-writes.md)) makes every write, with its snapshot, diff, channel check and log row.
 
@@ -121,3 +121,44 @@ To publish again, set the placement's `status` back to `"active"` in the channel
 - **Copy:** the H1 and subline are SEO-11's, with decision 14's figures ("nearly 2,000", "$0.75"), rechecked at the T-14 content freeze (HOME-4; ticket 57), in the subline and the meta description alike.
 - **Buttons:** `/dry-flies/` and `/species/` on 1895766. Both are tree-4 pages: tree 4 has no categories until refactor 13 (`research/07-prelaunch-probes.md`), and `/species/` is ticket 34's hub. Until then both links answer 404 on 1895766, so a link check on the home page (ticket 54's link-200 spec) expects that until refactor 13 and ticket 34.
 - **Home title and meta description** are channel settings, not widget fields. The title is `content/settings/1895766/storefront-seo.json`, a changes file for the store-write helper. The meta description is a DRAFT until Shaun approves it, so it waits in `content/drafts/1895766/storefront-seo-meta.json`, which isn't a changes file: once he approves it, a PR moves it into one.
+
+## The cards (in `widgets/home-lead`)
+
+Ticket 47's three big Fly Type cards: Dry Flies, Nymphs and Streamers, right after the hero in the same template (HOME-2), so they share its placement and go active with it. Each is `widgets/_shared/type-card.html`, pasted in by the sync.
+
+- **Markup:** each card is one `<a>` holding the photo (`alt=""`), the label (CD-2: "On the surface", "Below the surface", "Stripped and swung"), the Fly Type name as an `<h2>` (no section heading sits between the hero's H1 and the cards, so the outline skips no level; SEO-8 asked for h3), the count when the query returns one, and the call to action as a `<span>`.
+- **Fields:** per card `card<n>_label`, `_name`, `_url`, `_cta`, `_banner`, `_frame` and `_focus`; shared `cards_label` (the list's name for screen readers), `card_count_suffix` ("patterns"), and the files' own sizes, `card_banner_width` and `_height` (1600x700) and `card_frame_width` and `_height` (1600x2000). The CDN base is the hero's `image_base`.
+- **Photos** (SEO-8, HOME-1, CD-6): real `<img>` elements with a srcset at 400w to 1600w, sizes, width and height, eager and with no `fetchpriority` (the hero's is the page's only one).
+  - **Interim** (ticket 14, option d): each card's own category banner, `i/dry-flies__36885`, `n/nymphs-sub-surface__11277` and `l/streamers-buggers__88399` (`.original.jpg`), cropped by CSS: 16:10 on phones, square from 801px. `card<n>_focus` (a select, 0% to 100% in steps of 5) is where the crop sits, from the left: Dry 75%, Nymphs 5%, Streamers 10%, the reference's art direction. It becomes a class, `rf-type-card__img--x<n>`, never inline CSS.
+  - **sizes** gives the width the banner is drawn at, not the card's: cropped by `object-fit: cover`, a 1600x700 banner is drawn 2.29 times as wide as its box is tall, so a 347px square card at 1280 draws it about 794px wide, and a 2x screen takes the 1600w file (CD-2's "about a 1.08x upscale at 2x"). The ticket's `33vw` would have picked the 1200w file there, a 1.46x upscale.
+  - **Final** (HOME-1): when ticket 14's vertical 1600x2000 stone frames arrive, put each in the Image Manager and set `card<n>_frame` to `image-manager/<file>`. A `<picture>` source then serves the frame from 801px, the card takes the 4:5 shape there, and phones keep the 16:10 banner. If none arrive, the square crops stay.
+  - The cards use the three Fly Type banners and no other photo; the hero's is the Bass & Pan Fish frame (decision 4). Ticket 49's left-third crop of the Dry banner is the one allowed repeat, a section or more away from the Dry card, and carries `data-rf-photo-repeat` (`home-photo-once`).
+- **Count** (HOME-4): "N patterns" shows only when the widget's storefront query returns a product count for the card's link. No field holds a typed number. The template reads `_.data.site.card1` to `card3`, each a route's node. **The widget has no query yet:** ReelFlies_CA has no tree-4 categories until refactor 13, so no route would answer, and the store's handling of an empty mapped variable is untested. Once tree 4 exists, add `widgets/home-lead/query.graphql` and the schema's hidden mapping in one PR (revisitable):
+
+  ```graphql
+  query HomeLeadCounts($card1Path: String!, $card2Path: String!, $card3Path: String!) {
+    site {
+      card1: route(path: $card1Path) { node { ... on Category { products { collectionInfo { totalItems } } } } }
+      card2: route(path: $card2Path) { node { ... on Category { products { collectionInfo { totalItems } } } } }
+      card3: route(path: $card3Path) { node { ... on Category { products { collectionInfo { totalItems } } } } }
+    }
+  }
+  ```
+
+  The mapping is a `hidden` element with one `graphQl` setting whose `typeMeta.mappings` read `card1_url` to `card3_url` as `String!`. Check then whether the count includes subcategories' products (a parent with none of its own would show nothing, which HOME-4 allows), and that a count of 1,000 or more reads well (the template prints the number as the store gives it).
+- **Scrim** (CD-6): neutral #1C1D1F at 0.8 behind every line of the text block, fading to clear over the 48px above the text, so the photo shows above it. CD-6's fixed 0 at 42% of the card would leave the label over the bare photo on a square crop, whose text block is nearly half its height (about 3:1 in the first measurement). `home-widgets-screens.spec.mjs` reads the lightest pixel behind each line.
+- **Links:** `/dry-flies/`, `/nymphs/` and `/streamers/`, the approved tree's paths (`plan/design/src/store-data.json`, `menu`, until refactor 06's `new-tree.json`). They answer 404 on 1895766 until refactor 13 builds tree 4; ticket 54's link check expects that until then.
+
+## The tiles (`widgets/link-tiles`)
+
+Ticket 47's row of six bordered tiles (R5, CD-11, UX-14), so with the three cards all six Fly Types sit in the first two desktop screens (HOME-3).
+
+- **Placement:** `pages/home`, `home_below_top_products`, `sort_order` 10, the first in that region (build pipeline 6.5). Nothing renders between the cards and the tiles: the stock carousel is off (46), and so are the featured, most popular and new products strips (below).
+- **Recorded `"inactive"` on 1895766 for now,** like the hero: tiles placed before a release carries `_home-tiles.scss` would show unstyled on the prelaunch home page and in Page Builder's preview. Set it `"active"` with the hero, after ticket 27 and a release carrying 27 and 47 (the hero's steps above), then sync, plan, apply and `--verify`, and open the PR with the channel file.
+- **Tiles,** in order: Eggs & Worms (`/eggs-worms/`), Warmwater Flies (`/warmwater-flies/`), Saltwater Flies (`/saltwater-flies/`), Flies by Species (`/species/`, ticket 34's hub), Fly Selections & Assortments (`/fly-selections-assortments/`) and Fly Gear (`/fly-gear/`), each `tile<n>_name`, `_url` and `_photo`.
+- **Photos:** the reference's picks, each product's default image (white, 1024x683, 3:2): 5101 Glo Bug Pink, 5300 Monster Streamer, 3857 Crazy Charlie Pink, 5490 Green Machine, 5445 the 30-nymph Selection and 4398 the fly box, as `products/<id>/<image id>/<file>` paths after the size segment. Lazy, with a srcset at 160w to 640w, sizes, width and height, and `alt=""`. They switch to stone crops only if a frame is free under the one-slot rule, and never the bass frame on the Warmwater tile (ticket 13, item 4).
+- **Layout:** two columns on phones, three from 801px and six from 1261px, never a sideways scroller (UX-3, HOME-3). A white photo in a 3:2 box (`object-fit: contain`) with a 1px #DDE2DC border and a 12px radius, then the name with a CSS chevron. Product cards elsewhere stay borderless.
+
+## The stock home strips
+
+`homepage_featured_products_count`, `homepage_top_products_count` and `homepage_new_products_count` are 0 ("Disable") in `config.json`'s base settings, so every variation, ticket 53's channel-1 one included, inherits them and the store sends `home.html` no products for its stock strips. Best sellers come from ticket 48's widget. `home-no-stock-strips` checks the page.
