@@ -13,7 +13,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import templateAssembler from '@bigcommerce/stencil-cli/lib/template-assembler.js'; // eslint-disable-line import/extensions, import/no-extraneous-dependencies
 import { THEME_DIR } from './render/render.mjs';
-import { checkRelease } from '../release-guard.mjs';
+import { checkRelease, menuIdsSet } from '../release-guard.mjs';
 import { effectiveSettings, MENU_ID_KEYS, threeWayDiff } from '../release-diff.mjs';
 import { validateThemeConfig } from '../release-schema.mjs';
 
@@ -109,10 +109,16 @@ describe('the release guard and step 1 with the pre-declared keys (seam 5)', () 
     for (const variation of VARIATIONS) {
         const repo = effectiveSettings(config, variation);
         const live = Object.fromEntries(Object.entries(repo).filter(([key]) => !key.startsWith('rf_')));
+        // These tests are about the switches and values (rule 1). A variation with menu ids set
+        // (ReelFlies US has tree 2's, decision 5) is checked against a tree that holds them, as
+        // the release reads its target's tree; rule 2 is release-guard.test.mjs's.
+        const tree = menuIdsSet(repo)
+            ? MENU_ID_KEYS.flatMap(key => String(repo[key]).split(',')).map(id => id.trim()).filter(Boolean).map(Number)
+            : null;
 
         it(`lets the first push after the scaffold through on ${variation}, listing each switch once as new`, () => {
             const result = checkRelease({
-                repoSettings: repo, liveSettings: live, channelId: 1895766, categoryIds: null,
+                repoSettings: repo, liveSettings: live, channelId: 1895766, categoryIds: tree,
             });
             assert.equal(result.pass, true, result.reasons.join('; '));
             const switches = Object.keys(repo).filter(key => key.startsWith('rf_') && !MENU_ID_KEYS.includes(key)).sort();
@@ -128,7 +134,7 @@ describe('the release guard and step 1 with the pre-declared keys (seam 5)', () 
         it(`refuses, on ${variation}, a pre-declared switch the live theme has with another value`, () => {
             for (const key of SWITCHES) {
                 const result = checkRelease({
-                    repoSettings: repo, liveSettings: { ...live, [key]: !repo[key] }, channelId: 1895766, categoryIds: null,
+                    repoSettings: repo, liveSettings: { ...live, [key]: !repo[key] }, channelId: 1895766, categoryIds: tree,
                 });
                 assert.equal(result.pass, false, key);
                 assert.ok(result.reasons.some(reason => reason.startsWith(`${key}:`)), key);
@@ -145,7 +151,7 @@ describe('the release guard and step 1 with the pre-declared keys (seam 5)', () 
             assert.equal(VALUE_KEYS.length, 6);
             for (const key of VALUE_KEYS) {
                 const result = checkRelease({
-                    repoSettings: { ...repo, [key]: another(key) }, liveSettings: pushed, channelId: 1895766, categoryIds: null,
+                    repoSettings: { ...repo, [key]: another(key) }, liveSettings: pushed, channelId: 1895766, categoryIds: tree,
                 });
                 // If this starts passing, the release lane has given values the three-way rule: update
                 // CUSTOMIZATIONS.md ("Changing a pre-declared value"), drop this test and the todo below's flag.
@@ -159,7 +165,7 @@ describe('the release guard and step 1 with the pre-declared keys (seam 5)', () 
                 const value = another(key);
                 const changed = { ...repo, [key]: value };
                 const result = checkRelease({
-                    repoSettings: changed, liveSettings: { ...pushed, [key]: value }, channelId: 1895766, categoryIds: null,
+                    repoSettings: changed, liveSettings: { ...pushed, [key]: value }, channelId: 1895766, categoryIds: tree,
                 });
                 assert.equal(result.pass, true, `${key}: ${result.reasons.join('; ')}`);
                 const { blocking } = threeWayDiff({ repo: changed, live: { ...pushed, [key]: value }, released: pushed });
@@ -176,7 +182,7 @@ describe('the release guard and step 1 with the pre-declared keys (seam 5)', () 
             for (const key of VALUE_KEYS) {
                 const changed = { ...repo, [key]: another(key) };
                 const result = checkRelease({
-                    repoSettings: changed, liveSettings: pushed, channelId: 1895766, categoryIds: null,
+                    repoSettings: changed, liveSettings: pushed, channelId: 1895766, categoryIds: tree,
                 });
                 assert.equal(result.pass, true, `${key}: ${result.reasons.join('; ')}`);
                 const step1 = threeWayDiff({ repo: changed, live: pushed, released: pushed });

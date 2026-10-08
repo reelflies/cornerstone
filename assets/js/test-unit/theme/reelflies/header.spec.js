@@ -3,7 +3,8 @@ import { isOpen } from '../../../theme/reelflies/open-state';
 
 // The header's behaviour (ticket 27; spec module 4, story 9): Escape closes the phone drawer and
 // gives focus back to the Menu button, the drawer writes its token in <html data-rf-open>, and
-// "Shop flies" opens the stock menu as a panel on desktop until ticket 28's grouped panel.
+// "Shop flies" opens #menu as a panel on desktop: ticket 28's grouped menu (whose panes menu.js
+// shows), or the stock menu while both menu ids are empty.
 // The Menu/Close label follows aria-expanded in CSS, so it needs no script.
 
 const flush = () => new Promise(resolve => {
@@ -83,7 +84,7 @@ describe('the phone drawer', () => {
     });
 });
 
-describe('"Shop flies" until ticket 28', () => {
+describe('"Shop flies"', () => {
     let stop;
     afterEach(() => {
         if (stop) stop();

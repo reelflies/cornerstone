@@ -257,14 +257,14 @@ The screenshots and axe open each state in `UI_STATES` on the pins it names, at 
 
 | State | Opens | At | On | Owner |
 |---|---|---|---|---|
-| `drawer-open` | the phone menu: ticket 27's Menu button, which drives the stock toggle, and the stock `#menu` | `phone-375` | `home` (ReelFlies_CA) | 28 points it at the grouped drawer |
-| `panel-open` | the desktop menu panel: ticket 27's "Shop flies" opens the stock menu as a panel, then the stock sub-menu of the first top-level category opens, both from the keyboard | `desktop-1280` | `category` (channel 1) | 28 points it at its grouped panel |
+| `drawer-open` | the phone menu: ticket 27's Menu button, which drives the stock toggle, opens `#menu`; in ticket 28's grouped drawer the first row's chevron then opens its children in place, so the shot shows one row open. With both menu ids empty it is the stock drawer | `phone-375` | `home` (ReelFlies_CA: the stock fallback until tree 4's ids), `category` (channel 1: the grouped drawer) | 28 |
+| `panel-open` | the desktop menu panel: ticket 27's "Shop flies" opens it from the keyboard, on the grouped panel's first Fly Type pane with focus on its rail item (28). With both menu ids empty, the stock menu's first sub-menu opens instead, from the keyboard too | `desktop-1280` | `category` (channel 1) | 28; 29 adds a state per pane if it needs one |
 | `sheet-open` | a slot for the quick-add sheet and popover | | | 43 adds it |
 
 - **A state shot** is the viewport as it shows with the state open, because a fixed drawer or sheet covers the viewport rather than the page. A state can ask for `fullPage: true`. It has the page's masks and stylesheet. Its baseline is `<key>~<state>-<project>-<platform>.png`, covered on the `Baselines:` line by its page kind.
 - **Each state's `open(page)`** resolves once the state is open, and leaves the pointer off the page, so no hover state shows in the shot. A ticket that rebuilds the UI points `open` at its own, and may wait for its token in `<html data-rf-open>` (build pipeline, section 6.9). A ticket adds a state in its own slot in the registry, with its pages.
-- **axe** allows a known issue in one state only through its `states` (above, "axe"). The stock sub-menu has one, which ticket 28 removes.
-- `drawer-open` and `panel-open` show live data: channel 1's sub-menu lists its live tree-1 categories, as its header already does. A change there moves the state's baseline like the page's, through a re-baseline epoch.
+- **axe** allows a known issue in one state only through its `states` (above, "axe"). The stock sub-menu has one, which only the stock fallback still shows (both menu ids empty).
+- `drawer-open` and `panel-open` show live data: channel 1's grouped menu lists its live tree-1 categories, as its header already does. A change there moves the state's baseline like the page's, through a re-baseline epoch.
 
 ### Overlays (`overlays/`, `overlays.mjs`)
 
@@ -286,7 +286,7 @@ QA_OVERLAY=rf_rise-off npm run qa:raw-html
 QA_OVERLAY=rf_rise-off node scripts/qa/serve.mjs # by hand
 ```
 
-- **The overlays today:** `rf_rise-off` (27), `menu-ids-empty` (28's stock fallback) and `species-empty` (28: no Species group), and one per module switch for the switch matrix (ticket 54a): `rf_cart_state-off` (42), `rf_quick_add-off` (43) and `rf_region_prompt-on` (52). A module ticket records its overlay's baselines when its module lands; a new switch adds its overlay in the same PR.
+- **The overlays today:** `rf_rise-off` (27), `menu-ids-empty` (28's stock fallback) and `species-empty` (28: no Species group), and one per module switch for the switch matrix (ticket 54a): `rf_cart_state-off` (42), `rf_quick_add-off` (43) and `rf_region_prompt-on` (52). A module ticket records its overlay's baselines when its module lands; a new switch adds its overlay in the same PR. Ticket 28 recorded `menu-ids-empty` on channel 1, where it renders the stock menu in place of the grouped one (`baselines/1-reelflies-ca-channel-1/*+menu-ids-empty-*`); on 1895766 both ids are empty already, so it renders as the plain run. `species-empty` renders as the plain run on both channels today (channel 1's Species id is empty, and 1895766 has no ids), so it has no baselines until a channel sets a Species id (wave R1); `render/partials/menu.test.mjs` covers it from fixtures.
 - **Only declared settings.** An overlay is refused while `config.json` doesn't declare one of its settings, or when a value has another type than the declared one, because the render would look unchanged and pass for the overlay. Ticket 25's scaffold declares every module switch and both menu ids, so all six above run; an overlay for a new setting runs once the PR that declares it has landed. A misspelt key in the file, a missing `description` or an empty `settings` is refused too.
 - **The patch** sets each value in the base settings and in every variation's, so it renders whatever `QA_VARIATION` is. It also sets `rf_qa_overlay` to the overlay's name. `?debug=context` shows it in `theme_settings`, and the gates check it: an overlay run trusts only a server that renders its overlay, and a plain run never trusts one that renders any overlay.
 - **A throwaway git worktree.** The run makes a worktree of the checkout's working tree as it is, uncommitted and untracked changes included, through a temporary index (the checkout's index, branch and files stay as they were). It goes in `QA_SCRATCH_DIR`, or the system temp folder, as `rf-qa-overlay-<port>-<overlay>-…`. Its `node_modules`, `secrets.stencil.json` and `config.stencil.json` are links to the checkout's own, never copies. Only its `stencil start` runs there: Playwright, the specs, the baselines and the manifest stay in the checkout. It is removed when the run ends, also on Ctrl-C, `SIGTERM` or `SIGHUP`. One a killed run left on the same port is removed, with a `STALE` line, by the next overlay run on that port, which holds the port lock. It is found by its name among the repo's worktrees, whatever `QA_SCRATCH_DIR` either run had, and a worktree on a branch is never removed, whatever its folder is called.
@@ -451,7 +451,7 @@ Every pinned page, at 375 and 1280, runs with the tags WCAG 2.0–2.2 A and AA p
 - A known issue is reported as an annotation and doesn't fail the run.
 - A listed issue that no longer occurs is reported as fixed, so the entry can be removed.
 - An entry's `templates` are page kinds or `kind@name` pins. Its optional `states` limits it to the page with one of those UI states open; without it, it covers the page in every state.
-- **The list holds one entry, with the stock desktop sub-menu open** (`panel-open` on channel 1's category page; W0-8, 2026-10-06): `aria-hidden-focus`. Ticket 28 replaces the sub-menu with its panel and removes it. Its `color-contrast` and `target-size` entries went with ticket 27, whose "Shop flies" panel holds the stock menu and in which neither occurs. The closed stock templates had no serious or critical issues on ReelFlies_CA (home, cart, 404, brand) or on the channel-1 product and category pages on 2026-10-05, and the stock phone menu open (`drawer-open`) has none.
+- **The list holds one entry, with the stock desktop sub-menu open** (`panel-open` on channel 1's category page; W0-8, 2026-10-06): `aria-hidden-focus`. Ticket 28's grouped panel doesn't raise it, so a plain channel-1 run reports it as fixed; it stays for the stock fallback, which channel 1 renders under `QA_OVERLAY=menu-ids-empty`, until no channel pins a category page with empty ids (wave R1). Its `color-contrast` and `target-size` entries went with ticket 27, whose "Shop flies" panel holds the stock menu and in which neither occurs. The closed stock templates had no serious or critical issues on ReelFlies_CA (home, cart, 404, brand) or on the channel-1 product and category pages on 2026-10-05, and the stock phone menu open (`drawer-open`) has none.
 - The moderate issues found were no `<main>` landmark, content outside landmarks, heading order and duplicate landmarks. Ticket 25 gave every template one `<main>`, which `skin.spec.mjs` checks with axe's two landmark rules on every pin. Heading order on the cart and search pages is left for the tickets that rebuild them (41 and 30), and content outside landmarks for the footer ticket (50). Ticket 27's header is the banner landmark, and the shipping strip's region sits in its own labelled region landmark, which `header.spec.mjs` checks with axe's `region` rule.
 
 ## Screenshots (`screens.spec.mjs`)
@@ -557,10 +557,10 @@ export default {
 | `rf-header` | 27 | one ReelFlies `<header data-rf-header>` holding no `<h1>`; the logo a `<div data-rf-logo>` holding one link, and no `.header-logo` an `<h1>`; the Menu control a `<button>` with `aria-expanded` and a visible label; no Compare, Gift Certificates or wish list link in the header row (the phone drawer is ticket 28's) |
 | `max-one-h1` | 27 | at most one `<h1>` on every page |
 | `strip-region` | 27 | one `header_bottom--global` region, after the header, inside `<div data-rf-strip-region role="region">` with an accessible name; the shipping strip (`data-rf-strip`), when it is there, holds no link. Another channel's widget in the region isn't judged |
+| `rf-menu` | 28 | when the menu ids are set: one grouped `<nav data-rf-menu>` with a name, inside the ReelFlies header, with no stock navigation (`.navPages`), no stock quick-search form and no `data-menu` on its `#menu`; every link has an href and every category link `data-rf-category`; no "All …" or "Shop all" link; each pane hidden, with an id, opened by one `type="button"` with `aria-expanded="false"`, and headed by an `<h2>` holding its one link. With both ids empty the stock navigation renders, and it passes. Which URLs the nav must hold is `menu.spec.mjs`'s curl test, below |
 
 **Still to come:**
 
-- the tree-4 nav links in the header `<nav>` (28)
 - facet links with `_bc_fsnf=1` and `rel="nofollow"` (33)
 - the structured data's contents (40). The home page is already fetched wherever it is pinned.
 - the prompt's copy (52)
@@ -603,12 +603,12 @@ It isn't part of `qa:prepush`, so a release doesn't run it. Ticket 54 folds the 
 
 Ticket 27's checks in a browser (spec modules 2, 4 and 19; stories 4, 9, 57, 67 and 68), on every page pinned for `QA_CHANNEL`, at 375 and 1280:
 
-- **At 1280:** one row holding the logo, "Shop flies", a visible search field, Account and Cart (with Sign out between them when signed in, below), in that order, and no Saved, Compare or Gift Certificates link. "Shop flies" opens the stock menu as a panel under the row until ticket 28, and Escape closes it with focus back on the button.
+- **At 1280:** one row holding the logo, "Shop flies", a visible search field, Account and Cart (with Sign out between them when signed in, below), in that order, and no Saved, Compare or Gift Certificates link. "Shop flies" opens `#menu` as a panel under the row (ticket 28's grouped panel, or the stock menu while both menu ids are empty), and Escape closes it with focus back on the button.
 - **At 375:** a 56px bar that stays at the top as the page scrolls. Menu is a `<button>` named "Menu" with `aria-expanded`; open, it is named "Close", the drawer shows and `<html data-rf-open>` holds `drawer`; Escape closes it with focus back on the button.
 - **Focus:** tabbing through the category pins (home where the channel has none), at both widths, never leaves the focused element under the sticky bar (`tabThrough` and `focusProblems` from `page-checks.mjs`).
 - **axe:** no serious or critical issue in the header or the strip's landmark with the drawer or panel closed and open, and no node of axe's `region` rule inside them.
-- **No script error:** the stock scripts that bound to the stock header's markup throw nothing. `cart-preview.js`'s dropdown finds nothing; `quick-search.js` still binds to the stock quick-search form in the drawer (`navigation-menu.html:2-4`) until ticket 28.
-- **Signed in:** Sign out is in the row from 801px, between Account and Cart, and hidden on phones, where the stock drawer has it. No pin is signed in (an account is customer data), so this one test renders the header with a customer on W0-9's fixture page (the shipping strip's, with this checkout's theme CSS); `render/partials/header.test.mjs` checks the markup.
+- **No script error:** the stock scripts that bound to the stock header's markup throw nothing. `cart-preview.js`'s dropdown finds nothing; `quick-search.js` finds no form where the grouped drawer renders, and binds to the stock drawer's (`navigation-menu.html:2-4`) in the fallback.
+- **Signed in:** Sign out is in the row from 801px, between Account and Cart, and hidden on phones, where the drawer has it (the grouped drawer's footer, or the stock drawer's). No pin is signed in (an account is customer data), so this one test renders the header with a customer on W0-9's fixture page (the shipping strip's, with this checkout's theme CSS); `render/partials/header.test.mjs` checks the markup.
 - **The rise ring:** with `rf_rise` on, `rise.js` loads, the ring plays once when the count goes up (`bumpCart`), and not under reduced motion; under `QA_OVERLAY=rf_rise-off` there is no ring and no `rf-rise` chunk.
 
 ```sh
@@ -619,6 +619,27 @@ QA_OVERLAY=rf_rise-off npx playwright test --config scripts/qa/playwright.config
 ```
 
 Like the skin's, it isn't in `qa:prepush`. A ticket that changes the header (28, 29, 30) runs it.
+
+## The menu (`menu.spec.mjs`)
+
+Ticket 28's checks in a browser (spec modules 3 and 4 and seam 2; stories 4, 5, 6, 9, 10, 19, 68 and 72). The menu's rules are `menu-urls.mjs`: the Fly Types in `rf_menu_type_ids` order, found at the top level or one level down; Flies by Species (`rf_menu_species_root_id`) with its children only; then every other top-level category but those in `rf_menu_exclude_ids`, whose children already in the rail stay out of its pane. `render/partials/menu.test.mjs` holds the template to the same rules on tree-4, tree-1 and tree-2 fixtures (tree 2 is .com's, rendered with ReelFlies US's ids for the .com preview, the build pipeline's decision 5).
+
+- **The curl test:** each product and category pin's raw HTML, fetched with no JavaScript, links every URL those rules call for, read from the page's own `?debug=context` (its categories and menu settings; nothing else is kept or printed), as an `<a href>` in the header's `<nav>`, with the rail in that order and the `rf-menu` assertion passing. Channel 1 checks tree 1 with the channel-1 variation's ids now; wave R1 runs it on tree 4 once 1895766 has its ids and pins.
+- **At 1280:** "Shop flies" opens the panel on the first Fly Type's pane with focus on its rail item; the rail reads the Fly Types, a divider and Flies by Species where there is one, then More from ReelFlies; the pane's heading is the link, beside the rail, its children in two columns; a rail item shows its own pane alone; no "All …" line; Escape closes it.
+- **At 375:** each drawer row is its name as a 48px link and a 48px chevron button named "Show <name>" that opens the children in place and flips `aria-expanded`; `<html data-rf-open>` holds `drawer` while it is open; the footer lists Account, the channel's Shipping & Returns and Contact us pages, the hook size chart, "Fly fishing articles" (with the blog on) and "Call" with the store's number as a `tel:` link.
+- **axe:** no serious or critical issue in `#menu` with a row open at 375 and a pane open at 1280.
+- **Story 72:** the links in the menu after opening the drawer or the panel and its panes are the server HTML's, unchanged.
+- **The fallback:** with both ids empty (1895766 today, or `QA_OVERLAY=menu-ids-empty`), the stock navigation renders in `#menu`, with `data-menu`; with the Species id empty there is no Species group.
+- **Tree 4** (six Fly Types, Flies by Species and its 11 names) on W0-9's fixture page, opened by setting the classes and attributes the scripts set: the rail's order at 1280 and the Species pane at 375, with axe, until refactor 13 gives a channel that tree.
+
+```sh
+export QA_PORT=3500
+QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs menu.spec
+npx playwright test --config scripts/qa/playwright.config.mjs menu.spec
+QA_CHANNEL=1 QA_OVERLAY=menu-ids-empty npx playwright test --config scripts/qa/playwright.config.mjs menu.spec
+```
+
+It isn't in `qa:prepush` either; ticket 28 runs it, and any ticket that changes the menu (29, 30). The page baselines with the menu open are the `drawer-open` and `panel-open` states.
 
 ## Fixture renders (`render/`)
 
@@ -967,7 +988,7 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - `harness-selftest.spec.mjs` runs with `qa:axe`, `qa:screens`, `qa:quick-view`, `qa:reflow`, `qa:motion` and `qa:focus`, and in every row of `qa:matrix`, on pages it serves itself. It proves that a pinned page answering with the wrong status fails the run without being asked again, that one answering 5xx twice or 429 four times fails, and that dismissing the cookie banner leaves nothing hovered. Its 5xx and 429 retry cases answer the pinned 404 page (or the channel's first page) with a 500, or a 429 with `Retry-After: 1`, once and then let the request through, so the second answer is the storefront's real one.
 - `widget-screens.spec.mjs` runs with `qa:screens`, because the script's `screens` filter matches its name.
 - `home-lead-screens.spec.mjs` and `shipping-strip-screens.spec.mjs` run with `qa:screens` too, for the same reason.
-- `header.spec.mjs` (ticket 27) runs only when named, like `skin.spec.mjs`: no npm script's filter matches it.
+- `header.spec.mjs` (ticket 27) and `menu.spec.mjs` (ticket 28) run only when named, like `skin.spec.mjs`: no npm script's filter matches them.
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
 - `storefront.test.mjs` also covers `QA_PORT`, the start log's name, the locks a gate holds (and the ports checked again after a slot wait), trusting only the server a gate started, and stopping that server when the gate is stopped by a signal. `playwright-config.test.mjs` covers that the config reads `QA_PORT` and holds the locks only in the runner, `prepush.test.mjs` what `qa:prepush` checks before its first gate, `serve.test.mjs` the locks around a `stencil start` by hand, and `scripts/lib/lock.test.mjs` the locks themselves: the stale rules, waiting, the three slots across processes, the signals, `RF_LOCK_ROOT`, and the command line `release.sh` uses.
 - `pages.test.mjs` covers W0-8's pins, baseline names (against the baseline-scope check's parser), UI states, overlays and custom layouts; `overlays.test.mjs` the overlay files, the patch and the throwaway worktree (in git repos of its own); `custom-layouts.test.mjs` the merge into `config.stencil.json`; `playwright-config.test.mjs` the overlay's refusals, ports and folder, and the custom-layouts step before `stencil start`; `storefront.test.mjs` the overlay marker check, and that only an overlay run's own worktree moves a `stencil start` out of the checkout (an `RF_QA_THEME_DIR` left in the shell never does; `prepush.test.mjs` too).

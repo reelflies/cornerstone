@@ -1,0 +1,22 @@
+{{!--
+    Whether a category is already in the grouped menu's rail (ticket 28; menu.html). Renders
+    nothing; sets the variable rf_menu_rail to 1 when rf_id is one of rf_menu_type_ids or is
+    rf_menu_species_root_id, and with rf_exclude also when it is one of rf_menu_exclude_ids, and
+    to 0 otherwise:
+
+        {{> components/reelflies/menu-in-rail rf_id=rfTop.id rf_exclude=true}}
+        {{#unless (getVar 'rf_menu_rail')}} … {{/unless}}
+
+    Ids are compared trimmed, with ==, because the store gives them as strings and the settings
+    are comma-separated lists that may hold spaces.
+--}}
+{{~assignVar 'rf_menu_rail' 0~}}
+{{~#each (split @root.theme_settings.rf_menu_type_ids ',') as |rfId|~}}
+{{~#if ../rf_id '==' (trim rfId)~}}{{~assignVar 'rf_menu_rail' 1~}}{{~/if~}}
+{{~/each~}}
+{{~#if rf_id '==' (trim @root.theme_settings.rf_menu_species_root_id)~}}{{~assignVar 'rf_menu_rail' 1~}}{{~/if~}}
+{{~#if rf_exclude~}}
+{{~#each (split @root.theme_settings.rf_menu_exclude_ids ',') as |rfId|~}}
+{{~#if ../rf_id '==' (trim rfId)~}}{{~assignVar 'rf_menu_rail' 1~}}{{~/if~}}
+{{~/each~}}
+{{~/if~}}

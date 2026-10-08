@@ -186,7 +186,7 @@ describe('the header partial', () => {
         assert.ok(findTags(off, 'span').some(tag => /\bcart-quantity\b/.test(tag.attrs.class || '')), 'the stock count stays');
     });
 
-    it('keeps #menu, with the stock navigation-menu, for the phone drawer and the desktop panel', async () => {
+    it('keeps #menu, with the stock navigation-menu while both menu ids are empty (ticket 28\'s fallback), for the phone drawer and the desktop panel', async () => {
         const html = await render();
         const header = elementSource(html, 'header', attrs => 'data-rf-header' in attrs);
         const menu = findTags(header, 'div').find(tag => tag.attrs.id === 'menu');

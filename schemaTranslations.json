@@ -6109,6 +6109,9 @@
   "i18n.RfMenuSpeciesRootId": {
     "default": "Flies by Species category id"
   },
+  "i18n.RfMenuExcludeIds": {
+    "default": "Top-level category ids to leave out of More from ReelFlies, comma-separated"
+  },
 
   "i18n.RfProductCards": {
     "default": "Product cards"
