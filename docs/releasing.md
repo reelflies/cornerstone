@@ -233,7 +233,7 @@ scripts/release.sh --channel 1 --variation 'ReelFlies CA channel 1'             
 **What it shows, and step 5.**
 
 - The push summary names the channel, the variation, every `rf_*` value it pushes and each new switch, and its `prelaunch` line says whether the commit ran on 1895766 (above).
-- The Hero values the first push replaces (below) are listed at step 1 only, not in the push summary or the entry: read them in the dry run, which stops before the build.
+- The Hero values the first push replaces (below) are listed at step 1 only, not in the push summary or the entry: read them in the dry run's step 1, before the real push, which lists them again at its own step 1.
 - Step 5 asks: `Type the channel id (1) to push to live reelflies.ca (channel 1) with variation "ReelFlies CA channel 1" and the N rf_* value(s) it has never had, listed above as new switches:`. Typing `1` confirms the push and those values.
 - The `RELEASES.md` entry records `Confirmation: channel id typed at the terminal` and the operator.
 
