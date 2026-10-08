@@ -103,8 +103,9 @@ export async function hideWidgetsFromLoad(page) {
         const style = document.createElement('style');
         style.setAttribute('data-rf-qa-hidden-from-load', '');
         style.textContent = rule;
-        // The script runs before the parser makes <html>, so the style goes in as soon as it
-        // exists, which is before any of the body is parsed.
+        // The script runs before the parser makes <html>, so the style goes in at the parser's
+        // next microtask checkpoint after it exists: before the page's first script runs and
+        // before its first layout (on the storefront, inside <head>).
         const add = () => {
             if (!document.documentElement) return false;
             document.documentElement.append(style);

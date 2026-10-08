@@ -8,7 +8,8 @@
 // - A changed region below the threshold passes, so the threshold is what decides.
 //
 // It also proves the stylesheet the template diffs apply (W0-5), on a page of its own,
-// with no baseline: see "the screenshot stylesheet" below.
+// with no baseline: see "the screenshot stylesheet" below. And that the widgets are out of the
+// layout from the first one (hideWidgetsFromLoad): see "widgets hidden from load".
 
 /* eslint-env browser */ // the page.evaluate callbacks run in the page
 
@@ -154,7 +155,7 @@ test.describe('widgets hidden from load', () => {
     const URL = 'https://selftest.invalid/widgets-from-load/';
     const html = `<!doctype html><html lang="en"><body style="margin:0">
         <div data-content-region="home_below_menu"><div data-widget-id="w1" style="height:690.344px;background:#7b8e7a"></div></div>
-        <script>window.seen = { display: getComputedStyle(document.querySelector('[data-widget-id]')).display, top: document.querySelector('footer') ? null : 0 };</script>
+        <script>window.seen = { display: getComputedStyle(document.querySelector('[data-widget-id]')).display };</script>
         <footer style="height:100px;background:#2f382f">Footer</footer></body></html>`;
 
     test('a widget is already out of the layout when the page\'s own script first reads it', async ({ page }) => {
