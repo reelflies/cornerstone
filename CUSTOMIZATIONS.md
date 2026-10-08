@@ -133,7 +133,6 @@ From the review's upgrade-safe layering plan and the design session ([ADR 0001](
 - `templates/components/products/card.html` and `options/set-rectangle.html`
 - `templates/components/products/product-view.html` and `templates/components/common/responsive-img.html`
 - `templates/pages/category.html`
-- `templates/components/search/quick-results.html` and `assets/js/theme/global/quick-search.js`
 - `assets/js/theme/common/product-details.js` and `assets/js/theme/cart.js`
 - `templates/components/common/navigation-menu.html`
 - `templates/pages/errors/404.html`
@@ -141,6 +140,7 @@ From the review's upgrade-safe layering plan and the design session ([ADR 0001](
 Added by the design session (spec, "Hook count"), with the ticket that adds each:
 
 - `navigation-list.html` (28, 29). Ticket 27 needed no hook in `navigation.html`: its header no longer includes it.
+- Ticket 30 needed no hook in `templates/components/common/quick-search.html`, `components/search/quick-results.html` or `assets/js/theme/global/quick-search.js`, which the review expected: ticket 27's header carries the ReelFlies search form (`components/reelflies/search-form.html`), which stock `quick-search.js` doesn't bind, and quick search renders its own `components/reelflies/quick-results.html` through the search API. The stock three stay for the drawer's stock form until ticket 28 rebuilds the drawer.
 - `templates/components/category/sidebar.html` (32) and `faceted-search/facets/multi.html` (33)
 - `templates/components/products/description-tabs.html` and `tabs.html` (39)
 - `templates/pages/cart.html`, `templates/components/cart/totals.html` and `cart/status-messages.html` (41)

@@ -24,7 +24,8 @@ export const GLOBAL_MODULES = [
 
     // 28 grouped menu and phone drawer
 
-    // 30 quick search
+    // 30 quick search: the dropdown under each ReelFlies search form, and the phone header's search toggle
+    context => import(/* webpackChunkName: "rf-quick-search" */ './quick-search').then(module => module.default(context)),
 
     // 52 outside-Canada prompt
 ];

@@ -5,7 +5,9 @@
 
     - One row from Cornerstone's medium breakpoint (801px) up: the logo, "Shop flies", the search
       field, Account and Cart. No Saved, Compare or Gift Certificates (stock O04; UX-20).
-    - On phones, a 56px sticky bar: the Menu button, the logo, a search link and the bag.
+    - On phones, a 56px sticky bar: the Menu button, the logo, search and the bag. Search is a link
+      to the search page until quick-search.js (ticket 30) swaps it for the toggle button beside
+      it, which opens the header's search form as the bar's second row.
     - The logo is a link inside a <div> on every page type, never an <h1> (stock made it the home
       page's <h1>, header.html:19-22), so each page's own <h1> is its only one: the hero's on home
       (ticket 46). Its name is "ReelFlies home". It is the 133x95 PNG, 78px wide on desktop and
@@ -20,7 +22,7 @@
     - The cart count is the stock pill (.countPill.cart-quantity, which cart-preview.js fills).
       With rf_rise on, the rise ring sits on it (rise.js); off, there is no ring markup and
       rise.js never loads (js-settings.html, reelflies/global.js).
-    - After </header>: ticket 30's phone search row (an empty slot for now), then the
+    - After </header>: ticket 30's phone search row (home, category and search pages), then the
       header_bottom--global region, where the shipping strip widget sits on 1895766
       (widgets/shipping-strip). It stays outside the banner, so on phones it scrolls away under
       the sticky bar, inside a labelled region landmark (O04; axe region).
@@ -52,9 +54,12 @@
         </button>
         {{> components/reelflies/search-form name='header' class='rf-header-search'}}
         <nav class="rf-header-user" aria-label="{{lang 'reelflies.header.user_label'}}">
-            <a class="rf-header-action rf-header-search-link" href="{{urls.search}}">
+            <a class="rf-header-action rf-header-search-link" href="{{urls.search}}" data-rf-search-link>
                 {{> components/reelflies/icon name='search'}}<span class="is-srOnly">{{lang 'common.search'}}</span>
             </a>
+            <button class="rf-header-action rf-header-search-toggle" type="button" aria-expanded="false" aria-controls="rf-search-form-header" hidden data-rf-search-toggle>
+                {{> components/reelflies/icon name='search'}}<span class="is-srOnly">{{lang 'common.search'}}</span>
+            </button>
             <a class="rf-header-action rf-header-account" href="{{#if customer}}{{urls.account.index}}{{else}}{{urls.auth.login}}{{/if}}">
                 {{> components/reelflies/icon name='account'}}<span class="rf-header-label">{{lang 'common.account'}}</span>
             </a>

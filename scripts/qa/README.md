@@ -557,6 +557,7 @@ export default {
 | `rf-header` | 27 | one ReelFlies `<header data-rf-header>` holding no `<h1>`; the logo a `<div data-rf-logo>` holding one link, and no `.header-logo` an `<h1>`; the Menu control a `<button>` with `aria-expanded` and a visible label; no Compare, Gift Certificates or wish list link in the header row (the phone drawer is ticket 28's) |
 | `max-one-h1` | 27 | at most one `<h1>` on every page |
 | `strip-region` | 27 | one `header_bottom--global` region, after the header, inside `<div data-rf-strip-region role="region">` with an accessible name; the shipping strip (`data-rf-strip`), when it is there, holds no link. Another channel's widget in the region isn't judged |
+| `rf-search-forms` | 30 | every ReelFlies search form (`data-rf-search-form`) a GET with a real action and one `search_query` field, so Enter works with no script; no stock quick-search hooks and no combobox attributes on its field; each form's name once; the phone search row (`data-rf-phone-search`) after the header, at most once, on home, category and search pages that carry the header's form, and never on product, cart, 404, brand, Web Page, sign-in or chart pages |
 
 **Still to come:**
 
@@ -619,6 +620,25 @@ QA_OVERLAY=rf_rise-off npx playwright test --config scripts/qa/playwright.config
 ```
 
 Like the skin's, it isn't in `qa:prepush`. A ticket that changes the header (28, 29, 30) runs it.
+
+## Quick search (`quick-search.spec.mjs`)
+
+Ticket 30's checks in a browser (spec modules 4 and 5; stories 1, 2, 3 and 68), on the pins of `QA_CHANNEL`, at 375 and 1280. The dropdown's logic (the category matcher, the 400 ms debounce, the stale-answer guard, the open state) is Jest's (`assets/js/test-unit/theme/reelflies/quick-search.spec.js`); its templates are rendered by `render/partials/quick-search.test.mjs`; the server HTML is the `rf-search-forms` assertion.
+
+- **The dropdown,** on the category pin (home where the channel has none): typing "caddis" into the visible field (the phone row at 375, the header's at 1280) sends one search request, for the whole word, and shows the count heading from the real total, up to 2 categories named "…, category", at most 6 product rows at 375 and 8 at 1280 each with a price, and "See all N results" with the heading's N, in that order. ReelFlies_CA has no products until refactor 14, so the rows and the categories are required on channel 1 only; on 1895766 the heading says nothing matched.
+- **The announcement and the open state:** the heading's words go to the shared live region once; `<html data-rf-open>` holds `search` while the dropdown is open; Escape closes it, leaves focus and the text in the field, and clears the token; focus back in the field shows the last results again; focus leaving the form closes it.
+- **axe** with the dropdown open: no `aria-allowed-attr` on the field, which carries no combobox attributes, and no serious or critical issue in the form.
+- **With JavaScript off,** Enter in the visible field lands on the search page (HTTP 200).
+- **The phone search row** at 375 sits right under the 56px bar on the home and category pins and scrolls away with the page; it is hidden at 1280, and absent from every other pin.
+- **The phone header's search icon** is the toggle quick-search.js swaps in for the link: it opens the header's form as the bar's second row, focused, and Escape closes it with focus back on the toggle.
+
+```sh
+export QA_PORT=3700
+npx playwright test --config scripts/qa/playwright.config.mjs quick-search.spec
+QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs quick-search.spec
+```
+
+Like the header's, it isn't in `qa:prepush`. A ticket that changes the header or the search forms runs it.
 
 ## Fixture renders (`render/`)
 
@@ -967,7 +987,7 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - `harness-selftest.spec.mjs` runs with `qa:axe`, `qa:screens`, `qa:quick-view`, `qa:reflow`, `qa:motion` and `qa:focus`, and in every row of `qa:matrix`, on pages it serves itself. It proves that a pinned page answering with the wrong status fails the run without being asked again, that one answering 5xx twice or 429 four times fails, and that dismissing the cookie banner leaves nothing hovered. Its 5xx and 429 retry cases answer the pinned 404 page (or the channel's first page) with a 500, or a 429 with `Retry-After: 1`, once and then let the request through, so the second answer is the storefront's real one.
 - `widget-screens.spec.mjs` runs with `qa:screens`, because the script's `screens` filter matches its name.
 - `home-lead-screens.spec.mjs` and `shipping-strip-screens.spec.mjs` run with `qa:screens` too, for the same reason.
-- `header.spec.mjs` (ticket 27) runs only when named, like `skin.spec.mjs`: no npm script's filter matches it.
+- `header.spec.mjs` (ticket 27) and `quick-search.spec.mjs` (ticket 30) run only when named, like `skin.spec.mjs`: no npm script's filter matches them.
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
 - `storefront.test.mjs` also covers `QA_PORT`, the start log's name, the locks a gate holds (and the ports checked again after a slot wait), trusting only the server a gate started, and stopping that server when the gate is stopped by a signal. `playwright-config.test.mjs` covers that the config reads `QA_PORT` and holds the locks only in the runner, `prepush.test.mjs` what `qa:prepush` checks before its first gate, `serve.test.mjs` the locks around a `stencil start` by hand, and `scripts/lib/lock.test.mjs` the locks themselves: the stale rules, waiting, the three slots across processes, the signals, `RF_LOCK_ROOT`, and the command line `release.sh` uses.
 - `pages.test.mjs` covers W0-8's pins, baseline names (against the baseline-scope check's parser), UI states, overlays and custom layouts; `overlays.test.mjs` the overlay files, the patch and the throwaway worktree (in git repos of its own); `custom-layouts.test.mjs` the merge into `config.stencil.json`; `playwright-config.test.mjs` the overlay's refusals, ports and folder, and the custom-layouts step before `stencil start`; `storefront.test.mjs` the overlay marker check, and that only an overlay run's own worktree moves a `stencil start` out of the checkout (an `RF_QA_THEME_DIR` left in the shell never does; `prepush.test.mjs` too).

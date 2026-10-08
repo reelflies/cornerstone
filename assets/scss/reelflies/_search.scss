@@ -1,0 +1,212 @@
+// =============================================================================
+// QUICK SEARCH (ticket 30; spec module 5, module 4's phone row; O05, O18, UX-4)
+// =============================================================================
+//
+// - The dropdown quick-search.js adds at the end of each ReelFlies search form, holding
+//   components/reelflies/quick-results.html: the count heading, up to 2 categories, compact
+//   product rows and "See all", from the reference's .qs rules (plan/design/src/reference.src.html
+//   :165-178). Product photos sit on white as shot, with no tile behind them (HANDOFF, ticket 31).
+//   Up to 8 rows come back; phones show 6 (UX-4).
+// - The phone search row (components/reelflies/phone-search-row.html): a full-width field under
+//   the 56px bar on home, category and search pages, in normal flow so it scrolls away (the
+//   reference's .m-search, :866-870). Phones only.
+// - The phone header's search toggle, which opens the header's form as the bar's second row (the
+//   reference's .search-toggle and .search-open, :774-781).
+//
+// The search form itself (the pill field and its button) is _header.scss's.
+//
+// -----------------------------------------------------------------------------
+
+$rf-qs-phone-max:   800px;      // below Cornerstone's medium breakpoint (801px): the phone layout
+$rf-qs-phone-rows:  6;
+$rf-qs-thumb:       56px;
+
+
+// The dropdown
+// -----------------------------------------------------------------------------
+
+.rf-qs {
+    background: var(--rf-paper);
+    border-radius: var(--rf-radius-mid);
+    box-shadow: var(--rf-pop);
+    box-sizing: border-box;
+    color: var(--rf-ink);
+    left: 0;
+    padding: 12px;
+    position: absolute;
+    right: 0;
+    text-align: left;
+    top: calc(100% + 8px);
+    z-index: zIndex("high");
+
+    &[hidden] {
+        display: none;
+    }
+}
+
+.rf-qs-heading {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 2px 6px 8px;
+}
+
+.rf-qs-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    &[hidden] {
+        display: none;
+    }
+}
+
+// Categories first, set apart from the flies by a rule and the muted word "category"
+.rf-qs-categories {
+    border-bottom: 1px solid var(--rf-tile-2);
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+}
+
+.rf-qs-link {
+    align-items: center;
+    border-radius: var(--rf-radius-small);
+    color: var(--rf-ink);
+    display: grid;
+    gap: 12px;
+    grid-template-columns: $rf-qs-thumb minmax(0, 1fr) auto;
+    min-height: var(--rf-target-row);
+    padding: 6px;
+    text-decoration: none;
+
+    &:hover {
+        background: var(--rf-tile);
+        color: var(--rf-ink);
+    }
+}
+
+// One line: the name, then the muted word, wrapping as words do
+.rf-qs-category {
+    display: block;
+    line-height: 1.3;
+    min-height: var(--rf-target-buy);
+    padding: 12px 6px;
+}
+
+.rf-qs-kind {
+    color: var(--rf-dun);
+    font-size: 14px;
+    margin-left: 6px;
+}
+
+.rf-qs-thumb {
+    background: var(--rf-paper);
+    border-radius: var(--rf-radius-small);
+    display: block;
+    overflow: hidden;
+
+    img {
+        aspect-ratio: 3 / 2;
+        display: block;
+        height: auto;
+        object-fit: contain;
+        width: $rf-qs-thumb;
+    }
+}
+
+.rf-qs-name {
+    -webkit-box-orient: vertical;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-height: 1.3;
+    overflow: hidden;
+}
+
+.rf-qs-price {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.rf-qs-all {
+    color: var(--rf-ink);
+    display: inline-block;
+    font-weight: 600;
+    margin: 8px 6px 2px;
+    padding: 4px 0;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+
+    &:hover {
+        color: var(--rf-ink);
+        text-decoration-thickness: 2px;
+    }
+}
+
+@media (max-width: $rf-qs-phone-max) {
+    .rf-qs-products .rf-qs-item:nth-child(n + #{$rf-qs-phone-rows + 1}) {
+        display: none;
+    }
+
+    // The header's form sits in the sticky bar, so its dropdown scrolls inside itself.
+    .rf-header .rf-qs {
+        max-height: calc(100vh - 2 * var(--rf-header-h) - 16px);
+        max-height: calc(100dvh - 2 * var(--rf-header-h) - 16px);
+        overflow-y: auto;
+    }
+}
+
+
+// The phone search row: under the bar, in normal flow, phones only
+// -----------------------------------------------------------------------------
+
+.rf-phone-search {
+    background: var(--rf-paper);
+    padding: 10px var(--rf-gutter) 2px;
+    position: relative;
+    z-index: zIndex("low");
+
+    @include breakpoint("medium") {
+        display: none;
+    }
+}
+
+
+// The phone header's search toggle, and the header's form as the bar's second row
+// -----------------------------------------------------------------------------
+
+.rf-header-action[hidden] {
+    display: none;
+}
+
+.rf-header-search-toggle {
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+
+    &[aria-expanded="true"] {
+        background: var(--rf-tile);
+    }
+
+    @include breakpoint("medium") {
+        display: none;
+    }
+}
+
+@media (max-width: $rf-qs-phone-max) {
+    .rf-header.rf-is-search-open {
+        .rf-header-row {
+            grid-template-rows: var(--rf-header-h) auto;
+            height: auto;
+        }
+
+        .rf-header-search {
+            box-sizing: border-box;
+            display: block;
+            grid-column: 1 / -1;
+            grid-row: 2;
+            max-width: none;
+            padding: 0 4px 12px;
+        }
+    }
+}
