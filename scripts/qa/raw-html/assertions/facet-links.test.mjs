@@ -9,7 +9,7 @@ import path from 'path';
 import { before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { checkPage, loadAssertions } from '../../raw-html.mjs';
-import facetLinks, { decodeHtml, facetAnchors } from './facet-links.mjs';
+import facetLinks, { facetAnchors } from './facet-links.mjs';
 
 const FIXTURES = path.resolve('scripts/qa/raw-html/fixtures');
 const page = (name, kind = 'category') => ({
@@ -94,17 +94,5 @@ describe('the facet-links assertion', () => {
         const html = '<a href="/search.php?search_query=adams&amp;section=product&amp;sort=newest&amp;limit=24&amp;mode=grid" data-faceted-search-facet>Clear all</a>';
         assert.deepEqual(facetAnchors(html, 'http://localhost:3301/search.php?search_query=adams'), []);
         assert.deepEqual(facetLinks.check({ html, url: 'http://localhost:3301/search.php' }), []);
-    });
-});
-
-describe('decodeHtml', () => {
-    it('decodes the character references Handlebars writes into attributes', () => {
-        assert.equal(decodeHtml('?_bc_fsnf&#x3D;1&amp;Fly+Sizes&#x3D;2%2F0'), '?_bc_fsnf=1&Fly+Sizes=2%2F0');
-        assert.equal(decodeHtml('&quot;&#x27;&#x60;&lt;&gt;&#61;&apos;&#X3d;'), '"\'`<>=\'=');
-    });
-
-    it('leaves text without references, and references it doesn\'t know, as they are', () => {
-        assert.equal(decodeHtml('/flies/dry-flies/?page=2'), '/flies/dry-flies/?page=2');
-        assert.equal(decodeHtml('a &copy; b &#xZZ; &#x110000;'), 'a &copy; b &#xZZ; &#x110000;');
     });
 });

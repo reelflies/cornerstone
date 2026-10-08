@@ -11,8 +11,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { findTags } from '../../raw-html/html.mjs';
-import rfFooter, { elementsHtml, outerHtml, textOf } from '../../raw-html/assertions/rf-footer.mjs';
+import {
+    elementsHtml, findTags, outerHtml, textOf,
+} from '../../raw-html/html.mjs';
+import rfFooter from '../../raw-html/assertions/rf-footer.mjs';
 import { unbalancedTags } from '../html-checks.mjs';
 import {
     readFixture, renderPartial, themeConfig, THEME_DIR,
@@ -35,10 +37,10 @@ const render = (name, overrides = {}, options = {}) => {
 };
 
 // The parts of the footer, each an element's whole markup.
-const part = (html, attribute) => outerHtml(html, tag => attribute in tag.attrs);
-const column = (html, heading) => elementsHtml(html, tag => tag.name === 'article').find(article => textOf(article).startsWith(heading)) ?? null;
+const part = (html, name, attribute) => outerHtml(html, name, attrs => attribute in attrs);
+const column = (html, heading) => elementsHtml(html, 'article').find(article => textOf(article).startsWith(heading)) ?? null;
 const links = html => findTags(html, 'a').map(tag => tag.attrs);
-const linkTexts = html => elementsHtml(html, tag => tag.name === 'a').map(textOf);
+const linkTexts = html => elementsHtml(html, 'a').map(textOf);
 const page = html => ({
     kind: 'home', key: 'home', path: '/', url: 'http://localhost:3601/', status: 200, html: `<!DOCTYPE html><html lang="en-CA"><head><title>ReelFlies</title></head><body><div class="body" id="main-content"></div>${html}</body></html>`,
 });
@@ -53,7 +55,7 @@ describe('the footer.html hook', () => {
         assert.equal(footers.length, 1);
         assert.ok('data-rf-footer' in footers[0].attrs);
         assert.ok(html.indexOf('data-banner-location="bottom"') < html.indexOf('<footer'), 'the banners come first');
-        assert.match(part(html, 'data-rf-footer'), /data-rf-test-seal/);
+        assert.match(part(html, 'footer', 'data-rf-footer'), /data-rf-test-seal/);
         assert.deepEqual(unbalancedTags(html), []);
     });
 
@@ -67,24 +69,24 @@ describe('the footer.html hook', () => {
 describe('the Shop column', () => {
     it('lists the six Fly Types in rf_menu_type_ids order, then Flies by Species, never in the store\'s order', async () => {
         const html = await render('tree-4');
-        const shop = part(html, 'data-rf-footer-shop');
+        const shop = part(html, 'ul', 'data-rf-footer-shop');
         assert.deepEqual(linkTexts(shop), ['Dry Flies', 'Nymphs', 'Streamers', 'Eggs & Worms', 'Warmwater Flies', 'Saltwater Flies', 'Flies by Species']);
         assert.deepEqual(links(shop).map(attrs => attrs['data-rf-menu-id']), ['601', '602', '603', '604', '605', '606', '700']);
         assert.equal(links(shop)[6].href, 'https://reelflies.ca/species/');
         assert.equal(findTags(shop, 'li').length, 7);
-        assert.equal(part(html, 'data-rf-footer-categories'), null, 'no stock Categories column beside it');
+        assert.equal(part(html, 'ul', 'data-rf-footer-categories'), null, 'no stock Categories column beside it');
         assert.deepEqual(rfFooter.check(page(html)), []);
     });
 
     it('declares the ids it was given, which the raw-HTML check holds the links to', async () => {
-        const [list] = findTags(part(await render('tree-4'), 'data-rf-footer-shop'), 'ul');
+        const [list] = findTags(part(await render('tree-4'), 'ul', 'data-rf-footer-shop'), 'ul');
         assert.equal(list.attrs['data-rf-menu-type-ids'], '601, 602,603,604 ,605,606');
         assert.equal(list.attrs['data-rf-menu-species-root-id'], '700');
     });
 
     it('finds tree 1\'s Fly Types one level down, in channel 1\'s variation order, with no Species link (ticket 53)', async () => {
         const html = await render('tree-1', {}, { variation: 'ReelFlies CA channel 1' });
-        const shop = part(html, 'data-rf-footer-shop');
+        const shop = part(html, 'ul', 'data-rf-footer-shop');
         assert.equal(themeConfig('ReelFlies CA channel 1').settings.rf_menu_type_ids, '298,251,255,272,438');
         assert.deepEqual(linkTexts(shop), ['Dry Flies', 'Nymphs & Sub Surface Flies', 'Streamers & Buggers', 'Saltwater, Warmwater & Salmon', 'Realistic Trout Flies']);
         assert.equal(findTags(shop, 'li').length, 5, 'no empty item for the empty Species id');
@@ -92,19 +94,19 @@ describe('the Shop column', () => {
     });
 
     it('lists the Species root alone when only it is set', async () => {
-        const shop = part(await render('tree-4', { theme_settings: { rf_menu_type_ids: '' } }), 'data-rf-footer-shop');
+        const shop = part(await render('tree-4', { theme_settings: { rf_menu_type_ids: '' } }), 'ul', 'data-rf-footer-shop');
         assert.deepEqual(linkTexts(shop), ['Flies by Species']);
     });
 
     it('skips an id the channel\'s tree doesn\'t hold, and a stray comma', async () => {
-        const shop = part(await render('tree-4', { theme_settings: { rf_menu_type_ids: '601,,9999,602,', rf_menu_species_root_id: '' } }), 'data-rf-footer-shop');
+        const shop = part(await render('tree-4', { theme_settings: { rf_menu_type_ids: '601,,9999,602,', rf_menu_species_root_id: '' } }), 'ul', 'data-rf-footer-shop');
         assert.deepEqual(linkTexts(shop), ['Dry Flies', 'Nymphs']);
     });
 
     it('falls back to the stock Categories column, every top-level category, when both ids are empty', async () => {
         const html = await render('tree-4', { theme_settings: { rf_menu_type_ids: '', rf_menu_species_root_id: '' } });
-        assert.equal(part(html, 'data-rf-footer-shop'), null);
-        const stock = part(html, 'data-rf-footer-categories');
+        assert.equal(part(html, 'ul', 'data-rf-footer-shop'), null);
+        const stock = part(html, 'ul', 'data-rf-footer-categories');
         assert.deepEqual(linkTexts(stock), ['Fly Gear', 'Eggs & Worms', 'Dry Flies', 'Nymphs', 'Flies by Species', 'Streamers', 'Saltwater Flies', 'Warmwater Flies']);
         assert.match(textOf(column(html, LANG.footer.categories)), new RegExp(`^${LANG.footer.categories}`));
         assert.deepEqual(unbalancedTags(html), []);
@@ -114,8 +116,8 @@ describe('the Shop column', () => {
     it('falls back on ReelFlies_CA today, which has no categories, and nothing breaks', async () => {
         const html = await render('prelaunch');
         assert.equal(themeConfig('ReelFlies CA').settings.rf_menu_type_ids, '');
-        assert.equal(part(html, 'data-rf-footer-shop'), null);
-        assert.notEqual(part(html, 'data-rf-footer-categories'), null);
+        assert.equal(part(html, 'ul', 'data-rf-footer-shop'), null);
+        assert.notEqual(part(html, 'ul', 'data-rf-footer-categories'), null);
         assert.deepEqual(unbalancedTags(html), []);
         assert.deepEqual(rfFooter.check(page(html)), []);
     });
@@ -186,11 +188,11 @@ describe('the Newsletter column', () => {
         const [email] = findTags(newsletter, 'input').filter(tag => tag.attrs.type === 'email');
         assert.equal(label.attrs.for, email.attrs.id);
         assert.doesNotMatch(label.attrs.class || '', /srOnly|u-hiddenVisually/);
-        assert.equal(textOf(outerHtml(newsletter, tag => tag.name === 'label')), 'Email address');
+        assert.equal(textOf(outerHtml(newsletter, 'label')), 'Email address');
         assert.equal(email.attrs.name, 'nl_email');
         assert.equal(email.attrs.autocomplete, 'email');
         assert.ok('required' in email.attrs);
-        const consent = outerHtml(newsletter, tag => tag.attrs.id === email.attrs['aria-describedby']);
+        const consent = outerHtml(newsletter, 'p', attrs => attrs.id === email.attrs['aria-describedby']);
         assert.equal(textOf(consent), NEWSLETTER.consent);
         assert.match(textOf(newsletter), new RegExp(NEWSLETTER.line.replace(/\./g, '\\.')));
         assert.doesNotMatch(newsletter, /store's own newsletter summary/);
@@ -220,7 +222,7 @@ describe('the Newsletter column', () => {
 
 describe('the base row', () => {
     it('has the promise line, the copyright and the outside-Canada link, a real link to reelflies.com', async () => {
-        const base = part(await render('tree-4'), 'data-rf-footer-base');
+        const base = part(await render('tree-4'), 'div', 'data-rf-footer-base');
         const text = textOf(base);
         assert.match(text, /We stand behind every fly we sell\./);
         assert.match(text, new RegExp(`© ${YEAR} ReelFlies\\.ca\\. ReelFlies® is a registered trademark of Digital Barn Ltd\\.`));
@@ -233,7 +235,7 @@ describe('the base row', () => {
     it('shows no payment icons while ticket 24 has none turned on, and Cornerstone\'s icons once it does', async () => {
         assert.equal(findTags(await render('tree-4'), 'ul').filter(tag => tag.attrs.class === 'footer-payment-icons').length, 0);
         const html = await render('tree-4', { theme_settings: { show_accept_visa: true, show_accept_mastercard: true, show_accept_amex: true } });
-        assert.notEqual(outerHtml(html, tag => tag.attrs.class === 'footer-payment-icons'), null);
+        assert.notEqual(outerHtml(html, 'ul', attrs => attrs.class === 'footer-payment-icons'), null);
         // Read from the raw HTML: outerHtml leaves <title> text out, as a crawler's markup view does.
         const icons = html.slice(html.indexOf('footer-payment-icons'), html.lastIndexOf('</ul>'));
         assert.deepEqual([...icons.matchAll(/<title>([^<]+)<\/title>/g)].map(([, title]) => title), ['American Express', 'Mastercard', 'Visa']);

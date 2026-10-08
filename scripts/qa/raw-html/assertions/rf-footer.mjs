@@ -18,57 +18,20 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { findTags, markupOnly, parseAttributes } from '../html.mjs';
-import { decodeHtml } from './facet-links.mjs';
+import {
+    decodeHtml, elementsHtml, findTags, outerHtml, textOf,
+} from '../html.mjs';
 
 const LANG = JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../lang/en.json'), 'utf8'));
 const STRINGS = LANG.reelflies.footer;
 export const COM_URL = 'https://reelflies.com/';
-
-const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
-const TAG = /<(\/?)([a-z][a-z0-9-]*)(?=[\s/>])((?:[^>"']|"[^"]*"|'[^']*')*)>/gi;
-
-// The whole markup of each element whose start tag passes `test` ({ name, attrs, raw }), from its
-// start tag to its matching end tag, in page order. Elements of the same name nested inside are
-// counted, so a <div> inside a <div> doesn't end it. Comments and script, style, textarea and title
-// contents are left out first (markupOnly), as findTags does.
-export function elementsHtml(html, test) {
-    const markup = markupOnly(html);
-    const found = [];
-    const open = [];
-    for (const match of markup.matchAll(TAG)) {
-        const [raw, close, tagName, attributes] = match;
-        const name = tagName.toLowerCase();
-        if (!close) {
-            const tag = { name, attrs: parseAttributes(attributes), raw };
-            const wanted = test(tag);
-            if (VOID.has(name) || raw.endsWith('/>')) {
-                if (wanted) found.push({ start: match.index, html: raw });
-            } else {
-                open.push({ name, start: match.index, wanted });
-            }
-        } else {
-            const at = open.map(element => element.name).lastIndexOf(name);
-            if (at !== -1) {
-                const [element] = open.splice(at);
-                if (element.wanted) found.push({ start: element.start, html: markup.slice(element.start, match.index + raw.length) });
-            }
-        }
-    }
-    return found.sort((a, b) => a.start - b.start).map(element => element.html);
-}
-
-export const outerHtml = (html, test) => elementsHtml(html, test)[0] ?? null;
-
-// Text as a browser shows it: tags out, entities decoded, white space collapsed.
-export const textOf = html => decodeHtml(markupOnly(html).replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim();
 
 const idList = value => decodeHtml(value || '').split(',').map(id => id.trim()).filter(Boolean);
 const escape = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const COPYRIGHT = new RegExp(escape(STRINGS.copyright).replace(escape('{year}'), '\\d{4}'));
 
 function shopProblems(footer) {
-    const shop = outerHtml(footer, tag => 'data-rf-footer-shop' in tag.attrs);
+    const shop = outerHtml(footer, 'ul', attrs => 'data-rf-footer-shop' in attrs);
     const stock = findTags(footer).some(tag => 'data-rf-footer-categories' in tag.attrs);
     if (shop && stock) return ['the footer has both the Shop column and the stock Categories column'];
     if (!shop && !stock) return ['the footer has neither the Shop column nor the stock Categories column'];
@@ -94,11 +57,11 @@ export default {
         if (/\bpowered by\b/i.test(textOf(page.html))) problems.push('"Powered by" is on the page');
         if (findTags(page.html).some(tag => tag.attrs['data-section-type'] === 'footer-brands')) problems.push('a Brands column (data-section-type="footer-brands") is on the page');
 
-        const footer = outerHtml(page.html, tag => tag.name === 'footer' && 'data-rf-footer' in tag.attrs);
+        const footer = outerHtml(page.html, 'footer', attrs => 'data-rf-footer' in attrs);
         if (!footer) return [...problems, 'no ReelFlies footer (<footer data-rf-footer>)'];
 
         const text = textOf(footer);
-        const com = elementsHtml(footer, tag => tag.name === 'a' && decodeHtml(tag.attrs.href || '').trim() === COM_URL);
+        const com = elementsHtml(footer, 'a', attrs => decodeHtml(attrs.href || '').trim() === COM_URL);
         if (com.length !== 1) problems.push(`${com.length ? `${com.length} links` : 'no link'} to ${COM_URL} in the footer, where the outside-Canada line needs one <a href>`);
         if (!text.includes(`${STRINGS.outside_canada} ${STRINGS.outside_canada_link}`) || (com.length && textOf(com[0]) !== STRINGS.outside_canada_link)) {
             problems.push(`the outside-Canada line "${STRINGS.outside_canada} ${STRINGS.outside_canada_link}" isn't in the footer, with the link on its last words`);

@@ -14,33 +14,14 @@
 // elementSource and headerRowSource are shared with the other ticket 27 assertions and the
 // header's render tests.
 
-import { findTags, markupOnly, parseAttributes } from '../html.mjs';
+import { findTags, outerHtml } from '../html.mjs';
 
-const ATTRIBUTES = String.raw`((?:[^>"']|"[^"]*"|'[^']*')*)`;
 const STOCK_ONLY_LINKS = /(^|\/)(compare(\/|$|\?)|giftcertificates\.php|wishlist\.php)/i;
 
-// The outer markup of the first <name> element whose attributes pass `test`, with comments and
-// text-only elements emptied (markupOnly), or null. Nested elements of the same name are counted,
-// so a <div> holding <div>s comes back whole.
-export function elementSource(html, name, test = () => true) {
-    const markup = markupOnly(html);
-    const tags = new RegExp(`<(/?)(${name})(?=[\\s/>])${ATTRIBUTES}>`, 'gi');
-    let start = -1;
-    let depth = 0;
-    for (const match of markup.matchAll(tags)) {
-        const [whole, closing, , attributes] = match;
-        if (start < 0) {
-            if (!closing && test(parseAttributes(attributes))) {
-                start = match.index;
-                depth = 1;
-            }
-        } else {
-            depth += closing ? -1 : 1;
-            if (depth === 0) return markup.slice(start, match.index + whole.length);
-        }
-    }
-    return start < 0 ? null : markup.slice(start);
-}
+// The outer markup of the first <name> element whose attributes pass `test`, or null: html.mjs's
+// outerHtml, which counts nested elements of the same name, so a <div> holding <div>s comes back
+// whole. The name stays for this ticket's and ticket 28's callers.
+export const elementSource = outerHtml;
 
 // The header's one row (data-rf-header-row): the logo, Menu, "Shop flies", search, Account, Cart.
 export const headerRowSource = html => elementSource(html, 'div', attrs => 'data-rf-header-row' in attrs);

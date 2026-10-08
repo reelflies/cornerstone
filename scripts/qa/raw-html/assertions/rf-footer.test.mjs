@@ -9,7 +9,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadAssertions } from '../../raw-html.mjs';
 import { readFixture, renderPartial } from '../../render/render.mjs';
-import rfFooter, { elementsHtml, outerHtml, textOf } from './rf-footer.mjs';
+import { elementsHtml, textOf } from '../html.mjs';
+import rfFooter from './rf-footer.mjs';
 
 const FIXTURES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../render/partials/footer');
 
@@ -73,22 +74,8 @@ describe('rf-footer', () => {
     it('fails a page with both the Shop column and the stock Categories column, or with neither', async () => {
         const shop = await footer();
         const stock = await footer('tree-4', { rf_menu_type_ids: '', rf_menu_species_root_id: '' });
-        const stockColumn = elementsHtml(stock, tag => tag.name === 'article').find(article => textOf(article).startsWith('Categories'));
+        const stockColumn = elementsHtml(stock, 'article').find(article => textOf(article).startsWith('Categories'));
         assert.match(problems(shop.replace('<article', `${stockColumn}<article`)).join('\n'), /both the Shop column and the stock Categories column/);
         assert.match(problems(stock.replace(stockColumn, '')).join('\n'), /neither the Shop column nor the stock Categories column/);
-    });
-});
-
-describe('the element helpers', () => {
-    it('finds an element\'s whole markup, nested elements of the same name included', () => {
-        const html = '<div a><div b><div></div></div><p>x</p></div><div c></div>';
-        assert.equal(outerHtml(html, tag => 'b' in tag.attrs), '<div b><div></div></div>');
-        assert.equal(outerHtml(html, tag => 'a' in tag.attrs), '<div a><div b><div></div></div><p>x</p></div>');
-        assert.deepEqual(elementsHtml(html, tag => tag.name === 'div').length, 4);
-        assert.equal(outerHtml(html, tag => 'z' in tag.attrs), null);
-    });
-
-    it('reads text as a browser shows it: tags out, entities decoded, white space collapsed', () => {
-        assert.equal(textOf('<p>Shipping &amp; Returns <br> &#x3D; <span>and\n  more</span></p>'), 'Shipping & Returns = and more');
     });
 });
