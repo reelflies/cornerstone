@@ -8,7 +8,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { readFixture, renderWidget, WIDGETS_DIR } from '../../render/render.mjs';
+import {
+    readFixture, renderPartial, renderWidget, WIDGETS_DIR,
+} from '../../render/render.mjs';
 import { checkPage, loadAssertions } from '../../raw-html.mjs';
 import cardsTiles, { cardsTilesProblems, linksWithClass } from './home-cards-tiles.mjs';
 import photoOnce, { photoKey, photosOn, repeatedPhotos } from './home-photo-once.mjs';
@@ -114,6 +116,53 @@ test('the same photo twice fails, a <picture> and its <img> are one photo, and t
     const crop = '<img src="https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/800w/i/dry-flies__36885.original.jpg" alt="" data-rf-photo-repeat>';
     assert.deepEqual(repeatedPhotos((await homePage({ lead, tiles: `${tiles}${crop}` })).html), []);
     assert.equal(repeatedPhotos((await homePage({ lead, tiles: `${tiles}${crop.replace(' data-rf-photo-repeat', '')}` })).html).length, 1);
+});
+
+// Ticket 29's pane banners reuse the Fly Type banners the cards show (each pane's category image).
+// They are the menu's, not the home page's: a closed, lazy pane downloads nothing, so a banner
+// marked data-rf-menu-banner inside a data-rf-menu-pane isn't counted.
+test('a menu pane banner showing a card\'s photo isn\'t counted inside a pane, and is unmarked or outside one', async () => {
+    const banner = await renderPartial('components/reelflies/menu-banner', {
+        rf_image: { data: 'https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/{:size}/i/dry-flies__36885.original.jpg', alt: '' },
+    });
+    assert.match(banner, /data-rf-menu-banner/);
+    const home = await homePage();
+    const withMenu = { ...home, html: home.html.replace(`<header>${LOGO}`, `<header>${LOGO}<nav id="menu"><div data-rf-menu-pane>${banner}</div></nav>`) };
+    assert.deepEqual(repeatedPhotos(withMenu.html), []);
+    assert.deepEqual(failures(withMenu, photoOnce), []);
+    const problems = repeatedPhotos(withMenu.html.replace(' data-rf-menu-banner', ''));
+    assert.equal(problems.length, 1);
+    assert.match(problems[0], /^the photo i\/dry-flies__36885\.original\.jpg appears twice/);
+    // Only inside a pane: with the pane still in the menu, the same marked <img> in the page body
+    // counts (rf/spec on #58, minor 1; rf/standards on #58 round 2, minor 1).
+    const inBody = withMenu.html.replace('<div data-content-region="home_below_top_products">', `${banner}<div data-content-region="home_below_top_products">`);
+    const bodyProblems = repeatedPhotos(inBody);
+    assert.equal(bodyProblems.length, 1);
+    assert.match(bodyProblems[0], /^the photo i\/dry-flies__36885\.original\.jpg appears twice/);
+});
+
+// A pane's markup is replaced as text, never read as a replacement pattern (rf/standards on #58
+// round 2, minor 2): a "$&" in a category name doesn't put the banner back.
+test('a pane whose text holds "$&" or "$\'" still has its banner left out', async () => {
+    const banner = await renderPartial('components/reelflies/menu-banner', {
+        rf_image: { data: 'https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/{:size}/i/dry-flies__36885.original.jpg', alt: '' },
+    });
+    const home = await homePage();
+    for (const name of ['Flies $&amp; Gear', 'Cost $&#x27;s', 'Pay $$ less']) {
+        const html = home.html.replace(`<header>${LOGO}`, () => `<header>${LOGO}<nav id="menu"><div data-rf-menu-pane><h2>${name}</h2>${banner}</div></nav>`);
+        assert.deepEqual(repeatedPhotos(html), [], name);
+    }
+});
+
+// A pane banner served as a <picture> goes with its <source> elements, which would otherwise
+// attach to the next <img> on the page (rf/skeptic on #58 round 2, minor 1).
+test('a pane banner inside a <picture> goes with its sources', async () => {
+    const home = await homePage();
+    const picture = '<picture><source srcset="https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/640w/i/dry-flies__36885.original.jpg 640w" media="(min-width: 801px)">'
+        + '<img src="https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/320w/i/dry-flies__36885.original.jpg" alt="" data-rf-menu-banner></picture>';
+    const html = home.html.replace(`<header>${LOGO}`, () => `<header>${LOGO}<nav id="menu"><div data-rf-menu-pane><h2>Dry Flies</h2>${picture}</div></nav>`);
+    assert.deepEqual(repeatedPhotos(html), []);
+    assert.ok(!photosOn(html).some(photo => photo.keys.includes('i/dry-flies__36885.original.jpg') && /rf-hero/.test(photo.raw)), 'no source lands on the hero');
 });
 
 test('lazy-loaded photos count too, and a photo inside a comment or a script doesn\'t', () => {
