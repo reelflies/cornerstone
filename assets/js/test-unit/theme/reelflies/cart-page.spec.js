@@ -19,7 +19,7 @@ const LINES = `<div data-cart-page-title><h1>Your cart</h1></div>
         </ul>
     </li>
 </ul>
-<form class="coupon-form"><input id="couponcode"><button type="submit">Apply</button></form>`;
+<form class="coupon-form"><input id="couponcode"><button type="button">Apply</button></form>`;
 
 const swapContent = () => {
     // cart.js replaces the lines and the summary with what the server renders.
@@ -73,6 +73,18 @@ describe('the cart page module', () => {
         click(document.querySelector('[data-cart-itemid="a1"][data-action="inc"]'));
         document.dispatchEvent(new CustomEvent(FAILED_EVENT)); // the change failed: nothing re-rendered
         swapContent();
+        document.dispatchEvent(new CustomEvent(RENDERED_EVENT));
+        expect(document.activeElement).toBe(document.querySelector('h1'));
+    });
+
+    it('puts focus on the heading after a coupon change even where stock\'s own focus call put it on an old stepper', () => {
+        document.body.innerHTML = LINES;
+        click(document.querySelector('[data-cart-itemid="a1"][data-action="inc"]'));
+        swapContent();
+        document.dispatchEvent(new CustomEvent(RENDERED_EVENT));
+        click(document.querySelector('.coupon-form button'));
+        swapContent();
+        document.querySelector('[data-cart-itemid="a1"][data-action="inc"]').focus(); // stock's refreshContent
         document.dispatchEvent(new CustomEvent(RENDERED_EVENT));
         expect(document.activeElement).toBe(document.querySelector('h1'));
     });

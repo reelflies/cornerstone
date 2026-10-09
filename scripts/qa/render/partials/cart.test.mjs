@@ -68,6 +68,9 @@ describe('the cart lines, grouped on the server (components/reelflies/cart-lines
         assert.deepEqual(found.map(group => textOf(outerHtml(group, 'h2', () => true))), ['Parachute Adams', 'Beadhead Krystal Bugger Black']);
         assert.deepEqual(found.map(rowIds), [['a1', 'a2', 'a3'], ['b1']], 'each group\'s rows in the store\'s order; cart-groups.js sorts them');
         assert.deepEqual(unbalancedTags(html), []);
+        // cart-feedback.js removes every [data-rf-cart-error] before it shows one: only its errors.
+        assert.equal(findTags(html).filter(tag => 'data-rf-cart-error' in tag.attrs).length, 0);
+        assert.equal(findTags(html, 'ul').find(tag => 'data-rf-cart-lines' in tag.attrs).attrs['data-rf-cart-error-words'], 'Something went wrong. Try again.');
     });
 
     it('marks a group of several rows, which waits out of view for cart-groups.js, and leaves a single row alone', async () => {

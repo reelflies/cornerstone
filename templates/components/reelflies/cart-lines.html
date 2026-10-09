@@ -16,14 +16,14 @@
     - The list carries data-cart-quantity, which cart.js reads after a change.
     - The inner loops compare with the outer line's id and price kept in variables, not ../: on the
       outer line itself Handlebars adds no depth, so ../ would skip it and read the page.
-    - The list carries data-rf-cart-error, the words cart-feedback.js shows when a call fails with
-      none of the store's own.
+    - The list carries data-rf-cart-error-words, the words cart-feedback.js shows when a call fails
+      with none of the store's own.
 --}}
 {{~assignVar 'rf_cart_prices' 0~}}
 {{~#or customer (unless settings.hide_price_from_guests)~}}{{~assignVar 'rf_cart_prices' 1~}}{{~/or~}}
 {{~assignVar 'rf_cart_backorder' 0~}}
 {{~#if cart.inventory_settings.show_backorder_message~}}{{~assignVar 'rf_cart_backorder' 1~}}{{~/if~}}
-<ul class="rf-cart-lines" data-rf-cart-lines data-cart-quantity="{{cart.quantity}}" data-rf-cart-error="{{lang 'reelflies.cart.error'}}">
+<ul class="rf-cart-lines" data-rf-cart-lines data-cart-quantity="{{cart.quantity}}" data-rf-cart-error-words="{{lang 'reelflies.cart.error'}}">
     {{#each cart.items}}
     {{~assignVar 'rf_cart_at' @index~}}
     {{~assignVar 'rf_cart_pid' product_id~}}

@@ -142,6 +142,11 @@ test.describe('the cart (ticket 41)', () => {
             }
             const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
             expect(overflow, 'nothing scrolls sideways').toBeLessThanOrEqual(0);
+            const past = await page.locator('[data-rf-cart-row]').evaluateAll(rows => rows.filter(row => {
+                const group = row.closest('[data-rf-cart-group]').getBoundingClientRect();
+                return [row, ...row.children].some(element => element.getBoundingClientRect().right > group.right + 0.5);
+            }).map(row => row.dataset.rfSize));
+            expect(past, 'rows whose controls run past their group').toEqual([]);
         });
     }
 

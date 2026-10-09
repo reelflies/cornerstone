@@ -26,7 +26,7 @@
 // -----------------------------------------------------------------------------
 
 $rf-cart-row-one: 360px; // the narrowest width a size row fits on one line
-$rf-cart-bar-h: 4.5rem; // the phone bar's height (72px at 16px text), which the scroll padding matches
+$rf-cart-bar-h: 4.5rem; // the phone bar's height (72px at 16px text); the scroll padding matches it
 
 .page-content[data-cart] {
     column-gap: 44px;
@@ -197,9 +197,12 @@ $rf-cart-bar-h: 4.5rem; // the phone bar's height (72px at 16px text), which the
     margin: 0;
     row-gap: 6px;
 
+    // The size column is at least a two-digit size's tag wide, so the steppers line up; the total
+    // takes what is left, so the row never runs past its group (story 71).
     @media (min-width: $rf-cart-row-one) {
+        column-gap: 8px;
         grid-template-areas: "size stepper total remove";
-        grid-template-columns: minmax(76px, auto) auto minmax(60px, 1fr) 44px;
+        grid-template-columns: minmax(76px, auto) auto minmax(0, 1fr) 44px;
     }
 }
 
@@ -297,6 +300,11 @@ $rf-cart-bar-h: 4.5rem; // the phone bar's height (72px at 16px text), which the
     grid-area: total;
     margin: 0;
     text-align: right;
+
+    // Stock pads the table cell's value for its own layout, which here pushes it into Remove.
+    .cart-item-value {
+        padding: 0;
+    }
 }
 
 .rf-cart-remove {
@@ -310,6 +318,8 @@ $rf-cart-bar-h: 4.5rem; // the phone bar's height (72px at 16px text), which the
     grid-area: remove;
     height: var(--rf-target-buy);
     justify-items: center;
+    margin: 0; // stock floats it with a left margin from 551px, past the row's end
+    padding: 0;
     width: var(--rf-target-buy);
 
     &:hover {

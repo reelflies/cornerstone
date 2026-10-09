@@ -7,7 +7,7 @@ import ShippingEstimator from './cart/shipping-estimator';
 import { defaultModal, showAlertModal, ModalEvents } from './global/modal';
 import CartItemDetails from './common/cart-item-details';
 import { cartFailed } from './reelflies/cart-feedback'; // ReelFlies hook (ticket 41; CUSTOMIZATIONS.md): each call's error first
-import { RENDERED_EVENT } from './reelflies/cart-events'; // ReelFlies hook (ticket 41; CUSTOMIZATIONS.md): the cart page module regroups after a re-render
+import { RENDERED_EVENT } from './reelflies/cart-events'; // ReelFlies hook (ticket 41; CUSTOMIZATIONS.md): the cart page module sorts the rows after a re-render
 
 export default class Cart extends PageManager {
     onReady() {
@@ -162,8 +162,8 @@ export default class Cart extends PageManager {
             const refreshContent = () => this.refreshContent();
             async function onSubmit(event) {
                 event.preventDefault();
-                utils.api.cart.postFormData(new FormData(this), (postErr, postResponse) => {
-                    if (cartFailed(postErr, postResponse, { undo: () => modal.close() })) return; // ReelFlies hook (ticket 41; CUSTOMIZATIONS.md): the error first, then stock's handling
+                utils.api.cart.postFormData(new FormData(this), postErr => { // ReelFlies hook (ticket 41; CUSTOMIZATIONS.md): the callback takes the error, which stock ignored
+                    if (postErr && cartFailed(postErr, null, { undo: () => modal.close() })) return; // ReelFlies hook (ticket 41; CUSTOMIZATIONS.md): only the error, since the answer is the cart page's HTML
                     modal.close();
                     refreshContent();
                 });

@@ -149,10 +149,18 @@ describe('cartFailed (stock cart.js\'s guarded callbacks)', () => {
         expect(document.querySelector('[data-rf-cart-error]').nextElementSibling.matches('[data-rf-cart-lines]')).toBe(true);
     });
 
-    it('with no fallback given, shows the words the cart\'s lines carry (cart-lines.html\'s data-rf-cart-error)', () => {
-        document.querySelector('[data-rf-cart-lines]').setAttribute('data-rf-cart-error', FALLBACK);
-        cartFailed(new Error('Network Error'), undefined);
-        expect(document.querySelector('[data-rf-cart-error]').textContent).toBe(FALLBACK);
+    it('with no fallback given, shows the words the cart\'s lines carry, and leaves the lines and their rows in place', () => {
+        // The list as cart-lines.html renders it, carrying the words.
+        document.querySelector('[data-rf-cart-lines]').setAttribute('data-rf-cart-error-words', FALLBACK);
+        const anchor = document.querySelector('[data-cart-itemid="b1"]');
+        cartFailed(null, { data: { status: 'failed' } }, { anchor, status: 'succeed' });
+        cartFailed(new Error('Network Error'), undefined, { anchor });
+        expect(document.querySelector('[data-rf-cart-lines]')).not.toBeNull();
+        expect(document.querySelectorAll('[data-rf-cart-row]')).toHaveLength(2);
+        const errors = document.querySelectorAll('p[data-rf-cart-error]');
+        expect(errors).toHaveLength(1);
+        expect(errors[0].textContent).toBe(FALLBACK);
+        expect(anchor.closest('[data-rf-cart-row]').contains(errors[0])).toBe(true);
     });
 
     it('replaces an earlier error rather than stacking them, and passes a success through untouched', () => {

@@ -6,9 +6,9 @@
 //   (cart-events.js; its hook at the end of refreshContent).
 // - Puts focus back after a re-render, which replaces the lines and the summary:
 //   - on the same line's same control (a stepper, the quantity field, Remove) when one was used;
-//   - where it was, when it is still on the page;
 //   - else on the cart's heading: the line went, or a coupon, gift certificate or options change
-//     re-rendered the cart.
+//     re-rendered the cart. Stock's own focus call goes to the last line control it saw used,
+//     however long ago, so where it leaves focus doesn't count.
 //   A failed call re-renders nothing and announces FAILED_EVENT, so the control is forgotten.
 
 import { sortCartRows } from './cart-groups';
@@ -49,11 +49,8 @@ export default {
             used = null;
         });
         doc.addEventListener(RENDERED_EVENT, () => {
-            const active = doc.activeElement;
             sortCartRows(doc);
-            if (used) restoreFocus(used, doc);
-            else if (active && active !== doc.body && active.isConnected) active.focus();
-            else restoreFocus(null, doc);
+            restoreFocus(used, doc);
             used = null;
         });
     },

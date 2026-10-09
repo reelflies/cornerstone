@@ -5,8 +5,9 @@
 // failed (guarded-api.js decides), it:
 // - runs `undo`, which clears the loading overlay and puts the line's last good quantity back
 // - shows the store's words, or else `fallback`, or else the words the cart's lines carry
-//   (cart-lines.html's data-rf-cart-error), as an inline error on the line the control belongs to,
-//   after a coupon or gift certificate form, or else above the lines, replacing any earlier one
+//   (cart-lines.html's data-rf-cart-error-words), as an inline error on the line the control
+//   belongs to, after a coupon or gift certificate form, or else above the lines, replacing any
+//   earlier error (only the errors: data-rf-cart-error, never the list that carries the words)
 // - announces them once in the shared live region (ticket 25)
 // - sends FAILED_EVENT (cart-events.js), so cart-page.js stops waiting to refocus a control
 // and returns true, so the stock callback stops there. Focus stays on the control that was used.
@@ -41,7 +42,7 @@ export function showCartError(message, anchor = null, doc = document) {
 // The cart's own words for a failed call, which the lines carry so each call needn't pass them.
 export function cartErrorWords(doc = document) {
     const lines = doc.querySelector('[data-rf-cart-lines]');
-    return (lines && lines.getAttribute('data-rf-cart-error')) || '';
+    return (lines && lines.getAttribute('data-rf-cart-error-words')) || '';
 }
 
 export function cartFailed(err, response, {
