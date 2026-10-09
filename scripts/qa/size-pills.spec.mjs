@@ -126,8 +126,8 @@ test.describe('the size pills (ticket 37)', () => {
             }).toBe(true);
             marked += (await soldOut(sizes)).marked.length; // eslint-disable-line no-await-in-loop
         }
-        // The live stock decides whether any colour leaves a size sold out; the run says so when none
-        // did, so a pass that checked no mark is visible.
+        // The live stock decides whether any colour leaves a size sold out; the run says so when
+        // none did, so a pass that checked no mark is visible.
         if (!marked) testInfo.annotations.push({ type: 'no marks', description: 'none of the colours tried left a size sold out today, so only the empty line was checked' });
     });
 

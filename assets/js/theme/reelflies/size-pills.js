@@ -87,10 +87,11 @@ export function watchPills(field) {
     if (field.hasAttribute(WATCHED)) return () => {};
     field.setAttribute(WATCHED, '');
     const doc = field.ownerDocument;
-    const scope = field.closest('form') || field;
+    // The options' own changes are choices; the stepper's, in the same form, aren't.
+    const scope = field.closest('[data-product-option-change]') || field.closest('form') || field;
     // The shopper's choices still waiting for stock's answer: a change to the line that comes while
-    // any is pending answers one, and is said. Counted, so quick choices (arrowing through swatches)
-    // each get their answer said, the last one last.
+    // any is pending answers one, and is said. Counted, so quick choices (arrowing through
+    // swatches) each get their answer said, the last one last.
     let pending = 0;
     let observer = null;
     const update = () => {

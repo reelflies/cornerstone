@@ -40,6 +40,18 @@ export const chunkLoaded = (page, name) => page.waitForFunction(chunk => perform
 // which the pin's mask leaves alone), every live mark cleared, a size's and a colour's alike (stock
 // marks the colours a chosen size is out in), then `unavailable` on the sizes at `positions`
 // (negative from the end), and size-pills.js's line in step.
+// Stock's answer to a choice also sets the buy row from the live stock: the add button's and the
+// stepper's disabled state, and the variant's message (product-details-base.js). A state that
+// chooses resets them after the answer, so the look, not the day's stock, is shot.
+async function settleBuyRow(page) {
+    await page.evaluate(() => {
+        document.querySelectorAll('.productAttributes-message').forEach(box => box.style.setProperty('display', 'none'));
+        document.querySelectorAll('#form-action-addToCart, [data-quantity-change] button').forEach(control => control.removeAttribute('disabled'));
+        const wrapper = document.getElementById('add-to-cart-wrapper');
+        if (wrapper) wrapper.style.display = '';
+    });
+}
+
 async function setSizeMarks(page, positions) {
     await page.evaluate(marks => {
         const options = document.querySelector('[data-product-option-change]');
@@ -141,6 +153,7 @@ export const UI_STATES = {
             await pill.click();
             await answered;
             await setSizeMarks(page, []);
+            await settleBuyRow(page);
             await page.locator('[data-rf-pills="size"] .form-radio:checked + .rf-pill .rf-pill-check').waitFor({ state: 'visible' });
             await page.mouse.move(0, 0);
         },
@@ -179,6 +192,7 @@ export const UI_STATES = {
                 await answered; // eslint-disable-line no-await-in-loop
             }
             await setSizeMarks(page, []);
+            await settleBuyRow(page);
             await page.evaluate(() => window.scrollTo(0, document.querySelector('#form-action-addToCart').getBoundingClientRect().bottom + window.scrollY + 200));
             await page.locator('[data-rf-sticky-add]').waitFor({ state: 'visible' });
         },
