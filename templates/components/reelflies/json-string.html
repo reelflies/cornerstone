@@ -1,10 +1,11 @@
 {{!--
     A string as a JSON string literal, for JSON-LD (ticket 40's store-schema.html): JSONstringify's
-    quoting and escapes, with each "<" written as the escape <, so a value holding "</script>"
-    can't close the script element it sits in, and each "/" as the escape \/, which parses back to
-    "/". stencil start removes the channel's own URL from every page it serves (stencil-cli's
+    quoting and escapes, with each "<" written as the escape \u003c, so a value holding "</script>"
+    can't close the script element it sits in and one holding "<!--<script>" can't hold it open past
+    its own end tag (review round 2), and each "/" as the escape \/, which parses back to "/".
+    stencil start removes the channel's own URL from every page it serves (stencil-cli's
     pencil-response.js), which would turn "https://reelflies.ca/" into "/" on channel 1, and on
     1895766 from the Flip; written "https:\/\/reelflies.ca\/" it stays whole, so a local gate run
     reads what the live page says. rf_value must be a string: pass (trim ...) or (lang ...).
 --}}
-{{~{strReplace (strReplace (JSONstringify rf_value) '<' '<') '/' '\/'}~}}
+{{~{strReplace (strReplace (JSONstringify rf_value) '<' '\u003c') '/' '\/'}~}}

@@ -224,6 +224,23 @@ describe('optional values', () => {
         assert.equal(byType(html, 'WebSite')[0].name, name.trim());
         assert.doesNotMatch(html, /<\/script><script>alert/);
     });
+
+    // A value with no "/" in it: "<!--<script>" puts a browser's HTML parser into its escaped
+    // script states, where the block's own </script> no longer ends it, and the footer and the
+    // rest of the page become script text. No "<" may reach a block's text at all; JSON's escape
+    // for it is backslash-u003c, spelled in two pieces here so no editor decodes it (review round 2).
+    it('writes each "<" as JSON\'s escape, so "<!--<script>" without a slash can\'t open an escaped script state', async () => {
+        const name = 'A <!--<script> B';
+        const html = await render({ rf_store_name: name });
+        const texts = scriptsOfType(html, 'application/ld+json');
+        assert.equal(texts.length, 2);
+        texts.forEach(text => {
+            assert.equal(text.includes('<'), false, `a raw "<" in ${text.slice(0, 80)}`);
+            assert.ok(text.includes(`A ${'\\'}u003c!--${'\\'}u003cscript> B`), 'the name with each "<" escaped');
+        });
+        assert.equal(byType(html, 'WebSite')[0].name, name);
+        assert.equal(byType(html, 'OnlineStore')[0].name, name);
+    });
 });
 
 describe('the home.html hook', () => {
