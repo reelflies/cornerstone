@@ -160,6 +160,45 @@ export const UI_STATES = {
         },
     },
 
+    // The phone's sticky add bar (ticket 38), at rest and after an add from it, on Fat Albert
+    // (product@sizes): its first Colour and its first size chosen, each answered by stock, then the
+    // live sold-out marks cleared (setSizeMarks, as ticket 37's states). The add is answered here
+    // (page.route fulfils it, so nothing reaches the store, as the network guard requires on a
+    // live channel), and the bar keeps its added look for about 4 seconds.
+    'sticky-bar': {
+        description: 'the phone\'s sticky add bar at rest, with a Colour and a size chosen and the main button scrolled past',
+        ticket: '38',
+        projects: ['phone-375'],
+        pages: ['product@sizes'],
+        async open(page) {
+            await chunkLoaded(page, 'rf-add-flow');
+            await chunkLoaded(page, 'rf-size-pills');
+            for (const choice of ['[data-product-attribute="swatch"] .form-option', '[data-rf-pills="size"] .rf-pill[data-product-attribute-value]']) {
+                const answered = page.waitForResponse(response => /\/remote\/v1\/product-attributes\//.test(response.url()));
+                await page.locator(choice).first().click(); // eslint-disable-line no-await-in-loop
+                await answered; // eslint-disable-line no-await-in-loop
+            }
+            await setSizeMarks(page, []);
+            await page.evaluate(() => window.scrollTo(0, document.querySelector('#form-action-addToCart').getBoundingClientRect().bottom + window.scrollY + 200));
+            await page.locator('[data-rf-sticky-add]').waitFor({ state: 'visible' });
+        },
+    },
+    'sticky-bar-added': {
+        description: 'the phone\'s sticky add bar just after an add from it: "Added 1 × size N, Colour" and View cart',
+        ticket: '38',
+        projects: ['phone-375'],
+        pages: ['product@sizes'],
+        async open(page) {
+            await page.route('**/remote/v1/cart/add**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: { cart_id: 'qa-cart', cart_item: { id: 'qa-item' } } }) }));
+            await page.route('**/api/storefront/carts**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ lineItems: { physicalItems: [{ productId: 1, quantity: 1, brand: 'ReelFlies' }] } }]) }));
+            await UI_STATES['sticky-bar'].open(page);
+            // The bar keeps its added look for about 4 s; held for the shot.
+            await page.locator('[data-rf-sticky-add]').evaluate(bar => bar.setAttribute('data-rf-bar-ms', '600000'));
+            await page.locator('[data-rf-sticky-button]').click();
+            await page.locator('[data-rf-sticky-view]').waitFor({ state: 'visible' });
+        },
+    },
+
     // sheet-open: the quick-add sheet on a phone and its popover on desktop, on the cards of a
     // stable listing pin (ticket 43, which adds "quick-add" to <html data-rf-open>).
 };

@@ -21,7 +21,7 @@
 const product = [
     () => import(/* webpackChunkName: "rf-size-pills" */ './size-pills'), // 37 size pills
 
-    // 38 add flow
+    () => import(/* webpackChunkName: "rf-add-flow" */ './add-flow'), // 38 add flow
 
     // 42 cart state: the product page half
 ];

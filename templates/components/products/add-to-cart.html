@@ -1,3 +1,5 @@
+{{!-- ReelFlies hook (ticket 38; CUSTOMIZATIONS.md): the buy row is components/reelflies/add-to-cart.html (the button's label, the stepper's icons, the status line); the stock markup below is kept, unrendered --}}
+{{> components/reelflies/add-to-cart}}{{#if false}}
 <div id="add-to-cart-wrapper" class="add-to-cart-wrapper" {{#unless product.can_purchase}}style="display: none"{{/unless}}>
     {{#if product.show_quantity_input}}
         {{inject 'productQuantityErrorMessage'  (lang 'products.quantity_error_message')}}
@@ -71,3 +73,4 @@
         </div>
     {{/or}}
 </div>
+{{/if}}

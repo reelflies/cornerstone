@@ -1,0 +1,15 @@
+{{!--
+    The sticky add bar (ticket 38; spec module 15; GEO-3; stories 43 and 67), from stock
+    pages/product.html's hook, after the product view: below 801px, once the main button has
+    scrolled out of view, add-flow.js shows it at the bottom of the screen with the choice ("Size
+    14, 3 flies" or "No size chosen") and the same button as the main one. After an add from it,
+    it says "Added 3 × size 14" with View cart for about 4 seconds, with focus kept in it. Hidden
+    until then, and on a product the shopper can't buy.
+--}}
+{{#if product.can_purchase}}{{#or customer (unless settings.hide_price_from_guests)}}
+<div class="rf-sticky-add" data-rf-sticky-add hidden>
+    <p class="rf-sticky-add-text" data-rf-sticky-text></p>
+    <button type="button" class="button button--primary rf-sticky-add-button" data-rf-sticky-button></button>
+    <a class="button rf-sticky-add-view" href="{{urls.cart}}" data-rf-sticky-view hidden>{{lang 'reelflies.add_flow.view_cart'}}</a>
+</div>
+{{/or}}{{/if}}
