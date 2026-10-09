@@ -1,0 +1,10 @@
+{{!--
+    The hook size chart page's gauge and its caption (ticket 35;
+    pages/custom/page/hook-size-chart.html): the gauge partial's chart layout, 6/0 to 24, each
+    size linking to its row on the page, as a labelled group with each link named "Size 14", and
+    a caption saying it is drawn to relative scale, not actual size.
+--}}
+<div class="rf-chart-gauge">
+    {{> components/reelflies/hook-gauge gauge_label=(lang 'reelflies.chart.gauge_label') gauge_size_label=(lang 'reelflies.chart.size')}}
+    <p class="rf-chart-gauge-caption">{{lang 'reelflies.chart.gauge_caption'}}</p>
+</div>

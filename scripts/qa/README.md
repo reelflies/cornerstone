@@ -733,6 +733,31 @@ npx playwright test --config scripts/qa/playwright.config.mjs category-screens
 QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs category.spec
 ```
 
+## The hook size chart page (`hook-chart-screens.spec.mjs`)
+
+Ticket 35's page (`pages/custom/page/hook-size-chart.html`, the custom template of the Web Page at `/fly-hook-size-chart/`). Its template is rendered by `render/partials/hook-chart-page.test.mjs`:
+
+- one `<main>` and one `<h1>`
+- the page's content split at the rows' start marker, the gauge between the copy and the rows (with no rows yet, the copy alone)
+- every gauge size linking to its row
+- the rows' facet links as `scripts/hook-chart/rows.mjs` writes them (`_bc_fsnf=1`, `rel="nofollow"`)
+
+The rows' fixture, `render/partials/hook-chart/rows.html`, is a run of the row script on its own fixtures. The same test holds it to the script's output, the fixture page's content to it, and the template's marker to the script's.
+
+- **`hook-chart-screens.spec.mjs`** (in `qa:screens`), at 375 and 1280, on the fixture page `render/pages/hook-chart-page/`: the real chart page round a draft of its copy and those rows, because the Web Page doesn't exist on ReelFlies_CA yet. Its baselines are widget baselines (`widgets/<variation>/hook-chart-page-chart-…`), declared as `widget hook-chart-page`. It checks:
+  - the baseline
+  - one `<main>` and the H1
+  - the gauge between the copy and the rows
+  - every hook drawn to one scale (the same px per mm) at 320, 375 and 1280, with no sideways scroll
+  - a gauge size landing on its tinted row, clear of the sticky header
+  - no sideways scroll at 320
+  - axe
+
+```sh
+QA_VARIATION="ReelFlies CA" npx playwright test --config scripts/qa/playwright.config.mjs hook-chart-screens
+node --test scripts/qa/render/partials/hook-chart-page.test.mjs
+```
+
 ## Fixture renders (`render/`)
 
 The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixture JSON instead of store data. So a template can be tested before the store has its data: ReelFlies_CA has no tree-4 categories until refactor 13, but the Species pages, the hub, the chips, the description split and the hook chart rows can be tested now. And a widget is checked from its source, not from what the store shows. Tickets 32, 34, 35, 36 and 46–49 use it.
@@ -745,7 +770,7 @@ The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixtu
 | `render/home-page.mjs` | the whole home page with every widget a channel places on `pages/home`, each from a fixture, in its region and placement order: `homeCases`, `renderHomePage` and `openHomePage` (ticket 47; `home-widgets-screens.spec.mjs`, below) |
 | `render/photo-contrast.mjs` | `worstContrastOverPhoto(page, selector)`: a line of text against the lightest pixel behind it, for text on a scrim over a photo, which axe can't judge (the hero's and the cards', tickets 46 and 47) |
 | `widget-screens.spec.mjs` | the widget element shots |
-| `render/pages/<name>/` | fixture pages: a real page template rendered round an empty widget from fixed data, each shot by its own `*-screens.spec.mjs` (ticket 31's `card-grid`, by `card-screens.spec.mjs`; ticket 32's `category-page`, by `category-screens.spec.mjs`; "Fixture pages" below) |
+| `render/pages/<name>/` | fixture pages: a real page template rendered round an empty widget from fixed data, each shot by its own `*-screens.spec.mjs` (ticket 31's `card-grid`, by `card-screens.spec.mjs`; ticket 32's `category-page`, by `category-screens.spec.mjs`; ticket 35's `hook-chart-page`, by `hook-chart-screens.spec.mjs`; "Fixture pages" below) |
 | `render/example/` | the worked example below |
 
 ### Partials
@@ -835,7 +860,7 @@ Page baselines hide widget regions ("What the screenshots hide" above), because 
 
 A theme change that restyles buttons or headings changes the self-test's baselines too: update them in the same commit and name `widget rf-selftest` on the `Baselines:` line.
 
-**Fixture pages** (`render/pages/<name>/`, from ticket 31) are widget folders whose fixture renders a real page template round an empty widget (`"page"`, with the page's context in `"page_context"`), so a spec can shoot what that page shows from fixed data, where the live page is masked or the store has no such page yet. `widget-page.mjs` exports the folder as `PAGE_FIXTURES`, and nothing syncs it. `widget-screens.spec.mjs` doesn't shoot them: each has its own `*-screens.spec.mjs` (`card-grid`'s is `card-screens.spec.mjs`, `category-page`'s `category-screens.spec.mjs`), which shoots its cases, and its baselines take the widget shots' names and rules, declared as `widget <name>`. The baseline-scope check reads each folder's name as an owner, and `widget-baselines.test.mjs` and `check-baseline-scope.test.mjs` count every case, so a fixture page's cases are all shot cases.
+**Fixture pages** (`render/pages/<name>/`, from ticket 31) are widget folders whose fixture renders a real page template round an empty widget (`"page"`, with the page's context in `"page_context"`), so a spec can shoot what that page shows from fixed data, where the live page is masked or the store has no such page yet. `widget-page.mjs` exports the folder as `PAGE_FIXTURES`, and nothing syncs it. `widget-screens.spec.mjs` doesn't shoot them: each has its own `*-screens.spec.mjs` (`card-grid`'s is `card-screens.spec.mjs`, `category-page`'s `category-screens.spec.mjs`, `hook-chart-page`'s `hook-chart-screens.spec.mjs`), which shoots its cases, and its baselines take the widget shots' names and rules, declared as `widget <name>`. The baseline-scope check reads each folder's name as an owner, and `widget-baselines.test.mjs` and `check-baseline-scope.test.mjs` count every case, so a fixture page's cases are all shot cases.
 
 ### Widget layout specs
 
@@ -1098,6 +1123,7 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - `home-widgets-screens.spec.mjs` runs with `qa:screens` too, for the same reason.
 - `card-screens.spec.mjs` (ticket 31) runs with `qa:screens` too, for the same reason; `card.spec.mjs` runs only when named, like the specs below.
 - `category-screens.spec.mjs` (ticket 32) runs with `qa:screens` too; `category.spec.mjs` runs only when named.
+- `hook-chart-screens.spec.mjs` (ticket 35) runs with `qa:screens` too.
 - `header.spec.mjs` (ticket 27), `menu.spec.mjs` (ticket 28), `rail.spec.mjs` (ticket 29) and `quick-search.spec.mjs` (ticket 30) run only when named, like `skin.spec.mjs`: no npm script's filter matches them. The first three wait for their scripts with `chunkLoaded` from `states.mjs`; `quick-search.spec.mjs` waits until quick-search.js has added each search form's dropdown.
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
 - `storefront.test.mjs` also covers `QA_PORT`, the start log's name, the locks a gate holds (and the ports checked again after a slot wait), trusting only the server a gate started, and stopping that server when the gate is stopped by a signal. `playwright-config.test.mjs` covers that the config reads `QA_PORT` and holds the locks only in the runner, `prepush.test.mjs` what `qa:prepush` checks before its first gate, `serve.test.mjs` the locks around a `stencil start` by hand, and `scripts/lib/lock.test.mjs` the locks themselves: the stale rules, waiting, the three slots across processes, the signals, `RF_LOCK_ROOT`, and the command line `release.sh` uses.
