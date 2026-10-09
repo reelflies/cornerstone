@@ -21,17 +21,15 @@
 
 /* eslint-env browser */ // the page.evaluate callbacks run in the page
 
-import path from 'path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { QA_OVERLAY, QA_VARIATION, slug } from './storefront.mjs';
-import { THEME_DIR, widgetCases } from './render/render.mjs';
+import { widgetCases } from './render/render.mjs';
 import { themeScript } from './render/theme-script.mjs';
-import { openWidget } from './render/widget-page.mjs';
+import { PAGE_FIXTURES, openWidget } from './render/widget-page.mjs';
 
 test.skip(Boolean(QA_OVERLAY), `the cart renders from its fixture, not under an overlay (QA_OVERLAY=${QA_OVERLAY})`);
 
-const PAGE_FIXTURES = path.join(THEME_DIR, 'scripts/qa/render/pages');
 const CART = widgetCases([PAGE_FIXTURES]).find(({ widget, name }) => widget === 'cart-page' && name === 'twelve');
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
 const GROUP = "modules['reelflies/cart-groups'].applyCartGroups(document);";
