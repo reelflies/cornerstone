@@ -3,8 +3,8 @@
 // the live listings have, rendered round the six products of render/partials/card/products.json
 // (search results for "streamer" on channel 1), with their own photos
 // (render/pages/card-grid/fixtures/files/). The live grids on the pinned category and search
-// pages are masked, because the catalogue decides what they list (pages.mjs), so the card's look
-// is checked here.
+// pages are held out of their shots, because the catalogue decides what they list (pages.mjs's
+// `hold`), so the card's look and the grid's layout are checked here.
 //
 // The shot shows: the photos on white in their 3:2 boxes, with nothing over their bottom-left
 // logo corner (IMG-1), the sold-out badge, the names in two lines at most, "/ fly" on the flies
