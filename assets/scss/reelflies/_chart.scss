@@ -1,0 +1,182 @@
+// =============================================================================
+// HOOK SIZE CHART PAGE (ticket 35; spec module 22; R9, CD-12; stories 15, 16 and 71)
+// =============================================================================
+//
+// The chart page (pages/custom/page/hook-size-chart.html) and the gauge it shares with ticket
+// 49's home band (components/reelflies/hook-gauge.html), from the reference's .chart, .gauge and
+// .chart-gauge rules (plan/design/src/reference.src.html:269-276, :643, :677-689, :812-813).
+//
+// - The gauge: each hook drawn to one scale, its width the hook's length (--rf-hook-len, mm)
+//   times the scale (--rf-gauge-k, px per mm, set on the gauge by the partial for each layout),
+//   sitting on one line with its size under it. Phones take the partial's --rf-gauge-k-phone,
+//   and a row that doesn't fit wraps, so nothing scrolls sideways at 320.
+// - The rows: a table the row script writes into the page's content. A row the URL names
+//   (#size-14, from the gauge or a "Hook size guide" link) is tinted, and lands clear of the
+//   sticky phone bar. On phones a row's links wrap, so the table fits its column.
+//
+// -----------------------------------------------------------------------------
+
+.rf-chart {
+    padding-block: 20px var(--rf-section);
+
+    .rf-chart-title {
+        font-size: var(--rf-fs-h1);
+        letter-spacing: -0.02em;
+        line-height: 1.08;
+        margin: 12px 0 0;
+        text-align: left;
+    }
+}
+
+.rf-chart-copy {
+    max-width: 44em;
+
+    p {
+        margin: 10px 0 0;
+    }
+}
+
+// The copy after the rows (the Mustad size-32 post's link, SEO-15).
+.rf-chart-body > p {
+    margin: 16px 0 0;
+    max-width: 44em;
+}
+
+.rf-chart-gauge {
+    background: var(--rf-tile);
+    border-radius: var(--rf-radius-tile);
+    margin: 24px 0 8px;
+    padding: 24px clamp(16px, 3vw, 32px);
+}
+
+.rf-chart-gauge-caption {
+    color: var(--rf-dun);
+    font-size: 14px;
+    margin: 14px 0 0;
+}
+
+
+// The gauge
+// -----------------------------------------------------------------------------
+
+.rf-hook-gauge {
+    display: grid;
+    gap: 16px;
+
+    @include breakpoint("medium") {
+        gap: 14px;
+    }
+}
+
+.rf-hook-gauge__row {
+    --rf-gauge-scale: var(--rf-gauge-k-phone, var(--rf-gauge-k));
+    align-items: flex-end;
+    display: flex;
+    flex-wrap: wrap;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    row-gap: 16px;
+
+    @include breakpoint("medium") {
+        --rf-gauge-scale: var(--rf-gauge-k);
+        flex-wrap: nowrap;
+    }
+}
+
+.rf-hook-gauge__item {
+    flex: 1 1 0;
+    min-width: 44px;
+
+    @include breakpoint("medium") {
+        flex: 1 1 auto;
+    }
+}
+
+.rf-hook-gauge__link {
+    border-radius: var(--rf-radius-small);
+    color: var(--rf-ink);
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+
+    &:hover {
+        color: var(--rf-ink);
+
+        .rf-hook-gauge__size {
+            text-decoration: underline;
+            text-underline-offset: 4px;
+        }
+    }
+}
+
+.rf-hook-gauge__hook {
+    align-self: center;
+    height: auto;
+    margin: 10px 0 3px;
+    max-width: 100%;
+    width: calc(var(--rf-hook-len) * var(--rf-gauge-scale));
+}
+
+// The size under each hook; its top border is the line the hooks sit on.
+.rf-hook-gauge__size {
+    border-top: 1.5px solid var(--rf-ink);
+    font-size: 15px;
+    font-weight: 600;
+    padding: 6px 0 2px;
+    text-align: center;
+
+    @include breakpoint("medium") {
+        font-size: 18px;
+        padding-top: 10px;
+    }
+}
+
+
+// The rows
+// -----------------------------------------------------------------------------
+
+.rf-chart-rows {
+    border-collapse: collapse;
+    font-size: 15px;
+    margin-top: 16px;
+    width: 100%;
+
+    th,
+    td {
+        border-bottom: 1px solid var(--rf-tile-2);
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    thead th {
+        color: var(--rf-dun);
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    tbody th {
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    tr {
+        scroll-margin-top: calc(var(--rf-header-h) + 12px);
+    }
+
+    tr:target {
+        background: var(--rf-bead-soft);
+    }
+
+    // At least 24px tall (WCAG 2.5.8): on phones a row's links wrap and stack.
+    td a {
+        align-items: center;
+        display: inline-flex;
+        min-height: 24px;
+
+        @include breakpoint("medium") {
+            white-space: nowrap;
+        }
+    }
+}
