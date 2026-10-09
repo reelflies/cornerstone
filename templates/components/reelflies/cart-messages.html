@@ -1,0 +1,10 @@
+{{!--
+    The cart's status messages (ticket 41; BUILD-1, O17; story 52), from stock
+    cart/status-messages.html's hook, re-rendered by cart.js after every change: the free-shipping
+    promotion's own UPSELL, ELIGIBLE or APPLIED message (ticket 21), and any other message the
+    store sends, each as a plain line in the store's own words and markup, not an alert box. The
+    theme never computes a threshold or a remainder.
+--}}
+{{#each cart.status_messages}}
+<p class="rf-cart-message" data-promotion-banner>{{{message}}}</p>
+{{/each}}

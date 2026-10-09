@@ -6,6 +6,8 @@ import utils from '@bigcommerce/stencil-utils';
 import ShippingEstimator from './cart/shipping-estimator';
 import { defaultModal, showAlertModal, ModalEvents } from './global/modal';
 import CartItemDetails from './common/cart-item-details';
+import { cartFailed } from './reelflies/cart-feedback'; // ReelFlies hook (ticket 41): each call's error first
+import { RENDERED_EVENT } from './reelflies/cart-page'; // ReelFlies hook (ticket 41)
 
 export default class Cart extends PageManager {
     onReady() {
@@ -54,6 +56,7 @@ export default class Cart extends PageManager {
 
         utils.api.cart.itemUpdate(itemId, newQty, (err, response) => {
             this.$overlay.hide();
+            if (cartFailed(err, response, { undo: () => $el.val(oldQty), anchor: $target[0], fallback: this.context.rfCartError })) return; // ReelFlies hook (ticket 41)
 
             if (response.data.status === 'succeed') {
                 // if the quantity is changed "1" from "0", we have to remove the row.
@@ -94,6 +97,7 @@ export default class Cart extends PageManager {
         this.$overlay.show();
         utils.api.cart.itemUpdate(itemId, newQty, (err, response) => {
             this.$overlay.hide();
+            if (cartFailed(err, response, { undo: () => $el.val(oldQty), anchor: $el[0], fallback: this.context.rfCartError })) return; // ReelFlies hook (ticket 41)
 
             if (response.data.status === 'succeed') {
                 // if the quantity is changed "1" from "0", we have to remove the row.
@@ -111,6 +115,7 @@ export default class Cart extends PageManager {
     cartRemoveItem(itemId) {
         this.$overlay.show();
         utils.api.cart.itemRemove(itemId, (err, response) => {
+            if (cartFailed(err, response, { undo: () => this.$overlay.hide(), anchor: document.querySelector(`.cart-remove[data-cart-itemid="${itemId}"]`), fallback: this.context.rfCartError })) return; // ReelFlies hook (ticket 41)
             if (response.data.status === 'succeed') {
                 this.refreshContent(true);
             } else {
@@ -136,6 +141,7 @@ export default class Cart extends PageManager {
         this.$modal.find('.modal-content').addClass('hide-content');
 
         utils.api.productAttributes.configureInCart(itemId, options, (err, response) => {
+            if (cartFailed(err, response, { undo: () => modal.close(), fallback: this.context.rfCartError })) return; // ReelFlies hook (ticket 41)
             modal.updateContent(response.content);
             const optionChangeHandler = () => {
                 const $productOptionsContainer = $('[data-product-attributes-wrapper]', this.$modal);
@@ -223,6 +229,7 @@ export default class Cart extends PageManager {
         }
 
         utils.api.cart.getContent(options, (err, response) => {
+            if (cartFailed(err, response, { undo: () => this.$overlay.hide(), fallback: this.context.rfCartError })) return; // ReelFlies hook (ticket 41)
             this.$cartContent.html(response.content);
             this.$cartCoupons.html(response.coupons);
             this.$cartTotals.html(response.totals);
@@ -245,6 +252,7 @@ export default class Cart extends PageManager {
             $(`[data-cart-itemid='${this.$activeCartItemId}']`, this.$cartContent)
                 .filter(`[data-action='${this.$activeCartItemBtnAction}']`)
                 .trigger('focus');
+            document.dispatchEvent(new CustomEvent(RENDERED_EVENT)); // ReelFlies hook (ticket 41): regroup the new lines, keep focus
         });
     }
 
@@ -348,6 +356,7 @@ export default class Cart extends PageManager {
             }
 
             utils.api.cart.applyCode(code, (err, response) => {
+                if (cartFailed(err, response, { anchor: $codeInput[0], fallback: this.context.rfCartError })) return; // ReelFlies hook (ticket 41)
                 if (response.data.status === 'success') {
                     this.refreshContent();
                 } else {
@@ -389,6 +398,7 @@ export default class Cart extends PageManager {
             }
 
             utils.api.cart.applyGiftCertificate(code, (err, resp) => {
+                if (cartFailed(err, resp, { anchor: $certInput[0], fallback: this.context.rfCartError })) return; // ReelFlies hook (ticket 41)
                 if (resp.data.status === 'success') {
                     this.refreshContent();
                 } else {
@@ -413,6 +423,7 @@ export default class Cart extends PageManager {
             modal.open();
 
             utils.api.cart.getItemGiftWrappingOptions(itemId, options, (err, response) => {
+                if (cartFailed(err, response, { undo: () => modal.close(), fallback: this.context.rfCartError })) return; // ReelFlies hook (ticket 41)
                 modal.updateContent(response.content);
 
                 this.bindGiftWrappingForm();

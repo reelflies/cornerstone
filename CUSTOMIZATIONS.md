@@ -55,6 +55,7 @@ The settings groups and their documented defaults (section 6.3). A pre-declared 
 | 31 | `rf_price_unit_exclude` (empty): the channel's Gear and Assortment category roots, comma-separated, for the card's "/ fly" rule (`components/reelflies/price-unit.html`); empty, the unit never shows. "ReelFlies CA channel 1" sets tree 1's (`Fly Gear,Fly Selections & Fly Boxes`); ReelFlies CA gets tree 4's in wave R1, set live in Theme Styles first (below) |
 | 39 | `rf_ship_free_threshold` ("60" in base for Canada, decision 2; `""` in ReelFlies US, because .com stays on its flat rate with no threshold, 39's owner decision), `rf_ship_standard_rate` and `rf_ship_expedited_from` (empty until Shaun gives the rates, decision 12) |
 | 40 | `rf_store_same_as` (empty); 40 adds its other `rf_store_*` keys after it |
+| 41 | `rf_fly_brands` ("ReelFlies"): the channel's fly brands, comma-separated. The cart's heading (`components/reelflies/cart-title.html`) and `cart-count.js` count in flies and patterns only when every line's brand is one of them (Shaun's brand rule, review-02), else in items and products. Added by ticket 41, with its Theme Styles field under Cart state |
 | 42 | `rf_cart_state` (true) |
 | 43 | `rf_quick_add` (true) |
 | 52 | `rf_region_prompt` (false) |
@@ -141,6 +142,13 @@ The only approved way is the custom category template `templates/pages/custom/ca
 | `templates/components/category/sidebar.html` | Lines 2-13, the stock subcategory list (`.sidebarBlock` with its `navList`), become one Handlebars comment | The chips above the listing replace it (UX-5): on phones it pushed the first card about 1,100px down (ticket 26's spike). The facets and shop by price stay. Faceted search re-renders this file, so the list stays gone after a filter | 32 |
 | `config.json` | `settings` values only: `categorypage_products_per_page` and `brandpage_products_per_page` 24 (stock 12) | 24 products a page on category and brand pages, with the stock numbered pager (UX-7). The front matter of both category templates reads the setting | 32 |
 | `schema.json` | One option, 24, added at the end of `categorypage_products_per_page`'s and `brandpage_products_per_page`'s lists (stock 6 to 20) | So Theme Styles can show and keep the value 24 | 32 |
+| `templates/components/cart/content.html` | A Handlebars comment and an include of `components/reelflies/cart-lines` before the stock table, which is wrapped in `{{#if false}}` and kept, unrendered | The cart's lines (spec module 18; story 50): one line per item with its pattern heading and size row, keeping the stock attributes `cart.js` drives; `cart-groups.js` groups them by pattern in hook order. Port an upstream change to the stock table into the partial | 41 |
+| `templates/components/cart/page-title.html` | The stock heading replaced by an include of `components/reelflies/cart-title` | "Your cart" and its count by the brand rule (`rf_fly_brands`; story 51), in one `data-cart-page-title` element, which `cart.js` replaces after each change | 41 |
+| `templates/components/cart/status-messages.html` | The stock alert boxes replaced by an include of `components/reelflies/cart-messages` | The store's status messages, the free-shipping promotion's among them, as plain lines (BUILD-1; story 52) | 41 |
+| `templates/components/cart/totals.html` | The classic coupon row skipped (`{{else if false}}`), and an include of `components/reelflies/cart-summary` after the list | Check out, "Have a coupon code?" with stock's own toggle and form, the promise line and the phone bar, re-rendered with the totals after each change (UX-11, UX-22; stories 45, 54, 55) | 41 |
+| `templates/pages/cart.html` | Stock's Check out and sign-in blocks skipped (`{{#if false}}`, `{{else if false}}`); the extra checkout buttons stay | Check out is in the summary (`cart-summary.html`), so it renders once | 41 |
+| `assets/js/theme/cart.js` | Two imports; one line at the start of each storefront API callback (`cartFailed`, eight calls); one event at the end of `refreshContent` (`rf:cart-rendered`) | Each call's error and refusal first, shown inline and in the live region with the line's last good quantity kept, never a TypeError or a stuck overlay (story 68); the event lets `cart-page.js` regroup the lines and put focus back | 41 |
+| `config.json` | `settings`: `rf_fly_brands` "ReelFlies" (a new key, ticket 41's group) | The cart's brand rule | 41 |
 
 New ReelFlies files in upstream folders: `templates/pages/custom/category/rf-noindex.html` (ticket 32: the noindex category template, below), `.github/workflows/reelflies-checks.yml`, `.github/workflows/reelflies-baseline-scope.yml` (W0-13), `.gitleaksignore`, `.gitleaks.toml` (gitleaks' default rules, with one `generic-api-key` allowlist for whole uuids in widget channel files; ticket 27's follow-up, #65), `.gitattributes` at the repo root (W0-11: `RELEASES.md` merges as a union, so parallel log branches keep both sides' rows; upstream has no `.gitattributes`), and `RELEASES.md` at the repo root (the release log, written by `scripts/release.sh`, the Switch toggles log, the host batch's Host runs, and the My Themes log of each theme the prune deletes; tickets 05, 15 and 16, W0-3). `stencil bundle` zips only `README.md` and `CHANGELOG.md` from the root's Markdown files, so `RELEASES.md` never ships.
 
@@ -152,14 +160,13 @@ From the review's upgrade-safe layering plan and the design session ([ADR 0001](
 
 - `templates/components/products/options/set-rectangle.html` (37)
 - `templates/components/products/product-view.html` and `templates/components/common/responsive-img.html`
-- `assets/js/theme/common/product-details.js` and `assets/js/theme/cart.js`
+- `assets/js/theme/common/product-details.js` (38)
 - `templates/pages/errors/404.html`
 
 Added by the design session (spec, "Hook count"), with the ticket that adds each:
 
 - `faceted-search/facets/multi.html` (33)
 - `templates/components/products/description-tabs.html` and `tabs.html` (39)
-- `templates/pages/cart.html`, `templates/components/cart/totals.html` and `cart/status-messages.html` (41)
 - `templates/components/products/schema.html` (40)
 
 Not needed after all, so not counted toward the ADR's 25–30:

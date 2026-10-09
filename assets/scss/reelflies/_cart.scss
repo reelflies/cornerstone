@@ -1,0 +1,461 @@
+// =============================================================================
+// CART (ticket 41; spec module 18; O17, UX-11, UX-12, UX-13, UX-22; stories 50 to 56, 67, 71)
+// =============================================================================
+//
+// The cart page, from the reference's cart screen (plan/design/src/reference.src.html:438-469,
+// :842-847, :892-893), first tried on ticket 26's spike: the lines on the left grouped by pattern,
+// the summary on the right in a tile panel, and on phones a bar fixed to the bottom with the
+// total and Check out.
+//
+// - cart.html's .page-content holds the breadcrumbs, the heading, the messages, the lines, the
+//   coupons, the totals, a region and the extra checkout buttons as siblings, so a CSS grid
+//   places them without moving markup.
+// - The lines (cart-lines.html) are one list of lines, each with its pattern heading and its size
+//   row. cart-groups.js orders them into groups and marks each group's first and last line: only
+//   a first line shows its heading, and a last line closes the group. Until it has (no
+//   data-rf-grouped, with script running), the list is hidden, so grouping never moves the page.
+// - A size row is one line from 360px: the size, the stepper, the line total and Remove. Below
+//   that it takes two (the size and Remove, then the stepper and the total), so nothing scrolls
+//   sideways at 320px.
+// - The summary (stock totals, then cart-summary.html): Check out, "Have a coupon code?", the
+//   promise line. Below 801px the phone bar (data-rf-cart-bar) is fixed to the bottom, and the
+//   page pads its scroll by the bar's height, so a focused element never sits behind it.
+//
+// -----------------------------------------------------------------------------
+
+$rf-cart-bar-h: 72px; // the phone bar's height, which the page's scroll padding matches
+
+.page-content[data-cart] {
+    column-gap: 44px;
+    display: grid;
+    grid-auto-flow: row dense;
+    grid-template-columns: minmax(0, 1fr);
+    text-align: left;
+
+    > * {
+        grid-column: 1 / -1;
+    }
+
+    > .cart-content-padding-right {
+        padding-right: 0;
+    }
+
+    @include breakpoint("medium") {
+        grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+
+        > [data-cart-content] {
+            grid-column: 1;
+            grid-row: span 20;
+        }
+
+        > [data-cart-coupons],
+        > [data-cart-totals],
+        > [data-content-region],
+        > .cart-additionalCheckoutButtons {
+            grid-column: 2;
+        }
+    }
+}
+
+// The heading and its count
+.rf-cart-heading {
+    align-items: baseline;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin: 8px 0 18px;
+
+    .page-heading {
+        font-size: var(--rf-fs-h1);
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+        margin: 0;
+        text-align: left;
+    }
+}
+
+.rf-cart-count {
+    color: var(--rf-dun);
+    font-variant-numeric: tabular-nums;
+    margin: 0;
+}
+
+// The promotion's messages: plain lines
+.rf-cart-message {
+    color: var(--rf-ink);
+    margin: 0 0 12px;
+}
+
+// The lines
+.rf-cart-lines {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    .js &:not([data-rf-grouped]) {
+        visibility: hidden;
+    }
+}
+
+.rf-cart-line {
+    column-gap: 14px;
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    padding: 4px 0;
+
+    &[data-rf-group-first] {
+        padding-top: 18px;
+    }
+
+    &[data-rf-group-last] {
+        border-bottom: 1px solid var(--rf-tile-2);
+        padding-bottom: 18px;
+    }
+
+    // In a group, only the first line shows the pattern's heading
+    .rf-cart-lines[data-rf-grouped] &:not([data-rf-group-first]) .rf-cart-head {
+        display: none;
+    }
+}
+
+.rf-cart-head {
+    display: contents;
+}
+
+.rf-cart-photo {
+    align-self: start;
+    background: var(--rf-paper);
+    border-radius: 12px;
+    display: block;
+    grid-column: 1;
+    overflow: hidden;
+
+    img {
+        aspect-ratio: 3 / 2;
+        display: block;
+        height: auto;
+        object-fit: contain;
+        width: 100%;
+    }
+}
+
+.rf-cart-title {
+    grid-column: 2;
+    min-width: 0;
+}
+
+.rf-cart-name {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 0;
+    text-transform: none;
+
+    a {
+        color: var(--rf-ink);
+        text-decoration: none;
+
+        &:hover {
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+    }
+}
+
+.rf-cart-unit {
+    color: var(--rf-dun);
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    margin: 2px 0 0;
+}
+
+// A size row: one line from 401px, two below
+.rf-cart-row {
+    align-items: center;
+    column-gap: 10px;
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-areas:
+        "size size remove"
+        "stepper total total";
+    grid-template-columns: minmax(0, 1fr) auto 44px;
+    margin-top: 8px;
+    row-gap: 6px;
+
+    @media (min-width: 360px) {
+        grid-template-areas: "size stepper total remove";
+        grid-template-columns: minmax(76px, auto) auto minmax(60px, 1fr) 44px;
+    }
+}
+
+.rf-cart-size {
+    color: var(--rf-ink);
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    grid-area: size;
+    margin: 0;
+}
+
+.rf-cart-option {
+    color: var(--rf-dun);
+    font-weight: 400;
+    margin-left: 8px;
+}
+
+// Each size's own unit price shows only when the pattern's sizes are priced differently
+.rf-cart-row-unit {
+    color: var(--rf-dun);
+    display: none;
+    font-weight: 400;
+    margin-left: 8px;
+
+    [data-rf-prices-vary] & {
+        display: inline;
+    }
+}
+
+[data-rf-prices-vary] .rf-cart-unit {
+    display: none;
+}
+
+.rf-cart-stepper {
+    align-items: center;
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-pill);
+    display: inline-flex;
+    grid-area: stepper;
+    justify-self: start;
+}
+
+.rf-cart-step {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: var(--rf-radius-pill);
+    color: var(--rf-ink);
+    cursor: pointer;
+    display: inline-flex;
+    height: var(--rf-target-buy);
+    justify-content: center;
+    width: var(--rf-target-buy);
+
+    &:hover {
+        background: var(--rf-tile);
+    }
+
+    .rf-icon {
+        height: 18px;
+        width: 18px;
+    }
+}
+
+.rf-cart-qty.form-input {
+    background: transparent;
+    border: 0;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    height: var(--rf-target-buy);
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    width: 40px;
+}
+
+.rf-cart-total {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    grid-area: total;
+    margin: 0;
+    text-align: right;
+}
+
+.rf-cart-remove {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    color: var(--rf-dun);
+    cursor: pointer;
+    display: grid;
+    grid-area: remove;
+    height: var(--rf-target-buy);
+    justify-items: center;
+    width: var(--rf-target-buy);
+
+    &:hover {
+        background: var(--rf-tile);
+        color: var(--rf-ink);
+    }
+
+    .rf-icon {
+        height: 18px;
+        width: 18px;
+    }
+}
+
+.rf-cart-edit,
+.rf-cart-note {
+    font-size: 14px;
+    grid-column: 1 / -1;
+}
+
+.rf-cart-note {
+    color: var(--rf-dun);
+    margin: 0;
+}
+
+.rf-cart-error {
+    color: var(--rf-error);
+    font-size: 14px;
+    grid-column: 1 / -1;
+    margin: 6px 0 0;
+}
+
+// The summary panel: the stock totals, then cart-summary.html
+[data-cart] > [data-cart-totals] {
+    background: var(--rf-tile);
+    border-radius: var(--rf-radius-tile);
+    margin-top: 24px;
+    padding: 22px;
+
+    @include breakpoint("medium") {
+        margin-top: 0;
+    }
+
+    // Stock floats the list right at its content's width; here it fills the panel
+    .cart-totals {
+        float: none;
+        font-variant-numeric: tabular-nums;
+        margin: 0;
+        text-align: left;
+        width: 100%;
+    }
+
+    // Stock's totals rows, as label and value on one line
+    .cart-total {
+        align-items: baseline;
+        border: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 12px;
+        justify-content: space-between;
+        margin: 0;
+        padding: 6px 0;
+
+        &::before,
+        &::after {
+            display: none;
+        }
+
+        &:last-child {
+            border-top: 1px solid var(--rf-tile-2);
+            margin-top: 6px;
+            padding-top: 12px;
+        }
+    }
+
+    .cart-total-label,
+    .cart-total-value {
+        float: none;
+        padding: 0;
+        text-align: left;
+        width: auto;
+
+        strong {
+            font-weight: 400;
+        }
+    }
+
+    .cart-total-value {
+        text-align: right;
+    }
+
+    .cart-total-grandTotal {
+        font-size: 18px;
+        font-weight: 600;
+    }
+}
+
+.rf-cart-summary {
+    margin-top: 14px;
+}
+
+.rf-cart-checkout.button {
+    margin: 0;
+    min-height: 52px;
+    width: 100%;
+}
+
+.rf-cart-coupon {
+    margin-top: 12px;
+}
+
+.rf-cart-coupon-link {
+    background: none;
+    border: 0;
+    color: var(--rf-ink);
+    cursor: pointer;
+    font-size: 15px;
+    padding: 4px 0;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.rf-cart-promise {
+    color: var(--rf-dun);
+    font-size: 14px;
+    line-height: 20px;
+    margin: 12px 0 0;
+}
+
+// The phone bar: the order total and Check out, fixed to the bottom below 801px
+.rf-cart-bar {
+    align-items: center;
+    background: var(--rf-paper);
+    bottom: 0;
+    box-shadow: 0 -1px 0 var(--rf-tile-2);
+    box-sizing: border-box;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    left: 0;
+    min-height: $rf-cart-bar-h;
+    padding: 12px var(--rf-gutter) calc(12px + env(safe-area-inset-bottom, 0px));
+    position: fixed;
+    right: 0;
+    z-index: zIndex("high");
+
+    .button {
+        margin: 0;
+        min-height: 48px;
+    }
+
+    @include breakpoint("medium") {
+        display: none;
+    }
+}
+
+.rf-cart-bar-total {
+    display: flex;
+    flex-direction: column;
+    font-variant-numeric: tabular-nums;
+    margin: 0;
+
+    span {
+        color: var(--rf-dun);
+        font-size: 13px;
+    }
+}
+
+// The page's scroll and its end clear the bar, so focus and the footer never sit behind it
+@media (max-width: $screen-medium - 1) {
+    html:has([data-rf-cart-bar]) {
+        scroll-padding-bottom: $rf-cart-bar-h + 8px;
+    }
+
+    body:has([data-rf-cart-bar]) {
+        padding-bottom: $rf-cart-bar-h;
+    }
+}

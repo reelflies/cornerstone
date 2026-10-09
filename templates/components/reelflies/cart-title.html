@@ -1,0 +1,32 @@
+{{!--
+    The cart's heading and its count (ticket 41; story 51), from stock cart/page-title.html's hook.
+    cart.js replaces the data-cart-page-title element with this template after every change, so
+    the heading and the count share that one element.
+
+    "Your cart", then what it holds by Shaun's brand rule (review-02; cart-count.js counts the same
+    way for tickets 38, 43 and 44): flies and patterns when every line's brand is one of the
+    channel's fly brands (theme setting rf_fly_brands, comma-separated), else items and products.
+    A pattern is one product. No line carries its Placements, so the brand is the only signal; a
+    storefront that sends no brand (show_product_brand off) always counts items.
+--}}
+{{~assignVar 'rf_cart_seen' ','~}}
+{{~assignVar 'rf_cart_products' 0~}}
+{{~assignVar 'rf_cart_flies' 0~}}
+{{~#if cart.items.length~}}{{~#if (trim theme_settings.rf_fly_brands)~}}{{~assignVar 'rf_cart_flies' 1~}}{{~/if~}}{{~/if~}}
+{{~#each cart.items~}}
+{{~#contains (getVar 'rf_cart_seen') (concat (concat ',' product_id) ',')~}}{{~else~}}
+{{~assignVar 'rf_cart_seen' (concat (concat (getVar 'rf_cart_seen') product_id) ',')~}}
+{{~assignVar 'rf_cart_products' (add (getVar 'rf_cart_products') 1)~}}
+{{~/contains~}}
+{{~assignVar 'rf_cart_fly_line' 0~}}
+{{~#each (split ../theme_settings.rf_fly_brands ',') as |rfBrand|~}}
+{{~#if (trim rfBrand)~}}{{~#if (trim rfBrand) '===' (trim ../brand.name)~}}{{~assignVar 'rf_cart_fly_line' 1~}}{{~/if~}}{{~/if~}}
+{{~/each~}}
+{{~#unless (getVar 'rf_cart_fly_line')~}}{{~assignVar 'rf_cart_flies' 0~}}{{~/unless~}}
+{{~/each~}}
+<div class="rf-cart-heading" data-cart-page-title>
+    <h1 class="page-heading">{{lang 'reelflies.cart.heading'}}</h1>
+    {{#if cart.items.length}}
+    <p class="rf-cart-count" data-rf-cart-count>{{#if (getVar 'rf_cart_flies')}}{{lang 'reelflies.cart.count_flies' units=cart.quantity products=(getVar 'rf_cart_products')}}{{else}}{{lang 'reelflies.cart.count_items' units=cart.quantity products=(getVar 'rf_cart_products')}}{{/if}}</p>
+    {{/if}}
+</div>

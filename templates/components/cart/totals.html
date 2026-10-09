@@ -160,7 +160,7 @@
                     </div>
                 </li>
             {{/each}}
-        {{else}}
+        {{else if false}}{{!-- ReelFlies hook (ticket 41; CUSTOMIZATIONS.md): the coupon field is under Check out, in components/reelflies/cart-summary.html --}}
             <li class="cart-total">
                 <div class="cart-total-label">
                     <strong>{{lang 'cart.coupon_code'}}:</strong>
@@ -256,3 +256,4 @@
         {{/if}}
     {{/each}}
 </ul>
+{{> components/reelflies/cart-summary}}{{!-- ReelFlies hook (ticket 41; CUSTOMIZATIONS.md): Check out, the coupon link, the promise line and the phone bar --}}

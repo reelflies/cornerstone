@@ -733,6 +733,18 @@ npx playwright test --config scripts/qa/playwright.config.mjs category-screens
 QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs category.spec
 ```
 
+## The cart (`cart-screens.spec.mjs`)
+
+Ticket 41's cart (spec module 18) on the fixture page: the real cart page rendered round a 12-pattern cart (`render/pages/cart-page/fixtures/twelve.json`, products from the reference page's data with their own photos). A cart on channel 1 would be a live write (W0-6), and ReelFlies_CA has no products until refactor 14. The fixture page loads no theme bundle, so the spec runs the real `cart-groups.js` in it through `render/theme-script.mjs`, which turns listed theme modules into one browser script with Babel.
+
+- **The look,** at 375 and 1280: the page without the fixed phone bar, and the bar on its own at 375 (widget baselines, `widget cart-page`).
+- **Grouping:** one group per pattern, sizes in hook order; a pattern with sizes priced differently shows each size's unit price; the lines add up to the subtotal.
+- **Photos and reflow:** each group's 64px photo, linked to the product, at 320, 375 and 1280, and nothing scrolls sideways.
+- **The phone bar:** the total and Check out, and tabbing never leaves the focused element under it.
+- **axe** in the cart.
+
+Its templates are rendered by `render/partials/cart.test.mjs` (the lines, the count by the brand rule, the messages, the summary, and the whole cart page); its scripts by Jest (`cart-groups.spec.js`, `cart-guards.spec.js` for the error and network-failure paths, `cart-count.spec.js`, `cart-page.spec.js`).
+
 ## Fixture renders (`render/`)
 
 The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixture JSON instead of store data. So a template can be tested before the store has its data: ReelFlies_CA has no tree-4 categories until refactor 13, but the Species pages, the hub, the chips, the description split and the hook chart rows can be tested now. And a widget is checked from its source, not from what the store shows. Tickets 32, 34, 35, 36 and 46–49 use it.
@@ -1098,6 +1110,7 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - `home-widgets-screens.spec.mjs` runs with `qa:screens` too, for the same reason.
 - `card-screens.spec.mjs` (ticket 31) runs with `qa:screens` too, for the same reason; `card.spec.mjs` runs only when named, like the specs below.
 - `category-screens.spec.mjs` (ticket 32) runs with `qa:screens` too; `category.spec.mjs` runs only when named.
+- `cart-screens.spec.mjs` (ticket 41) runs with `qa:screens` too, for the same reason.
 - `header.spec.mjs` (ticket 27), `menu.spec.mjs` (ticket 28), `rail.spec.mjs` (ticket 29) and `quick-search.spec.mjs` (ticket 30) run only when named, like `skin.spec.mjs`: no npm script's filter matches them. The first three wait for their scripts with `chunkLoaded` from `states.mjs`; `quick-search.spec.mjs` waits until quick-search.js has added each search form's dropdown.
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
 - `storefront.test.mjs` also covers `QA_PORT`, the start log's name, the locks a gate holds (and the ports checked again after a slot wait), trusting only the server a gate started, and stopping that server when the gate is stopped by a signal. `playwright-config.test.mjs` covers that the config reads `QA_PORT` and holds the locks only in the runner, `prepush.test.mjs` what `qa:prepush` checks before its first gate, `serve.test.mjs` the locks around a `stencil start` by hand, and `scripts/lib/lock.test.mjs` the locks themselves: the stale rules, waiting, the three slots across processes, the signals, `RF_LOCK_ROOT`, and the command line `release.sh` uses.

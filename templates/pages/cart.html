@@ -36,6 +36,7 @@ cart: true
             {{{region name="cart_below_totals"}}}
 
             {{#or customer (unless settings.hide_price_from_guests)}}
+                {{#if false}}{{!-- ReelFlies hook (ticket 41; CUSTOMIZATIONS.md): Check out is in the summary, components/reelflies/cart-summary.html --}}
                 {{#if cart.show_primary_checkout_button}}
                     <div class="cart-actions cart-content-padding-right">
                         <a
@@ -57,13 +58,14 @@ cart: true
                         <a class="button" href="{{urls.home}}" title="{{lang 'cart.continue_shopping'}}">{{lang 'cart.continue_shopping'}}</a>
                     </div>
                 {{/if}}
+                {{/if}}
 
                 {{#if cart.additional_checkout_buttons}}
                     <div data-cart-additional-checkout-buttons class="cart-additionalCheckoutButtons cart-content-padding-right">
                         {{> components/cart/additional-checkout-buttons}}
                     </div>
                 {{/if}}
-            {{else}}
+            {{else if false}}{{!-- ReelFlies hook (ticket 41): sign-in to check out is in the summary too --}}
                 <div class="cart-actions cart-content-padding-right">
                     <a class="button" href="{{urls.auth.login}}" title="{{lang 'cart.login_to_checkout'}}">{{lang 'cart.login_to_checkout'}}</a>
                 </div>

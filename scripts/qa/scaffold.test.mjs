@@ -29,6 +29,7 @@ const SETTINGS_GROUPS = [
     [31, ['rf_price_unit_exclude']],
     [39, ['rf_ship_free_threshold', 'rf_ship_standard_rate', 'rf_ship_expedited_from']],
     [40, ['rf_store_same_as']],
+    [41, ['rf_fly_brands']],
     [42, ['rf_cart_state']],
     [43, ['rf_quick_add']],
     [52, ['rf_region_prompt']],
@@ -148,7 +149,7 @@ describe('the release guard and step 1 with the pre-declared keys (seam 5)', () 
         const another = key => (repo[key] === '5' ? '6' : '5');
 
         it(`refuses, on ${variation}, a pre-declared value that config.json changes after the scaffold's push (rule 1)`, () => {
-            assert.equal(VALUE_KEYS.length, 6);
+            assert.equal(VALUE_KEYS.length, 7);
             for (const key of VALUE_KEYS) {
                 const result = checkRelease({
                     repoSettings: { ...repo, [key]: another(key) }, liveSettings: pushed, channelId: 1895766, categoryIds: tree,
