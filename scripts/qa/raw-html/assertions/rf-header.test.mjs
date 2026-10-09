@@ -57,9 +57,7 @@ describe('ticket 27\'s assertions', () => {
     it('pass the header components/common/header.html renders, on every page kind', async () => {
         const assertions = (await loadAssertions()).filter(({ ticket }) => ticket === 27);
         for (const kind of ['home', 'product', 'category', 'cart', 'brand', '404', 'login', 'page']) {
-            // A skip counts only where the assertion leaves the kind out (strip-every-page's 404).
-            const leftOut = id => (assertions.find(entry => entry.id === id).notOn || []).includes(kind);
-            const failed = checkPage(page(frame(header), kind), assertions).filter(({ id, status }) => status !== 'pass' && !(status === 'skip' && leftOut(id)));
+            const failed = checkPage(page(frame(header), kind), assertions).filter(({ status }) => status !== 'pass');
             assert.deepEqual(failed.map(({ id, problems }) => `${id}: ${problems}`), [], kind);
         }
     });

@@ -226,6 +226,8 @@ export function readChannelFile(widget, channel) {
             }
         } else if (typeof placement.template_file !== 'string' || !placement.template_file) {
             problems.push('placement needs a template_file, such as "pages/home"');
+        } else if (!TEMPLATE_FILE.test(placement.template_file)) {
+            problems.push(`placement template_file ${show(placement.template_file)} isn't a template file such as "pages/home"`);
         }
         if (typeof placement.region !== 'string' || !placement.region) problems.push('placement needs a region, such as "home_below_menu"');
         if (!Number.isInteger(placement.sort_order)) problems.push('placement sort_order must be a whole number');
@@ -247,7 +249,7 @@ export function readChannelFile(widget, channel) {
         if (several) {
             const listed = Array.isArray(placement.template_files) ? placement.template_files : [];
             for (const [name, uuid] of Object.entries(uuids.placements)) {
-                if (!listed.includes(name)) problems.push(`uuids.placements records ${name}, which template_files doesn't list: the sync never deletes a placement, so unpublish or delete it first`);
+                if (!listed.includes(name)) problems.push(`uuids.placements records ${name}, which template_files doesn't list: the sync never deletes a placement, so delete it in the control panel (the store-write helper can't), then remove its uuid here`);
                 else if (uuid !== null && !UUID.test(String(uuid))) problems.push(`uuids.placements[${show(name)}] must be null or a uuid`);
             }
         }

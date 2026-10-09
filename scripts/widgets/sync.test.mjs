@@ -250,7 +250,7 @@ test('unpublishing sends only the placement\'s status, which the content freeze 
     const unplaced = planSync({
         channel: CH, entries: [hero()], store: empty, unpublish: 'home-lead',
     });
-    assert.match(unplaced.problems.join('\n'), /home-lead: no placement is recorded, so there is nothing to unpublish/);
+    assert.match(unplaced.problems.join('\n'), /home-lead: the widget isn't recorded in .*channels\/1895766\.json, so there is nothing to unpublish/);
 });
 
 test('a recorded uuid the channel doesn\'t have stops the sync', () => {
@@ -395,10 +395,40 @@ test('unpublishing a widget on several template files sets every recorded placem
     assert.deepEqual(requests.map(request => `${request.method} ${request.path} ${JSON.stringify(request.body)}`), [P, P3].map(uuid => `PUT ${PATHS.placements}/${uuid} {"status":"inactive","channel_id":${CH}}`));
     assert.ok(lines.includes('  placement pages/cart header_bottom--global (e2e2e2e2): already inactive'), lines.join('\n'));
     assert.doesNotThrow(() => checkRequests(requests, { mode: 'lifted', phase: contentFreeze }));
+});
+
+// The off switch works whatever the channel file has recorded yet: a template file listed but not
+// placed (a ticket that adds a custom template, before its write), or one placed but not recorded.
+test('unpublishing switches off every placement of the widget on the channel, recorded or not', () => {
     const partly = several({ template: T, widget: W, placements: { 'pages/home': P } });
-    assert.match(planSync({
+    const store = {
+        templates: [storeTemplate(partly)],
+        widgets: [storeWidget(partly)],
+        placements: [placedOn('pages/home', P), placedOn('pages/cart', P2), placedOn('pages/product', P3, { status: 'inactive' })],
+    };
+    const { requests, problems, lines } = planSync({
         channel: CH, entries: [partly], store, unpublish: 'home-lead',
-    }).problems.join('\n'), /home-lead: no placement is recorded for pages\/cart, pages\/search: record them \(--record\) before unpublishing, so none is left on/);
+    });
+    assert.deepEqual(problems, []);
+    assert.deepEqual(requests.map(request => request.path), [`${PATHS.placements}/${P}`, `${PATHS.placements}/${P2}`]);
+    assert.ok(lines.includes('  placement pages/cart header_bottom--global (e2e2e2e2, not recorded): unpublish'), lines.join('\n'));
+    assert.ok(lines.includes('  placement pages/product header_bottom--global (e3e3e3e3, not recorded): already inactive'), lines.join('\n'));
+    const none = planSync({
+        channel: CH, entries: [partly], store: { ...store, placements: [] }, unpublish: 'home-lead',
+    });
+    assert.match(none.problems.join('\n'), /home-lead: channel 1895766 has no placement of widget d00dfeed.*, so there is nothing to unpublish/);
+});
+
+test('a placement of the widget the channel file doesn\'t record stops the sync and fails --verify', () => {
+    const entry = several({ template: T, widget: W, placements: { 'pages/home': P, 'pages/cart': P2, 'pages/search': P3 } });
+    const base = [placedOn('pages/home', P), placedOn('pages/cart', P2), placedOn('pages/search', P3)];
+    const store = placements => ({ templates: [storeTemplate(entry)], widgets: [storeWidget(entry)], placements });
+    assert.deepEqual(planSync({ channel: CH, entries: [entry], store: store(base) }).problems, []);
+    const duplicate = planSync({ channel: CH, entries: [entry], store: store([...base, placedOn('pages/cart', OTHER)]) });
+    assert.deepEqual(duplicate.requests, []);
+    assert.match(duplicate.problems.join('\n'), /home-lead: channel 1895766 has placement f2f2f2f2.* of the widget on pages\/cart header_bottom--global, which .*channels\/1895766\.json doesn't record: delete it in the control panel/);
+    const unlisted = planSync({ channel: CH, entries: [entry], store: store([...base, placedOn('pages/product', OTHER)]) });
+    assert.match(unlisted.problems.join('\n'), /placement f2f2f2f2.* of the widget on pages\/product header_bottom--global, which .* doesn't record: delete it in the control panel, or list its template file and run --record/);
 });
 
 test('--record finds each template file\'s placement and records them as a map', () => {

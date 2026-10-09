@@ -151,6 +151,22 @@ function step(context, {
     return { $created: requests.length - 1 };
 }
 
+// Any placement of the recorded widget on the channel that the channel file doesn't record, and
+// the twin check in step() doesn't already name (a placement on a listed template file with no
+// recorded uuid): a second one on a listed file, or one on a file the list leaves out. Either
+// would show the widget where the repo doesn't say, and --verify would never see it.
+function unrecordedPlacements({
+    channel, problems, store, where, entryName,
+}, widgetUuid, placements) {
+    const recorded = new Map(placements.map(placement => [placement.template_file, placement.uuid]));
+    for (const item of store.placements || []) {
+        if (item.widget?.uuid !== widgetUuid || [...recorded.values()].includes(item.uuid)) continue; // eslint-disable-line no-continue
+        if (recorded.has(item.template_file) && !recorded.get(item.template_file)) continue; // eslint-disable-line no-continue
+        const listed = recorded.has(item.template_file);
+        problems.push(`${entryName}: channel ${channel} has placement ${item.uuid} of the widget on ${item.template_file} ${item.region}, which ${where} doesn't record: delete it in the control panel${listed ? '' : ', or list its template file and run --record'}`);
+    }
+}
+
 // The requests that bring the channel in step with the repo, the diff and any problems. With
 // problems, `requests` is empty: nothing is half-synced.
 //
@@ -178,20 +194,22 @@ export function planSync({
         const { uuids } = channelFile;
         const placements = placementsOf(channelFile);
         if (unpublish) {
-            const unrecorded = placements.filter(placement => !placement.uuid);
-            if (unrecorded.length === placements.length) {
-                problems.push(`${widget.name}: no placement is recorded, so there is nothing to unpublish`);
-            } else if (unrecorded.length) {
-                problems.push(`${widget.name}: no placement is recorded for ${unrecorded.map(placement => placement.template_file).join(', ')}: record them (--record) before unpublishing, so none is left on`);
+            // Every placement of the widget on the channel, recorded or not, so the off switch
+            // leaves nothing on: a template file listed but not placed yet, or placed but not
+            // recorded, never stops it.
+            const ofWidget = uuids.widget ? (store.placements || []).filter(item => item.widget?.uuid === uuids.widget) : [];
+            const recordedUuids = placements.map(placement => placement.uuid).filter(Boolean);
+            if (!uuids.widget) {
+                problems.push(`${widget.name}: the widget isn't recorded in ${channelFile.where}, so there is nothing to unpublish`);
+            } else if (!ofWidget.length) {
+                problems.push(`${widget.name}: channel ${channel} has no placement of widget ${uuids.widget}, so there is nothing to unpublish`);
             }
-            for (const placement of unrecorded.length ? [] : placements) {
-                const item = (store.placements || []).find(candidate => candidate.uuid === placement.uuid);
-                if (!item) {
-                    problems.push(`${widget.name}: placement ${placement.uuid} is recorded in ${channelFile.where}, but channel ${channel} has no such placement`);
-                } else if (item.status === 'inactive') {
-                    lines.push(`  placement ${placement.template_file} ${placement.region} (${short(item.uuid)}): already inactive`);
+            for (const item of ofWidget) {
+                const label = `  placement ${item.template_file} ${item.region} (${short(item.uuid)}${recordedUuids.includes(item.uuid) ? '' : ', not recorded'})`;
+                if (item.status === 'inactive') {
+                    lines.push(`${label}: already inactive`);
                 } else {
-                    lines.push(`  placement ${placement.template_file} ${placement.region} (${short(item.uuid)}): unpublish`, `${INDENT}status: ${showValue(item.status)} -> "inactive"`);
+                    lines.push(`${label}: unpublish`, `${INDENT}status: ${showValue(item.status)} -> "inactive"`);
                     requests.push(buildRequest({
                         object: 'placements', id: item.uuid, body: { status: 'inactive' }, channel,
                     }));
@@ -233,6 +251,7 @@ export function planSync({
                         twinWhat: `a placement of widget ${widgetRef} in ${placement.template_file} ${placement.region}`,
                     });
                 }
+                if (typeof widgetRef === 'string') unrecordedPlacements(context, widgetRef, placements);
             }
         }
     }

@@ -321,6 +321,11 @@ test('a channel file is checked before anything is read from the store', () => {
         }, /placement needs a region/],
         [{
             placement: {
+                template_file: 'home', region: 'home_below_menu', sort_order: 0, status: 'active',
+            },
+        }, /placement template_file "home" isn't a template file such as "pages\/home"/],
+        [{
+            placement: {
                 template_file: 'pages/home', region: 'home_below_menu', sort_order: 1.5, status: 'active',
             },
         }, /sort_order must be a whole number/],

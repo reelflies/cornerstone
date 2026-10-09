@@ -19,7 +19,9 @@
 //   and stopped here when not. With QA_FRESH_SERVER=1 it is always started here.
 // - Assertions: every module in scripts/qa/raw-html/assertions/, loaded by file name,
 //   so a ticket adds one by adding a file (scripts/qa/README.md). An assertion's `pages` and
-//   `notOn` name page kinds, which cover every pin of the kind, or one kind@name pin.
+//   `notOn` name page kinds, which cover every pin of the kind, or one kind@name pin. Its
+//   `check(page)` runs on each page; its `checkAll(pages)`, if it has one, runs once after the
+//   last page, on all the pages it applies to that rendered (ticket 27's strip-every-page).
 //
 // Exits 1 when an assertion fails or a page doesn't render, and 2 when the
 // storefront can't be reached or, with QA_FRESH_SERVER=1, when something already answers
@@ -55,18 +57,21 @@ export async function loadAssertions(dir = ASSERTIONS_DIR) {
 const names = (list, key, kind) => list.includes(kind) || list.includes(key);
 const appliesTo = (assertion, key, kind) => (!assertion.pages || names(assertion.pages, key, kind)) && !names(assertion.notOn || [], key, kind);
 
-// Runs each assertion that applies to the page's kind, or to its kind@name pin. A page that
-// didn't render fails as page-renders, and its assertions are skipped. `page.key` is the pin's
-// key, and its kind when it has none.
+// One assertion's result, as report() prints it.
+const result = ({ id, ticket, description }, status, problems = []) => ({
+    id,
+    ticket,
+    description,
+    status,
+    problems,
+});
+
+// Runs each assertion's check on the page, when the assertion applies to the page's kind, or to
+// its kind@name pin, and has a check (one with only checkAll is skipped here). A page that didn't
+// render fails as page-renders, and its assertions are skipped. `page.key` is the pin's key, and
+// its kind when it has none.
 export function checkPage(page, assertions) {
     const key = page.key ?? page.kind;
-    const result = ({ id, ticket, description }, status, problems = []) => ({
-        id,
-        ticket,
-        description,
-        status,
-        problems,
-    });
     if (page.status !== expectedStatus(key)) {
         return [
             result({ id: 'page-renders', ticket: 16, description: 'the page renders as its template' }, 'fail', [`${page.path} returned HTTP ${page.status}, not ${expectedStatus(key)}`]),
@@ -82,23 +87,18 @@ export function checkPage(page, assertions) {
 
 // Runs, once, each assertion's checkAll on every fetched page it applies to that rendered as its
 // template (a page that didn't is page-renders' failure), for what only the pages together show,
-// such as the shipping strip on every page or none (strip-every-page). Skipped with no such page.
+// such as the shipping strip on every page or none (strip-every-page). checkAll gets the pages as
+// fetchPage returns them ({ key, kind, path, url, status, html }) and returns its problems, as a
+// check does. Skipped with no such page.
 export function checkPages(pages, assertions) {
     return assertions.filter(assertion => typeof assertion.checkAll === 'function').map(assertion => {
-        const { id, ticket, description } = assertion;
         const rendered = pages.filter(page => {
             const key = page.key ?? page.kind;
             return page.status === expectedStatus(key) && appliesTo(assertion, key, page.kind);
         });
-        if (!rendered.length) {
-            return {
-                id, ticket, description, status: 'skip', problems: [],
-            };
-        }
+        if (!rendered.length) return result(assertion, 'skip');
         const problems = assertion.checkAll(rendered);
-        return {
-            id, ticket, description, status: problems.length ? 'fail' : 'pass', problems,
-        };
+        return result(assertion, problems.length ? 'fail' : 'pass', problems);
     });
 }
 
@@ -142,13 +142,16 @@ export async function fetchPage(baseUrl, { key, kind, path: pagePath }, redirect
 const warn = message => console.log(`WARNING  ${message}`);
 const fail = message => console.error(`FAIL     ${message}`);
 
-function report(page, results) {
-    console.log(`\n${page.key} ${page.path} (HTTP ${page.status})`);
-    for (const result of results) {
-        if (result.status === 'fail') {
-            result.problems.forEach(problem => fail(`${page.key} ${page.path} · ${result.id} (ticket ${result.ticket}): ${problem}`));
+// Prints one page's results under its heading (its key, path and status, unless one is given).
+function report(page, results, heading = `${page.key} ${page.path} (HTTP ${page.status})`) {
+    console.log(`\n${heading}`);
+    for (const {
+        id, ticket, description, status, problems,
+    } of results) {
+        if (status === 'fail') {
+            problems.forEach(problem => fail(`${page.key} ${page.path} · ${id} (ticket ${ticket}): ${problem}`));
         } else {
-            console.log(`  ${result.status === 'pass' ? 'ok     ' : 'skipped'}  ${result.id}: ${result.description}`);
+            console.log(`  ${status === 'pass' ? 'ok     ' : 'skipped'}  ${id}: ${description}`);
         }
     }
 }
@@ -183,7 +186,7 @@ async function main() {
             fetched.push(page);
         }
         const together = checkPages(fetched, assertions);
-        if (together.length) report({ key: 'every page', path: 'together', status: 'checked' }, together);
+        if (together.length) report({ key: 'every page', path: '(together)' }, together, `Every page together (${fetched.length} pages)`);
         failures += together.filter(({ status }) => status === 'fail').length;
     } catch (error) {
         console.error(`Couldn't fetch from ${storefront.baseUrl}: ${error.message}`);

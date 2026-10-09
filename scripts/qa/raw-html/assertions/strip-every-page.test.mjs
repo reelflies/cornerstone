@@ -15,11 +15,11 @@ const EMPTY_REGION = '<div data-content-region="header_bottom--global"></div>';
 const STRIP = '<div data-widget-id="w1"><div class="rf-strip" data-rf-strip><p>Free standard shipping</p></div></div>';
 
 // A pinned page as the harness fetched it, with `strips` copies of the strip in its region.
-const page = (key, strips = 1, status = key === '404' ? 404 : 200) => ({
+const page = (key, strips = 1, status = key === '404' ? 404 : 200, origin = 'http://localhost:3301') => ({
     key,
     kind: key,
     path: `/${key}`,
-    url: `http://localhost:3301/${key}`,
+    url: `${origin}/${key}`,
     status,
     html: FIXTURE.replace(EMPTY_REGION, `<div data-content-region="header_bottom--global">${STRIP.repeat(strips)}</div>`),
 });
@@ -48,7 +48,7 @@ test('the strip on every pinned page, or on none, passes; on some only fails, na
     assert.deepEqual(stripEveryPage.checkAll(keys.map(key => page(key, 0))), []);
     const homeOnly = keys.map(key => page(key, key === 'home' ? 1 : 0));
     assert.deepEqual(stripEveryPage.checkAll(homeOnly), [
-        'the shipping strip is on home but not on cart /cart, brand /brand, 404 /404, login /login: place it on each page\'s template file (widgets/shipping-strip/channels/<channel>.json, template_files)',
+        'the shipping strip is on home but not on cart /cart, brand /brand, login /login: place it on each page\'s template file (widgets/shipping-strip/channels/<channel>.json, template_files)',
     ]);
 });
 
@@ -57,8 +57,13 @@ test('the harness runs checkAll once on the pages each assertion applies to that
     const [all] = checkPages(pages, [stripEveryPage]);
     assert.equal(all.status, 'fail');
     assert.match(all.problems[0], /on home but not on cart \/cart:/, 'a page that didn\'t render is left to page-renders');
-    // The 404 page is left out: stencil start never fills its regions (pages/errors/* has no page type there).
+    // The 404 page is left out on a local stencil start, which never fills its regions
+    // (pages/errors/* has no page type there), and counted on the prelaunch host.
     assert.equal(result(checkPages([page('home', 1), page('404', 0)], [stripEveryPage])).status, 'pass');
+    const host = 'https://reelflies-ca-prelaunch.example';
+    const onHost = result(checkPages([page('home', 1, 200, host), page('404', 0, 404, host)], [stripEveryPage]));
+    assert.equal(onHost.status, 'fail');
+    assert.match(onHost.problems[0], /not on 404 \/404/);
     const onlyHome = { ...stripEveryPage, pages: ['home'] };
     assert.equal(result(checkPages(pages, [onlyHome])).status, 'pass');
     assert.equal(result(checkPages([page('cart', 0, 500)], [stripEveryPage])).status, 'skip');

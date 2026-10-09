@@ -1,0 +1,24 @@
+# gitleaks' configuration for this repo (W0-13; guarded: a change needs rf/safety). CI's secret
+# scan (.github/workflows/reelflies-checks.yml) reads it from the checkout's root.
+#
+# gitleaks' default rules all apply. One allowlist narrows generic-api-key:
+# - Widget channel files (widgets/<name>/channels/<channel>.json, docs/widgets.md) record the uuids
+#   the store gave a widget's template, widget and placements. A placement's uuid sits beside its
+#   template file, and "pages/auth/forgot-password" reads to generic-api-key as a password key
+#   (ticket 27's follow-up, PR #65). Only a value that is a whole uuid, in a channel file, is let
+#   through: anything else in those files, a uuid anywhere else, and every other rule still apply.
+# - It is a rule allowlist, not a global one: gitleaks skips a file whose path matches a global
+#   allowlist before it reads the condition, so a global one would let anything in those files.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Store uuids in widget channel files"
+condition = "AND"
+paths = ['''^widgets/[^/]+/channels/[^/]+\.json$''']
+regexTarget = "secret"
+regexes = ['''^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$''']
