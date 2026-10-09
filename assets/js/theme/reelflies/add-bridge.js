@@ -1,7 +1,9 @@
 // Between stock product-details.js and the add flow (ticket 38): the hooks in stock's add and
 // option-change callbacks, and in product-details-base.js's sold-out pass, call these, and
 // add-flow.js, its own chunk (page-modules.js), registers what they do when it loads. Stock
-// imports only this file, so the add flow never joins stock's chunk.
+// imports only this file, so the add flow never joins stock's chunk. page-modules.js imports it
+// too (addFlowFailed), so it loads with main.js, and stock's product chunk and the flow's share
+// that one copy.
 //
 // - addFinished(err, response, options): true when the add's answer has been taken, so stock's
 //   callback stops there; false lets stock open its modal as before. With no flow loaded (Quick
