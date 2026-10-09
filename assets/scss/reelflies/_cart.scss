@@ -10,20 +10,23 @@
 // - cart.html's .page-content holds the breadcrumbs, the heading, the messages, the lines, the
 //   coupons, the totals, a region and the extra checkout buttons as siblings, so a CSS grid
 //   places them without moving markup.
-// - The lines (cart-lines.html) are one list of lines, each with its pattern heading and its size
-//   row. cart-groups.js orders them into groups and marks each group's first and last line: only
-//   a first line shows its heading, and a last line closes the group. Until it has (no
-//   data-rf-grouped, with script running), the list is hidden, so grouping never moves the page.
-// - A size row is one line from 360px: the size, the stepper, the line total and Remove. Below
-//   that it takes two (the size and Remove, then the stepper and the total), so nothing scrolls
-//   sideways at 320px.
-// - The summary (stock totals, then cart-summary.html): Check out, "Have a coupon code?", the
-//   promise line. Below 801px the phone bar (data-rf-cart-bar) is fixed to the bottom, and the
-//   page pads its scroll by the bar's height, so a focused element never sits behind it.
+// - The lines (cart-lines.html) come grouped from the server: one group per pattern, its head
+//   (the photo, the name, the unit price), then its rows. cart-groups.js puts a group's rows in
+//   hook order; until it has, with script running, a group of more than one row keeps them out
+//   of view at their full height, so sorting moves nothing. If the script never comes, they show
+//   after 10s, in the store's order.
+// - A size row is one line from $rf-cart-row-one: the size, the stepper, the line total and
+//   Remove. Below that it takes two (the size and Remove, then the stepper and the total), so
+//   nothing scrolls sideways at 320px.
+// - The summary (stock totals, then cart-summary.html): "Order summary", the totals, Check out,
+//   the promise line, "Have a coupon code?". Below 801px the phone bar (data-rf-cart-bar) is fixed
+//   to the bottom, and the page pads its scroll by the bar's height, so a focused element never
+//   sits behind it. The bar's height is in rem, so it and the padding grow with the text.
 //
 // -----------------------------------------------------------------------------
 
-$rf-cart-bar-h: 72px; // the phone bar's height, which the page's scroll padding matches
+$rf-cart-row-one: 360px; // the narrowest width a size row fits on one line
+$rf-cart-bar-h: 4.5rem; // the phone bar's height (72px at 16px text), which the scroll padding matches
 
 .page-content[data-cart] {
     column-gap: 44px;
@@ -36,13 +39,18 @@ $rf-cart-bar-h: 72px; // the phone bar's height, which the page's scroll padding
         grid-column: 1 / -1;
     }
 
-    > .cart-content-padding-right {
+    // Stock pads the right of each block for its float layout; the grid's gap does that here.
+    // The summary panel keeps its own padding.
+    > .cart-content-padding-right:not([data-cart-totals]) {
         padding-right: 0;
     }
 
     @include breakpoint("medium") {
         grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
 
+        // The lines take the left column beside every block of the right one, however many
+        // there are (the coupons, the totals, a region, the extra checkout buttons): more rows
+        // than the page has blocks.
         > [data-cart-content] {
             grid-column: 1;
             grid-row: span 20;
@@ -87,40 +95,47 @@ $rf-cart-bar-h: 72px; // the phone bar's height, which the page's scroll padding
     margin: 0 0 12px;
 }
 
-// The lines
+// The lines: one group per pattern
 .rf-cart-lines {
     list-style: none;
     margin: 0;
     padding: 0;
-
-    .js &:not([data-rf-grouped]) {
-        visibility: hidden;
-    }
 }
 
-.rf-cart-line {
+.rf-cart-group {
+    border-bottom: 1px solid var(--rf-tile-2);
     column-gap: 14px;
     display: grid;
     grid-template-columns: 64px minmax(0, 1fr);
-    padding: 4px 0;
+    padding: 18px 0;
+}
 
-    &[data-rf-group-first] {
-        padding-top: 18px;
-    }
+.rf-cart-rows {
+    display: grid;
+    grid-column: 1 / -1;
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    row-gap: 8px;
+}
 
-    &[data-rf-group-last] {
-        border-bottom: 1px solid var(--rf-tile-2);
-        padding-bottom: 18px;
-    }
+// A group of several rows, until cart-groups.js has sorted them: out of view at their full
+// height. The timer shows them anyway, so a script that never runs hides nothing; with reduced
+// motion it still waits, because the theme's reset (_foundation.scss) would set it to 0s.
+.js .rf-cart-group[data-rf-cart-multi]:not([data-rf-cart-sorted]) .rf-cart-rows {
+    animation: rf-cart-rows-show 0s 10s forwards;
+    visibility: hidden;
 
-    // In a group, only the first line shows the pattern's heading
-    .rf-cart-lines[data-rf-grouped] &:not([data-rf-group-first]) .rf-cart-head {
-        display: none;
+    @media (prefers-reduced-motion: reduce) {
+        animation-delay: 10s !important;
+        animation-duration: 0s !important;
     }
 }
 
-.rf-cart-head {
-    display: contents;
+@keyframes rf-cart-rows-show {
+    to {
+        visibility: visible;
+    }
 }
 
 .rf-cart-photo {
@@ -170,20 +185,19 @@ $rf-cart-bar-h: 72px; // the phone bar's height, which the page's scroll padding
     margin: 2px 0 0;
 }
 
-// A size row: one line from 401px, two below
+// A size row: one line from $rf-cart-row-one, two below
 .rf-cart-row {
     align-items: center;
     column-gap: 10px;
     display: grid;
-    grid-column: 1 / -1;
     grid-template-areas:
         "size size remove"
         "stepper total total";
     grid-template-columns: minmax(0, 1fr) auto 44px;
-    margin-top: 8px;
+    margin: 0;
     row-gap: 6px;
 
-    @media (min-width: 360px) {
+    @media (min-width: $rf-cart-row-one) {
         grid-template-areas: "size stepper total remove";
         grid-template-columns: minmax(76px, auto) auto minmax(60px, 1fr) 44px;
     }
@@ -204,15 +218,29 @@ $rf-cart-bar-h: 72px; // the phone bar's height, which the page's scroll padding
     margin-left: 8px;
 }
 
-// Each size's own unit price shows only when the pattern's sizes are priced differently
+// The size, as the reference's tag
+.rf-cart-sizetag {
+    align-items: center;
+    background: var(--rf-tile);
+    border-radius: var(--rf-radius-pill);
+    display: inline-flex;
+    font-size: 14px;
+    padding: 4px 12px;
+    white-space: nowrap;
+}
+
+// Each size's own unit price shows only when the pattern's sizes are priced differently, on a
+// line of its own under the size
 .rf-cart-row-unit {
     color: var(--rf-dun);
     display: none;
+    font-size: 14px;
     font-weight: 400;
-    margin-left: 8px;
+    margin-top: 2px;
+    white-space: nowrap;
 
     [data-rf-prices-vary] & {
-        display: inline;
+        display: block;
     }
 }
 
@@ -313,7 +341,15 @@ $rf-cart-bar-h: 72px; // the phone bar's height, which the page's scroll padding
     margin: 6px 0 0;
 }
 
-// The summary panel: the stock totals, then cart-summary.html
+// The summary panel: its heading, the stock totals, then cart-summary.html
+.rf-cart-summary-heading {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0 0 14px;
+    text-transform: none;
+}
+
 [data-cart] > [data-cart-totals] {
     background: var(--rf-tile);
     border-radius: var(--rf-radius-tile);
@@ -382,8 +418,13 @@ $rf-cart-bar-h: 72px; // the phone bar's height, which the page's scroll padding
     margin-top: 14px;
 }
 
-.rf-cart-checkout.button {
+.rf-cart-checkout.button,
+.rf-cart-bar .button {
+    border-radius: var(--rf-radius-pill);
     margin: 0;
+}
+
+.rf-cart-checkout.button {
     min-height: 52px;
     width: 100%;
 }
@@ -404,10 +445,20 @@ $rf-cart-bar-h: 72px; // the phone bar's height, which the page's scroll padding
 }
 
 .rf-cart-promise {
+    align-items: center;
     color: var(--rf-dun);
+    display: flex;
     font-size: 14px;
+    gap: 8px;
     line-height: 20px;
     margin: 12px 0 0;
+}
+
+.rf-cart-promise-icon {
+    color: var(--rf-sage);
+    flex: none;
+    height: 16px;
+    width: 16px;
 }
 
 // The phone bar: the order total and Check out, fixed to the bottom below 801px
@@ -422,14 +473,13 @@ $rf-cart-bar-h: 72px; // the phone bar's height, which the page's scroll padding
     justify-content: space-between;
     left: 0;
     min-height: $rf-cart-bar-h;
-    padding: 12px var(--rf-gutter) calc(12px + env(safe-area-inset-bottom, 0px));
+    padding: 0.75rem var(--rf-gutter) calc(0.75rem + env(safe-area-inset-bottom, 0px));
     position: fixed;
     right: 0;
     z-index: zIndex("high");
 
     .button {
-        margin: 0;
-        min-height: 48px;
+        min-height: 3rem;
     }
 
     @include breakpoint("medium") {
@@ -437,25 +487,24 @@ $rf-cart-bar-h: 72px; // the phone bar's height, which the page's scroll padding
     }
 }
 
+// "$36.50 for 28 flies", as the reference's bar
 .rf-cart-bar-total {
-    display: flex;
-    flex-direction: column;
     font-variant-numeric: tabular-nums;
     margin: 0;
 
     span {
         color: var(--rf-dun);
-        font-size: 13px;
     }
 }
 
-// The page's scroll and its end clear the bar, so focus and the footer never sit behind it
-@media (max-width: $screen-medium - 1) {
+// The page's scroll and its end clear the bar, so focus and the footer never sit behind it.
+// "Not medium" rather than a max-width one pixel under it, so no width falls between the two.
+@media not all and (min-width: $screen-medium) {
     html:has([data-rf-cart-bar]) {
-        scroll-padding-bottom: $rf-cart-bar-h + 8px;
+        scroll-padding-bottom: calc(#{$rf-cart-bar-h} + 8px + env(safe-area-inset-bottom, 0px));
     }
 
     body:has([data-rf-cart-bar]) {
-        padding-bottom: $rf-cart-bar-h;
+        padding-bottom: calc(#{$rf-cart-bar-h} + env(safe-area-inset-bottom, 0px));
     }
 }

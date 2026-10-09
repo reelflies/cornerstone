@@ -1,0 +1,37 @@
+{{!--
+    What the cart holds, by Shaun's brand rule (ticket 41; review-02; story 51), for the heading
+    (cart-title.html) and the phone bar (cart-summary.html). It prints nothing: it sets
+    rf_cart_products, the number of patterns, and rf_cart_flies, 1 when the cart counts in flies.
+    cart-count.js counts the same way for tickets 38, 43 and 44.
+
+    - A pattern is one product: a product's first line counts, its later lines don't (the same
+      first-line test cart-lines.html groups by). Each gift certificate is its own.
+    - Flies and patterns only when every line's brand is one of the channel's fly brands (theme
+      setting rf_fly_brands, comma-separated), else items and products. No line carries its
+      Placements, so the brand is the only signal; a storefront that sends no brand
+      (show_product_brand off) always counts items.
+
+    It reads cart and theme_settings from its context, so include it where those are in reach. The
+    inner loop compares with the outer line's id kept in a variable, as cart-lines.html does.
+--}}
+{{~assignVar 'rf_cart_products' 0~}}
+{{~assignVar 'rf_cart_flies' 0~}}
+{{~#if cart.items.length~}}{{~#if (trim theme_settings.rf_fly_brands)~}}{{~assignVar 'rf_cart_flies' 1~}}{{~/if~}}{{~/if~}}
+{{~#each cart.items~}}
+{{~assignVar 'rf_cart_at' @index~}}
+{{~assignVar 'rf_cart_pid' product_id~}}
+{{~assignVar 'rf_cart_first' 1~}}
+{{~#if type '!=' 'GiftCertificate'~}}
+{{~#each ../cart.items~}}
+{{~#if @index '<' (getVar 'rf_cart_at')~}}{{~#if type '!=' 'GiftCertificate'~}}
+{{~#if product_id '==' (getVar 'rf_cart_pid')~}}{{~assignVar 'rf_cart_first' 0~}}{{~/if~}}
+{{~/if~}}{{~/if~}}
+{{~/each~}}
+{{~/if~}}
+{{~#if (getVar 'rf_cart_first')~}}{{~assignVar 'rf_cart_products' (add (getVar 'rf_cart_products') 1)~}}{{~/if~}}
+{{~assignVar 'rf_cart_fly_line' 0~}}
+{{~#each (split ../theme_settings.rf_fly_brands ',') as |rfBrand|~}}
+{{~#if (trim rfBrand)~}}{{~#if (trim rfBrand) '===' (trim ../brand.name)~}}{{~assignVar 'rf_cart_fly_line' 1~}}{{~/if~}}{{~/if~}}
+{{~/each~}}
+{{~#unless (getVar 'rf_cart_fly_line')~}}{{~assignVar 'rf_cart_flies' 0~}}{{~/unless~}}
+{{~/each~}}

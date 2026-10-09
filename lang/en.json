@@ -1107,9 +1107,13 @@
             "remove_line": "Remove {name}",
             "quantity": "Quantity of {name}, size {size}",
             "quantity_line": "Quantity of {name}",
+            "decrease": "Decrease the quantity of {name}, size {size}",
+            "increase": "Increase the quantity of {name}, size {size}",
             "coupon_link": "Have a coupon code?",
             "promise": "We stand behind every fly we sell.",
-            "order_total": "Order total",
+            "summary": "Order summary",
+            "bar_flies": "for {units, plural, one {# fly} other {# flies}}",
+            "bar_items": "for {units, plural, one {# item} other {# items}}",
             "error": "Something went wrong. Try again."
         },
 

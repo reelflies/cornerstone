@@ -735,15 +735,21 @@ QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs categ
 
 ## The cart (`cart-screens.spec.mjs`)
 
-Ticket 41's cart (spec module 18) on the fixture page: the real cart page rendered round a 12-pattern cart (`render/pages/cart-page/fixtures/twelve.json`, products from the reference page's data with their own photos). A cart on channel 1 would be a live write (W0-6), and ReelFlies_CA has no products until refactor 14. The fixture page loads no theme bundle, so the spec runs the real `cart-groups.js` in it through `render/theme-script.mjs`, which turns listed theme modules into one browser script with Babel.
+Ticket 41's cart (spec module 18) on the fixture page: the real cart page rendered round a 12-pattern cart (`render/pages/cart-page/fixtures/twelve.json`, products from the reference page's data with their own photos). A cart on channel 1 would be a live write (W0-6), and ReelFlies_CA has no products until refactor 14. The server groups the lines by pattern; the fixture page loads no theme bundle, so the spec runs the real `cart-groups.js`, which sorts each group's sizes, in it through `render/theme-script.mjs`, which turns listed theme modules into one browser script with Babel.
 
 - **The look,** at 375 and 1280: the page without the fixed phone bar, and the bar on its own at 375 (widget baselines, `widget cart-page`).
-- **Grouping:** one group per pattern, sizes in hook order; a pattern with sizes priced differently shows each size's unit price; the lines add up to the subtotal.
+- **Grouping:** one group per pattern, sizes in hook order once sorted; until then a group of several sizes keeps them out of view, and sorting moves no group and not the summary (CLS); a pattern with sizes priced differently shows each size's unit price; the lines add up to the subtotal.
 - **Photos and reflow:** each group's 64px photo, linked to the product, at 320, 375 and 1280, and nothing scrolls sideways.
-- **The phone bar:** the total and Check out, and tabbing never leaves the focused element under it.
+- **The phone bar:** the total for the flies and Check out; tabbing from the top to the summary's Check out never leaves the focused element under it, and a second test shows that check fails with the page's scroll padding taken away.
 - **axe** in the cart.
 
-Its templates are rendered by `render/partials/cart.test.mjs` (the lines, the count by the brand rule, the messages, the summary, and the whole cart page); its scripts by Jest (`cart-groups.spec.js`, `cart-guards.spec.js` for the error and network-failure paths, `cart-count.spec.js`, `cart-page.spec.js`).
+Its templates are rendered by `render/partials/cart.test.mjs` (the groups, the rows and their stock attributes, the count by the brand rule, the messages, the summary and the stock markup it copies, and the whole cart page); its scripts by Jest (`cart-groups.spec.js`, `cart-guards.spec.js` for the error, refusal, unreadable-answer and network-failure paths, `cart-count.spec.js`, `cart-page.spec.js`, and `cart-coupon.spec.js` for stock `cart.js` opening the coupon field).
+
+```sh
+QA_VARIATION="ReelFlies CA" npx playwright test --config scripts/qa/playwright.config.mjs cart-screens
+node --test scripts/qa/render/partials/cart.test.mjs scripts/qa/render/theme-script.test.mjs
+npx jest assets/js/test-unit/theme/reelflies/cart
+```
 
 ## Fixture renders (`render/`)
 
@@ -754,10 +760,11 @@ The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixtu
 | `render/render.mjs` | `renderPartial` and `renderWidget`, `readFixture`, `widgetCases`, `themeConfig` |
 | `render/html-checks.mjs` | `unbalancedTags(html)`: elements closed in the wrong place, closed with nothing open, or never closed |
 | `render/widget-page.mjs` | the fixture page a widget shot is taken on |
+| `render/theme-script.mjs` | `themeScript(names, run)`: listed theme modules as one browser script, through Babel, for a fixture page, which loads no bundle (ticket 41's `cart-screens.spec.mjs`) |
 | `render/home-page.mjs` | the whole home page with every widget a channel places on `pages/home`, each from a fixture, in its region and placement order: `homeCases`, `renderHomePage` and `openHomePage` (ticket 47; `home-widgets-screens.spec.mjs`, below) |
 | `render/photo-contrast.mjs` | `worstContrastOverPhoto(page, selector)`: a line of text against the lightest pixel behind it, for text on a scrim over a photo, which axe can't judge (the hero's and the cards', tickets 46 and 47) |
 | `widget-screens.spec.mjs` | the widget element shots |
-| `render/pages/<name>/` | fixture pages: a real page template rendered round an empty widget from fixed data, each shot by its own `*-screens.spec.mjs` (ticket 31's `card-grid`, by `card-screens.spec.mjs`; ticket 32's `category-page`, by `category-screens.spec.mjs`; "Fixture pages" below) |
+| `render/pages/<name>/` | fixture pages: a real page template rendered round an empty widget from fixed data, each shot by its own `*-screens.spec.mjs` (ticket 31's `card-grid`, by `card-screens.spec.mjs`; ticket 32's `category-page`, by `category-screens.spec.mjs`; ticket 41's `cart-page`, by `cart-screens.spec.mjs`; "Fixture pages" below) |
 | `render/example/` | the worked example below |
 
 ### Partials
@@ -847,7 +854,7 @@ Page baselines hide widget regions ("What the screenshots hide" above), because 
 
 A theme change that restyles buttons or headings changes the self-test's baselines too: update them in the same commit and name `widget rf-selftest` on the `Baselines:` line.
 
-**Fixture pages** (`render/pages/<name>/`, from ticket 31) are widget folders whose fixture renders a real page template round an empty widget (`"page"`, with the page's context in `"page_context"`), so a spec can shoot what that page shows from fixed data, where the live page is masked or the store has no such page yet. `widget-page.mjs` exports the folder as `PAGE_FIXTURES`, and nothing syncs it. `widget-screens.spec.mjs` doesn't shoot them: each has its own `*-screens.spec.mjs` (`card-grid`'s is `card-screens.spec.mjs`, `category-page`'s `category-screens.spec.mjs`), which shoots its cases, and its baselines take the widget shots' names and rules, declared as `widget <name>`. The baseline-scope check reads each folder's name as an owner, and `widget-baselines.test.mjs` and `check-baseline-scope.test.mjs` count every case, so a fixture page's cases are all shot cases.
+**Fixture pages** (`render/pages/<name>/`, from ticket 31) are widget folders whose fixture renders a real page template round an empty widget (`"page"`, with the page's context in `"page_context"`), so a spec can shoot what that page shows from fixed data, where the live page is masked or the store has no such page yet. `widget-page.mjs` exports the folder as `PAGE_FIXTURES`, and nothing syncs it. `widget-screens.spec.mjs` doesn't shoot them: each has its own `*-screens.spec.mjs` (`card-grid`'s is `card-screens.spec.mjs`, `category-page`'s `category-screens.spec.mjs`, `cart-page`'s `cart-screens.spec.mjs`), which shoots its cases, and its baselines take the widget shots' names and rules, declared as `widget <name>`. The baseline-scope check reads each folder's name as an owner, and `widget-baselines.test.mjs` and `check-baseline-scope.test.mjs` count every case, so a fixture page's cases are all shot cases.
 
 ### Widget layout specs
 

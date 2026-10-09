@@ -1,51 +1,39 @@
-// The cart's lines grouped by pattern (ticket 41; spec module 18; O17, UX-13; story 50).
+// Each pattern's sizes in hook order (ticket 41; spec module 18; O17, UX-13; story 50).
 //
-// The store lists cart lines in the order they were added. The cart's markup
-// (components/reelflies/cart-lines.html) renders one line per item, each with its own pattern
-// heading, so the page reads right with no script. This module then groups them: one group per
-// product, the patterns in the order each was first added, and each pattern's sizes in hook order
-// (hook-order.js, shared with ticket 33's facets).
+// The server groups the cart's lines by pattern, in the order each was first added
+// (components/reelflies/cart-lines.html), and lists each group's rows in the order the store
+// gives, the order they were added. This puts the rows in hook order (hook-order.js, shared with
+// ticket 33's facets): sizes 14, 12 and 16 added in that order read 12, 14, 16; 2/0 comes before
+// 1/0, then 1, 2 and up; a row with no size keeps its place after the sizes.
 //
-// - groupCartLines(lines) is the pure part: lines as { productId, size, unitPrice } in the
-//   page's order, returning groups as { productId, lines: [indexes], pricesVary }.
-// - applyCartGroups(root) reorders the rendered lines to match, marks each group's first and last
-//   line (CSS shows the pattern heading on the first only), marks a group whose sizes are priced
-//   differently (each size row then shows its own unit price), and sets data-rf-grouped on the
-//   list. Until then the list is hidden (_cart.scss), so regrouping never moves the page after it
-//   paints. cart.js calls it again after each re-render of the cart's content.
+// - rowOrder(sizes) is the pure part: the rows' sizes in page order, returning their indexes in
+//   hook order.
+// - sortCartRows(root) reorders every group's rows to match and marks each group sorted. Until
+//   then a group with more than one row keeps its rows out of view at their full height
+//   (_cart.scss), so sorting them moves nothing on the page. cart-page.js runs it on load and
+//   after each re-render of the cart's content.
 
 import { sortByHookOrder } from './hook-order';
 
-export function groupCartLines(lines) {
-    const byProduct = new Map();
-    lines.forEach((line, index) => {
-        if (!byProduct.has(line.productId)) byProduct.set(line.productId, []);
-        byProduct.get(line.productId).push(index);
-    });
-    return [...byProduct.entries()].map(([productId, indexes]) => ({
-        productId,
-        lines: sortByHookOrder(indexes, index => lines[index].size),
-        pricesVary: new Set(indexes.map(index => lines[index].unitPrice)).size > 1,
-    }));
+export const GROUP = '[data-rf-cart-group]';
+export const ROW = '[data-rf-cart-row]';
+export const SORTED = 'data-rf-cart-sorted';
+
+export function rowOrder(sizes) {
+    return sortByHookOrder(sizes.map((_size, index) => index), index => sizes[index]);
 }
 
-export function applyCartGroups(root = document) {
-    const list = root.querySelector('[data-rf-cart-lines]');
-    if (!list) return;
-    const elements = [...list.querySelectorAll(':scope > [data-rf-cart-line]')];
-    const lines = elements.map(element => ({
-        productId: element.dataset.rfProductId,
-        size: element.dataset.rfSize,
-        unitPrice: element.dataset.rfUnitPrice,
-    }));
-    groupCartLines(lines).forEach(group => {
-        group.lines.forEach((index, position) => {
-            const element = elements[index];
-            element.toggleAttribute('data-rf-group-first', position === 0);
-            element.toggleAttribute('data-rf-group-last', position === group.lines.length - 1);
-            element.toggleAttribute('data-rf-prices-vary', group.pricesVary);
-            list.appendChild(element);
-        });
+export function sortCartRows(root = document) {
+    root.querySelectorAll(GROUP).forEach(group => {
+        const rows = [...group.querySelectorAll(ROW)];
+        const order = rowOrder(rows.map(row => row.getAttribute('data-rf-size') || ''));
+        if (order.some((index, position) => index !== position)) {
+            // Moving a row takes focus off whatever in it had focus, so give it back.
+            const focused = group.ownerDocument.activeElement;
+            const hadFocus = focused !== group && group.contains(focused);
+            order.forEach(index => rows[index].parentNode.appendChild(rows[index]));
+            if (hadFocus && group.ownerDocument.activeElement !== focused) focused.focus();
+        }
+        group.setAttribute(SORTED, '');
     });
-    list.setAttribute('data-rf-grouped', '');
 }

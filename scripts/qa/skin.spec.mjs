@@ -35,9 +35,11 @@ const RING = {
 }; // #23272B, _settings.scss
 // The gold bead #F2C14E on forest grounds (.rf-on-dark): the footer (ticket 50) and the forest bands.
 const RING_ON_DARK = 'rgb(242, 193, 78)';
-// The phone logo link's inset ring (_header.scss, #67), below 801px.
+// The phone logo link's inset ring (_header.scss, #67), below 801px: Cornerstone's medium
+// breakpoint, where the header's own rule moves the ring back outside.
 const LOGO_LINK = '.rf-header-logo .rf-header-logo-link';
 const LOGO_RING_OFFSET_PHONE = '-2px';
+const MEDIUM = 801;
 const FONT_FILE = /\/fonts\/onest-latin-var\.woff2(\?|$)/;
 const GOOGLE_FONTS = /fonts\.(googleapis|gstatic)\.com/;
 // A channel-1 product with no image of its own (ticket 14's inventory: 4094, a Mustad hook pack).
@@ -88,7 +90,7 @@ async function pointerFocus(page, locator) {
 
 for (const [key, pagePath] of Object.entries(PAGES)) {
     test.describe(`${key} (${pagePath})`, () => {
-        test('keyboard focus shows the ReelFlies ring on a link and a button; a pointer shows none', async ({ page }, testInfo) => {
+        test('keyboard focus shows the ReelFlies ring on a link and a button; a pointer shows none', async ({ page }) => {
             await storefrontPage(page, key);
             await dismissCookieBanner(page);
             const targets = {
@@ -101,7 +103,7 @@ for (const [key, pagePath] of Object.entries(PAGES)) {
                 // Stock .button eases `all` over 0.15s, the ring included, so wait for it to settle.
                 await keyboardFocus(page, target); // eslint-disable-line no-await-in-loop
                 const onDark = await target.evaluate(element => Boolean(element.closest('.rf-on-dark'))); // eslint-disable-line no-await-in-loop
-                const inset = testInfo.project.name === 'phone-375' && await target.evaluate((element, selector) => element.matches(selector), LOGO_LINK); // eslint-disable-line no-await-in-loop
+                const inset = page.viewportSize().width < MEDIUM && await target.evaluate((element, selector) => element.matches(selector), LOGO_LINK); // eslint-disable-line no-await-in-loop
                 await expect.poll(() => outlineOf(target), { message: `the ${what} by keyboard`, timeout: 3000 }).toEqual({ // eslint-disable-line no-await-in-loop
                     focused: true, visible: true, width: RING.width, style: RING.style, colour: onDark ? RING_ON_DARK : RING.colour, offset: inset ? LOGO_RING_OFFSET_PHONE : RING.offset,
                 });

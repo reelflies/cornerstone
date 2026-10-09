@@ -1,8 +1,10 @@
 import { guardedApi, guardedCallback } from '../../../theme/reelflies/guarded-api';
 
 // The stock storefront API's callbacks, as utils.api.cart.* calls them: (err, response), where a
-// refused change answers { data: { status: 'failed', errors: [...] } }, and a dropped connection
-// gives err and no response at all (stock cart.js read response.data first and threw).
+// refused change answers { data: { status: 'failed', errors: [...] } }, a dropped connection
+// gives err and no response at all (stock cart.js read response.data first and threw), and a 4xx
+// or 5xx answer gives no err, with an HTML page or JSON with no data (stencil-utils never checks
+// the status).
 const FALLBACK = 'Something went wrong. Try again.';
 
 describe('guardedCallback', () => {
@@ -35,19 +37,46 @@ describe('guardedCallback', () => {
 
     it('turns a network failure, with no response, into a failure with the fallback words, never a TypeError', () => {
         const fail = jest.fn();
-        expect(() => guardedCallback(jest.fn(), fail, FALLBACK)(new Error('Network Error'), undefined)).not.toThrow();
+        expect(() => guardedCallback(jest.fn(), fail, { fallback: FALLBACK })(new Error('Network Error'), undefined)).not.toThrow();
         expect(fail).toHaveBeenCalledWith(FALLBACK);
         const empty = jest.fn();
-        guardedCallback(jest.fn(), empty, FALLBACK)(null, { data: { status: 'failed' } });
+        guardedCallback(jest.fn(), empty, { fallback: FALLBACK })(null, { data: { status: 'failed' } });
         expect(empty).toHaveBeenCalledWith(FALLBACK);
     });
 
     it('checks the error before the response: an error with a response is still a failure', () => {
         const ok = jest.fn();
         const fail = jest.fn();
-        guardedCallback(ok, fail, FALLBACK)(new Error('500'), { data: { status: 'succeed' } });
+        guardedCallback(ok, fail, { fallback: FALLBACK })(new Error('500'), { data: { status: 'succeed' } });
         expect(ok).not.toHaveBeenCalled();
         expect(fail).toHaveBeenCalledWith(FALLBACK);
+    });
+
+    it('fails an answer that isn\'t a cart response: a 5xx or 429 page as text, JSON with no data or content, an empty answer', () => {
+        for (const response of ['<!DOCTYPE html><title>503</title>', { error: 'Too Many Requests' }, {}, null, 0]) {
+            const ok = jest.fn();
+            const fail = jest.fn();
+            guardedCallback(ok, fail, { fallback: FALLBACK })(null, response);
+            expect(ok).not.toHaveBeenCalled();
+            expect(fail).toHaveBeenCalledWith(FALLBACK);
+        }
+    });
+
+    it('holds a call to its own word for success: the cart calls\' "succeed", the coupon calls\' "success"', () => {
+        const ok = jest.fn();
+        guardedCallback(ok, jest.fn(), { status: 'succeed' })(null, { data: { status: 'succeed' } });
+        expect(ok).toHaveBeenCalled();
+        for (const response of [{ data: { status: 'success' } }, { data: {} }, { data: { quantity: 2 } }, { content: '<p>cart</p>' }]) {
+            const fail = jest.fn();
+            guardedCallback(jest.fn(), fail, { status: 'succeed', fallback: FALLBACK })(null, response);
+            expect(fail).toHaveBeenCalledWith(FALLBACK);
+        }
+    });
+
+    it('passes an option change\'s data, which has no status, when the call names no word', () => {
+        const ok = jest.fn();
+        guardedCallback(ok, jest.fn())(null, { data: { purchasable: true, instock: true } });
+        expect(ok).toHaveBeenCalled();
     });
 });
 
@@ -73,8 +102,10 @@ describe('cartFailed (stock cart.js\'s guarded callbacks)', () => {
         ({ announce } = await import('../../../theme/reelflies/live-region'));
         ({ cartFailed } = await import('../../../theme/reelflies/cart-feedback'));
         document.body.innerHTML = `<ul data-rf-cart-lines>
-            <li data-rf-cart-line><div class="rf-cart-row"><button data-cart-itemid="a1" data-action="inc">+</button></div></li>
-            <li data-rf-cart-line><div class="rf-cart-row"><button data-cart-itemid="b1" data-action="inc">+</button></div></li>
+            <li data-rf-cart-group><ul class="rf-cart-rows">
+                <li data-rf-cart-row><button data-cart-itemid="a1" data-action="inc">+</button></li>
+                <li data-rf-cart-row><button data-cart-itemid="b1" data-action="inc">+</button></li>
+            </ul></li>
         </ul>`;
     });
 
@@ -87,9 +118,27 @@ describe('cartFailed (stock cart.js\'s guarded callbacks)', () => {
         const errors = document.querySelectorAll('[data-rf-cart-error]');
         expect(errors).toHaveLength(1);
         expect(errors[0].textContent).toBe('Only 4 left of size 12.');
-        expect(anchor.closest('[data-rf-cart-line]').contains(errors[0])).toBe(true);
+        expect(anchor.closest('[data-rf-cart-row]').contains(errors[0])).toBe(true);
         expect(announce).toHaveBeenCalledTimes(1);
         expect(announce).toHaveBeenCalledWith('Only 4 left of size 12.', document);
+    });
+
+    it('leaves focus on the stepper that was used, and tells the cart page the change failed (story 68)', () => {
+        const anchor = document.querySelector('[data-cart-itemid="b1"]');
+        anchor.focus();
+        const failedEvent = jest.fn();
+        document.addEventListener('rf:cart-failed', failedEvent);
+        cartFailed(null, { data: { status: 'failed', errors: ['Only 4 left of size 12.'] } }, { anchor, fallback: FALLBACK, status: 'succeed' });
+        expect(document.activeElement).toBe(anchor);
+        expect(failedEvent).toHaveBeenCalledTimes(1);
+        document.removeEventListener('rf:cart-failed', failedEvent);
+    });
+
+    it('on a 5xx page with no error: undoes and shows the fallback words, where stock threw a TypeError', () => {
+        const undo = jest.fn();
+        expect(cartFailed(null, '<!DOCTYPE html><title>502</title>', { undo, fallback: FALLBACK, status: 'succeed' })).toBe(true);
+        expect(undo).toHaveBeenCalledTimes(1);
+        expect(document.querySelector('[data-rf-cart-error]').textContent).toBe(FALLBACK);
     });
 
     it('on a dropped connection: the fallback words, and no TypeError from the missing response', () => {
@@ -98,6 +147,12 @@ describe('cartFailed (stock cart.js\'s guarded callbacks)', () => {
         expect(undo).toHaveBeenCalled();
         expect(document.querySelector('[data-rf-cart-error]').textContent).toBe(FALLBACK);
         expect(document.querySelector('[data-rf-cart-error]').nextElementSibling.matches('[data-rf-cart-lines]')).toBe(true);
+    });
+
+    it('with no fallback given, shows the words the cart\'s lines carry (cart-lines.html\'s data-rf-cart-error)', () => {
+        document.querySelector('[data-rf-cart-lines]').setAttribute('data-rf-cart-error', FALLBACK);
+        cartFailed(new Error('Network Error'), undefined);
+        expect(document.querySelector('[data-rf-cart-error]').textContent).toBe(FALLBACK);
     });
 
     it('replaces an earlier error rather than stacking them, and passes a success through untouched', () => {

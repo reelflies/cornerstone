@@ -1,9 +1,9 @@
 // Theme modules as one browser script, for a fixture page (W0-9), which loads no theme bundle
 // (render/widget-layout.html). A spec that needs a module's real code in the page, such as ticket
-// 41's cart-groups.js ordering the cart's lines, injects this with page.addScriptTag:
+// 41's cart-groups.js sorting the cart's rows, injects this with page.addScriptTag:
 //
 //   const content = themeScript(['reelflies/hook-order', 'reelflies/cart-groups'],
-//       "modules['reelflies/cart-groups'].applyCartGroups(document);");
+//       "modules['reelflies/cart-groups'].sortCartRows(document);");
 //   await page.addScriptTag({ content });
 //
 // - Each module, named by its path under assets/js/theme without .js, is turned into CommonJS by
@@ -18,7 +18,7 @@ import { createRequire } from 'module';
 import { THEME_DIR } from './render.mjs';
 
 const require = createRequire(import.meta.url);
-const babel = require('@babel/core'); // eslint-disable-line import/no-extraneous-dependencies
+const babel = require('@babel/core');
 
 const JS_ROOT = path.join(THEME_DIR, 'assets/js/theme');
 
@@ -26,7 +26,9 @@ function commonJs(name) {
     const file = path.join(JS_ROOT, `${name}.js`);
     if (!fs.existsSync(file)) throw new Error(`no theme module assets/js/theme/${name}.js`);
     return babel.transformFileSync(file, {
-        babelrc: false, configFile: false, plugins: ['@babel/plugin-transform-modules-commonjs'],
+        // The theme's own preset, a direct dependency, kept to modules: the page is a current
+        // Chromium, so nothing else needs rewriting.
+        babelrc: false, configFile: false, presets: [['@babel/preset-env', { modules: 'commonjs', targets: { chrome: '120' } }]],
     }).code;
 }
 

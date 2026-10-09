@@ -26,6 +26,10 @@ describe('countCart (ticket 41\'s brand rule, Shaun on review-02)', () => {
         expect(countCart([item(1, 2, null), item(2, 1, '')], ['ReelFlies'])).toMatchObject({ flies: false, units: 3 });
     });
 
+    it('counts each line with no product id, such as a gift certificate, as a product of its own', () => {
+        expect(countCart([item(undefined, 1, null), item(undefined, 1, null), item(1, 2)], ['ReelFlies'])).toEqual({ units: 4, products: 3, flies: false });
+    });
+
     it('counts items when the channel names no fly brands', () => {
         expect(countCart([item(1, 2)], [])).toMatchObject({ flies: false });
     });

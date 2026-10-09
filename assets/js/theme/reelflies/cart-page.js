@@ -1,21 +1,25 @@
 // The cart page's ReelFlies module (ticket 41; spec module 18; stories 50 and 67), loaded with
 // stock cart.js through page-modules.js.
 //
-// - Groups the lines by pattern on load (cart-groups.js) and again each time stock cart.js
-//   renders the cart's content after a change, which it announces with the rf:cart-rendered
-//   event (its hook in refreshContent).
-// - Puts focus back on the control that was used: the re-render replaces the lines, so the
-//   stepper or quantity field that had focus is gone (stock refocuses a stepper, and regrouping
-//   would take that away). It finds the same line's same control, and failing that (the line was
-//   removed) the cart's heading. cart.js sends the event last, after its own focus call.
+// - Sorts each pattern's sizes into hook order on load (cart-groups.js) and again each time stock
+//   cart.js renders the cart's content after a change, which it announces with RENDERED_EVENT
+//   (cart-events.js; its hook at the end of refreshContent).
+// - Puts focus back after a re-render, which replaces the lines and the summary:
+//   - on the same line's same control (a stepper, the quantity field, Remove) when one was used;
+//   - where it was, when it is still on the page;
+//   - else on the cart's heading: the line went, or a coupon, gift certificate or options change
+//     re-rendered the cart.
+//   A failed call re-renders nothing and announces FAILED_EVENT, so the control is forgotten.
 
-import { applyCartGroups } from './cart-groups';
+import { sortCartRows } from './cart-groups';
+import { FAILED_EVENT, RENDERED_EVENT } from './cart-events';
 
-export const RENDERED_EVENT = 'rf:cart-rendered';
+const CONTROL = 'button[data-cart-itemid], input[data-cart-itemid]';
+const HEADING = '[data-cart-page-title] h1';
 
-// The control a shopper last used in the lines, as a selector that finds it again.
+// The line control a shopper used, as a selector that finds it again, or null for anything else.
 export function controlSelector(target) {
-    const control = target && target.closest ? target.closest('[data-cart-itemid]') : null;
+    const control = target && target.closest ? target.closest(CONTROL) : null;
     if (!control || !control.closest('[data-rf-cart-lines]')) return null;
     const id = control.getAttribute('data-cart-itemid');
     if (control.classList.contains('cart-remove')) return `[data-cart-itemid="${id}"].cart-remove`;
@@ -24,7 +28,7 @@ export function controlSelector(target) {
 }
 
 export function restoreFocus(selector, doc = document) {
-    const target = (selector && doc.querySelector(selector)) || doc.querySelector('[data-cart-page-title] h1');
+    const target = (selector && doc.querySelector(selector)) || doc.querySelector(HEADING);
     if (!target) return;
     if (!target.matches('a, button, input, select, textarea, [tabindex]')) target.setAttribute('tabindex', '-1');
     target.focus();
@@ -32,20 +36,24 @@ export function restoreFocus(selector, doc = document) {
 
 export default {
     load(_context, doc = document) {
-        applyCartGroups(doc);
+        sortCartRows(doc);
         let used = null;
+        // Any click or change sets it, so a later coupon or options change doesn't send focus
+        // back to a stepper used before.
         const remember = event => {
-            const selector = controlSelector(event.target);
-            if (selector) used = selector;
+            used = controlSelector(event.target);
         };
         doc.addEventListener('click', remember, true);
         doc.addEventListener('change', remember, true);
+        doc.addEventListener(FAILED_EVENT, () => {
+            used = null;
+        });
         doc.addEventListener(RENDERED_EVENT, () => {
-            // Regrouping moves the lines, which takes focus off the one stock cart.js just focused.
             const active = doc.activeElement;
-            applyCartGroups(doc);
+            sortCartRows(doc);
             if (used) restoreFocus(used, doc);
             else if (active && active !== doc.body && active.isConnected) active.focus();
+            else restoreFocus(null, doc);
             used = null;
         });
     },

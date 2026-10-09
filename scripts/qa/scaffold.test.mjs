@@ -211,7 +211,7 @@ describe('schema.json and schemaTranslations.json: the ReelFlies group', () => {
         const headings = group.settings.filter(setting => setting.type === 'heading').map(setting => setting.content);
         assert.deepEqual(headings, [
             'i18n.RfHeader', 'i18n.RfMenu', 'i18n.RfProductCards', 'i18n.RfProductPage', 'i18n.RfStoreDetails',
-            'i18n.RfCartState', 'i18n.RfQuickAdd', 'i18n.RfRegionPrompt',
+            'i18n.RfCart', 'i18n.RfCartState', 'i18n.RfQuickAdd', 'i18n.RfRegionPrompt',
         ]);
         const menu = group.settings.findIndex(setting => setting.content === 'i18n.RfMenu');
         assert.deepEqual(group.settings.slice(menu + 1, menu + 3).map(setting => [setting.type, setting.id]), [
@@ -347,7 +347,7 @@ describe('the JavaScript and template slots', () => {
     it('js-settings.html: one slot per switch ticket, in ticket order, with blank lines between', () => {
         const text = lines('templates/components/reelflies/js-settings.html');
         const body = text.slice(text.indexOf('--}}') + 1);
-        assert.deepEqual(slotProblems(body, [27, 31, 39, 40, 42, 43, 52], TEMPLATE_SLOT), []);
+        assert.deepEqual(slotProblems(body, [27, 31, 39, 40, 41, 42, 43, 52], TEMPLATE_SLOT), []);
     });
 
     it('the slot check accepts a filled slot and catches a lost blank line or a slot out of order', () => {

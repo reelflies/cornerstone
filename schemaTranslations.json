@@ -6128,11 +6128,15 @@
     "default": "Store details"
   },
 
-  "i18n.RfCartState": {
-    "default": "Cart state"
+  "i18n.RfCart": {
+    "default": "Cart"
   },
   "i18n.RfFlyBrands": {
     "default": "Fly brands, comma-separated: a cart of these alone counts in flies and patterns"
+  },
+
+  "i18n.RfCartState": {
+    "default": "Cart state"
   },
 
   "i18n.RfQuickAdd": {

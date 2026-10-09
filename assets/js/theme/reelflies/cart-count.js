@@ -1,6 +1,7 @@
 // What a cart holds, in flies or in items (ticket 41; story 51), for ticket 38's "15 flies in your
-// cart." and tickets 43 and 44 (build pipeline 6.2). The cart page's own heading counts the same
-// way in its template (components/reelflies/cart-title.html).
+// cart." and tickets 43 and 44 (build pipeline 6.2). The cart page counts the same way in its
+// templates (components/reelflies/cart-counts.html). Ticket 38 reads the setting from
+// context.rfFlyBrands (js-settings.html).
 //
 // The brand rule (Shaun, review-02): the count is in flies and patterns only when every line's
 // brand is one of the channel's fly brands (theme setting rf_fly_brands, comma-separated; today
@@ -12,10 +13,11 @@ export function flyBrandList(setting) {
     return String(setting ?? '').split(',').map(name => name.trim()).filter(Boolean);
 }
 
-// items: [{ productId, quantity, brand }]. Returns { units, products, flies }.
+// items: [{ productId, quantity, brand }]. Returns { units, products, flies }. A line with no
+// product id, such as a gift certificate, is a product of its own.
 export function countCart(items, flyBrands) {
     const units = items.reduce((sum, line) => sum + Number(line.quantity || 0), 0);
-    const products = new Set(items.map(line => line.productId)).size;
+    const products = new Set(items.map((line, index) => line.productId ?? `line-${index}`)).size;
     const flies = items.length > 0 && flyBrands.length > 0 && items.every(line => flyBrands.includes(String(line.brand ?? '').trim()));
     return { units, products, flies };
 }

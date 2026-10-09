@@ -1,72 +1,67 @@
-import { applyCartGroups, groupCartLines } from '../../../theme/reelflies/cart-groups';
+import { rowOrder, sortCartRows } from '../../../theme/reelflies/cart-groups';
 
-// A cart line as the cart's markup describes it: its product, its Fly Size and its unit price.
-const line = (productId, size, unitPrice = '1.25') => ({ productId, size, unitPrice });
+// The server groups the lines by pattern (cart-lines.html; render/partials/cart.test.mjs); this
+// sorts each group's rows into hook order.
 
-describe('groupCartLines', () => {
-    it('puts one pattern\'s sizes in one group, in hook order, whatever order they were added in (story 50)', () => {
-        const groups = groupCartLines([line('5663', '14'), line('5663', '12'), line('5663', '16')]);
-        expect(groups).toEqual([{ productId: '5663', lines: [1, 0, 2], pricesVary: false }]);
-    });
-
-    it('keeps the patterns in the order each was first added', () => {
-        const groups = groupCartLines([
-            line('4831', '10'), line('5906', '6'), line('4831', '8'), line('4398', ''), line('5906', '4'),
-        ]);
-        expect(groups.map(group => group.productId)).toEqual(['4831', '5906', '4398']);
-        expect(groups.map(group => group.lines)).toEqual([[2, 0], [4, 1], [3]]);
+describe('rowOrder', () => {
+    it('puts one pattern\'s sizes in hook order, whatever order they were added in: 14, 12, 16 read 12, 14, 16 (story 50)', () => {
+        expect(rowOrder(['14', '12', '16'])).toEqual([1, 0, 2]);
     });
 
     it('puts aught sizes first: 2/0, then 1/0, then 2, reading the catalogue\'s 1-0 too', () => {
-        const groups = groupCartLines([line('7', '2'), line('7', '1-0'), line('7', '2/0')]);
-        expect(groups[0].lines).toEqual([2, 1, 0]);
+        expect(rowOrder(['2', '1-0', '2/0'])).toEqual([2, 1, 0]);
     });
 
-    it('keeps a line with no size, or a size that isn\'t a hook size, after the hook sizes, in the order added', () => {
-        const groups = groupCartLines([line('8', ''), line('8', '12'), line('8', 'Assorted'), line('8', '10')]);
-        expect(groups[0].lines).toEqual([3, 1, 0, 2]);
+    it('keeps a row with no size, or a size that isn\'t a hook size, after the hook sizes, in the order added', () => {
+        expect(rowOrder(['', '12', 'Assorted', '10'])).toEqual([3, 1, 0, 2]);
     });
 
-    it('marks a group whose sizes are priced differently, so each size row shows its own unit price', () => {
-        const groups = groupCartLines([line('9', '8', '2.95'), line('9', '10', '2.95'), line('10', '6', '2.95'), line('10', '4', '3.25')]);
-        expect(groups.map(group => group.pricesVary)).toEqual([false, true]);
-    });
-
-    it('returns no groups for an empty cart', () => {
-        expect(groupCartLines([])).toEqual([]);
+    it('leaves one row, or none, where it is', () => {
+        expect(rowOrder(['14'])).toEqual([0]);
+        expect(rowOrder([])).toEqual([]);
     });
 });
 
-describe('applyCartGroups', () => {
-    const render = items => {
-        document.body.innerHTML = `<div data-cart-content><ul data-rf-cart-lines>${items.map(([id, productId, size, price]) => `<li data-rf-cart-line data-cart-itemid="${id}" data-rf-product-id="${productId}" data-rf-size="${size}" data-rf-unit-price="${price}"></li>`).join('')}</ul></div>`;
-        return document.querySelector('[data-rf-cart-lines]');
+describe('sortCartRows', () => {
+    // Groups as cart-lines.html renders them: the server's grouping, each group's rows in the
+    // order they were added.
+    const render = groups => {
+        document.body.innerHTML = `<ul data-rf-cart-lines>${groups.map(rows => `<li data-rf-cart-group${rows.length > 1 ? ' data-rf-cart-multi' : ''}>
+            <h2>Pattern</h2>
+            <ul class="rf-cart-rows">${rows.map(([id, size]) => `<li data-rf-cart-row data-rf-size="${size}" data-id="${id}"><button data-cart-itemid="${id}" data-action="inc">+</button></li>`).join('')}</ul>
+        </li>`).join('')}</ul>`;
+        return [...document.querySelectorAll('[data-rf-cart-group]')];
     };
-    const order = list => [...list.children].map(element => element.dataset.cartItemid);
-    const marked = (list, attribute) => [...list.children].filter(element => element.hasAttribute(attribute)).map(element => element.dataset.cartItemid);
+    const order = group => [...group.querySelectorAll('[data-rf-cart-row]')].map(row => row.dataset.id);
 
-    it('reorders the rendered lines into groups and marks each group\'s first and last line', () => {
-        const list = render([['a', '1', '14', '1.25'], ['b', '2', '8', '0.95'], ['c', '1', '12', '1.25'], ['d', '1', '16', '1.25']]);
-        applyCartGroups(document);
-        expect(order(list)).toEqual(['c', 'a', 'd', 'b']);
-        expect(marked(list, 'data-rf-group-first')).toEqual(['c', 'b']);
-        expect(marked(list, 'data-rf-group-last')).toEqual(['d', 'b']);
-        expect(list.hasAttribute('data-rf-grouped')).toBe(true);
+    it('sorts each group\'s rows into hook order and marks every group sorted, leaving the groups\' order alone', () => {
+        const [adams, bugger] = render([[['a', '14'], ['b', '12'], ['c', '16']], [['d', '8']]]);
+        sortCartRows(document);
+        expect(order(adams)).toEqual(['b', 'a', 'c']);
+        expect(order(bugger)).toEqual(['d']);
+        expect([adams, bugger].every(group => group.hasAttribute('data-rf-cart-sorted'))).toBe(true);
+        expect([...document.querySelectorAll('[data-rf-cart-group]')]).toEqual([adams, bugger]);
     });
 
-    it('marks every line of a group whose sizes are priced differently', () => {
-        const list = render([['a', '1', '6', '2.95'], ['b', '1', '4', '3.25'], ['c', '2', '8', '0.95']]);
-        applyCartGroups(document);
-        expect(marked(list, 'data-rf-prices-vary')).toEqual(['b', 'a']);
+    it('keeps focus on a control in a row it moves', () => {
+        const [adams] = render([[['a', '14'], ['b', '12']]]);
+        const button = adams.querySelector('[data-cart-itemid="a"]');
+        button.focus();
+        sortCartRows(document);
+        expect(order(adams)).toEqual(['b', 'a']);
+        expect(document.activeElement).toBe(button);
     });
 
-    it('runs again cleanly on a re-rendered list, and does nothing on a page without one', () => {
-        const list = render([['a', '1', '14', '1.25'], ['b', '1', '12', '1.25']]);
-        applyCartGroups(document);
-        applyCartGroups(document);
-        expect(order(list)).toEqual(['b', 'a']);
-        expect(marked(list, 'data-rf-group-first')).toEqual(['b']);
+    it('moves nothing in a group already in hook order, runs again cleanly, and does nothing on a page with no lines', () => {
+        const [adams] = render([[['a', '12'], ['b', '14']]]);
+        const rows = [...adams.querySelectorAll('[data-rf-cart-row]')];
+        const observer = new MutationObserver(() => {});
+        observer.observe(adams, { childList: true, subtree: true });
+        sortCartRows(document);
+        sortCartRows(document);
+        expect(observer.takeRecords()).toEqual([]);
+        expect([...adams.querySelectorAll('[data-rf-cart-row]')]).toEqual(rows);
         document.body.innerHTML = '<p>Your cart is empty</p>';
-        expect(() => applyCartGroups(document)).not.toThrow();
+        expect(() => sortCartRows(document)).not.toThrow();
     });
 });
