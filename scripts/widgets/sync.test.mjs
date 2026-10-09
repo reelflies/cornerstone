@@ -250,7 +250,7 @@ test('unpublishing sends only the placement\'s status, which the content freeze 
     const unplaced = planSync({
         channel: CH, entries: [hero()], store: empty, unpublish: 'home-lead',
     });
-    assert.match(unplaced.problems.join('\n'), /home-lead: the widget isn't recorded in .*channels\/1895766\.json, so there is nothing to unpublish/);
+    assert.match(unplaced.problems.join('\n'), /home-lead: channel 1895766 has no widget named rf-home-lead, and .*channels\/1895766\.json records none, so there is nothing to unpublish/);
 });
 
 test('a recorded uuid the channel doesn\'t have stops the sync', () => {
@@ -444,4 +444,39 @@ test('--record finds each template file\'s placement and records them as a map',
     assert.equal(result.changed, true);
     const moved = several({ template: T, widget: W, placements: { 'pages/cart': OTHER } });
     assert.match(recordUuids({ channel: CH, entries: [moved], store })[0].problems.join('\n'), /records placement pages\/cart f2f2f2f2.*, but the channel's is e2e2e2e2/);
+});
+
+// #65's round-2 rf/skeptic: the twin check matches a listed template file in the placement's own
+// region, so a stray placement on that file in another region is this check's to name.
+test('an unrecorded placement on a listed template file in another region stops the sync', () => {
+    const entry = several({ template: T, widget: W, placements: { 'pages/home': P, 'pages/cart': P2 } });
+    const store = {
+        templates: [storeTemplate(entry)],
+        widgets: [storeWidget(entry)],
+        placements: [placedOn('pages/home', P), placedOn('pages/cart', P2), placedOn('pages/search', P3, { region: 'home_below_menu' })],
+    };
+    const { requests, problems } = planSync({ channel: CH, entries: [entry], store });
+    assert.deepEqual(requests, []);
+    assert.match(problems.join('\n'), /placement e3e3e3e3.* of the widget on pages\/search home_below_menu, which .* doesn't record: delete it in the control panel/);
+});
+
+// #65's round-2 rf/skeptic: between an apply and its --record PR, the widget is on the channel
+// but not in the channel file; the off switch finds it by name.
+test('unpublishing a widget the channel file doesn\'t record yet finds it by name', () => {
+    const entry = several({ template: null, widget: null, placements: {} });
+    const store = {
+        templates: [storeTemplate(entry)],
+        widgets: [storeWidget(entry)],
+        placements: [placedOn('pages/home', P), placedOn('pages/cart', P2)],
+    };
+    const { requests, problems, lines } = planSync({
+        channel: CH, entries: [entry], store, unpublish: 'home-lead',
+    });
+    assert.deepEqual(problems, []);
+    assert.deepEqual(requests.map(request => request.path), [`${PATHS.placements}/${P}`, `${PATHS.placements}/${P2}`]);
+    assert.ok(lines.some(line => /widget rf-home-lead \(d00dfeed\), found by name: not recorded yet/.test(line)), lines.join('\n'));
+    const none = planSync({
+        channel: CH, entries: [entry], store: { ...store, widgets: [] }, unpublish: 'home-lead',
+    });
+    assert.match(none.problems.join('\n'), /home-lead: channel 1895766 has no widget named rf-home-lead, and .* records none, so there is nothing to unpublish/);
 });

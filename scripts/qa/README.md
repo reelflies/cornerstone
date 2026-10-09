@@ -523,14 +523,14 @@ export default {
     description: 'exactly one <h1>',
     pages: ['home', 'product', 'category'], // optional: only these page kinds
     notOn: ['cart'],                        // optional: never these page kinds
-    check(page) {                           // page: { kind, path, url, status, html }
+    check(page) {                           // page: { kind, key, path, url, status, html }
         const count = findTags(page.html, 'h1').length;
         return count === 1 ? [] : [`${count} <h1> elements`]; // problems; empty means pass
     },
 };
 ```
 
-**A check across pages:** an assertion may also export `checkAll(pages)`, or only that. The harness runs it once, after every page is fetched, on the pages its `pages` and `notOn` pick that rendered as their template, and reports it under "Every page together". `pages` is a list of the page objects `check` gets, each with its pin's `key` (`kind@name`, or the kind) as well; `checkAll` returns its problems, as `check` does. Ticket 27's `strip-every-page` uses it: the shipping strip on every pinned page or on none. (Build pipeline 6.5 says a ticket adds an assertion without touching the harness; this one hook was added to the harness once, by ticket 27's follow-up, so later cross-page checks need no harness edit either.)
+**A check across pages:** an assertion may also export `checkAll(pages)`, or only that. The harness runs it once, after every page is fetched, on the pages its `pages` and `notOn` pick that rendered as their template, and reports it under "Every page together". `pages` is a list of the page objects `check` gets, each with its pin's `key` (`kind@name`, or the kind); `checkAll` returns its problems, as `check` does. Ticket 27's `strip-every-page` uses it: the shipping strip on every pinned page or on none. (Build pipeline 6.5 says a ticket adds an assertion without touching the harness; this one hook was added to the harness once, by ticket 27's follow-up, so later cross-page checks need no harness edit either.)
 
 **Helpers in `html.mjs`** read HTML the way a browser builds it:
 

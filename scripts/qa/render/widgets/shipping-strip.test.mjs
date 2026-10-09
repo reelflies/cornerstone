@@ -49,11 +49,15 @@ test('the channel file places it on 1895766 in header_bottom--global, active, on
     assert.equal(channelFile.channel_id, 1895766);
     // A global region's placement names one template file, and the store shows it on that page
     // only (#62's rf/skeptic; ticket 27's follow-up), so the strip has a placement per template file.
-    const { template_files: files, ...placement } = channelFile.placement;
-    assert.deepEqual(placement, { region: 'header_bottom--global', sort_order: 0, status: 'active' });
+    // The status isn't pinned: an R12 unpublish (ticket 57) sets it inactive in a PR that must
+    // pass CI; --verify compares it with the store.
+    const { template_files: files, status, ...placement } = channelFile.placement;
+    assert.deepEqual(placement, { region: 'header_bottom--global', sort_order: 0 });
+    assert.ok(['active', 'inactive'].includes(status), status);
     // Every template with the header but the hibernation page (a closed store makes no shipping
-    // promise) and the stored payment-method pages, which the Widgets API refuses ("422 template_file:
-    // unsupported template file", 2026-10-09, plan 78d5173a; its documented list leaves them out). A
+    // promise) and the stored payment-method pages: the Widgets API's documented list leaves the
+    // three out, and the store refused pages/account/payment-methods ("422 template_file:
+    // unsupported template file", 2026-10-09, plan 78d5173a); the other two weren't tried. A
     // ticket that adds a custom template (pages/custom/<kind>/<file>) adds it here.
     const notPlaceable = ['pages/unavailable/hibernation', 'pages/account/add-payment-method', 'pages/account/edit-payment-method', 'pages/account/payment-methods'];
     const expected = headerTemplateFiles().filter(file => !notPlaceable.includes(file));

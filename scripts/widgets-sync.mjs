@@ -32,7 +32,9 @@
 //    check the widgets' markup wherever a page has them (build pipeline, section 6.6).
 //
 // --unpublish <name> sets the widget's placement "inactive" in its channel file and plans only
-// that status change: the one widget write the release calendar allows from T-14 (ticket 57).
+// status changes: one for each of the widget's placements on the channel that is still active,
+// recorded or not (a widget not recorded yet is found by its name). It is the one widget write the
+// release calendar allows from T-14 (ticket 57).
 
 import fs from 'fs';
 import path from 'path';
