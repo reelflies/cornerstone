@@ -2,8 +2,8 @@
 // 21, 22, 27, 70 and 71), at 375 and 1280, on the fixture page: the real category page rendered
 // round tree-4-shaped data (render/pages/category-page/), two Fly Type pages and a Species page,
 // with the theme's header and footer and channel 1's own category images. ReelFlies_CA has no
-// tree-4 categories until refactor 13, and the live category pins mask their grids, so the
-// templates' look is checked here; category.spec.mjs checks the live channel-1 pins.
+// tree-4 categories until refactor 13, and the live category pins hold their grids out of the
+// shots, so the templates' look is checked here; category.spec.mjs checks the live channel-1 pins.
 //
 // - Each page matches its baseline (widget baselines, declared as `widget category-page`).
 // - The banner: eager with fetchpriority="high", 220px tall from 801px (taller only when a long

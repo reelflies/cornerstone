@@ -27,6 +27,9 @@ import { KNOWN_ISSUES, knownIssue } from './axe-known-issues.mjs';
 // The boxes channel 1's product page holds: its related products' carousels.
 const RELATED = '#tab-related .productCarousel';
 const SIMILAR = '#tab-similar .productCarousel';
+// Channel 1's pins whose product list is the live catalogue's, and the listing's grid they hold.
+const LIVE_LISTS = ['category', 'category@more', 'category@noindex', 'search'];
+const LISTING_GRID = '#product-listing-container .productGrid';
 
 describe('the status a pinned page must return', () => {
     it('is 404 for the 404 template and 200 for every other one', () => {
@@ -34,9 +37,6 @@ describe('the status a pinned page must return', () => {
         for (const template of ['home', 'product', 'category', 'cart', 'brand', 'fly-type']) assert.equal(expectedStatus(template), 200);
     });
 });
-
-// Channel 1's pins whose product list is the live catalogue's.
-const LIVE_LISTS = ['category', 'category@more', 'category@noindex', 'search'];
 
 describe('the screenshot masks', () => {
     const LIVE = ['.price-section', '[data-product-stock]', '.productView-rating', '.countPill', '.cart-total-value'];
@@ -57,8 +57,8 @@ describe('the screenshot masks', () => {
     });
 
     it('hide channel 1\'s live product list, which isn\'t pinned, only on its own pages', () => {
-        assert.ok(masksFor('1', 'category').includes('.productGrid'));
-        assert.ok(!masksFor('1', 'product').includes('.productGrid'));
+        assert.ok(masksFor('1', 'category').includes(LISTING_GRID));
+        assert.ok(!masksFor('1', 'product').includes(LISTING_GRID));
     });
 
     it('no longer mask widget regions, which the screenshot stylesheet hides instead (W0-5)', () => {
@@ -192,13 +192,16 @@ describe('the screenshot stylesheet (W0-5)', () => {
 
     it('holds channel 1\'s live product lists at a fixed height, with their cards taken out: a mask keeps a grid\'s size, and a live title that wraps to another line moves it (2026-10-09, the search pin at 375)', () => {
         for (const pin of LIVE_LISTS) {
-            const height = CHANNELS[1].hold[pin]?.['.productGrid'];
+            const height = CHANNELS[1].hold[pin]?.[LISTING_GRID];
             assert.ok(Number.isInteger(height) && height > 0, `${pin}'s grid has a height`);
             const css = rules(screenshotStyle('1', pin));
-            for (const property of ['height', 'min-height', 'max-height']) assert.equal(css.get('.productGrid')?.[property], `${height}px !important`, `${pin} ${property}`);
-            assert.equal(css.get('.productGrid > *')?.display, 'none !important', `${pin}'s cards`);
-            assert.ok(masksFor('1', pin).includes('.productGrid'), `${pin}'s held grid is masked, so a reviewer sees it`);
-            assert.ok(!(CHANNELS[1].mask[pin] || []).includes('.productGrid'), `${pin}'s grid is held, not only masked`);
+            for (const property of ['height', 'min-height', 'max-height']) assert.equal(css.get(LISTING_GRID)?.[property], `${height}px !important`, `${pin} ${property}`);
+            assert.equal(css.get(LISTING_GRID)?.overflow, 'hidden !important', `${pin} overflow`);
+            assert.equal(css.get(`${LISTING_GRID} > *`)?.display, 'none !important', `${pin}'s cards`);
+            assert.ok(masksFor('1', pin).includes(LISTING_GRID), `${pin}'s held grid is masked, so a reviewer sees it`);
+            for (const selector of ['.productGrid', LISTING_GRID]) assert.ok(!(CHANNELS[1].mask[pin] || []).includes(selector), `${pin}'s grid is held, not only masked`);
+            // Only the listing's grid: quick search's results and the cart preview are .productGrids too.
+            assert.ok(!css.has('.productGrid'), `${pin} holds every .productGrid`);
         }
     });
 

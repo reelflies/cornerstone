@@ -24,7 +24,8 @@
 //                 RAW_HTML_REQUIRED kinds: the raw-HTML check fails a channel that pins
 //                 neither the page nor a reason here.
 //   mask          optional, page key -> selectors the screenshots also mask on that page:
-//                 content these pins can't hold still, such as a live product list
+//                 content these pins can't hold still but whose size holds, such as a
+//                 listing's count
 //   hold          optional, page key -> { selector: height in px }: live content whose
 //                 height these pins can't hold still. The screenshot takes everything
 //                 inside each box out and holds the box at that height, so the page keeps
@@ -113,14 +114,19 @@ export const CHANNELS = {
         // because tickets 39 and 40 change them; ticket 39 points these at its grid.
         // The search pin's "Did you mean" panel lists the categories the store finds for the
         // query, so the catalogue sets its height (#68's rf/spec).
-        // The category and search pins' grids: the live catalogue's cards, whose titles wrap
-        // to one line or two, so the rows' heights follow the list. A mask kept the grid's
+        // The category and search pins' grids (the listing's own, in #product-listing-container,
+        // not quick search's or the cart preview's): the live catalogue's cards, whose titles
+        // wrap to one line or two, so the rows' heights follow the list. A mask kept the grid's
         // size: on 2026-10-09 the search pin at 375 grew 21px, one title line, with no theme
-        // change. Held at 1200px at both widths, which is no layout's own height.
+        // change. Held at 1200px at both widths, a height no layout of these grids has, so a
+        // hold that stops applying changes the shot's height and fails it. What the hold can't
+        // stop: a pin whose product count crosses a page (24) gains or loses its pager row,
+        // which is only masked. That is a catalogue change, so a re-baseline epoch (build
+        // pipeline 6.6).
         hold: {
-            category: { '.productGrid': 1200 },
-            'category@more': { '.productGrid': 1200 },
-            'category@noindex': { '.productGrid': 1200 },
+            category: { '#product-listing-container .productGrid': 1200 },
+            'category@more': { '#product-listing-container .productGrid': 1200 },
+            'category@noindex': { '#product-listing-container .productGrid': 1200 },
             product: {
                 '#tab-related .productCarousel': 320,
                 '#tab-similar .productCarousel': 320,
@@ -131,7 +137,7 @@ export const CHANNELS = {
             },
             search: {
                 '.page-content > .panel': 360,
-                '.productGrid': 1200,
+                '#product-listing-container .productGrid': 1200,
             },
         },
     },
@@ -192,8 +198,8 @@ export function baselineName({ key, state = null, overlay = null }) {
 // Live data the screenshots mask on every page, so they don't fail on price, stock or
 // catalogue changes: prices, stock and SKU lines, ratings and review counts, sale and
 // sold-out badges, cart counts and totals, page counts, and marketing banners. Product
-// cards, grids and carousels stay visible; a page whose list isn't pinned masks it through
-// its channel's `mask`, or holds it through `hold`. A mask keeps the layout, so it suits
+// cards, grids and carousels stay visible; a page whose list isn't pinned holds it through
+// its channel's `hold`. A mask keeps the layout, so it suits
 // content whose size holds still while its pixels change. Content that can change a
 // page's height is hidden instead (HIDDEN and `hold`).
 export const LIVE_DATA = [
