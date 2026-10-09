@@ -66,6 +66,18 @@ test('fails a chip with no href, a "more" chip shown in the HTML, or none at all
     assert.match(problems(good, /<li class="rf-chips-item rf-chips-more"[\s\S]*?<\/li>/, ''), /0 "more" chips, not one/);
 });
 
+test('fails a marker inside an element, which splits it and lets the header swallow the page', async () => {
+    const split = await renderPartial('pages/category', {
+        page_type: 'category',
+        breadcrumbs: pages['fly-type'].breadcrumbs,
+        category: { ...pages['fly-type'].category, products, description: '<div class="intro"><p>Dry flies.</p><!--more--><p>More.</p></div>' },
+        categories: tree4.categories,
+        settings: {},
+        theme_settings: tree4.theme_settings,
+    });
+    assert.match(categoryPage.check({ kind: 'category', key: 'category', html: split }).join('\n'), /a <!--more--> marker inside an element split it/);
+});
+
 test('fails the description\'s rest before the grid, and a printed <!--more--> marker', async () => {
     const good = await page('fly-type');
     const rest = good.html.match(/<div class="rf-listing-description" data-rf-description>[\s\S]*?<\/div>/)[0];

@@ -6,9 +6,10 @@
 // moves nothing below it.
 //
 // - layoutChips: shows every chip; if they take more than two rows, it hides chips from the end
-//   until the "more" chip fits at the end of the second row, and fills in its wide label, "+N
-//   more", from the template's data-rf-more-label. Its narrow label, "Show all N", is the
-//   template's. Then it marks the list laid out, which lifts the CSS clip.
+//   until the "more" chip fits at the end of the second row, with its wide label, "+N more"
+//   (from the template's data-rf-more-label), filled in before each measurement. Its narrow
+//   label, "Show all N", is the template's. A chip that had focus and is now hidden hands it to
+//   the "more" chip. Then it marks the list laid out, which lifts the CSS clip.
 // - Again whenever the list's width changes (a rotation, a resize) or the fonts arrive, until
 //   the list is opened.
 // - The "more" chip shows every chip, goes away, and moves focus to the first chip it showed.
@@ -19,27 +20,41 @@ const MORE = '[data-rf-chips-more]';
 const WIDE_LABEL = '[data-rf-chips-more-wide]';
 export const READY = 'data-rf-chips-ready';
 export const OPEN = 'data-rf-chips-open';
+export const CLIPPED = 'data-rf-chips-clipped';
 
 const chipsOf = list => Array.from(list.children).filter(item => !item.matches(MORE));
 const setHidden = (item, hidden) => item.toggleAttribute('hidden', hidden);
 
 export function layoutChips(list) {
     if (list.hasAttribute(OPEN)) return;
+    const focused = list.contains(list.ownerDocument.activeElement) ? list.ownerDocument.activeElement : null;
     const more = list.querySelector(MORE);
     const chips = chipsOf(list);
     chips.forEach(chip => setHidden(chip, false));
     if (more) setHidden(more, true);
+    list.removeAttribute(CLIPPED);
     const tops = Array.from(new Set(chips.map(chip => chip.offsetTop))).sort((a, b) => a - b);
     if (more && tops.length > 2) {
         const second = tops[1];
-        chips.filter(chip => chip.offsetTop > second).forEach(chip => setHidden(chip, true));
-        setHidden(more, false);
-        const shown = chips.filter(chip => !chip.hidden);
-        while (more.offsetTop > second && shown.length > 1) setHidden(shown.pop(), true);
         const button = more.querySelector('button');
         const wide = more.querySelector(WIDE_LABEL);
-        const count = chips.filter(chip => chip.hidden).length;
-        if (button && wide) wide.textContent = (button.getAttribute('data-rf-more-label') || '+# more').replace('#', count);
+        // The label changes the "more" chip's width, so it is filled before each measurement.
+        const label = () => {
+            if (button && wide) wide.textContent = (button.getAttribute('data-rf-more-label') || '+# more').replace('#', chips.filter(chip => chip.hidden).length);
+        };
+        chips.filter(chip => chip.offsetTop > second).forEach(chip => setHidden(chip, true));
+        setHidden(more, false);
+        label();
+        const shown = chips.filter(chip => !chip.hidden);
+        while (more.offsetTop > second && shown.length > 1) {
+            setHidden(shown.pop(), true);
+            label();
+        }
+        // A chip that had focus and is now hidden hands it to the "more" chip.
+        if (button && focused && focused.closest('[hidden]')) button.focus();
+        // The list keeps two rows' height (CSS), as its clip had, even when the "more" chip
+        // fits on the first row, so nothing below it moves.
+        list.setAttribute(CLIPPED, '');
     }
     list.setAttribute(READY, '');
 }
@@ -49,6 +64,7 @@ export function openChips(list) {
     const hidden = chipsOf(list).filter(chip => chip.hidden);
     hidden.forEach(chip => setHidden(chip, false));
     if (more) setHidden(more, true);
+    list.removeAttribute(CLIPPED);
     list.setAttribute(OPEN, '');
     const first = hidden.length ? hidden[0].querySelector('a') : null;
     if (first) first.focus();

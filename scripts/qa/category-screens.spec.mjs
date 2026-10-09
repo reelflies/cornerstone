@@ -1,6 +1,6 @@
 // The Fly Type and Species pages (ticket 32; spec module 8; O10, UX-5, CD-6, CD-10; stories 20,
 // 21, 22, 27, 70 and 71), at 375 and 1280, on the fixture page: the real category page rendered
-// round tree-4-shaped data (render/pages/category-page/), a Fly Type page and a Species page,
+// round tree-4-shaped data (render/pages/category-page/), two Fly Type pages and a Species page,
 // with the theme's header and footer and channel 1's own category images. ReelFlies_CA has no
 // tree-4 categories until refactor 13, and the live category pins mask their grids, so the
 // templates' look is checked here; category.spec.mjs checks the live channel-1 pins.
@@ -11,8 +11,9 @@
 //   the intro on it; on phones the photo first, then the H1 and the intro. Every line of text on
 //   it holds 4.5:1 against its lightest pixel (photo-contrast.mjs).
 // - The chips: at most two rows, with "+N more" at 1280 and "Show all N" at 375 when some are
-//   hidden; every chip's link in the page; the "more" chip shows them all. A chip has a
-//   thumbnail only where its subcategory has an image. Nothing scrolls sideways at 320.
+//   hidden (the Nymphs page has ten); every chip's link in the page; the "more" chip shows them
+//   all. A chip has a thumbnail only where its subcategory has an image. Laying them out moves
+//   nothing below them. Nothing scrolls sideways at 320.
 // - The first row of products: its photos whole at 1366x768, and starting within the first
 //   screen at 375x667 (stories 20 and 21).
 // - axe finds no serious or critical issue in the page's body.
@@ -44,10 +45,13 @@ const CHIPS_SOURCE = fs.readFileSync(path.join(THEME_DIR, 'assets/js/theme/reelf
     .replace(/^export /gm, '');
 const phone = testInfo => testInfo.project.name === 'phone-375';
 
-async function open(page, fixture) {
+const runChips = page => page.addScriptTag({ content: `${CHIPS_SOURCE}\nchipsModule.load({}, document);` });
+
+async function open(page, fixture, { chips = true } = {}) {
     const { problems } = await openWidget(page, fixture, { variation: QA_VARIATION });
     expect(problems, 'the fixture page loads nothing but its fixture\'s files, the theme\'s assets and fonts').toEqual([]);
-    await page.addScriptTag({ content: `${CHIPS_SOURCE}\nchipsModule.load({}, document);` });
+    if (!chips) return;
+    await runChips(page);
     await expect(page.locator('[data-rf-chips]')).toHaveAttribute('data-rf-chips-ready', '');
     for (const img of await page.locator('#main-content img:not([loading="lazy"]), .rf-chip-image').all()) {
         await expect.poll(() => img.evaluate(element => element.complete && element.naturalWidth > 0)).toBe(true); // eslint-disable-line no-await-in-loop
@@ -108,6 +112,15 @@ for (const fixture of CASES) {
             await button.click();
             await expect(list.locator('li[hidden]')).toHaveCount(1); // the "more" chip
             await expect(page.locator(':focus')).toHaveAttribute('href', subcategories[subcategories.length - hidden].url);
+        });
+
+        test('lays the chips out without moving anything below them (CLS; story 70)', async ({ page }) => {
+            await open(page, fixture, { chips: false });
+            const top = () => page.locator('.page').evaluate(element => element.getBoundingClientRect().top + window.scrollY);
+            const before = await top();
+            await runChips(page);
+            await expect(page.locator('[data-rf-chips]')).toHaveAttribute('data-rf-chips-ready', '');
+            expect(Math.abs(await top() - before), 'the listing stays where it was').toBeLessThanOrEqual(1);
         });
 
         test('scrolls nothing sideways at 320', async ({ page }) => {

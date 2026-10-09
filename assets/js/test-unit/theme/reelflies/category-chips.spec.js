@@ -1,5 +1,5 @@
 import chipsModule, {
-    LIST, OPEN, READY, layoutChips, openChips,
+    CLIPPED, LIST, OPEN, READY, layoutChips, openChips,
 } from '../../../theme/reelflies/category-chips';
 
 // jsdom lays nothing out, so offsetTop comes from a stand-in flow layout: each visible <li> of a
@@ -77,6 +77,28 @@ describe('layoutChips', () => {
         expect(chips(list).filter(chip => chip.hidden)).toHaveLength(5);
         expect(moreItem(list).offsetTop).toBe(ROW);
         expect(moreItem(list).textContent).toContain('+5 more');
+    });
+
+    it('hands focus to the "more" chip when a layout hides the chip that had it', () => {
+        const list = chipList(Array(10).fill(150), { width: 2000 });
+        layoutChips(list);
+        const last = chips(list)[9].querySelector('a');
+        last.focus();
+        list.dataset.width = '600';
+        layoutChips(list);
+        expect(chips(list)[9].hidden).toBe(true);
+        expect(document.activeElement).toBe(moreItem(list).querySelector('button'));
+    });
+
+    it('marks a list it hid chips in, so CSS keeps its two rows\' height, and unmarks it when opened', () => {
+        const list = chipList(Array(10).fill(150));
+        layoutChips(list);
+        expect(list.hasAttribute(CLIPPED)).toBe(true);
+        openChips(list);
+        expect(list.hasAttribute(CLIPPED)).toBe(false);
+        const fits = chipList([200, 200]);
+        layoutChips(fits);
+        expect(fits.hasAttribute(CLIPPED)).toBe(false);
     });
 
     it('keeps every link in the list, hidden or not', () => {

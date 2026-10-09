@@ -7,7 +7,8 @@
 // - The chips, where the category has subcategories: every chip a link with an href, in the
 //   HTML whether the list shows it or not, and the "more" chip hidden until the script needs it.
 // - The description after its <!--more--> marker (data-rf-description) follows the product grid,
-//   and the marker itself is never printed.
+//   and the marker itself is never printed. A marker inside an element other than a bare <p>
+//   splits that element, and the header then swallows the chips and the listing: that fails.
 //
 // card-images checks that the banner holds the page's only fetchpriority; max-one-h1 and
 // one-canonical check the H1 and the canonical on every page.
@@ -20,6 +21,7 @@ export function categoryPageProblems(html) {
     const problems = [];
     const header = outerHtml(html, 'div', hasClass('rf-listing-header'));
     if (!header) return ['no listing header (.rf-listing-header): the page isn\'t components/reelflies/category-page.html'];
+    if (/data-rf-chips|productGrid/.test(header)) problems.push('the listing header holds the chips or the listing: a <!--more--> marker inside an element split it (the marker goes only between top-level blocks)');
     const h1s = findTags(header, 'h1');
     if (h1s.length !== 1) problems.push(`the listing header has ${h1s.length} <h1>, not one`);
     const banner = findTags(header, 'img')[0];

@@ -10,11 +10,15 @@
     - A chip has a 1px #879186 border (--rf-edge), and a 72x48 thumbnail (48x32 on phones, so
       a chip with one is as tall as one without) only when its subcategory has its own image in
       the store's data (ticket 07's probe 14); otherwise its name alone. The thumbnail is lazy:
-      it is small, and a chip the list hides never loads it.
+      it is small, and a chip the list hides never loads it. It takes the 120w file (240w at 2x):
+      the store's category images are 16:7, so filling a 72x48 box crops them to about 110px of
+      their width.
     - At most two rows, never a sideways scroll (category-chips.js): the chips that don't fit
       are hidden, and the last item, the "more" chip, shows them all. It reads "+N more" from
       801px and "Show all N" on phones. Until the script lays the list out, CSS clips it to two
-      rows, so nothing moves when it does; with no script every chip shows.
+      rows, and a laid-out list with chips hidden keeps that height, so nothing below it moves
+      (CLS). With no script every chip shows; should the script fail to load, the clip lifts
+      after 5s.
     - No subcategories, no list.
 --}}
 {{#if rf_category.subcategories.length}}
@@ -22,7 +26,7 @@
 {{~#each rf_category.subcategories~}}{{~#if image.data~}}{{~assignVar 'rf_chip_thumbs' 1~}}{{~/if~}}{{~/each~}}
 <ul class="rf-chips{{#if (getVar 'rf_chip_thumbs')}} rf-chips--thumbs{{/if}}" aria-label="{{lang 'reelflies.category.chips' name=rf_category.name}}" data-rf-chips>
     {{#each rf_category.subcategories}}
-    <li class="rf-chips-item"><a class="rf-chip{{#if image.data}} rf-chip--thumb{{/if}}" href="{{url}}">{{#if image.data}}<img class="rf-chip-image" src="{{getImageSrcset image 1x='80w'}}" srcset="{{getImageSrcset image 1x='80w' 2x='160w'}}" width="72" height="48" alt="" loading="lazy" decoding="async">{{/if}}<span class="rf-chip-name">{{name}}</span></a></li>
+    <li class="rf-chips-item"><a class="rf-chip{{#if image.data}} rf-chip--thumb{{/if}}" href="{{url}}">{{#if image.data}}<img class="rf-chip-image" src="{{getImageSrcset image 1x='120w'}}" srcset="{{getImageSrcset image 1x='120w' 2x='240w'}}" width="72" height="48" alt="" loading="lazy" decoding="async">{{/if}}<span class="rf-chip-name">{{name}}</span></a></li>
     {{/each}}
     <li class="rf-chips-item rf-chips-more" data-rf-chips-more hidden>
         <button class="rf-chip rf-chip--more" type="button" data-rf-more-label="{{lang 'reelflies.category.chips_more' count='#'}}">

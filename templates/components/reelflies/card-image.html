@@ -14,7 +14,11 @@
     - Everything else is loading="lazy": later cards, related products, and the stock lists.
     - sizes: half the width less the gutter and gap on phones, a third of the 1088px container
       from 801px, or, beside the facet sidebar (ticket 32's category page sets rf_listing_sidebar),
-      a third of the listing's column: 258px from 1136px, measured at 801, 1024 and 1366.
+      a third of the listing's column: 258px from 1136px, measured at 801, 1024 and 1366. A facet
+      or sort refresh re-renders the listing alone (category.js, through stock faceted search),
+      as its own template, where @root holds the category, so its faceted_search_enabled says
+      the same. That refresh has no banner, so its first card can take fetchpriority again: the
+      page has long loaded by then, so it costs nothing.
     - A product with no photo shows the theme's default image (default_image_product, 500px
       square) by the same rules: its srcset is that one file, and it takes the same loading and
       fetchpriority as a photo in its place.
@@ -25,7 +29,7 @@
 {{~#if position '==' 1~}}{{~#unless (getVar 'rf_banner')~}}{{~assignVar 'rf_card_load' 'high'~}}{{~/unless~}}{{~/if~}}
 {{~/if~}}{{~/if~}}
 {{#if image}}
-<img class="card-image rf-card-image" src="{{getImageSrcset image 1x='480w'}}" srcset="{{getImageSrcset image 160w='160w' 320w='320w' 480w='480w' 640w='640w' 960w='960w'}}" sizes="{{#if (getVar 'rf_listing_sidebar')}}(min-width: 1136px) 258px, (min-width: 801px) calc(23.8vw - 13px){{else}}(min-width: 801px) 346px{{/if}}, calc(50vw - 24px)" width="600" height="400" alt="{{image.alt}}"{{#if (getVar 'rf_card_load') '==' 'high'}} fetchpriority="high"{{/if}}{{#if (getVar 'rf_card_load') '==' 'lazy'}} loading="lazy"{{/if}} decoding="async">
+<img class="card-image rf-card-image" src="{{getImageSrcset image 1x='480w'}}" srcset="{{getImageSrcset image 160w='160w' 320w='320w' 480w='480w' 640w='640w' 960w='960w'}}" sizes="{{#or (getVar 'rf_listing_sidebar') @root.category.faceted_search_enabled}}(min-width: 1136px) 258px, (min-width: 801px) calc(23.8vw - 13px){{else}}(min-width: 801px) 346px{{/or}}, calc(50vw - 24px)" width="600" height="400" alt="{{image.alt}}"{{#if (getVar 'rf_card_load') '==' 'high'}} fetchpriority="high"{{/if}}{{#if (getVar 'rf_card_load') '==' 'lazy'}} loading="lazy"{{/if}} decoding="async">
 {{else}}
-<img class="card-image rf-card-image" src="{{cdn theme_settings.default_image_product}}" srcset="{{cdn theme_settings.default_image_product}} 500w" sizes="{{#if (getVar 'rf_listing_sidebar')}}(min-width: 1136px) 258px, (min-width: 801px) calc(23.8vw - 13px){{else}}(min-width: 801px) 346px{{/if}}, calc(50vw - 24px)" width="600" height="400" alt="{{lang 'products.card_default_image_alt'}}"{{#if (getVar 'rf_card_load') '==' 'high'}} fetchpriority="high"{{/if}}{{#if (getVar 'rf_card_load') '==' 'lazy'}} loading="lazy"{{/if}} decoding="async">
+<img class="card-image rf-card-image" src="{{cdn theme_settings.default_image_product}}" srcset="{{cdn theme_settings.default_image_product}} 500w" sizes="{{#or (getVar 'rf_listing_sidebar') @root.category.faceted_search_enabled}}(min-width: 1136px) 258px, (min-width: 801px) calc(23.8vw - 13px){{else}}(min-width: 801px) 346px{{/or}}, calc(50vw - 24px)" width="600" height="400" alt="{{lang 'products.card_default_image_alt'}}"{{#if (getVar 'rf_card_load') '==' 'high'}} fetchpriority="high"{{/if}}{{#if (getVar 'rf_card_load') '==' 'lazy'}} loading="lazy"{{/if}} decoding="async">
 {{/if}}

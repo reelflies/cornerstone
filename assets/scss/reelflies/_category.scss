@@ -54,11 +54,13 @@ ol.breadcrumbs {
 
 .breadcrumb {
     color: var(--rf-dun);
+    font-size: inherit; // Citadel sets each crumb in the h6 size (13px)
+    line-height: inherit;
     margin: 0;
 
     &:not(:first-child)::before {
         border: 0;
-        content: "/";
+        content: unquote('"/" / ""'); // shown, not read: the list already says it's a trail
         height: auto;
         margin: 0 4px 0 0;
         transform: none;
@@ -177,8 +179,8 @@ ol.breadcrumbs {
     flex-wrap: wrap;
     gap: $rf-chips-gap;
     list-style: none;
-    margin: 0;
-    padding: 16px 0 4px;
+    margin: 16px 0 4px;
+    padding: 0;
 }
 
 // Phones: a 48x32 thumbnail, so a chip with one is as tall as one without (40px) and two rows
@@ -189,16 +191,38 @@ ol.breadcrumbs {
     }
 }
 
-// Two rows until category-chips.js has laid the list out (the chips' own height, twice, and the
-// gap); then the hidden attribute holds it to two.
+// Two rows until category-chips.js has laid the list out: the chips' own height, twice, and the
+// gap, exactly what the laid-out list takes (the list's space round it is margin, outside the
+// clip, and each item is as tall as its chip), so nothing below it moves when the script runs
+// (CLS). Should the script never run, the clip lifts after 5s, so no chip stays out of reach.
 .js .rf-chips:not([data-rf-chips-ready]) {
+    animation: rf-chips-unclip 0s 5s forwards;
     max-height: calc(2 * var(--rf-chip-h) + #{$rf-chips-gap});
     overflow: hidden;
 }
 
+// Laid out with some chips hidden, the list keeps its two rows' height, even when the "more"
+// chip fits on the first (a long name on row 2 hidden to make room for it).
+.rf-chips[data-rf-chips-clipped] {
+    min-height: calc(2 * var(--rf-chip-h) + #{$rf-chips-gap});
+}
+
+@keyframes rf-chips-unclip {
+    to {
+        max-height: none;
+        overflow: visible;
+    }
+}
+
 .rf-chips-item {
+    display: flex;
     margin: 0;
     max-width: 100%;
+
+    // display: flex would otherwise show what the script hides.
+    &[hidden] {
+        display: none;
+    }
 }
 
 .rf-chip {
