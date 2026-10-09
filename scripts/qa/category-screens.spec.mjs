@@ -7,9 +7,8 @@
 //
 // - Each page matches its baseline (widget baselines, declared as `widget category-page`).
 // - The banner: eager with fetchpriority="high", 220px tall from 801px (taller only when a long
-//   name wraps), with the H1 and
-//   the intro on it; on phones the photo first, then the H1 and the intro. Every line of text on
-//   it holds 4.5:1 against its lightest pixel (photo-contrast.mjs).
+//   name wraps), with the H1 and the intro on it; on phones the photo first, then the H1 and the
+//   intro. Every line of text on it holds 4.5:1 against its lightest pixel (photo-contrast.mjs).
 // - The chips: at most two rows, with "+N more" at 1280 and "Show all N" at 375 when some are
 //   hidden (the Nymphs page has ten); every chip's link in the page; the "more" chip shows them
 //   all. A chip has a thumbnail only where its subcategory has an image. Laying them out moves
@@ -114,14 +113,24 @@ for (const fixture of CASES) {
             await expect(page.locator(':focus')).toHaveAttribute('href', subcategories[subcategories.length - hidden].url);
         });
 
-        test('lays the chips out without moving anything below them (CLS; story 70)', async ({ page }) => {
-            await open(page, fixture, { chips: false });
-            const top = () => page.locator('.page').evaluate(element => element.getBoundingClientRect().top + window.scrollY);
-            const before = await top();
-            await runChips(page);
-            await expect(page.locator('[data-rf-chips]')).toHaveAttribute('data-rf-chips-ready', '');
-            expect(Math.abs(await top() - before), 'the listing stays where it was').toBeLessThanOrEqual(1);
-        });
+        for (const reducedMotion of ['no-preference', 'reduce']) {
+            test(`lays the chips out without moving anything below them, each chip its own height (CLS; story 70; ${reducedMotion} motion)`, async ({ page }) => {
+                await page.emulateMedia({ reducedMotion });
+                await open(page, fixture, { chips: false });
+                const list = page.locator('[data-rf-chips]');
+                expect(await list.evaluate(element => getComputedStyle(element).maxHeight), 'the clip is on until the script runs').not.toBe('none');
+                const top = () => page.locator('.page').evaluate(element => element.getBoundingClientRect().top + window.scrollY);
+                const before = await top();
+                await runChips(page);
+                await expect(list).toHaveAttribute('data-rf-chips-ready', '');
+                expect(Math.abs(await top() - before), 'the listing stays where it was').toBeLessThanOrEqual(1);
+                const { height, chips } = await list.evaluate(element => ({
+                    height: parseFloat(getComputedStyle(element).getPropertyValue('--rf-chip-h')),
+                    chips: [...element.querySelectorAll('li:not([hidden]) .rf-chip')].map(chip => chip.getBoundingClientRect().height),
+                }));
+                chips.forEach(chip => expect(chip, 'a chip is its own height, never stretched to the reserved rows').toBeLessThanOrEqual(height + 1));
+            });
+        }
 
         test('scrolls nothing sideways at 320', async ({ page }) => {
             await page.setViewportSize({ width: 320, height: 800 });

@@ -60,6 +60,7 @@ ol.breadcrumbs {
 
     &:not(:first-child)::before {
         border: 0;
+        content: "/"; // for browsers without alternative text in content, which drop the next line
         content: unquote('"/" / ""'); // shown, not read: the list already says it's a trail
         height: auto;
         margin: 0 4px 0 0;
@@ -175,6 +176,7 @@ ol.breadcrumbs {
 
 .rf-chips {
     --rf-chip-h: #{$rf-chip-height};
+    align-content: flex-start; // a single row stays its own height in the list's reserved two
     display: flex;
     flex-wrap: wrap;
     gap: $rf-chips-gap;
@@ -194,11 +196,20 @@ ol.breadcrumbs {
 // Two rows until category-chips.js has laid the list out: the chips' own height, twice, and the
 // gap, exactly what the laid-out list takes (the list's space round it is margin, outside the
 // clip, and each item is as tall as its chip), so nothing below it moves when the script runs
-// (CLS). Should the script never run, the clip lifts after 5s, so no chip stays out of reach.
+// (CLS). A chip whose name wraps to two lines is taller than --rf-chip-h, so a list with one
+// moves a few pixels when laid out: only a name wider than the list does that. Should the
+// script never run, the clip lifts after 10s, so no chip stays out of reach.
+// The animation is a timer, not motion: under reduced motion it keeps its delay, which the
+// theme's reset (_foundation.scss) would otherwise set to 0s, lifting the clip at once.
 .js .rf-chips:not([data-rf-chips-ready]) {
-    animation: rf-chips-unclip 0s 5s forwards;
+    animation: rf-chips-unclip 0s 10s forwards;
     max-height: calc(2 * var(--rf-chip-h) + #{$rf-chips-gap});
     overflow: hidden;
+
+    @media (prefers-reduced-motion: reduce) {
+        animation-delay: 10s !important;
+        animation-duration: 0s !important;
+    }
 }
 
 // Laid out with some chips hidden, the list keeps its two rows' height, even when the "more"

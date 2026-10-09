@@ -9,7 +9,8 @@
 //   until the "more" chip fits at the end of the second row, with its wide label, "+N more"
 //   (from the template's data-rf-more-label), filled in before each measurement. Its narrow
 //   label, "Show all N", is the template's. A chip that had focus and is now hidden hands it to
-//   the "more" chip. Then it marks the list laid out, which lifts the CSS clip.
+//   the "more" chip, and the "more" chip, hidden when every chip fits, hands it to the first chip
+//   it was hiding. Then it marks the list laid out, which lifts the CSS clip.
 // - Again whenever the list's width changes (a rotation, a resize) or the fonts arrive, until
 //   the list is opened.
 // - The "more" chip shows every chip, goes away, and moves focus to the first chip it showed.
@@ -30,6 +31,7 @@ export function layoutChips(list) {
     const focused = list.contains(list.ownerDocument.activeElement) ? list.ownerDocument.activeElement : null;
     const more = list.querySelector(MORE);
     const chips = chipsOf(list);
+    const wasHidden = chips.filter(chip => chip.hidden);
     chips.forEach(chip => setHidden(chip, false));
     if (more) setHidden(more, true);
     list.removeAttribute(CLIPPED);
@@ -55,6 +57,11 @@ export function layoutChips(list) {
         // The list keeps two rows' height (CSS), as its clip had, even when the "more" chip
         // fits on the first row, so nothing below it moves.
         list.setAttribute(CLIPPED, '');
+    }
+    // The "more" chip had focus and every chip now fits: focus goes to the first chip it hid.
+    if (focused && more && more.hidden && more.contains(focused) && wasHidden.length) {
+        const first = wasHidden[0].querySelector('a');
+        if (first) first.focus();
     }
     list.setAttribute(READY, '');
 }

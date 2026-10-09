@@ -213,6 +213,19 @@ describe('the cards beside the facet sidebar (#68\'s rf/skeptic)', () => {
         beside.forEach(img => assert.equal(img.attrs.sizes, '(min-width: 1136px) 258px, (min-width: 801px) calc(23.8vw - 13px), calc(50vw - 24px)'));
         alone.forEach(img => assert.equal(img.attrs.sizes, '(min-width: 801px) 346px, calc(50vw - 24px)'));
     });
+
+    it('keeps the narrower sizes when a facet or sort refresh renders the listing alone, from the page\'s category', async () => {
+        // Stock faceted search re-renders components/category/product-listing as its own
+        // template (category.js), where @root holds the category.
+        const listing = faceted => renderPartial('components/category/product-listing', {
+            category: { ...pages['fly-type'].category, products, faceted_search_enabled: faceted },
+            pagination: { category: { links: [], current: 1 } },
+            settings: {},
+            theme_settings: { product_list_display_mode: 'grid' },
+        });
+        cardImages(await listing(true)).forEach(img => assert.match(img.attrs.sizes, /^\(min-width: 1136px\) 258px/));
+        cardImages(await listing(false)).forEach(img => assert.match(img.attrs.sizes, /^\(min-width: 801px\) 346px/));
+    });
 });
 
 describe('24 per page and the pager (UX-7; story 26)', () => {

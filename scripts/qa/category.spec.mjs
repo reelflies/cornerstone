@@ -5,9 +5,8 @@
 //
 // - category: Realistic Trout Flies, one of channel 1's rf_menu_type_ids, so it has the banner:
 //   eager with fetchpriority="high", 220px tall from 801px (taller only when a long name wraps)
-//   with the H1 and the intro on
-//   it, every line of that text at 4.5:1 or better over its lightest pixel. Under the
-//   menu-ids-empty overlay it has the plain header.
+//   with the H1 and the intro on it, every line of that text at 4.5:1 or better over its
+//   lightest pixel. Under the menu-ids-empty overlay it has the plain header.
 // - category@more (Fly Gear, a More from ReelFlies category) and category@noindex (a sub-type on
 //   the noindex template): the plain header, though both categories have images.
 // - On every category pin: the chips are the store's subcategories, from ?debug=context, each a

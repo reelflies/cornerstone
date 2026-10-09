@@ -90,6 +90,17 @@ describe('layoutChips', () => {
         expect(document.activeElement).toBe(moreItem(list).querySelector('button'));
     });
 
+    it('hands focus from the "more" chip to the first chip it hid, when a wider layout fits them all', () => {
+        const list = chipList(Array(10).fill(150));
+        layoutChips(list);
+        const firstHidden = chips(list).find(chip => chip.hidden);
+        moreItem(list).querySelector('button').focus();
+        list.dataset.width = '2000';
+        layoutChips(list);
+        expect(moreItem(list).hidden).toBe(true);
+        expect(document.activeElement).toBe(firstHidden.querySelector('a'));
+    });
+
     it('marks a list it hid chips in, so CSS keeps its two rows\' height, and unmarks it when opened', () => {
         const list = chipList(Array(10).fill(150));
         layoutChips(list);
