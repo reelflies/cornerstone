@@ -13,9 +13,13 @@
 // - One module failing, or its chunk failing to load, is reported in the console; the others
 //   still start.
 // - Before them, ticket 25's reduced-motion setting for jQuery's animations (reduced-motion.js).
+// - Ticket 37's slot calls pills-in-modal.js, imported above it here: a small watcher that loads
+//   the size pills' own chunk only once pills appear in #modal, so the import is the one line
+//   outside its slot.
 
 import $ from 'jquery';
 import followReducedMotion from './reduced-motion';
+import watchModalPills from './pills-in-modal';
 
 export const GLOBAL_MODULES = [
     // 27 header: Escape and "Shop flies" (header.js), and the rise ring behind rf_rise (rise.js)
@@ -27,6 +31,9 @@ export const GLOBAL_MODULES = [
 
     // 30 quick search: the dropdown under each ReelFlies search form, and the phone header's search toggle
     context => import(/* webpackChunkName: "rf-quick-search" */ './quick-search').then(module => module.default(context)),
+
+    // 37 size pills: Quick view's and the cart's Change dialog's pills in #modal (pills-in-modal.js)
+    () => watchModalPills(),
 
     // 52 outside-Canada prompt
 ];

@@ -19,7 +19,7 @@
 //   file. A new custom template adds its line to TEMPLATES.
 
 const product = [
-    // 37 size pills
+    () => import(/* webpackChunkName: "rf-size-pills" */ './size-pills'), // 37 size pills
 
     // 38 add flow
 

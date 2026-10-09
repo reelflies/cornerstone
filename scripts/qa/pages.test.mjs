@@ -188,7 +188,7 @@ describe('the screenshot stylesheet (W0-5)', () => {
     });
 
     it('holds nothing on any other page or channel, so cards stay in those shots', () => {
-        const held = [['1', 'product'], ['1', 'search']];
+        const held = [['1', 'product'], ['1', 'product@sizes'], ['1', 'search']];
         for (const [channel, template] of kinds.filter(([kindChannel, kindTemplate]) => !held.some(([c, t]) => c === kindChannel && t === kindTemplate))) {
             const css = rules(screenshotStyle(channel, template));
             assert.deepEqual([...css.keys()].sort(), [...HIDDEN].sort(), `${channel} ${template}`);

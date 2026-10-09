@@ -255,7 +255,9 @@
                 {{#if product.cart_order_source}}
                     <input type="hidden" name="cart_order_source" value="{{product.cart_order_source}}"/>
                 {{/if}}
-                <div data-product-option-change style="display:none;">
+                {{!-- ReelFlies hook (ticket 37; CUSTOMIZATIONS.md): the options render visible, so nothing moves when the script shows them, and rf_product_id names each pill group (size-pills.html) --}}
+                {{assignVar 'rf_product_id' product.id}}
+                <div data-product-option-change>
                     {{inject 'showSwatchNames' theme_settings.show_product_swatch_names}}
                     {{#each product.options}}
                         {{{dynamicComponent 'components/products/options'}}}

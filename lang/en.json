@@ -1092,7 +1092,13 @@
         },
 
         "size_pills": {
-            "_slot": ""
+            "_slot": "",
+            "choose": "choose one",
+            "guide": "Hook size guide",
+            "sold_out_tag": "(sold out)",
+            "sold_out_one": "Size {sizes} is sold out.",
+            "sold_out_many": "Sizes {sizes} are sold out.",
+            "and": "and"
         },
 
         "add_flow": {

@@ -1,0 +1,96 @@
+{{!--
+    A product's rectangle option as pills (ticket 37; spec modules 15 and 16; O14, O15, R9, UX-10,
+    UX-21, SEO-7; stories 15, 37, 38, 39, 67, 68, 70 and 71), from stock
+    products/options/set-rectangle.html's hook, with the option as its context. Stock renders it
+    in three places: the product page and Quick view (product-view.html, whose hook sets
+    rf_product_id) and the cart's Change dialog (cart/modals/configure-product.html, which
+    doesn't). The size option is one; any other rectangle option looks the same.
+
+    - The size option: the one whose display name is the Fly size facet's
+      (size-facet-name.html), in any case. It's marked data-rf-pills="size".
+    - Stock's radio and label pairs, in a labelled radiogroup, so the arrow keys move and select
+      and stock's scripts find them: the radios' values stay the option value ids (ticket 42 reads
+      them), and each label keeps data-product-attribute-value. render/partials/size-pills.test.mjs
+      holds them to stock's own block, kept below the hook unrendered.
+    - The group's label id is built from the product and the option where product-view.html
+      gives the product (two products' pills on one page, ticket 43's panel, never share an id),
+      else from the option alone; never stock's fixed rectangle-group-label.
+    - No preselection on a fresh product view: a size is checked only when it is the option's
+      only value, never the catalogue's "default size" (stock's `selected`). Another option keeps
+      stock's choice, and so does every option in the cart's Change dialog, where `selected` is
+      the line's own value: its pill is checked and its value named. A fresh view is one whose
+      template set rf_product_id first, as product-view.html's hook does; ticket 43's panel, if
+      it renders options outside product-view.html, sets it too, or the catalogue's default size
+      comes back.
+    - The pill: the value, and a check that shows when chosen (_size-pills.scss). size-pills.js
+      marks a sold-out value, as stock's scripts mark it unavailable: struck, aria-disabled,
+      "(sold out)" in its name (its hidden span shown), and, for the size option, named in the line
+      under the pills ("Sizes 14 and 16 are sold out."), whose words ride on the line's data
+      attributes. The line keeps one line's height, so nothing moves. Another rectangle option
+      has no line: its words are about sizes.
+    - For the size option: "Fly Sizes: choose one" until a size is chosen, and "Hook size guide",
+      a link to the hook size chart (ticket 35; R9). Stock's "(Required)" stays for screen readers
+      and for stock's setProductVariant, which reads it; "choose one" says it on screen.
+    - The values keep the catalogue's order, which ticket 18 sorts into hook order.
+--}}
+{{> components/reelflies/size-facet-name}}
+{{~assignVar 'rf_pills_values' 0~}}
+{{~#each values~}}{{~assignVar 'rf_pills_values' (add (getVar 'rf_pills_values') 1)~}}{{~/each~}}
+{{~assignVar 'rf_pills_size' 0~}}
+{{~#if (toLowerCase display_name) '===' (toLowerCase (getVar 'rf_size_facet'))~}}{{~assignVar 'rf_pills_size' 1~}}{{~/if~}}
+{{~assignVar 'rf_pills_fresh' 0~}}
+{{~#if (getVar 'rf_product_id')~}}{{~#if (getVar 'rf_pills_size')~}}{{~assignVar 'rf_pills_fresh' 1~}}{{~/if~}}{{~/if~}}
+{{~#if (getVar 'rf_product_id')~}}
+    {{~assignVar 'rf_pills_label' (concat (concat (concat (concat 'rf-option-' (getVar 'rf_product_id')) '-') id) '-label')~}}
+{{~else~}}
+    {{~assignVar 'rf_pills_label' (concat (concat 'rf-option-' id) '-label')~}}
+{{~/if~}}
+{{~assignVar 'rf_pills_chosen' ''~}}
+{{~#each values~}}{{~#if selected~}}{{~assignVar 'rf_pills_chosen' label~}}{{~/if~}}{{~/each~}}
+<div class="form-field rf-pills-field" data-product-attribute="set-rectangle" data-rf-pills="{{#if (getVar 'rf_pills_size')}}size{{/if}}" role="radiogroup" aria-labelledby="{{getVar 'rf_pills_label'}}">
+    <p class="rf-pills-head">
+        <span class="form-label form-label--alternate form-label--inlineSmall rf-pills-label" id="{{getVar 'rf_pills_label'}}">
+            {{~display_name}}:
+            <span class="rf-pills-value" data-option-value data-rf-pills-placeholder="{{#if (getVar 'rf_pills_size')}}{{lang 'reelflies.size_pills.choose'}}{{/if}}">
+                {{~#if (getVar 'rf_pills_values') '==' 1}}{{#each values}}{{label}}{{/each}}{{else if (getVar 'rf_pills_fresh')}}{{lang 'reelflies.size_pills.choose'}}{{else if (getVar 'rf_pills_chosen')}}{{getVar 'rf_pills_chosen'}}{{else if (getVar 'rf_pills_size')}}{{lang 'reelflies.size_pills.choose'}}{{/if~}}
+            </span>
+            {{#if (getVar 'rf_pills_size')}}<span class="is-srOnly">{{> components/common/requireness-msg}}</span>{{else}}{{> components/common/requireness-msg}}{{/if}}
+        </span>
+        {{#if (getVar 'rf_pills_size')}}<a class="rf-pills-guide" href="/fly-hook-size-chart/">{{lang 'reelflies.size_pills.guide'}}</a>{{/if}}
+    </p>
+
+    <div class="rf-pills">
+        {{#unless required}}
+        <div class="form-option-wrapper">
+            <input class="form-radio" type="radio" id="attribute_rectangle__{{id}}_none" name="attribute[{{id}}]" value=""{{#unless (getVar 'rf_pills_fresh')}}{{#if defaultValue '==' ''}} checked{{/if}}{{/unless}}>
+            <label class="form-option rf-pill" for="attribute_rectangle__{{id}}_none">
+                <span class="form-option-variant">{{lang 'products.none'}}</span>
+            </label>
+        </div>
+        {{/unless}}
+        {{#each values}}
+        <div class="form-option-wrapper">
+            <input class="form-radio"
+                   type="radio"
+                   id="attribute_rectangle__{{../id}}_{{id}}"
+                   name="attribute[{{../id}}]"
+                   value="{{id}}"
+                   {{#if (getVar 'rf_pills_values') '==' 1}}checked data-default{{else}}{{#unless (getVar 'rf_pills_fresh')}}{{#if selected}}checked data-default{{/if}}{{/unless}}{{/if}}
+                   {{#if ../required}}required{{/if}}>
+            <label class="form-option rf-pill" for="attribute_rectangle__{{../id}}_{{id}}" data-product-attribute-value="{{id}}">
+                {{> components/reelflies/icon name='check' class='rf-pill-check'}}
+                <span class="form-option-variant">{{label}}</span>
+                <span class="is-srOnly" data-rf-sold-out-tag hidden> {{lang 'reelflies.size_pills.sold_out_tag'}}</span>
+            </label>
+        </div>
+        {{/each}}
+    </div>
+
+    {{#if (getVar 'rf_pills_size')}}
+    <p class="rf-pills-note"
+       data-rf-sold-out-line
+       data-rf-one="{{lang 'reelflies.size_pills.sold_out_one' sizes='#'}}"
+       data-rf-many="{{lang 'reelflies.size_pills.sold_out_many' sizes='#'}}"
+       data-rf-and="{{lang 'reelflies.size_pills.and'}}"></p>
+    {{/if}}
+</div>
