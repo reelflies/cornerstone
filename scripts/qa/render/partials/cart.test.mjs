@@ -17,7 +17,9 @@ import { unbalancedTags } from '../html-checks.mjs';
 import { renderPartial } from '../render.mjs';
 
 // A cart line as the cart page's context gives it (cart.items), with the fields the templates read.
-const line = (id, productId, name, size, { qty = 1, price = 1.25, brand = 'ReelFlies', options } = {}) => ({
+const line = (id, productId, name, size, {
+    qty = 1, price = 1.25, brand = 'ReelFlies', options,
+} = {}) => ({
     id,
     product_id: productId,
     name,
@@ -44,7 +46,9 @@ const TOTALS = {
     sub_total: { formatted: '$36.50' }, grand_total: { formatted: '$36.50' }, quantity: 28, show_primary_checkout_button: true, shipping_handling: null, taxes: [],
 };
 const page = (template, cart = CART, extra = {}) => renderPartial(template, {
-    cart: { items: cart, ...TOTALS, quantity: cart.reduce((sum, item) => sum + item.quantity, 0), ...extra.cart },
+    cart: {
+        items: cart, ...TOTALS, quantity: cart.reduce((sum, item) => sum + item.quantity, 0), ...extra.cart,
+    },
     urls: { checkout: { single_address: '/checkout' }, cart: '/cart.php', home: '/' },
     settings: { hide_price_from_guests: false },
     ...extra.context,
