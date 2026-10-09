@@ -300,7 +300,7 @@ export default class ProductDetails extends ProductDetailsBase {
         }
 
         utils.api.productAttributes.optionChange(productId, $form.serialize(), 'products/bulk-discount-rates', (err, response) => {
-            if (optionChangeFailed(err, response)) return; // ReelFlies hook (ticket 38; CUSTOMIZATIONS.md): the error first; the pills stay usable
+            if (optionChangeFailed(err, response, this.$scope[0])) return; // ReelFlies hook (ticket 38; CUSTOMIZATIONS.md): the error first; the pills stay usable
             const productAttributesData = response.data || {};
             const productAttributesContent = response.content || {};
             this.updateProductAttributes(productAttributesData);

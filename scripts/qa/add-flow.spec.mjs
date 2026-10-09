@@ -16,9 +16,9 @@
 // - An option change the network drops: the pills still usable, the error announced.
 // - At 375 the sticky bar after scrolling past the button, --sticky-h its height (0 hidden); an
 //   add from it confirms in the bar with focus kept there, and the bar rests again after about 4
-//   seconds; tabbing never leaves focus under it. Its two looks are the product pin's
-//   sticky-bar and sticky-bar-added states (states.mjs).
-// - axe with the confirmation and the bar showing.
+//   seconds; tabbing never leaves focus under it. Its two looks are product@sizes's sticky-bar
+//   and sticky-bar-added states (states.mjs).
+// - axe on the product view with the confirmation showing.
 //
 // It runs only when named:
 //
@@ -32,6 +32,7 @@ import {
 } from './fixtures.mjs';
 import { QA_CHANNEL } from './storefront.mjs';
 import { chunkLoaded } from './states.mjs';
+import { answerCartAdds, answerCartRead, cartLines } from './fixtures/cart/routes.mjs';
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
 const SIZE_GROUP = '[data-rf-pills="size"]';
@@ -41,21 +42,14 @@ const PIN = null;
 // Fat Albert's Colour: stock swatches, required, none chosen.
 const COLOUR = '[data-product-attribute="swatch"] .form-option';
 const phone = testInfo => testInfo.project.name === 'phone-375';
-const CART = units => [{ lineItems: { physicalItems: [{ productId: FAT_ALBERT_ID, quantity: units, brand: 'ReelFlies' }], digitalItems: [], giftCertificates: [] } }];
 
-// The add and the cart's read, answered here. Returns the adds made.
+// The add and the cart's read, answered here (fixtures/cart/routes.mjs). Returns the adds made.
 async function answerAdds(page, { fail = false, units = 15 } = {}) {
-    const adds = [];
-    await page.route('**/remote/v1/cart/add**', route => {
-        adds.push(route.request().url());
-        if (fail) return route.abort('failed');
-        return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: { cart_id: 'qa-cart', cart_item: { id: 'qa-item', product_id: FAT_ALBERT_ID } } }) });
-    });
-    await page.route('**/api/storefront/carts**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(CART(units)) }));
+    const adds = await answerCartAdds(page, { fail, productId: FAT_ALBERT_ID });
+    await answerCartRead(page, cartLines(FAT_ALBERT_ID, units));
     return adds;
 }
 
-// Fat Albert unless given the pin (PIN: the product pin's own path).
 async function open(page, pagePath = FAT_ALBERT) {
     await storefrontPage(page, 'product', pagePath ?? undefined);
     await dismissCookieBanner(page);
@@ -142,23 +136,38 @@ test.describe('the add flow (ticket 38)', () => {
         expect(spoken[0]).toMatch(new RegExp(`^Added 3 × size ${size}, .+\\. 15 flies in your cart\\.$`));
     });
 
-    test('adds nothing for a sold-out size, and says so (story 39)', async ({ page }) => {
+    test('adds nothing for a size stock can\'t sell, and says so (story 39)', async ({ page }) => {
         const adds = await answerAdds(page);
         await open(page);
-        // A Colour and a size, each answered by stock's option change, which redraws the marks.
-        const changed = () => page.waitForResponse(response => /\/remote\/v1\/product-attributes\//.test(response.url()));
-        let answer = changed();
+        // Stock's real answer to the Colour, kept; the size's answer is that answer with the size
+        // out of stock (fulfilled here, never sent), so stock's own sold-out pass runs: it marks
+        // the size and holds the button (add-bridge.js's holdAddButton, aria-disabled).
+        const real = page.waitForResponse(response => /\/remote\/v1\/product-attributes\//.test(response.url()));
         await page.locator(COLOUR).first().click();
-        await answer;
+        const answer = await (await real).json();
         const pill = page.locator(`${SIZE_GROUP} .rf-pill[data-product-attribute-value]:not(.unavailable)`).first();
         const size = (await pill.locator('.form-option-variant').innerText()).trim();
-        answer = changed();
+        const valueId = Number(await pill.getAttribute('data-product-attribute-value'));
+        const soldOut = {
+            ...answer,
+            data: {
+                ...answer.data,
+                instock: false,
+                purchasable: true,
+                available_to_sell: 0,
+                in_stock_attributes: (answer.data.in_stock_attributes || []).filter(id => Number(id) !== valueId),
+            },
+        };
+        await page.route('**/remote/v1/product-attributes/**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(soldOut) }));
+        const answered = page.waitForResponse(response => /\/remote\/v1\/product-attributes\//.test(response.url()));
         await pill.click();
-        await answer;
-        // Then stock marks the chosen size as one it can't sell; size-pills.js follows (ticket 37).
-        await pill.evaluate(label => label.classList.add('unavailable'));
-        await expect(page.locator(`${SIZE_GROUP} input:checked`)).toHaveAttribute('aria-disabled', 'true');
-        await page.locator('#form-action-addToCart').click();
+        await answered;
+        const button = page.locator('#form-action-addToCart');
+        // Held, not disabled: Playwright counts aria-disabled as disabled, so the property is read
+        // and the click forced past its enabled check, as a shopper's tap would go.
+        await expect(button).toHaveAttribute('aria-disabled', 'true');
+        await expect(button).toHaveJSProperty('disabled', false);
+        await button.click({ force: true });
         await expect(page.locator('[data-rf-add-status]')).toHaveText(`Size ${size} is sold out. Choose another size.`);
         expect(adds).toEqual([]);
     });
@@ -181,7 +190,7 @@ test.describe('the add flow (ticket 38)', () => {
         await page.route('**/remote/v1/product-attributes/**', route => route.abort('failed'));
         const pills = page.locator(`${SIZE_GROUP} .rf-pill[data-product-attribute-value]:not(.unavailable)`);
         await pills.first().click();
-        await expect(page.locator('[data-rf-add-status]')).toHaveText('That didn\'t go in your cart. Try again.');
+        await expect(page.locator('[data-rf-add-status]')).toHaveText('We couldn\'t check that choice. Try again.');
         await pills.nth(1).click();
         await expect(page.locator(`${SIZE_GROUP} input:checked`)).toHaveCount(1);
     });

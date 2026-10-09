@@ -1107,6 +1107,7 @@
             "add": "Add # to cart",
             "choose_first": "Choose a fly size first.",
             "sold_out": "Size {size} is sold out. Choose another size.",
+            "sold_out_only": "Size {size} is sold out.",
             "added": "Added {qty} × {choice}.",
             "size": "size {size}",
             "cart_fly": "# fly in your cart.",
@@ -1115,14 +1116,13 @@
             "cart_items": "# items in your cart.",
             "view_cart": "View cart",
             "error": "That didn't go in your cart. Try again.",
+            "option_error": "We couldn't check that choice. Try again.",
             "no_size": "No size chosen",
             "size_and": "Size {size}, {flies}",
             "one_fly": "# fly",
             "many_flies": "# flies",
             "quantity": "Quantity #",
-            "preview_heading": "Added to cart. Your cart now has {count, plural, one {# item} other {# items}}.",
-            "decrease": "Fewer",
-            "increase": "More"
+            "preview_heading": "Added to cart. Your cart now has {count, plural, one {# item} other {# items}}."
         },
 
         "product": {

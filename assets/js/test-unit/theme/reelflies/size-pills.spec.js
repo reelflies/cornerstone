@@ -134,6 +134,19 @@ describe('watching a group', () => {
         expect(announce.mock.calls.map(([text]) => text)).toEqual(['Size 14 is sold out.', 'Size 16 is sold out.']);
     });
 
+    it('counts the options\' changes as choices, not the stepper\'s', () => {
+        document.body.innerHTML = `<form><div data-product-option-change>${FIELD(SIZES)}<input type="radio" name="attribute[13]" value="9" id="colour"></div><input name="qty[]" id="qty" value="1"></form>`;
+        watchPills(field());
+        document.getElementById('qty').dispatchEvent(new Event('change', { bubbles: true }));
+        label('102').classList.add('unavailable');
+        applied();
+        expect(announce).not.toHaveBeenCalled();
+        document.getElementById('colour').dispatchEvent(new Event('change', { bubbles: true }));
+        label('103').classList.add('unavailable');
+        applied();
+        expect(announce).toHaveBeenCalledWith('Sizes 14 and 16 are sold out.', document);
+    });
+
     it('leaves a group it already watches alone, and stops when told', async () => {
         const unwatch = watchPills(field());
         expect(field().hasAttribute('data-rf-pills-watched')).toBe(true);

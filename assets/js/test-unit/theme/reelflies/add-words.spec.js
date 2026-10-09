@@ -31,6 +31,8 @@ describe('stickyText (story 43)', () => {
     it('says the size and the flies, or that no size is chosen, or the quantity of a product with no sizes', () => {
         expect(stickyText({ needsSize: true, chosen: '14', qty: 3 }, WORDS)).toBe('Size 14, 3 flies');
         expect(stickyText({ needsSize: true, chosen: '14', qty: 1 }, WORDS)).toBe('Size 14, 1 fly');
+        // A one-size product's size is checked for the shopper, so the bar names it.
+        expect(stickyText({ needsSize: false, chosen: '8', qty: 1 }, WORDS)).toBe('Size 8, 1 fly');
         expect(stickyText({ needsSize: true, chosen: '', qty: 1 }, WORDS)).toBe('No size chosen');
         expect(stickyText({ needsSize: false, chosen: '', qty: 2 }, WORDS)).toBe('Quantity 2');
     });

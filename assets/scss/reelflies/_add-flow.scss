@@ -17,7 +17,7 @@
 //
 // -----------------------------------------------------------------------------
 
-$rf-phone: "not all and (min-width: #{$screen-medium})";
+$rf-add-phone: "not all and (min-width: #{$screen-medium})";
 
 .productView-options .form .rf-add {
     align-items: center;
@@ -98,7 +98,7 @@ $rf-phone: "not all and (min-width: #{$screen-medium})";
     border-radius: var(--rf-radius-pill);
     color: var(--rf-buy-ink);
     margin: 0;
-    min-height: 48px;
+    min-height: var(--rf-target-row);
     width: 100%;
 
     &:hover,
@@ -106,6 +106,16 @@ $rf-phone: "not all and (min-width: #{$screen-medium})";
         background: var(--rf-buy-hover);
         border-color: var(--rf-buy-hover);
         color: var(--rf-buy-ink);
+    }
+
+    // Held when the choice can't be sold (add-bridge.js's holdAddButton): it stays focusable and
+    // its click says why, but it reads as unavailable, as stock's disabled button does.
+    &[aria-disabled="true"],
+    &:disabled {
+        background: var(--rf-tile-2);
+        border-color: var(--rf-tile-2);
+        color: var(--rf-dun);
+        cursor: not-allowed;
     }
 }
 
@@ -142,10 +152,6 @@ $rf-phone: "not all and (min-width: #{$screen-medium})";
     right: 0;
     z-index: zIndex("high");
 
-    &[hidden] {
-        display: none;
-    }
-
     @include breakpoint("medium") {
         display: none;
     }
@@ -153,11 +159,12 @@ $rf-phone: "not all and (min-width: #{$screen-medium})";
     .button {
         border-radius: var(--rf-radius-pill);
         margin: 0;
-        min-height: 3rem;
+        min-height: var(--rf-target-row);
     }
 }
 
-// display: flex above, and .button's display, would otherwise beat the hidden attribute.
+// The bar's display: flex, and .button's display on its button and link, would otherwise beat
+// the hidden attribute.
 .rf-sticky-add[hidden],
 .rf-sticky-add [hidden] {
     display: none;
@@ -176,8 +183,13 @@ $rf-phone: "not all and (min-width: #{$screen-medium})";
 }
 
 // While the bar shows, the page's end can scroll above it (the body's padding) and a focused
-// element is never left under it (the scroll padding). --sticky-h is 0 while it's hidden.
-@media #{$rf-phone} {
+// element is never left under it (the scroll padding). --sticky-h is 0 while it's hidden, and on
+// every page without the bar (build pipeline 6.9's contract, for ticket 52's card).
+:root {
+    --sticky-h: 0px;
+}
+
+@media #{$rf-add-phone} {
     html {
         scroll-padding-bottom: calc(var(--sticky-h, 0px) + 8px);
     }

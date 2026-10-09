@@ -22,8 +22,13 @@ const SIZES = {
 const product = (options, extra = {}) => ({
     id: 4877, title: 'Adams Parachute', cart_url: '/cart.php', url: '/adams-parachute/', images: [], options, can_purchase: true, show_quantity_input: true, min_purchase_quantity: 0, max_purchase_quantity: 0, price: {}, ...extra,
 });
-const row = (options, extra) => renderPartial('components/products/add-to-cart', {
-    product: product(options, extra), settings: {}, theme_settings: {}, with_wallet_buttons: false,
+// The buy row as the product page renders it: pages/product.html's hook sets rf_product_page first.
+// Quick view (`quickView: true`) renders it without.
+const ROW = 'rf-test/buy-row';
+const row = (options, extra, { quickView = false } = {}) => renderPartial(ROW, {
+    product: product(options, extra), settings: {}, theme_settings: {}, with_wallet_buttons: false, quick_view: quickView,
+}, {
+    overrides: { [ROW]: "{{#unless quick_view}}{{assignVar 'rf_product_page' 1}}{{/unless}}{{> components/products/add-to-cart}}" },
 });
 const button = html => findTags(html, 'input').find(tag => tag.attrs.id === 'form-action-addToCart');
 
@@ -57,10 +62,31 @@ describe('the buy row (components/reelflies/add-to-cart.html)', () => {
         assert.equal(words['data-rf-add-label'], 'Add # to cart');
     });
 
-    it('starts the stepper at 1, or the product\'s minimum', async () => {
+    it('finds the size option by the Fly size facet\'s name (size-facet-name.html), in any case, not by "Size" in a name', async () => {
+        assert.equal(button(await row([{ ...SIZES, display_name: 'fly sizes' }])).attrs.value, 'Choose a size');
+        assert.equal(button(await row([{ ...SIZES, display_name: 'Hook Size' }])).attrs.value, 'Add 1 to cart');
+    });
+
+    it('keeps stock\'s labels where add-flow.js doesn\'t run: "Add to Cart" in Quick view, and a pre-order product\'s everywhere', async () => {
+        assert.equal(button(await row([SIZES], {}, { quickView: true })).attrs.value, 'Add to Cart');
+        assert.equal(button(await row([], {}, { quickView: true })).attrs.value, 'Add to Cart');
+        assert.equal(button(await row([SIZES], { pre_order: true })).attrs.value, 'Pre-Order Now');
+        const [wrapper] = findTags(await row([SIZES], { pre_order: true }), 'div').filter(tag => 'data-rf-add' in tag.attrs);
+        assert.ok('data-rf-pre-order' in wrapper.attrs);
+    });
+
+    it('carries the product\'s name, which the confirmation names on a product with no options', async () => {
+        const [wrapper] = findTags(await row([]), 'div').filter(tag => 'data-rf-add' in tag.attrs);
+        assert.equal(wrapper.attrs['data-rf-product'], 'Adams Parachute');
+    });
+
+    it('starts the stepper at 1, or the product\'s minimum, with buttons that never submit the form', async () => {
         const qty = html => findTags(html, 'input').find(tag => tag.attrs.id === 'qty[]').attrs.value;
-        assert.equal(qty(await row([SIZES])), '1');
+        const html = await row([SIZES]);
+        assert.equal(qty(html), '1');
         assert.equal(qty(await row([SIZES], { min_purchase_quantity: 3 })), '3');
+        const steps = findTags(html, 'button').filter(tag => tag.attrs['data-action']);
+        assert.deepEqual(steps.map(tag => [tag.attrs['data-action'], tag.attrs.type]), [['dec', 'button'], ['inc', 'button']]);
     });
 
     it('carries the status line with no role, the flow\'s words, and no stock status span to announce twice (story 68)', async () => {
@@ -109,5 +135,28 @@ describe('Quick view\'s preview modal (stock cart/preview.html)', () => {
             cart: { quantity: 38, items: [], show_primary_checkout_button: true }, urls: { cart: '/cart.php', checkout: { single_address: '/checkout' } }, settings: {},
         });
         assert.equal(textOf(outerHtml(html, 'h1', () => true)), 'Added to cart. Your cart now has 38 items.');
+    });
+});
+
+describe('against stock\'s own buy row (kept below the hook, unrendered)', () => {
+    it('gives the quantity field and the button the attributes stock\'s block gives them', () => {
+        const source = fs.readFileSync(path.join(THEME_DIR, 'templates/components/products/add-to-cart.html'), 'utf8');
+        const stock = source.slice(source.indexOf('{{#if false}}'));
+        const ours = fs.readFileSync(path.join(THEME_DIR, 'templates/components/reelflies/add-to-cart.html'), 'utf8');
+        // An input's attributes as written, name="value" pairs; `value` differs by design (the
+        // quantity's start, the button's label), so only its presence is held.
+        const pairs = (html, marker) => {
+            const element = html.match(new RegExp(`<input\\s[^>]*${marker}[^>]*>`, 's'))[0];
+            return Object.fromEntries([...element.matchAll(/([a-z-]+)="([^"]*)"/g)].map(([, name, text]) => [name, text]));
+        };
+        for (const marker of ['name="qty\\[\\]"', 'id="form-action-addToCart"']) {
+            const theirs = pairs(stock, marker);
+            const mine = pairs(ours, marker);
+            for (const [name, text] of Object.entries(theirs)) {
+                if (name === 'value') assert.ok('value' in mine, `${marker} keeps a value`);
+                else if (name === 'class') assert.ok(text.split(/\s+/).every(part => mine.class.split(/\s+/).includes(part)), `${marker}'s classes ${text}`);
+                else assert.equal(mine[name], text, `${marker}'s ${name}`);
+            }
+        }
     });
 });

@@ -9,13 +9,15 @@ export function buttonLabel({ needsSize, chosen, qty }, words) {
     return words.add.replace('#', qty);
 }
 
-// The sticky bar at rest: "Size 14, 3 flies" or "No size chosen" on a product with sizes, flies
-// being what has sizes; "Quantity 3" on one without.
+// The sticky bar at rest: "Size 14, 3 flies" once a size is chosen (a one-size product's is
+// checked for the shopper), or "No size chosen" on a product with several; "Quantity 3" on one
+// with no size option. Flies are what have sizes.
 export function stickyText({ needsSize, chosen, qty }, words) {
-    if (!needsSize) return words.quantity.replace('#', qty);
-    if (!chosen) return words.noSize;
-    const flies = (qty === 1 ? words.one : words.many).replace('#', qty);
-    return words.sizeAnd.replace('{size}', chosen).replace('{flies}', flies);
+    if (chosen) {
+        const flies = (qty === 1 ? words.one : words.many).replace('#', qty);
+        return words.sizeAnd.replace('{size}', chosen).replace('{flies}', flies);
+    }
+    return needsSize ? words.noSize : words.quantity.replace('#', qty);
 }
 
 // "Added 3 × size 14. 15 flies in your cart." The choice is the chosen values ("size 14", or

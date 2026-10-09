@@ -2,6 +2,7 @@ import Wishlist from '../wishlist';
 import { initRadioOptions } from './aria';
 import PicklistBackorder from './picklist-backorder';
 import { findByBackorderMessageIdOrDefault } from './utils/backorder-utils';
+import { holdAddButton } from '../reelflies/add-bridge'; // ReelFlies hook (ticket 38; CUSTOMIZATIONS.md): the add flow's sold-out hold
 
 const optionsTypesMap = {
     INPUT_FILE: 'input-file',
@@ -776,9 +777,10 @@ export default class ProductDetailsBase {
             : parseInt(this.context.availableToSell, 10) || 0;
         const canSell = data.instock || dataAvailableToSell > 0;
         if (!data.purchasable || !canSell) {
-            viewModel.$addToCart.prop('disabled', true);
+            if (!holdAddButton(viewModel.$addToCart[0], true)) viewModel.$addToCart.prop('disabled', true); // ReelFlies hook (ticket 38; CUSTOMIZATIONS.md): the add flow's button held with aria-disabled, so its click says why
             viewModel.$increments.prop('disabled', true);
         } else {
+            holdAddButton(viewModel.$addToCart[0], false); // ReelFlies hook (ticket 38; CUSTOMIZATIONS.md): released again
             viewModel.$addToCart.prop('disabled', false);
             viewModel.$increments.prop('disabled', false);
         }

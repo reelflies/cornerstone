@@ -264,7 +264,7 @@ The screenshots and axe open each state in `UI_STATES` on the pins it names, at 
 | `size-default` | Fat Albert with no size chosen and no size sold out: "Fly Sizes: choose one" over the pills. Like the two below, it clears the live stock's marks (the sizes', and the colours' once a size is chosen) after stock has answered and marks the options (`data-rf-qa-state`), so the pin's mask of the live marks leaves them alone | `phone-375`, `desktop-1280` | `product@sizes` (channel 1) | 37 |
 | `size-chosen` | Fat Albert with its first size chosen: the ink outline on the tile and the check | `phone-375`, `desktop-1280` | `product@sizes` (channel 1) | 37 |
 | `size-sold-out` | Fat Albert with its last two sizes marked sold out as stock's scripts mark them (`unavailable`): struck, aria-disabled, and named in the line. The state marks them itself, so the shot shows the look, not the day's stock | `phone-375`, `desktop-1280` | `product@sizes` (channel 1) | 37 |
-| `sticky-bar` | the phone's sticky add bar at rest: a size chosen and the main button scrolled past | `phone-375` | `product@sizes` (channel 1) | 38 |
+| `sticky-bar` | the phone's sticky add bar at rest: a Colour and a size chosen (every option's live marks cleared, and the buy row settled) and the main button scrolled past | `phone-375` | `product@sizes` (channel 1) | 38 |
 | `sticky-bar-added` | the sticky add bar just after an add from it, "Added 1 × size N" with View cart. The add is answered by the state (page.route), so nothing reaches the store, and `data-rf-bar-ms` holds the look for the shot | `phone-375` | `product@sizes` (channel 1) | 38 |
 | `sheet-open` | a slot for the quick-add sheet and popover | | | 43 adds it |
 
@@ -440,6 +440,7 @@ This is ticket 54's "every link in the home widgets returns 200 with no redirect
   | `rf-menu` | grouped menu and phone drawer, and the desktop rail's hover intent, keys and focus | 28 and 29 (1,308 B in 29) | 8,000 B |
   | `rf-size-filter` | the Fly size filter on listings | 33 (1,892 B) | 3,000 B |
   | `rf-size-pills` | the product page's size pills, and Quick view's and the Change dialog's through `pills-in-modal.js` | 37 (1,302 B) | 3,000 B |
+  | `rf-add-flow` | the product page's add flow and sticky bar | 38 (6,319 B) | 7,000 B |
   | `rf-quick-add` | quick add on cards | 43 (measured in 45) | 15,000 B |
   | `rf-region-prompt` | outside-Canada prompt | 52 | 1,000 B |
 
@@ -859,23 +860,25 @@ npx jest assets/js/test-unit/theme/reelflies/size-pills
 Ticket 38's buy row (`components/reelflies/add-to-cart.html`, through stock `add-to-cart.html`'s hook), the sticky add bar (`sticky-add.html`, from `pages/product.html`), and `add-flow.js`, which stock `product-details.js` hands the add's answer to through `add-bridge.js`.
 
 - **The templates** are rendered by `render/partials/add-flow.test.mjs`:
-  - stock's ids and attributes
-  - "Choose a size" or "Add N to cart"
+  - stock's ids and attributes, as stock's kept block gives them
+  - "Choose a size" or "Add N to cart" on the product page, the size option found by the Fly size facet's name; stock's "Add to Cart" in Quick view and stock's "Pre-Order Now"; the stepper's buttons `type="button"`
+  - the product's name for the confirmation, and every word's placeholders whole
   - the stepper's start
   - the status line with no role
   - the sticky bar on the product page only
   - Quick view's reworded heading
 - **The script** is Jest's:
   - `add-words.spec.js`: the labels and the confirmation
-  - `add-flow.spec.js`: the guards before stock's submit, the add's success, error-answer, unreadable-answer and network-failure paths, focus kept, Quick view left to stock, a failed option change, and the bar's added look and its return after 4 s
-- **`add-flow.spec.mjs`** runs on channel 1's `product` pin. The add and the cart's read are answered by `page.route`, so no cart is made; the network guard fails any other write. It checks:
+  - `add-bridge.spec.js`: with no flow loaded (a listing's Quick view), a failed add taken (the button usable, the overlay gone, stock's alert) and a good one left to stock; a failed option change stopped
+  - `add-flow.spec.js`: the guards on the button's click and before stock's submit, stock's hold on a choice it can't sell (`aria-disabled`, and the click saying why), the one-size wording, the choice as it was sent, a new choice clearing the last message, a pre-order label kept, a failed option change said in its own form, the bar's double tap and a blocked tap forgotten, focus handed to the main button when the bar hides, the add's success, error-answer, unreadable-answer and network-failure paths, `rf:cart-changed` after the count update, a product with no options named, a swatch named by its title, focus kept, Quick view left to stock, a failed option change, the bar's place after a jump, and its added look and its return after 4 s
+- **`add-flow.spec.mjs`** runs on channel 1's Fat Albert (`product@sizes`, several sizes and a required Colour), and on the `product` pin for its one-size case. The add and the cart's read are answered by the cart route fixtures (`fixtures/cart/routes.mjs`, which tickets 42, 43 and 44 share: `answerCartAdds`, `answerCartRead`, `cartLines`), fulfilled or aborted and never passed on, so no cart is made; the network guard fails any other write. It checks:
   - "Choose a size" and focus
   - "Add 3 to cart"
   - an add with no modal, announced once, with focus kept and the header's count
   - a sold-out size
   - a dropped add and a dropped option change
   - the sticky bar, `--sticky-h` and tabbing at 375
-  - axe
+  - axe on the product view with the confirmation showing (the bar at rest is `qa:prepush`'s axe on `product@sizes`)
 
   It runs only when named. The bar's looks are the `sticky-bar` and `sticky-bar-added` states.
 

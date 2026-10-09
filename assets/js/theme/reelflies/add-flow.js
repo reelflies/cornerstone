@@ -27,11 +27,14 @@
 // Every message goes to ticket 25's live region after the visible line renders; the line has no
 // role, and focus stays on the button that was used.
 
+import $ from 'jquery';
 import { announce } from './live-region';
 import { buttonLabel, confirmation, stickyText } from './add-words';
 import { countCart, flyBrandList } from './cart-count';
 import { guardedCallback } from './guarded-api';
 import { setAddHandlers } from './add-bridge';
+import { CHANGED_EVENT } from './cart-events';
+import stockCurrencySelector from '../global/currency-selector';
 
 export const ADD = '[data-rf-add]';
 const SIZE_GROUP = '[data-rf-pills="size"]'; // ticket 37's marker on the size option's pills
@@ -40,10 +43,7 @@ const BUTTON = '#form-action-addToCart';
 const STICKY = '[data-rf-sticky-add]';
 const PHONE = 'not all and (min-width: 801px)'; // Cornerstone's medium breakpoint, as _add-flow.scss
 const BAR_MS = 4000;
-
-const DEFAULT_NOTIFY = units => {
-    if (window.jQuery) window.jQuery('body').trigger('cart-quantity-update', units);
-};
+const COUNT_MS = 4000; // how long the confirmation waits for the cart's count before it is said
 
 // The words the template puts on [data-rf-add], each with # or {name} where a value goes.
 export function wordsOf(element) {
@@ -53,6 +53,7 @@ export function wordsOf(element) {
         add: read('add-label'),
         chooseFirst: read('choose-first'),
         soldOut: read('sold-out'),
+        soldOutOnly: read('sold-out-only'),
         added: read('added'),
         size: read('size'),
         cartFly: read('cart-fly'),
@@ -61,11 +62,13 @@ export function wordsOf(element) {
         cartItems: read('cart-items'),
         viewCart: read('view-cart'),
         error: read('error'),
+        optionError: read('option-error'),
         noSize: read('no-size'),
         sizeAnd: read('size-and'),
         one: read('one-fly'),
         many: read('many-flies'),
         quantity: read('quantity'),
+        product: read('product'),
     };
 }
 
@@ -97,6 +100,7 @@ export function choiceOf(form) {
     const qty = Math.max(1, parseInt((form.querySelector('[name="qty[]"]') || {}).value, 10) || 1);
     return {
         needsSize: radios.length > 1,
+        sizes: radios.length,
         chosen: checked ? valueOf(checked) : '',
         soldOut: Boolean(checked && checked.getAttribute('aria-disabled') === 'true'),
         firstInStock: radios.find(radio => radio.getAttribute('aria-disabled') !== 'true') || radios[0] || null,
@@ -119,15 +123,15 @@ function showStatus(root, text, { error = false, link = null } = {}) {
     status.hidden = false;
 }
 
-// The add's answer is the cart's when it names the item it added; anything else failed.
-export function addAnswer(err, response) {
+// The add's answer is the cart's when it names the item it added; anything else failed. The
+// store's own error is HTML, read as text in an inert document.
+export function addAnswer(err, response, doc = document) {
     if (err) return { ok: false, message: '' };
     const data = response && typeof response === 'object' && response.data && typeof response.data === 'object' ? response.data : null;
     if (!data) return { ok: false, message: '' };
     if (data.error) {
-        const holder = document.createElement('div');
-        holder.innerHTML = data.error;
-        return { ok: false, message: holder.textContent.trim() };
+        const parsed = new doc.defaultView.DOMParser().parseFromString(String(data.error), 'text/html');
+        return { ok: false, message: parsed.body.textContent.trim() };
     }
     return data.cart_item ? { ok: true } : { ok: false, message: '' };
 }
@@ -144,8 +148,14 @@ export async function readCartCount(flyBrands, doFetch = window.fetch) {
     return countCart(items, flyBrandList(flyBrands));
 }
 
+// deps: jquery (stock's cart-quantity-update goes through it, as rise.js's), notify and doFetch,
+// for tests.
 export function createAddFlow(root, context = {}, {
-    doc = document, notify = DEFAULT_NOTIFY, doFetch = (...args) => window.fetch(...args),
+    doc = document,
+    jquery = $,
+    currencySelector = stockCurrencySelector,
+    notify = units => jquery(doc.body).trigger('cart-quantity-update', units),
+    doFetch = (...args) => window.fetch(...args),
 } = {}) {
     const form = root.closest('form') || root.querySelector('form');
     const words = wordsOf(root);
@@ -155,11 +165,15 @@ export function createAddFlow(root, context = {}, {
     let fromSticky = false;
     let barTimer = null;
     let placeSticky = () => {};
+    // The choice as it was when the add was sent: the pills and the stepper stay live while it is
+    // in flight, and the confirmation names what was added.
+    let sent = null;
 
     const sync = () => {
         const choice = choiceOf(form);
         const label = buttonLabel(choice, words);
-        if (button && button.value !== label && !button.disabled) button.value = label;
+        // A pre-order product keeps stock's "Pre-Order Now".
+        if (button && !root.hasAttribute('data-rf-pre-order') && button.value !== label && !button.disabled) button.value = label;
         if (sticky) {
             const text = sticky.querySelector('[data-rf-sticky-text]');
             const stickyButton = sticky.querySelector('[data-rf-sticky-button]');
@@ -172,9 +186,15 @@ export function createAddFlow(root, context = {}, {
     // focus on the first size it can sell. Returns whether it stopped the add.
     const stopped = () => {
         const choice = choiceOf(form);
+        // Stock holds the button (aria-disabled, add-bridge.js's holdAddButton) when the choice
+        // can't be sold: the chosen size is out in the chosen colour, or the product can't be
+        // bought as chosen.
+        const held = Boolean(button && button.getAttribute('aria-disabled') === 'true');
         let message = '';
         if (choice.needsSize && !choice.chosen) message = words.chooseFirst;
-        else if (choice.soldOut) message = words.soldOut.replace('{size}', choice.chosen);
+        // A product with one size has no other to choose.
+        else if (choice.soldOut || (held && choice.chosen)) message = (choice.sizes === 1 && words.soldOutOnly ? words.soldOutOnly : words.soldOut).replace('{size}', choice.chosen);
+        else if (held) message = words.error;
         if (!message) return false;
         showStatus(root, message, { error: true });
         announce(message, doc);
@@ -191,10 +211,14 @@ export function createAddFlow(root, context = {}, {
     // The button's click (Enter in a field clicks it too), before the browser checks the required
     // options; and submit, before stock's handler, for a submit that comes another way.
     const onClick = event => {
-        if (event.target.closest(BUTTON) && stopped()) stop(event);
+        if (!event.target.closest(BUTTON)) return;
+        if (stopped()) stop(event);
+        else sent = choiceOf(form);
     };
     const onSubmit = event => {
-        if (event.target === form && stopped()) stop(event);
+        if (event.target !== form) return;
+        if (stopped()) stop(event);
+        else if (!sent) sent = choiceOf(form);
     };
 
     const showBarAdded = text => {
@@ -209,31 +233,35 @@ export function createAddFlow(root, context = {}, {
             view.focus({ preventScroll: true });
         }
         if (stickyButton) stickyButton.hidden = true;
+        placeSticky(); // the added look's own height, in --sticky-h
         clearTimeout(barTimer);
         // data-rf-bar-ms holds the look longer for the screenshot state (states.mjs).
         barTimer = setTimeout(() => {
             const hadFocus = view && doc.activeElement === view;
             sticky.removeAttribute('data-rf-added');
-            placeSticky();
             if (view) view.hidden = true;
-            if (stickyButton) {
-                stickyButton.hidden = false;
-                if (hadFocus) stickyButton.focus({ preventScroll: true });
-            }
+            if (stickyButton) stickyButton.hidden = false;
+            // At rest the bar shows only while the main button is above the screen; placeSticky
+            // moves focus to the main button if the bar hides with it inside.
+            if (hadFocus && stickyButton) stickyButton.focus({ preventScroll: true });
+            placeSticky();
             sync();
         }, Number(sticky.getAttribute('data-rf-bar-ms')) || BAR_MS);
     };
 
     // Stock's add callback calls this first (through add-bridge.js). `form` is the form that
-    // added: the page's, or Quick view's, whose own status line takes its failure.
+    // added: the page's, or Quick view's, whose own status line takes its failure. On success it
+    // does what stock's callback did before its modal: currencySelector with the cart's id.
     const finished = async (err, response, {
         label, overlay, quickView = false, form: from = form,
     } = {}) => {
-        const answer = addAnswer(err, response);
+        const answer = addAnswer(err, response, doc);
         if (answer.ok && quickView) return false;
         const fromButton = from.querySelector(BUTTON);
         const wasSticky = fromSticky;
         fromSticky = false;
+        const stickyButton = sticky && sticky.querySelector('[data-rf-sticky-button]');
+        if (stickyButton) stickyButton.disabled = false;
         if (fromButton) {
             fromButton.disabled = false;
             if (label) fromButton.value = label;
@@ -242,6 +270,8 @@ export function createAddFlow(root, context = {}, {
             if (!wasSticky && (!active || active === doc.body)) fromButton.focus({ preventScroll: true });
         }
         if (overlay && overlay.hide) overlay.hide();
+        const choice = (!quickView && sent) || choiceOf(from);
+        sent = null;
         if (!answer.ok) {
             const message = answer.message || words.error;
             showStatus(from.querySelector(ADD) || root, message, { error: true });
@@ -249,20 +279,32 @@ export function createAddFlow(root, context = {}, {
             sync();
             return true;
         }
-        const choice = choiceOf(form);
+        currencySelector(response.data.cart_id);
         const choiceText = [choice.chosen ? words.size.replace('{size}', choice.chosen) : '', ...choice.others].filter(Boolean).join(', ')
-            || (context.productTitle || '');
+            || words.product;
+        const link = { href: cartUrl, text: words.viewCart };
+        // The line shows at once; the cart's count joins it when the Cart API answers, within
+        // COUNT_MS, and only then is the whole line said, once.
+        showStatus(root, confirmation({ qty: choice.qty, choice: choiceText, count: null }, words), { link });
+        if (wasSticky) showBarAdded(words.added.replace('{qty}', choice.qty).replace('{choice}', choiceText).replace(/\.$/, ''));
         let count = null;
+        let timer = null;
         try {
-            count = await readCartCount(context.rfFlyBrands, doFetch);
+            count = await Promise.race([
+                readCartCount(context.rfFlyBrands, doFetch),
+                new Promise(resolve => { timer = doc.defaultView.setTimeout(() => resolve(null), COUNT_MS); }),
+            ]);
         } catch (error) {
             count = null;
         }
+        doc.defaultView.clearTimeout(timer);
         if (count) notify(count.units);
+        // Build pipeline 6.9's event, after stock's: the rise ring and tickets 42, 43, 44 and 52.
+        const productId = Number((form.querySelector('[name="product_id"]') || {}).value) || null;
+        doc.dispatchEvent(new doc.defaultView.CustomEvent(CHANGED_EVENT, { detail: { source: 'add', productId } }));
         const message = confirmation({ qty: choice.qty, choice: choiceText, count }, words);
-        showStatus(root, message, { link: { href: cartUrl, text: words.viewCart } });
+        if (count) showStatus(root, message, { link });
         announce(message, doc);
-        if (wasSticky) showBarAdded(words.added.replace('{qty}', choice.qty).replace('{choice}', choiceText).replace(/\.$/, ''));
         sync();
         return true;
     };
@@ -282,6 +324,8 @@ export function createAddFlow(root, context = {}, {
             queued = false;
             const past = button.getBoundingClientRect().bottom < 0;
             const shown = phone.matches && (past || sticky.hasAttribute('data-rf-added'));
+            // Focus never goes down with the bar: it moves to the main button.
+            if (!shown && sticky.contains(doc.activeElement)) button.focus({ preventScroll: true });
             sticky.hidden = !shown;
             doc.documentElement.style.setProperty('--sticky-h', shown ? `${sticky.offsetHeight}px` : '0px');
         };
@@ -304,27 +348,55 @@ export function createAddFlow(root, context = {}, {
 
     if (sticky) {
         sticky.querySelector('[data-rf-sticky-button]')?.addEventListener('click', () => {
+            // A second tap while an add is in flight (stock disables the main button) adds nothing.
+            if (button && button.disabled) return;
             // requestSubmit checks the required options first, so the bar says why first.
             if (stopped()) return;
             fromSticky = true;
+            sent = choiceOf(form);
             if (typeof form.requestSubmit === 'function') form.requestSubmit(button || undefined);
             else button.click();
+            // Stock disables the main button as soon as an add starts: the bar's waits with it. If
+            // nothing started (the browser's own check of a required option stopped it), the next
+            // add isn't the bar's.
+            const barButton = sticky.querySelector('[data-rf-sticky-button]');
+            if (button && button.disabled) barButton.disabled = true;
+            else {
+                fromSticky = false;
+                sent = null;
+            }
         });
     }
-    // An option change that failed: said so, and the pills stay usable.
-    const optionFailed = (err, response) => {
+    // An option change that failed: said so, in the form whose option it was (the page's, or a
+    // Quick view's over it), and the pills stay usable.
+    const optionFailed = (err, response, scope = null) => {
+        const target = (scope && scope.querySelector && scope.querySelector(ADD)) || root;
         let failed = false;
         guardedCallback(() => {}, message => {
             failed = true;
-            const text = message || words.error;
-            showStatus(root, text, { error: true });
+            const text = message || words.optionError || words.error;
+            showStatus(target, text, { error: true });
             announce(text, doc);
-        }, { fallback: words.error })(err, response);
+        }, { fallback: words.optionError || words.error })(err, response);
         return failed;
     };
 
+    // A new choice among the options takes away the last message (the reference's): a red "Choose
+    // a fly size first." shouldn't stay once a size is chosen.
+    const options = form.querySelector('[data-product-option-change]');
+    if (options) {
+        options.addEventListener('change', () => {
+            const status = root.querySelector('[data-rf-add-status]');
+            if (status) status.hidden = true;
+        });
+    }
+
     sync();
-    return { sync, finished, optionFailed };
+    // add-bridge.js's holdAddButton holds only this flow's own button.
+    const holds = candidate => candidate === button;
+    return {
+        sync, finished, optionFailed, holds,
+    };
 }
 
 export default {
@@ -337,11 +409,12 @@ export default {
             // Stock's add callback is synchronous: say at once whether the flow takes the answer.
             add(err, response, options = {}) {
                 const quickView = Boolean(options.form && options.form.closest('.quickView'));
-                if (addAnswer(err, response).ok && quickView) return false;
+                if (addAnswer(err, response, doc).ok && quickView) return false;
                 flow.finished(err, response, { ...options, quickView });
                 return true;
             },
             option: flow.optionFailed,
+            holds: flow.holds,
         });
     },
 };

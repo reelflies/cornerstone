@@ -79,9 +79,9 @@ export function updatePills(field) {
     return lineChanged;
 }
 
-// Keeps one group of pills up to date: now, on each choice anywhere in its form and on each
-// change to stock's marks. Returns a function that stops it, which also runs by itself once the
-// group has left the page (Quick view and the Change dialog replace theirs). A group already
+// Keeps one group of pills up to date: now, on each choice among the product's options and on
+// each change to stock's marks. Returns a function that stops it, which also runs by itself once
+// the group has left the page (Quick view and the Change dialog replace theirs). A group already
 // watched is left alone. Ticket 43's panel calls it for the pills it renders.
 export function watchPills(field) {
     if (field.hasAttribute(WATCHED)) return () => {};

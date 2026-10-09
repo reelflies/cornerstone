@@ -26,6 +26,8 @@
 // a Species pane state waits for a pinned page with a Species group (wave R1). A ticket adds a
 // state in its own slot below.
 
+import { answerCartAdds, answerCartRead, cartLines } from './fixtures/cart/routes.mjs';
+
 /* eslint-env browser */ // the waitForFunction callbacks run in the page
 
 export const STATE_NAME = /^[a-z0-9][a-z0-9-]*$/;
@@ -40,6 +42,17 @@ export const chunkLoaded = (page, name) => page.waitForFunction(chunk => perform
 // which the pin's mask leaves alone), every live mark cleared, a size's and a colour's alike (stock
 // marks the colours a chosen size is out in), then `unavailable` on the sizes at `positions`
 // (negative from the end), and size-pills.js's line in step.
+async function setSizeMarks(page, positions) {
+    await page.evaluate(marks => {
+        const options = document.querySelector('[data-product-option-change]');
+        options.setAttribute('data-rf-qa-state', '');
+        options.querySelectorAll('.form-option.unavailable').forEach(label => label.classList.remove('unavailable'));
+        const pills = Array.from(options.querySelectorAll('[data-rf-pills="size"] .rf-pill[data-product-attribute-value]'));
+        marks.forEach(position => pills[(position + pills.length) % pills.length].classList.add('unavailable'));
+    }, positions);
+    await page.waitForFunction(count => document.querySelectorAll('[data-rf-pills="size"] input[aria-disabled="true"]').length === count, positions.length);
+}
+
 // Stock's answer to a choice also sets the buy row from the live stock: the add button's and the
 // stepper's disabled state, and the variant's message (product-details-base.js). A state that
 // chooses resets them after the answer, so the look, not the day's stock, is shot.
@@ -50,17 +63,6 @@ async function settleBuyRow(page) {
         const wrapper = document.getElementById('add-to-cart-wrapper');
         if (wrapper) wrapper.style.display = '';
     });
-}
-
-async function setSizeMarks(page, positions) {
-    await page.evaluate(marks => {
-        const options = document.querySelector('[data-product-option-change]');
-        options.setAttribute('data-rf-qa-state', '');
-        options.querySelectorAll('.form-option.unavailable').forEach(label => label.classList.remove('unavailable'));
-        const pills = Array.from(options.querySelectorAll('[data-rf-pills="size"] .rf-pill[data-product-attribute-value]'));
-        marks.forEach(position => pills[(position + pills.length) % pills.length].classList.add('unavailable'));
-    }, positions);
-    await page.waitForFunction(count => document.querySelectorAll('[data-rf-pills="size"] input[aria-disabled="true"]').length === count, positions.length);
 }
 
 export const UI_STATES = {
@@ -203,8 +205,8 @@ export const UI_STATES = {
         projects: ['phone-375'],
         pages: ['product@sizes'],
         async open(page) {
-            await page.route('**/remote/v1/cart/add**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: { cart_id: 'qa-cart', cart_item: { id: 'qa-item' } } }) }));
-            await page.route('**/api/storefront/carts**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ lineItems: { physicalItems: [{ productId: 1, quantity: 1, brand: 'ReelFlies' }] } }]) }));
+            await answerCartAdds(page, { productId: 5663 });
+            await answerCartRead(page, cartLines(5663, 1));
             await UI_STATES['sticky-bar'].open(page);
             // The bar keeps its added look for about 4 s; held for the shot.
             await page.locator('[data-rf-sticky-add]').evaluate(bar => bar.setAttribute('data-rf-bar-ms', '600000'));
