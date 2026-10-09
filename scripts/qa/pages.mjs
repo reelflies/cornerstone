@@ -92,9 +92,13 @@ export const CHANNELS = {
             // the tiles, each with its image and count; tree 1 puts their children past Menu
             // Display Depth 3, so no tile has Fly Type links.
             'species-hub': '/flies/saltwater-warmwater-salmon/',
+            // Ticket 36: the ReelFlies brand listing, which the store answers as brand 411 (its own
+            // URL is /reelflies-2/): the brand's image as the banner, 24 of its 2,167 products a page
+            // and the numbered pager (2026-10-09).
+            brand: '/brands/ReelFlies.html',
         },
-        // The live catalogue decides which products the category and search pins list, so
-        // their grids are held (below), not masked. Pin a listing that holds still before
+        // The live catalogue decides which products the category, search and brand pins list,
+        // so their grids are held (below), not masked. Pin a listing that holds still before
         // letting its cards into a shot. The search pin's result counts (its heading and both
         // tabs) change with the catalogue too. The tabs by role: stock search.js swaps the
         // active tab's navBar-action class. The listing's count (ticket 33's row) changes with
@@ -103,6 +107,7 @@ export const CHANNELS = {
             category: ['[data-rf-list-count]'],
             'category@more': ['[data-rf-list-count]'],
             'category@noindex': ['[data-rf-list-count]'],
+            brand: ['[data-rf-list-count]'],
             search: ['.page-heading', '[data-search-page-tabs] [role="tab"]'],
             // The tiles' counts and the grid's (ticket 34) follow the catalogue.
             'species-hub': ['[data-rf-hub-count]'],
@@ -122,19 +127,20 @@ export const CHANNELS = {
         // because tickets 39 and 40 change them; ticket 39 points these at its grid.
         // The search pin's "Did you mean" panel lists the categories the store finds for the
         // query, so the catalogue sets its height (#68's rf/spec).
-        // The category and search pins' grids (the listing's own, in #product-listing-container,
-        // not quick search's or the cart preview's): the live catalogue's cards, whose titles
-        // wrap to one line or two, so the rows' heights follow the list. A mask kept the grid's
-        // size: on 2026-10-09 the search pin at 375 grew 21px, one title line, with no theme
-        // change. Held at 1200px at both widths, a height no layout of these grids has, so a
-        // hold that stops applying changes the shot's height and fails it. What the hold can't
-        // stop: a pin whose product count crosses a page (24) gains or loses its pager row,
-        // which is only masked. That is a catalogue change, so a re-baseline epoch (build
-        // pipeline 6.6).
+        // The category, search and brand pins' grids (the listing's own, in
+        // #product-listing-container, not quick search's or the cart preview's): the live
+        // catalogue's cards, whose titles wrap to one line or two, so the rows' heights follow
+        // the list. A mask kept the grid's size: on 2026-10-09 the search pin at 375 grew 21px,
+        // one title line, with no theme change. Held at 1200px at both widths, a height no layout
+        // of these grids has, so a hold that stops applying changes the shot's height and fails
+        // it. What the hold can't stop: a pin whose product count crosses a page (24 on the
+        // category and brand pins, 12 on the search pin) gains or loses its pager row, which is
+        // only masked. That is a catalogue change, so a re-baseline epoch (build pipeline 6.6).
         hold: {
             category: { '#product-listing-container .productGrid': 1200 },
             'category@more': { '#product-listing-container .productGrid': 1200 },
             'category@noindex': { '#product-listing-container .productGrid': 1200 },
+            brand: { '#product-listing-container .productGrid': 1200 },
             product: {
                 '#tab-related .productCarousel': 320,
                 '#tab-similar .productCarousel': 320,

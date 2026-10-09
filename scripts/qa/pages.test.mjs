@@ -28,7 +28,7 @@ import { KNOWN_ISSUES, knownIssue } from './axe-known-issues.mjs';
 const RELATED = '#tab-related .productCarousel';
 const SIMILAR = '#tab-similar .productCarousel';
 // Channel 1's pins whose product list is the live catalogue's, and the listing's grid they hold.
-const LIVE_LISTS = ['category', 'category@more', 'category@noindex', 'search'];
+const LIVE_LISTS = ['category', 'category@more', 'category@noindex', 'search', 'brand'];
 const LISTING_GRID = '#product-listing-container .productGrid';
 
 describe('the status a pinned page must return', () => {

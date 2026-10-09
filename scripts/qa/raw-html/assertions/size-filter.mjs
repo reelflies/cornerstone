@@ -1,5 +1,5 @@
-// The Fly size filter in a category page's server HTML (ticket 33; spec modules 9 and 24; O11,
-// O20; stories 24 and 25):
+// The Fly size filter in a category page's server HTML, and the brand listing's (ticket 36), which
+// shares it (ticket 33; spec modules 9 and 24; O11, O20; stories 24 and 25):
 //
 // - A page with the Fly Sizes facet (its list, data-facet="Fly Sizes") has "What do sizes
 //   mean?" beside it: one link to /fly-hook-size-chart/ in the facet's block.
@@ -9,9 +9,12 @@
 //   first, so a pin without it means the option was renamed and the templates' name
 //   (size-facet-name.html) no longer matches, which would leave stock's list on the page.
 //
-// Through stencil start BigCommerce sends no facets (category.facets is empty on channel 1), so
-// the first and third checks bite on the prelaunch host's category pins, once Product Filtering
-// is set (ticket 21). The facet links themselves are facet-links.mjs's.
+// BigCommerce sends no facet items to a client it takes for a bot, by its User-Agent or headless
+// Chromium's Sec-CH-UA hint (ticket 36, 2026-10-09), and this check's fetch is one: on channel 1
+// a category's facets come empty and a brand's with no items. So the first and third checks bite
+// only on a fetch that reads as a browser, once Product Filtering is set (ticket 21); ticket
+// 36's brand.spec.mjs checks the brand's pills live as a regular Chrome. The facet links
+// themselves are facet-links.mjs's.
 
 import { elementsHtml, findTags, markupOnly } from '../html.mjs';
 
@@ -22,8 +25,9 @@ export const CHART_PATH = '/fly-hook-size-chart/';
 export const SIZE_FACET = 'Fly Sizes';
 
 // The pins that are fly listings (pages.mjs): channel 1's category pins but category@more, the
-// gear's, and the Fly Type and Species kinds the prelaunch host pins (wave R2).
-export const FLY_PINS = ['category', 'category@noindex', 'fly-type', 'species'];
+// gear's, the Fly Type and Species kinds the prelaunch host pins (wave R2), and ticket 36's
+// ReelFlies brand listing, the house patterns.
+export const FLY_PINS = ['category', 'category@noindex', 'fly-type', 'species', 'brand'];
 
 export function sizeFilterProblems(html, key) {
     const markup = markupOnly(html);
@@ -45,7 +49,7 @@ export default {
     id: 'size-filter',
     ticket: 33,
     description: '"What do sizes mean?" beside the Fly Sizes pills, Fly Sizes on the fly pins that list facets, and no focus-grabbing no-products alert',
-    pages: ['category', 'fly-type', 'species'],
+    pages: ['category', 'fly-type', 'species', 'brand'],
     check(page) {
         return sizeFilterProblems(page.html, page.key ?? page.kind);
     },

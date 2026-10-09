@@ -11,17 +11,18 @@
 //   splits that element, and the header then swallows the chips and the listing: that fails.
 //
 // card-images checks that the banner holds the page's only fetchpriority; max-one-h1 and
-// one-canonical check the H1 and the canonical on every page.
+// one-canonical check the H1 and the canonical on every page. Ticket 36's brand-page assertion
+// shares the header's checks (listingHeaderProblems).
 
 import { findTags, outerHtml } from '../html.mjs';
 
-const hasClass = name => attrs => new RegExp(`(^|\\s)${name}(\\s|$)`).test(attrs.class || '');
+export const hasClass = name => attrs => new RegExp(`(^|\\s)${name}(\\s|$)`).test(attrs.class || '');
+export const listingHeader = html => outerHtml(html, 'div', hasClass('rf-listing-header'));
 
-export function categoryPageProblems(html) {
+// A listing header's own checks (listing-header.html): the page's H1 in it, once, and its banner,
+// where it has one, eager and high priority with a srcset, sizes, dimensions and alt="".
+export function listingHeaderProblems(header) {
     const problems = [];
-    const header = outerHtml(html, 'div', hasClass('rf-listing-header'));
-    if (!header) return ['no listing header (.rf-listing-header): the page isn\'t components/reelflies/category-page.html'];
-    if (/data-rf-chips|productGrid/.test(header)) problems.push('the listing header holds the chips or the listing: a <!--more--> marker inside an element split it (the marker goes only between top-level blocks)');
     const h1s = findTags(header, 'h1');
     if (h1s.length !== 1) problems.push(`the listing header has ${h1s.length} <h1>, not one`);
     const banner = findTags(header, 'img')[0];
@@ -33,8 +34,17 @@ export function categoryPageProblems(html) {
         if ((attrs.srcset || '').split(',').filter(candidate => candidate.trim()).length < 2) problems.push(`${name} has no srcset of two or more candidates`);
         if (!(attrs.sizes || '').trim()) problems.push(`${name} has no sizes`);
         if (!/^\d+$/.test(attrs.width || '') || !/^\d+$/.test(attrs.height || '')) problems.push(`${name} has no width and height`);
-        if (attrs.alt !== '') problems.push(`${name} has alt "${attrs.alt ?? '(none)'}", not "": the H1 on it names the category`);
+        if (attrs.alt !== '') problems.push(`${name} has alt "${attrs.alt ?? '(none)'}", not "": the H1 on it names the page`);
     }
+    return problems;
+}
+
+export function categoryPageProblems(html) {
+    const header = listingHeader(html);
+    if (!header) return ['no listing header (.rf-listing-header): the page isn\'t components/reelflies/category-page.html'];
+    const problems = [];
+    if (/data-rf-chips|productGrid/.test(header)) problems.push('the listing header holds the chips or the listing: a <!--more--> marker inside an element split it (the marker goes only between top-level blocks)');
+    problems.push(...listingHeaderProblems(header));
     const chips = outerHtml(html, 'ul', attrs => 'data-rf-chips' in attrs);
     if (chips) {
         const items = findTags(chips, 'li');

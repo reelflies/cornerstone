@@ -6,7 +6,9 @@
 
     - The count: "312 flies" on a fly listing, else "312 products", from category.total_products,
       which counts the filtered listing (the live context has no paginator total; the filtered
-      count is checked again at prelaunch). When applied filters match nothing
+      count is checked again at prelaunch). A listing whose context has no total, the brand
+      listing's (ticket 36: BigCommerce gives brand pages none), prints no count while it has
+      products, since one page's cards aren't the listing's. When applied filters match nothing
       (listing-empty.html), "No flies match these filters", or "No products …" (O20).
       size-filter.js announces it after each refresh, and focuses it when the control the shopper
       used is gone.
@@ -24,7 +26,9 @@
 <div class="rf-list-top">
     <p class="rf-list-count" data-rf-list-count tabindex="-1">
         {{~#if category.products~}}
+            {{~#if category.total_products~}}
             {{~#if (getVar 'rf_fly_listing')}}{{lang 'reelflies.facets.count_flies' count=category.total_products}}{{else}}{{lang 'reelflies.facets.count_products' count=category.total_products}}{{/if~}}
+            {{~/if~}}
         {{~else~}}
             {{~#if (getVar 'rf_fly_listing')}}{{lang 'reelflies.facets.none_flies'}}{{else}}{{lang 'reelflies.facets.none_products'}}{{/if~}}
         {{~/if~}}
