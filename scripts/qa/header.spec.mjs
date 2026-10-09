@@ -7,9 +7,10 @@
 //   and no Saved, Compare or Gift Certificates link. "Shop flies" opens #menu as a panel (ticket
 //   28's grouped menu, or the stock menu while both menu ids are empty), and Escape closes it with
 //   focus back on the button. The grouped menu's own checks are menu.spec.mjs's.
-// - At 375: a 56px bar that stays at the top as the page scrolls. Menu is a <button> reading
-//   "Menu" with aria-expanded; open, it reads "Close" and <html data-rf-open> holds "drawer";
-//   Escape closes the drawer with focus back on the button.
+// - At 375: a 56px bar that stays at the top as the page scrolls, with the logo 78px wide inside
+//   it (decision 17). Menu is a <button> reading "Menu" with aria-expanded; open, it reads
+//   "Close" and <html data-rf-open> holds "drawer"; Escape closes the drawer with focus back on
+//   the button.
 // - Tabbing through a category page (or the channel's first pin, where it has none) never leaves
 //   the focused element under the sticky bar (WCAG 2.4.11).
 // - axe finds no serious or critical issue in the header or the strip's landmark, with the
@@ -61,7 +62,7 @@ const TAB_PINS = CATEGORY_PINS.length ? CATEGORY_PINS : [MAIN_PIN];
 const box = locator => locator.evaluate(element => {
     const rect = element.getBoundingClientRect();
     return {
-        top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right, height: rect.height,
+        top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right, height: rect.height, width: rect.width,
     };
 });
 
@@ -113,11 +114,17 @@ for (const key of PINS) {
         expect(visibleLinks.filter(({ text }) => /^(Saved|Compare|Gift Certificates?)$/i.test(text))).toEqual([]);
     });
 
-    test(`${key}: a 56px phone bar that stays at the top, with Menu a button that reads Close while open, and Escape${label(QA_OVERLAY)}`, async ({ page }, testInfo) => {
+    test(`${key}: a 56px phone bar that stays at the top, holding the logo 78px wide, with Menu a button that reads Close while open, and Escape${label(QA_OVERLAY)}`, async ({ page }, testInfo) => {
         test.skip(desktop(testInfo), 'the phone bar is the phone layout');
         await open(page, key);
         const header = page.locator('[data-rf-header]');
         expect((await box(header)).height).toBe(PHONE_BAR);
+        // Decision 17 as written (Shaun, review-02): the 133x95 PNG 78px wide on phones too, so
+        // 56px tall, within the bar.
+        const logo = await box(page.locator('[data-rf-logo] img'));
+        expect(Math.round(logo.width), 'the logo is 78px wide on phones (decision 17)').toBe(78);
+        expect(logo.top, 'the logo sits inside the bar').toBeGreaterThanOrEqual(0);
+        expect(logo.bottom, 'the logo sits inside the bar').toBeLessThanOrEqual(PHONE_BAR);
         await page.evaluate(() => window.scrollTo(0, 400));
         expect((await box(header)).top, 'the bar stays at the top as the page scrolls').toBe(0);
         await page.evaluate(() => window.scrollTo(0, 0));

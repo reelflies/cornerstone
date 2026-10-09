@@ -55,13 +55,14 @@ describe('the banner strip on tree 4', () => {
         const url = size => imageOf('501').data.replace('{:size}', size);
         assert.ok('data-rf-menu-banner' in attrs);
         assert.match(attrs.class, /(^|\s)rf-menu-banner(\s|$)/);
-        assert.equal(attrs.alt, '', 'decorative: the heading beside it names the category');
+        assert.equal(attrs.alt, '', 'decorative: the heading under it names the category');
         assert.equal(attrs.loading, 'lazy', 'a closed pane, and a phone, download nothing');
         assert.equal(attrs.decoding, 'async');
-        assert.equal(attrs.src, url('320w'));
-        const candidates = ['160w', '320w', '480w', '640w'].map(size => `${url(size)} ${size}`);
+        // A strip across the pane (Shaun, review-02): 827px from 1240px wide, so a 2x screen takes the 1600w file.
+        assert.equal(attrs.src, url('960w'));
+        const candidates = ['480w', '640w', '960w', '1280w', '1600w'].map(size => `${url(size)} ${size}`);
         assert.deepEqual(attrs.srcset.split(',').map(candidate => candidate.trim()), candidates);
-        assert.match(attrs.sizes, /^\(min-width: 1240px\) 268px, calc\(\(100vw - 420px\) \/ 3\)$/);
+        assert.match(attrs.sizes, /^\(min-width: 1240px\) 827px, calc\(100vw - 390px\)$/);
         assert.equal(Number(attrs.width) * 7, Number(attrs.height) * 16, 'the store\'s category images are 1600x700');
         assert.ok(!('fetchpriority' in attrs), 'never high priority: the panel opens after the page has loaded');
         assert.ok(pane.indexOf('<img') < pane.indexOf('<h2'), 'at the top of the pane, before its heading');
@@ -98,7 +99,7 @@ describe('the banner strip on tree 1 (channel 1, "ReelFlies CA channel 1")', () 
         ['298', '251', '255', '272', '438'].forEach(id => {
             const imgs = findTags(paneSource(html, id), 'img');
             assert.equal(imgs.length, 1, `pane ${id}`);
-            assert.equal(imgs[0].attrs.src, imageOf(id).data.replace('{:size}', '320w'));
+            assert.equal(imgs[0].attrs.src, imageOf(id).data.replace('{:size}', '960w'));
         });
         assert.equal(banners(html).length, 5, 'Flies (398) has no pane on channel 1: its children are the Fly Types');
         assert.deepEqual(bannerProblems(html), []);

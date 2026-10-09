@@ -28,6 +28,16 @@ $rf-card-scrim:         rgb(nth($rf-scrim, 1), nth($rf-scrim, 2), nth($rf-scrim,
 $rf-card-scrim-strong:  0.8;        // its opacity behind the text
 $rf-card-fade:          48px;       // the scrim's fade to clear, above the text
 $rf-card-fade-phone:    32px;       // the same below 801px
+$rf-card-scrim-phone:   0.78;       // phones: its opacity behind the label, the name and a count
+$rf-card-scrim-cta:     0.45;       // phones: behind the call to action, whose white pill needs none
+$rf-card-pad:           18px;       // the text block's padding at the sides and bottom
+$rf-card-gap:           4px;        // between the text block's lines
+$rf-card-cta-height:    44px;       // the call to action's pill
+$rf-card-cta-margin:    12px;       // above the pill
+$rf-card-cta-zone:      56px;       // phones: the scrim is lighter up to here from the card's bottom,
+// and reaches $rf-card-scrim-phone where the text above the pill starts (78px), so no line of text
+// sits in the ease: built from the spacing, so a change to the pill moves the ease with it
+$rf-card-text-from:     $rf-card-pad + $rf-card-cta-height + $rf-card-cta-margin + $rf-card-gap;
 $rf-cards-gap:          clamp(14px, 1.8vw, 24px);
 
 
@@ -135,25 +145,31 @@ $rf-cards-gap:          clamp(14px, 1.8vw, 24px);
 }
 
 // The scrim sits behind the text block only (CD-6): neutral #1C1D1F at 0.8 behind every line of
-// text, fading to clear over the block's top padding, above the text, so the photo shows above
+// text from 801px, fading to clear over the block's top padding, above the text, so the photo shows above
 // it. It is drawn on the text block itself, so it grows with the text (a longer name, a count,
 // text-only zoom), where CD-6's fixed 42% of the card would leave the label over the bare photo
 // on a square crop, whose text block is nearly half its height. The fade is shorter on phones,
 // where the text block is most of a 16:10 card, so the card keeps its shape at 320px.
+//
+// On phones it is lighter (Shaun, review-02: the 0.8 band covered about 65% of the card, which
+// read darker than the reference): 0.78 behind the label, the name and a count, and 0.45 behind
+// the call to action, whose white pill carries its own contrast, easing between the two up to
+// where the text above the pill starts. home-widgets-screens.spec.mjs still holds every line to 4.5:1 on its lightest pixel.
 .rf-type-card__copy {
     --rf-card-fade: #{$rf-card-fade-phone};
     align-items: flex-start;
     align-self: end;
-    background: linear-gradient(to top, rgba($rf-card-scrim, $rf-card-scrim-strong) 0, rgba($rf-card-scrim, $rf-card-scrim-strong) calc(100% - var(--rf-card-fade)), rgba($rf-card-scrim, 0) 100%);
+    background: linear-gradient(to top, rgba($rf-card-scrim, $rf-card-scrim-cta) 0, rgba($rf-card-scrim, $rf-card-scrim-cta) $rf-card-cta-zone, rgba($rf-card-scrim, $rf-card-scrim-phone) $rf-card-text-from, rgba($rf-card-scrim, $rf-card-scrim-phone) calc(100% - var(--rf-card-fade)), rgba($rf-card-scrim, 0) 100%);
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: $rf-card-gap;
     grid-area: 1 / 1;
-    padding: var(--rf-card-fade) 18px 18px;
+    padding: var(--rf-card-fade) $rf-card-pad $rf-card-pad;
     position: relative;
 
     @include breakpoint("medium") {
         --rf-card-fade: #{$rf-card-fade};
+        background: linear-gradient(to top, rgba($rf-card-scrim, $rf-card-scrim-strong) 0, rgba($rf-card-scrim, $rf-card-scrim-strong) calc(100% - var(--rf-card-fade)), rgba($rf-card-scrim, 0) 100%);
         padding: var(--rf-card-fade) clamp(18px, 2.2vw, 28px) clamp(18px, 2.2vw, 28px);
     }
 }
@@ -198,8 +214,8 @@ $rf-cards-gap:          clamp(14px, 1.8vw, 24px);
     font-size: 15px;
     font-weight: 600;
     line-height: 1.2;
-    margin-top: 12px;
-    min-height: 44px;
+    margin-top: $rf-card-cta-margin;
+    min-height: $rf-card-cta-height;
     padding: 0 20px;
     transition: background-color var(--rf-t-fast) ease-out;
 }

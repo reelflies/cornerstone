@@ -49,6 +49,9 @@ export const UI_STATES = {
             const grouped = await page.locator('[data-rf-menu]').count();
             await chunkLoaded(page, 'rf-header');
             if (grouped) await chunkLoaded(page, 'rf-menu');
+            // A tap draws Chromium's tap highlight over the button, fading as the shot is taken,
+            // so the Close button's tint changed from take to take (#67's round 2).
+            await page.addStyleTag({ content: '* { -webkit-tap-highlight-color: transparent !important; }' });
             await page.locator('[data-mobile-menu-toggle="menu"]').tap();
             await page.locator('#menu.is-open').waitFor({ state: 'visible' });
             await page.locator('[data-mobile-menu-toggle="menu"][aria-expanded="true"]').waitFor();

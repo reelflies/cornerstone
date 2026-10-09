@@ -289,7 +289,8 @@ $rf-menu-max:     1176px;   // the desktop card's width, as the reference's .meg
         }
     }
 
-    // The pane beside the rail
+    // The pane beside the rail. _rail.scss sets its top padding and its heading's margin, from
+    // the 200px budget under the banner strip (O09).
     .rf-menu-pane {
         background: transparent;
         border-radius: 0;
