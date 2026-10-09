@@ -116,7 +116,8 @@ test.describe('the screenshot stylesheet', () => {
 
     test('a taller widget and taller related cards leave the shot as it was', async ({ page }) => {
         const before = await shot(page);
-        await page.setContent(product({ widget: 240, cardLines: 4 }));
+        // Cards tall enough that the page outgrows the grid's 400px hold without the stylesheet.
+        await page.setContent(product({ widget: 240, cardLines: 12 }));
         await dismissCookieBanner(page);
         await page.evaluate(() => window.showBar());
 
