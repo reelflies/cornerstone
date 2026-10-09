@@ -116,9 +116,14 @@ $rf-add-error-tint: #fdecea; // the reference's .status.err; the error colour on
         border-color: var(--rf-buy-hover);
         color: var(--rf-buy-ink);
     }
+}
 
-    // Held when the choice can't be sold (add-bridge.js's holdAddButton): it stays focusable and
-    // its click says why, but it reads as unavailable, as stock's disabled button does.
+// Held when the choice can't be sold (add-bridge.js's holdAddButton): the button stays focusable
+// and its click says why, but it reads as unavailable, as stock's disabled button does. The bar's
+// button follows the main one's (add-flow.js), so both share this look. After the hover rules,
+// which it beats.
+.rf-add-button.button,
+.rf-sticky-add-button.button {
     &[aria-disabled="true"],
     &:disabled {
         background: var(--rf-tile-2);
@@ -131,7 +136,7 @@ $rf-add-error-tint: #fdecea; // the reference's .status.err; the error colour on
 .rf-add-status {
     align-items: flex-start;
     background: var(--rf-tile);
-    border-radius: 12px;
+    border-radius: var(--rf-radius-mid);
     color: var(--rf-ink);
     display: flex;
     font-size: 15px;
@@ -139,6 +144,7 @@ $rf-add-error-tint: #fdecea; // the reference's .status.err; the error colour on
     line-height: 22px;
     margin: 0;
     padding: 12px 14px;
+    text-align: left; // stock centres .productView-options below 551px
 
     &[hidden] {
         display: none;
@@ -214,16 +220,9 @@ $rf-add-error-tint: #fdecea; // the reference's .status.err; the error colour on
     background: var(--rf-buy);
     border-color: var(--rf-buy);
     color: var(--rf-buy-ink);
+    flex: none;
     font-weight: 600;
-
-    // The main button's held look, which add-flow.js mirrors.
-    &[aria-disabled="true"],
-    &:disabled {
-        background: var(--rf-tile-2);
-        border-color: var(--rf-tile-2);
-        color: var(--rf-dun);
-        cursor: not-allowed;
-    }
+    white-space: nowrap; // the bar's message wraps beside it, never its label
 }
 
 .rf-sticky-add-text {

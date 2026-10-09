@@ -1,7 +1,9 @@
 // add-bridge.js with no add flow loaded (ticket 38): Quick view on a listing, where stock's add and
 // option-change callbacks call the bridge first. A failure is still taken, so stock never reads the
 // answer's missing data and the button never stays frozen; a good answer goes on to stock.
-import { addFinished, holdAddButton, optionChangeFailed } from '../../../theme/reelflies/add-bridge';
+import {
+    addFinished, addFlowFailed, holdAddButton, optionChangeFailed,
+} from '../../../theme/reelflies/add-bridge';
 import { showAlertModal } from '../../../theme/global/modal';
 
 jest.mock('../../../theme/global/modal', () => ({ showAlertModal: jest.fn() }));
@@ -39,16 +41,17 @@ describe('with no add flow loaded', () => {
         expect(optionChangeFailed(null, { data: { purchasable: true } })).toBe(false);
     });
 
-    it('sets the product page\'s "Choose a size" to stock\'s "Add to Cart" once a choice is answered, but not a pre-order label', () => {
+    it('when the flow\'s chunk fails: stock\'s "Add to Cart" on the flow\'s buttons, never a pre-order label, and the error passed on', () => {
         document.body.innerHTML = `<form><div data-rf-add data-rf-stock-label="Add to Cart">
             <input id="form-action-addToCart" type="submit" value="Choose a size">
+        </div></form>
+        <form id="pre"><div data-rf-add data-rf-pre-order data-rf-stock-label="Add to Cart">
+            <input id="form-action-addToCart" type="submit" value="Pre-Order Now">
         </div></form>`;
-        expect(optionChangeFailed(null, { data: { purchasable: true } }, form())).toBe(false);
+        const error = new Error('ChunkLoadError');
+        expect(() => addFlowFailed(error)).toThrow(error);
         expect(button().value).toBe('Add to Cart');
-        form().querySelector('[data-rf-add]').setAttribute('data-rf-pre-order', '');
-        button().value = 'Pre-Order Now';
-        optionChangeFailed(null, { data: { purchasable: true } }, form());
-        expect(button().value).toBe('Pre-Order Now');
+        expect(document.querySelector('#pre input').value).toBe('Pre-Order Now');
     });
 
     it('holds no button: stock disables it as before', () => {

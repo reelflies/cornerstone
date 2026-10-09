@@ -9,7 +9,8 @@
 // - Before the add (capture listeners, so no hook): with no size chosen, "Choose a fly size
 //   first." in the status line and the live region, and focus on the first in-stock pill; with a
 //   sold-out size chosen, "Size 14 is sold out. Choose another size."; with every size sold out,
-//   "Every size is sold out."; with another choice stock can't sell, "That choice is sold out.";
+//   "Every size is sold out." (or, with another option chosen, "That choice is sold out."); with
+//   another choice stock can't sell, "That choice is sold out.";
 //   and no cart request in any of them. It checks on the button's click, which comes before the
 //   browser's own check of the required options (that check would stop the submit unseen), and
 //   again on submit. A required option left empty is left to the browser's check.
@@ -90,6 +91,14 @@ function valueOf(radio) {
     return (text || label.textContent).trim();
 }
 
+// Whether an option's field holds a choice: a radio or checkbox checked, or a value.
+function hasChoice(field) {
+    return Array.from(field.querySelectorAll('input, select, textarea')).some(input => {
+        if (input.type === 'radio' || input.type === 'checkbox') return input.checked;
+        return Boolean(input.value);
+    });
+}
+
 // What the form holds now: whether it needs a size, the size chosen, whether that size is sold
 // out, the other choices, and the quantity.
 export function choiceOf(form) {
@@ -107,8 +116,7 @@ export function choiceOf(form) {
         })
         .filter(Boolean);
     // A required option with nothing chosen: the browser's own check says so.
-    const missing = Array.from(form.querySelectorAll(OPTION_FIELDS)).some(field => field.querySelector('[required]')
-        && !Array.from(field.querySelectorAll('input, select, textarea')).some(input => ((input.type === 'radio' || input.type === 'checkbox') ? input.checked : input.value)));
+    const missing = Array.from(form.querySelectorAll(OPTION_FIELDS)).some(field => field.querySelector('[required]') && !hasChoice(field));
     const qty = Math.max(1, parseInt((form.querySelector('[name="qty[]"]') || {}).value, 10) || 1);
     const inStock = radios.filter(radio => radio.getAttribute('aria-disabled') !== 'true');
     return {
@@ -224,8 +232,9 @@ export function createAddFlow(root, context = {}, {
         // instead: stock may hold the button only because the choice isn't whole.
         const held = Boolean(button && button.getAttribute('aria-disabled') === 'true') && !choice.missing;
         let message = '';
-        // Every size sold out: no other size to choose (a product with one size names it).
-        if (choice.allSoldOut && choice.sizes > 1) message = words.soldOutAll || words.soldOut.replace('{size}', choice.chosen);
+        // Every size sold out: no other size to choose (a product with one size names it). With
+        // another option chosen, stock's marks are that choice's, so it's the choice that's out.
+        if (choice.allSoldOut && choice.sizes > 1) message = (choice.others.length ? words.soldOutChoice : words.soldOutAll) || words.error;
         else if (choice.needsSize && !choice.chosen) message = words.chooseFirst;
         else if (choice.soldOut || (held && choice.chosen)) message = (choice.sizes === 1 && words.soldOutOnly ? words.soldOutOnly : words.soldOut).replace('{size}', choice.chosen);
         else if (held) message = words.soldOutChoice || words.error;
@@ -287,9 +296,6 @@ export function createAddFlow(root, context = {}, {
         }, Number(sticky.getAttribute('data-rf-bar-ms')) || BAR_MS);
     };
 
-    // Stock's add callback calls this first (through add-bridge.js). `form` is the form that
-    // added: the page's, or Quick view's, whose own status line takes its failure. On success it
-    // does what stock's callback did before its modal: currencySelector with the cart's id.
     // A read's answer within COUNT_MS, or null when it fails or is later.
     const within = async read => {
         let timer = null;
@@ -302,6 +308,9 @@ export function createAddFlow(root, context = {}, {
         }
     };
 
+    // Stock's add callback calls this first (through add-bridge.js). `form` is the form that
+    // added: the page's, or Quick view's, whose own status line takes its failure. On success it
+    // does what stock's callback did before its modal: currencySelector with the cart's id.
     const finished = async (err, response, {
         label, overlay, quickView = false, form: from = form,
     } = {}) => {
@@ -345,8 +354,9 @@ export function createAddFlow(root, context = {}, {
         sync();
         // The header's count, by stock's event: from the cart's read, or, when that failed or was
         // late, from stock's cart summary. Then build pipeline 6.9's event, after stock's.
+        // A summary that reads 0 (empty, or not yet the add's) is never said after an add.
         const units = count ? count.units : await within(readQuantity());
-        if (typeof units === 'number') notify(units);
+        if (typeof units === 'number' && units > 0) notify(units);
         const productId = Number((form.querySelector('[name="product_id"]') || {}).value) || null;
         doc.dispatchEvent(new doc.defaultView.CustomEvent(CHANGED_EVENT, { detail: { source: 'product', productId } }));
         return true;

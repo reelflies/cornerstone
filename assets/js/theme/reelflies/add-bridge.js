@@ -10,12 +10,14 @@
 //   overlay gone, and stock's alert says what the flow would have said.
 // - optionChangeFailed(err, response, scope): true when an option change failed, after the flow
 //   has said so in that scope's form; the pills stay usable, and stock's callback stops before it
-//   reads the answer. With no flow, a failure still stops stock there, silently, and an answered
-//   choice sets the button to stock's "Add to Cart" (data-rf-stock-label), since nothing else
-//   would take its "Choose a size" away.
+//   reads the answer. With no flow, a failure still stops stock there, silently.
 // - holdAddButton(button, held): true when the button is the flow's own (the product page's), whose
 //   "can't be sold" state is aria-disabled rather than disabled, so its click reaches the flow,
 //   which says why ("Size 14 is sold out."). Stock disables any other button as before.
+// - addFlowFailed(error): page-modules.js's catch for the flow's chunk. The buttons' "Choose a
+//   size" and "Add 1 to cart" would no longer follow the pills and the stepper, so each reads
+//   stock's "Add to Cart" (data-rf-stock-label), which is true whatever is chosen; then the error
+//   goes on to the loader, which reports it.
 
 import { showAlertModal } from '../global/modal';
 
@@ -36,14 +38,7 @@ function noFlowAdd(err, response, { label, overlay, form } = {}) {
     return true;
 }
 
-function noFlowOption(err, response, scope) {
-    if (!answered(err, response)) return true;
-    const row = scope && scope.querySelector && scope.querySelector('[data-rf-add]');
-    const button = row && row.querySelector('#form-action-addToCart');
-    const label = row && row.getAttribute('data-rf-stock-label');
-    if (button && label && !button.disabled && !row.hasAttribute('data-rf-pre-order')) button.value = label;
-    return false;
-}
+const noFlowOption = (err, response) => !answered(err, response);
 
 const handlers = { add: null, option: null, holds: null };
 
@@ -59,6 +54,14 @@ export function addFinished(err, response, options = {}) {
 
 export function optionChangeFailed(err, response, scope = null) {
     return (handlers.option || noFlowOption)(err, response, scope);
+}
+
+export function addFlowFailed(error, doc = document) {
+    doc.querySelectorAll('[data-rf-add][data-rf-stock-label]:not([data-rf-pre-order])').forEach(row => {
+        const button = row.querySelector('#form-action-addToCart');
+        if (button) button.value = row.getAttribute('data-rf-stock-label');
+    });
+    throw error;
 }
 
 export function holdAddButton(button, held) {

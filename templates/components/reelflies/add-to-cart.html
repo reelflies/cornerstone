@@ -18,7 +18,7 @@
       announced twice.
     - The wrapper carries the product's name (data-rf-product), which the confirmation names on a
       product with no options, stock's "Add to Cart" (data-rf-stock-label), which add-bridge.js
-      uses if the flow never loads, and the flow's words (data-rf-*), each with # or {name} where
+      puts on the button if the flow's chunk fails to load, and the flow's words (data-rf-*), each with # or {name} where
       a value goes. The lang helper fills a {name} it isn't given with "undefined", so each passes
       its own {name} back as the value, and add-flow.js fills it later.
 

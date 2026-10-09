@@ -254,6 +254,17 @@ describe('after an add, the rest of the page is told', () => {
         expect(order).toEqual(['count', 'changed']);
     });
 
+    it('never tells the header 0 from stock\'s cart summary after an add, as an empty or not-yet summary reads', async () => {
+        doFetch.mockImplementation(async () => { throw new Error('offline'); });
+        readQuantity.mockImplementation(async () => 0);
+        load();
+        choose('s1');
+        bridge.addFinished(null, { data: { cart_item: {} } }, { form: document.querySelector('form') });
+        await settle();
+        await settle();
+        expect(notify).not.toHaveBeenCalled();
+    });
+
     it('when stock\'s cart summary fails too, still sends rf:cart-changed, with the header left as it was', async () => {
         doFetch.mockImplementation(async () => { throw new Error('offline'); });
         readQuantity.mockImplementation(async () => null);
@@ -504,6 +515,18 @@ describe('the wording of the guards and failures', () => {
         choose('s1');
         button().dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
         expect(status().textContent).toBe('Every size is sold out.');
+        expect(stockSubmit).not.toHaveBeenCalled();
+    });
+
+    it('says "That choice is sold out." when every size is out in the Colour chosen, which other Colours may still have', () => {
+        document.body.innerHTML = PAGE(['12', '14', '16']).replace('<div id="add-to-cart-wrapper"', `<div data-product-option-change>
+            <div class="form-field"><input type="radio" id="c1" name="attribute[200]" value="9" checked>
+            <label for="c1" class="form-option"><span class="form-option-variant form-option-variant--color" title="Olive"></span></label></div>
+        </div><div id="add-to-cart-wrapper"`);
+        document.querySelector('form').addEventListener('submit', stockSubmit);
+        load();
+        button().dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(status().textContent).toBe('That choice is sold out.');
         expect(stockSubmit).not.toHaveBeenCalled();
     });
 

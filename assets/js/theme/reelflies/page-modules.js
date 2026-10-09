@@ -18,10 +18,12 @@
 // - Custom templates load their base kind's modules, because context.template names the custom
 //   file. A new custom template adds its line to TEMPLATES.
 
+import { addFlowFailed } from './add-bridge'; // 38: stock's label when the add flow's chunk fails
+
 const product = [
     () => import(/* webpackChunkName: "rf-size-pills" */ './size-pills'), // 37 size pills
 
-    () => import(/* webpackChunkName: "rf-add-flow" */ './add-flow'), // 38 add flow
+    () => import(/* webpackChunkName: "rf-add-flow" */ './add-flow').catch(addFlowFailed), // 38 add flow
 
     // 42 cart state: the product page half
 ];

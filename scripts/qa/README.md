@@ -871,9 +871,9 @@ Ticket 38's buy row (`components/reelflies/add-to-cart.html`, through stock `add
   - `add-words.spec.js`: the labels and the confirmation
   - `add-bridge.spec.js`, with no flow loaded (a listing's Quick view, or a failed chunk):
     - a failed add taken (the button usable, the overlay gone, stock's alert) and a good one left to stock
-    - a failed option change stopped, and an answered one setting "Choose a size" to stock's "Add to Cart"
+    - a failed option change stopped; and when the flow's chunk fails, stock's "Add to Cart" on its buttons (never a pre-order label), the error passed on to the loader
   - `add-flow.spec.js`:
-    - the guards, on the button's click and before stock's submit: no size, a sold-out size, every size sold out, a held choice with no size, a required option left to the browser's check, and the one-size wording
+    - the guards, on the button's click and before stock's submit: no size, a sold-out size, every size sold out (or out in the Colour chosen), a held choice with no size, a required option left to the browser's check, and the one-size wording
     - stock's hold on a choice it can't sell (`aria-disabled`, and the click saying why)
     - the add's success, error-answer, unreadable-answer and network-failure paths; focus kept; Quick view and a page with no flow left to stock
     - the header told from the cart's read, or from stock's cart summary when that fails, then `rf:cart-changed` after it
