@@ -43,7 +43,7 @@
                         {{~else~}}
                             {{~#if price.with_tax}}{{price.with_tax.formatted}}{{else}}{{price.without_tax.formatted}}{{/if~}}
                         {{~/and~}}
-                        {{!-- 31: the "/ fly" unit, components/reelflies/price-unit.html, goes here (build pipeline 6.2) --}}
+                        {{> components/reelflies/price-unit rf_categories=category rf_exclude=@root.theme_settings.rf_price_unit_exclude}}
                     {{~else~}}
                         {{lang 'common.login_for_pricing'}}
                     {{~/or~}}

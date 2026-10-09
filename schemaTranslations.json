@@ -6116,6 +6116,9 @@
   "i18n.RfProductCards": {
     "default": "Product cards"
   },
+  "i18n.RfPriceUnitExclude": {
+    "default": "Gear and Assortment category names, comma-separated: no \"/ fly\" on their products"
+  },
 
   "i18n.RfProductPage": {
     "default": "Product page"

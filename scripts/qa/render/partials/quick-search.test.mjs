@@ -142,6 +142,20 @@ describe('quick-results.html', () => {
         assert.equal(text(outerHtml(range, 'span', attrs => /\brf-qs-price\b/.test(attrs.class || ''))), '$0.95–$1.25');
     });
 
+    // Ticket 31's price-unit partial in the price's slot: the card's own rule, with the channel's
+    // Gear and Assortment roots (rf_price_unit_exclude; tree 1's in ReelFlies CA channel 1).
+    it('adds "/ fly" after a fly\'s price and not a hook pack\'s, by the card\'s rule (ticket 31)', async () => {
+        const html = await results({
+            products: [product(1), product(2, { name: 'Mustad R73-9671 Streamer Hooks [50/pack]', category: ['Fly Gear/Mustad Hooks'] })],
+        }, { theme_settings: { rf_price_unit_exclude: 'Fly Gear,Fly Selections & Fly Boxes' } });
+        const prices = findTags(html, 'span').filter(tag => /\brf-qs-price\b/.test(tag.attrs.class || ''));
+        assert.equal(prices.length, 2);
+        const [fly, hooks] = [...html.matchAll(/<span class="rf-qs-price">([\s\S]*?)<\/span>\s*<\/a>/g)].map(([, inner]) => text(inner));
+        assert.equal(fly, '$0.95 / fly');
+        assert.equal(hooks, '$0.95');
+        assert.equal(text(outerHtml(await results({ products: [product(1)] }), 'span', attrs => /\brf-qs-price\b/.test(attrs.class || ''))), '$0.95', 'no roots set (ReelFlies CA until tree 4): no unit');
+    });
+
     it('hides prices from guests when the store does', async () => {
         const html = await results({ products: [product(1)] }, { settings: { hide_price_from_guests: true } });
         assert.equal(text(outerHtml(html, 'span', attrs => /\brf-qs-price\b/.test(attrs.class || ''))), 'Log in for pricing');

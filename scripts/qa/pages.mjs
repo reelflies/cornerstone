@@ -4,9 +4,10 @@
 // Keys are page keys: a page kind, which is a template name from the spec's seam 1 list
 // (home, fly-type, species, species-hub, product, cart, hook-chart, 404 and brand, plus
 // category for the stock category template until ticket 32 builds the Fly Type and Species
-// pages, page for a Web Page, and login and create-account for the sign-in forms), or kind@name for one more pin of the same kind (W0-8), such as product@5663 or
-// product@sold-out. A template ticket adds its page here when it lands; the screenshot and axe
-// runs then cover it.
+// pages, page for a Web Page, login and create-account for the sign-in forms, and search for
+// the search results, ticket 31), or kind@name for one more pin of the same kind (W0-8), such
+// as product@5663 or product@sold-out. A template ticket adds its page here when it lands; the
+// screenshot and axe runs then cover it.
 // - The kind decides what the page must answer (expectedStatus), which raw-HTML assertions
 //   apply (an assertion's `pages` and `notOn` name kinds, or one kind@name pin), which pin
 //   satisfies RAW_HTML_REQUIRED, and the reference screen it is shown beside.
@@ -68,20 +69,33 @@ export const CHANNELS = {
             // has none yet (ticket 22's sources sync later). One paragraph of terms that read the
             // same on 2026-10-07 as the coupon wording on reelflies.ca has for years.
             page: '/coupon-codes/',
+            // Ticket 31: search results for "streamer", whose first 12 hold flies with and without
+            // sizes, three Mustad hook packs (Fly Gear) and a bulk selection, so the cards' "/ fly"
+            // rule and the listing's eager and lazy photos are checked on a real search page
+            // (2026-10-09).
+            search: '/search.php?search_query=streamer&section=product',
         },
         // The live catalogue decides which products these pages list, so the lists can't
         // be pinned here. Pin a listing that holds still before unmasking one.
+        // The search pin's result counts (its heading and both tabs) change with the catalogue
+        // too. The tabs by role: stock search.js swaps the active tab's navBar-action class.
         mask: {
             category: ['.productGrid'],
+            search: ['.productGrid', '.page-heading', '[data-search-page-tabs] [role="tab"]'],
         },
         // The related products' cards (Related Products, and Customers Also Viewed when the
         // store shows it), whose titles wrap to two or three lines, so the live list sets
         // the page's height. The heading and the section around them stay in the shot,
         // because tickets 39 and 40 change them; ticket 39 points these at its grid.
+        // The search pin's "Did you mean" panel lists the categories the store finds for the
+        // query, so the catalogue sets its height (#68's rf/spec).
         hold: {
             product: {
                 '#tab-related .productCarousel': 320,
                 '#tab-similar .productCarousel': 320,
+            },
+            search: {
+                '.page-content > .panel': 360,
             },
         },
     },

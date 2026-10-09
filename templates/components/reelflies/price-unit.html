@@ -1,0 +1,35 @@
+{{!--
+    The "/ fly" price unit (ticket 31; spec module 13, story 28), after a product's price: on the
+    card, in ticket 30's quick-search rows, and in 39, 42, 43 and 44 (build pipeline 6.2).
+
+        {{> components/reelflies/price-unit rf_categories=category rf_exclude=theme_settings.rf_price_unit_exclude}}
+
+    - rf_categories is the product's Placements as the store gives them: a card's or a search
+      row's `category`, each a full path ("Flies/Dry Flies/Caddis Dry Flies"; a card also lists
+      the ancestors, a search row doesn't).
+    - rf_exclude is theme setting rf_price_unit_exclude, passed in by the caller: inside a page's
+      {{#partial "page"}} block @root is empty, so the partial can't read it from there.
+    - The interim rule (ticket 13's decision 13: no "Sold by" field yet): "/ fly" when the product
+      has a Placement and none under a root that rf_exclude names (comma-separated category
+      names, the channel's Gear and Assortment roots, such as "Fly Gear,Fly Selections & Fly
+      Boxes" on tree 1). A root matches as a whole name: the path is the root itself or starts
+      with the root and "/".
+    - With the setting empty, or naming no root (only commas or spaces), the rule can't tell a
+      fly from Gear, so no unit shows.
+    - It renders a leading space and the unit, or nothing, so it sits inside the caller's price.
+--}}
+{{~assignVar 'rf_unit' 0~}}
+{{~assignVar 'rf_unit_roots' 0~}}
+{{~#if rf_categories.length~}}
+{{~assignVar 'rf_unit' 1~}}
+{{~#each (split rf_exclude ',') as |rfRoot|~}}
+{{~#if (trim rfRoot)~}}
+{{~assignVar 'rf_unit_roots' 1~}}
+{{~#each ../rf_categories as |rfPath|~}}
+{{~#if rfPath '===' (trim rfRoot)~}}{{~assignVar 'rf_unit' 0~}}{{~/if~}}
+{{~#startsWith (concat (trim rfRoot) '/') rfPath~}}{{~assignVar 'rf_unit' 0~}}{{~/startsWith~}}
+{{~/each~}}
+{{~/if~}}
+{{~/each~}}
+{{~/if~}}
+{{~#if (getVar 'rf_unit')}}{{#if (getVar 'rf_unit_roots')}} <span class="rf-price-unit">{{lang 'reelflies.card.per_fly'}}</span>{{/if}}{{/if~}}

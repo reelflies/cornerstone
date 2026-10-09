@@ -1,7 +1,7 @@
 <ul class="productGrid">
     {{#each products}}
     <li class="product">
-            {{>components/products/card settings=../settings show_compare=../show_compare show_rating=../settings.show_product_rating theme_settings=../theme_settings customer=../customer event=../event position=(add @index 1)}}
+            {{>components/products/card settings=../settings show_compare=../show_compare show_rating=../settings.show_product_rating theme_settings=../theme_settings customer=../customer event=../event position=(add @index 1) rf_listing=true}}{{!-- ReelFlies hook (ticket 31): rf_listing, so the first row's photos load eagerly --}}
     </li>
     {{/each}}
 </ul>

@@ -177,8 +177,19 @@ describe('the screenshot stylesheet (W0-5)', () => {
         }
     });
 
+    it('masks both of channel 1\'s search tabs, whose counts the catalogue sets, whichever is active (#68\'s rf/spec and rf/skeptic)', () => {
+        assert.ok(masksFor('1', 'search').includes('[data-search-page-tabs] [role="tab"]'));
+    });
+
+    it('holds channel 1\'s search page\'s "Did you mean" panel, whose categories the catalogue sets (ticket 31)', () => {
+        const css = rules(screenshotStyle('1', 'search'));
+        assert.equal(css.get('.page-content > .panel')?.height, '360px !important');
+        assert.equal(css.get('.page-content > .panel > *')?.display, 'none !important');
+    });
+
     it('holds nothing on any other page or channel, so cards stay in those shots', () => {
-        for (const [channel, template] of kinds.filter(([kindChannel, kindTemplate]) => !(kindChannel === '1' && kindTemplate === 'product'))) {
+        const held = [['1', 'product'], ['1', 'search']];
+        for (const [channel, template] of kinds.filter(([kindChannel, kindTemplate]) => !held.some(([c, t]) => c === kindChannel && t === kindTemplate))) {
             const css = rules(screenshotStyle(channel, template));
             assert.deepEqual([...css.keys()].sort(), [...HIDDEN].sort(), `${channel} ${template}`);
         }
