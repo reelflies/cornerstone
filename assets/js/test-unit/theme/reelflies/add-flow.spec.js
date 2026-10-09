@@ -459,7 +459,7 @@ describe('the sticky bar (story 43)', () => {
         expect(barButton.hasAttribute('aria-disabled')).toBe(false);
     });
 
-    it('says stock\'s quantity limit in the bar when the main button is disabled for it, and adds nothing', async () => {
+    it('says stock\'s quantity limit in the bar and the live region when the main button is disabled for it, and adds nothing', async () => {
         load();
         choose('s1');
         document.getElementById('add-to-cart-wrapper').insertAdjacentHTML('beforeend', '<div class="productAttributes-message" data-qty-limit="true"><p class="alertBox-message">The maximum purchasable quantity is 2</p></div>');
@@ -471,7 +471,30 @@ describe('the sticky bar (story 43)', () => {
         document.querySelector('form').requestSubmit = jest.fn();
         barButton.click();
         expect(bar.querySelector('[data-rf-sticky-text]').textContent).toBe('The maximum purchasable quantity is 2');
+        expect(announce).toHaveBeenCalledWith('The maximum purchasable quantity is 2', document);
         expect(document.querySelector('form').requestSubmit).not.toHaveBeenCalled();
+    });
+
+    it('says stock\'s quantity limit in the live region once when its alert appears, which has no role of its own (spec module 1)', async () => {
+        document.getElementById('add-to-cart-wrapper').insertAdjacentHTML('beforeend', '<div class="productAttributes-message" style="display:none"><p class="alertBox-message"></p></div>');
+        load();
+        const box = document.querySelector('.productAttributes-message');
+        // As stock's showQtyLimitMessage does: the words, then the mark.
+        const showLimit = () => {
+            box.querySelector('.alertBox-message').textContent = 'The maximum purchasable quantity is 2';
+            box.setAttribute('data-qty-limit', 'true');
+        };
+        showLimit();
+        await Promise.resolve();
+        expect(announce).toHaveBeenCalledTimes(1);
+        expect(announce).toHaveBeenCalledWith('The maximum purchasable quantity is 2', document);
+        showLimit(); // another keystroke over the limit: already said
+        await Promise.resolve();
+        expect(announce).toHaveBeenCalledTimes(1);
+        box.removeAttribute('data-qty-limit'); // back under the limit, then over it again
+        showLimit();
+        await Promise.resolve();
+        expect(announce).toHaveBeenCalledTimes(2);
     });
 
     it('hands focus to the main button when the bar hides with it inside, as after scrolling back up during the added look', async () => {

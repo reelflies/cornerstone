@@ -92,6 +92,14 @@ describe('the buy row (components/reelflies/add-to-cart.html)', () => {
         assert.deepEqual(steps.map(tag => [tag.attrs['data-action'], tag.attrs.type]), [['dec', 'button'], ['inc', 'button']]);
     });
 
+    it('labels the stepper "Quantity", visibly, as the reference\'s buy row does', async () => {
+        const html = await row([SIZES]);
+        const label = findTags(html, 'label').find(tag => tag.attrs.for === 'qty[]');
+        assert.ok(label, 'the quantity field\'s label');
+        assert.doesNotMatch(label.attrs.class, /is-srOnly/);
+        assert.match(html, /<label [^>]*for="qty\[\]"[^>]*>Quantity<\/label>/);
+    });
+
     it('carries the status line with no role, the flow\'s words, and no stock status span to announce twice (story 68)', async () => {
         const html = await row([SIZES]);
         const [status] = findTags(html, 'p').filter(tag => 'data-rf-add-status' in tag.attrs);

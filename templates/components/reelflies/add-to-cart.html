@@ -4,7 +4,8 @@
     the ids, names and data attributes stock product-details.js drives, and these changes:
 
     - The stepper starts at 1 (or the product's minimum), with − and + from the ReelFlies icons and
-      44px targets.
+      44px targets, under a visible "Quantity" (reelflies.add_flow.quantity_label, the reference's
+      word; stock's products.quantity reads "Quantity:").
     - The button says what it will do: "Choose a size" on a product whose size option (the Fly
       size facet's name, size-facet-name.html, in any case, as size-pills.html finds it) has
       several values, else "Add 1 to cart"; add-flow.js keeps it in step with the pills and the
@@ -62,7 +63,7 @@
     {{#if product.show_quantity_input}}
         {{inject 'productQuantityErrorMessage' (lang 'products.quantity_error_message')}}
         <div class="form-field form-field--increments rf-add-qty">
-            <label class="form-label form-label--alternate is-srOnly" for="qty[]">{{lang 'products.quantity'}}</label>
+            <label class="form-label form-label--alternate rf-add-qty-label" for="qty[]">{{lang 'reelflies.add_flow.quantity_label'}}</label>
             <div class="form-increment rf-add-stepper" data-quantity-change>
                 <button type="button" class="button button--icon rf-add-step" data-action="dec">
                     <span class="is-srOnly">{{lang 'products.quantity_decrease' name=product.title}}</span>

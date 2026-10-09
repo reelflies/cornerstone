@@ -22,8 +22,9 @@ const product = [
     () => import(/* webpackChunkName: "rf-size-pills" */ './size-pills'), // 37 size pills
 
     () => import(/* webpackChunkName: "rf-add-flow" */ './add-flow') // 38 add flow
-        // A chunk that fails to load: stock's "Add to Cart" on the flow's buttons (add-flow-failed.js).
-        .catch(error => import('./add-flow-failed').then(failed => failed.default(error), () => { throw error; })),
+        // A chunk that fails to load: stock's "Add to Cart" on the flow's buttons.
+        .catch(error => import(/* webpackChunkName: "rf-add-flow-failed" */ './add-flow-failed')
+            .then(failed => failed.default(error), () => { throw error; })),
 
     // 42 cart state: the product page half
 ];
