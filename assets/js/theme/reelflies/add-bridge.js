@@ -1,9 +1,7 @@
 // Between stock product-details.js and the add flow (ticket 38): the hooks in stock's add and
 // option-change callbacks, and in product-details-base.js's sold-out pass, call these, and
 // add-flow.js, its own chunk (page-modules.js), registers what they do when it loads. Stock
-// imports only this file, so the add flow never joins stock's chunk. page-modules.js imports it
-// too (addFlowFailed), so it loads with main.js, and stock's product chunk and the flow's share
-// that one copy.
+// imports only this file, so the add flow never joins stock's chunk.
 //
 // - addFinished(err, response, options): true when the add's answer has been taken, so stock's
 //   callback stops there; false lets stock open its modal as before. With no flow loaded (Quick
@@ -16,10 +14,6 @@
 // - holdAddButton(button, held): true when the button is the flow's own (the product page's), whose
 //   "can't be sold" state is aria-disabled rather than disabled, so its click reaches the flow,
 //   which says why ("Size 14 is sold out."). Stock disables any other button as before.
-// - addFlowFailed(error): page-modules.js's catch for the flow's chunk. The buttons' "Choose a
-//   size" and "Add 1 to cart" would no longer follow the pills and the stepper, so each reads
-//   stock's "Add to Cart" (data-rf-stock-label), which is true whatever is chosen; then the error
-//   goes on to the loader, which reports it.
 
 import { showAlertModal } from '../global/modal';
 
@@ -56,14 +50,6 @@ export function addFinished(err, response, options = {}) {
 
 export function optionChangeFailed(err, response, scope = null) {
     return (handlers.option || noFlowOption)(err, response, scope);
-}
-
-export function addFlowFailed(error, doc = document) {
-    doc.querySelectorAll('[data-rf-add][data-rf-stock-label]:not([data-rf-pre-order])').forEach(row => {
-        const button = row.querySelector('#form-action-addToCart');
-        if (button) button.value = row.getAttribute('data-rf-stock-label');
-    });
-    throw error;
 }
 
 export function holdAddButton(button, held) {

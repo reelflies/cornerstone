@@ -440,7 +440,7 @@ This is ticket 54's "every link in the home widgets returns 200 with no redirect
   | `rf-menu` | grouped menu and phone drawer, and the desktop rail's hover intent, keys and focus | 28 and 29 (1,308 B in 29) | 8,000 B |
   | `rf-size-filter` | the Fly size filter on listings | 33 (1,892 B) | 3,000 B |
   | `rf-size-pills` | the product page's size pills, and Quick view's and the Change dialog's through `pills-in-modal.js` | 37 (1,302 B) | 3,000 B |
-  | `rf-add-flow` | the product page's add flow and sticky bar | 38 (6,536 B) | 7,000 B |
+  | `rf-add-flow` | the product page's add flow and sticky bar | 38 (6,817 B) | 7,000 B |
   | `rf-quick-add` | quick add on cards | 43 (measured in 45) | 15,000 B |
   | `rf-region-prompt` | outside-Canada prompt | 52 | 1,000 B |
 
@@ -871,7 +871,8 @@ Ticket 38's buy row (`components/reelflies/add-to-cart.html`, through stock `add
   - `add-words.spec.js`: the labels and the confirmation
   - `add-bridge.spec.js`, with no flow loaded (a listing's Quick view, or a failed chunk):
     - a failed add taken (the button usable, the overlay gone, stock's alert) and a good one left to stock
-    - a failed option change stopped; and when the flow's chunk fails, stock's "Add to Cart" on its buttons (never a pre-order label), the error passed on to the loader
+    - a failed option change stopped
+  - `add-flow-failed.spec.js` and `page-modules.spec.js`: when the flow's chunk fails to load, the slot's catch loads `add-flow-failed.js` (its own small chunk), which puts stock's "Add to Cart" on the flow's buttons (never a pre-order label) and passes the error on to the loader
   - `add-flow.spec.js`:
     - the guards, on the button's click and before stock's submit: no size, a sold-out size, every size sold out (or out in the Colour chosen), a held choice with no size, a required option left to the browser's check, and the one-size wording
     - stock's hold on a choice it can't sell (`aria-disabled`, and the click saying why)

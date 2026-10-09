@@ -10,10 +10,10 @@
 //   first." in the status line and the live region, and focus on the first in-stock pill; with a
 //   sold-out size chosen, "Size 14 is sold out. Choose another size."; with every size sold out,
 //   "Every size is sold out." (or, with another option chosen, "That choice is sold out."); with
-//   another choice stock can't sell, "That choice is sold out.";
-//   and no cart request in any of them. It checks on the button's click, which comes before the
-//   browser's own check of the required options (that check would stop the submit unseen), and
-//   again on submit. A required option left empty is left to the browser's check.
+//   another choice stock can't sell, "That choice is sold out."; and no cart request in any of
+//   them. It checks on the button's click, which comes before the browser's own check of the
+//   required options (that check would stop the submit unseen), and again on submit. A required
+//   option left empty is left to the browser's check.
 // - The confirmation names every chosen option: the size, then the rest in the page's order, a
 //   swatch by its title, a select by its option's text.
 // - addFinished, which stock's add callback calls first (its hook in product-details.js): the
@@ -49,7 +49,8 @@ const SIZE_GROUP = '[data-rf-pills="size"]'; // ticket 37's marker on the size o
 const OPTION_FIELDS = '[data-product-option-change] .form-field';
 const BUTTON = '#form-action-addToCart';
 const STICKY = '[data-rf-sticky-add]';
-const PHONE = 'not all and (min-width: 801px)'; // Cornerstone's medium breakpoint, as _add-flow.scss
+// Cornerstone's medium breakpoint, as _add-flow.scss.
+const PHONE = 'not all and (min-width: 801px)';
 const BAR_MS = 4000;
 const COUNT_MS = 4000; // how long the confirmation waits for the cart's count before it is said
 
