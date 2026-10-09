@@ -35,6 +35,9 @@ describe('the status a pinned page must return', () => {
     });
 });
 
+// Channel 1's pins whose product list is the live catalogue's.
+const LIVE_LISTS = ['category', 'category@more', 'category@noindex', 'search'];
+
 describe('the screenshot masks', () => {
     const LIVE = ['.price-section', '[data-product-stock]', '.productView-rating', '.countPill', '.cart-total-value'];
     const CARDS_AND_LISTS = ['.productGrid', '.productCarousel', '.card', '.card-title', '.card-image', '#tab-related', '#tab-similar'];
@@ -187,8 +190,20 @@ describe('the screenshot stylesheet (W0-5)', () => {
         assert.equal(css.get('.page-content > .panel > *')?.display, 'none !important');
     });
 
+    it('holds channel 1\'s live product lists at a fixed height, with their cards taken out: a mask keeps a grid\'s size, and a live title that wraps to another line moves it (2026-10-09, the search pin at 375)', () => {
+        for (const pin of LIVE_LISTS) {
+            const height = CHANNELS[1].hold[pin]?.['.productGrid'];
+            assert.ok(Number.isInteger(height) && height > 0, `${pin}'s grid has a height`);
+            const css = rules(screenshotStyle('1', pin));
+            for (const property of ['height', 'min-height', 'max-height']) assert.equal(css.get('.productGrid')?.[property], `${height}px !important`, `${pin} ${property}`);
+            assert.equal(css.get('.productGrid > *')?.display, 'none !important', `${pin}'s cards`);
+            assert.ok(masksFor('1', pin).includes('.productGrid'), `${pin}'s held grid is masked, so a reviewer sees it`);
+            assert.ok(!(CHANNELS[1].mask[pin] || []).includes('.productGrid'), `${pin}'s grid is held, not only masked`);
+        }
+    });
+
     it('holds nothing on any other page or channel, so cards stay in those shots', () => {
-        const held = [['1', 'product'], ['1', 'product@sizes'], ['1', 'search']];
+        const held = [['1', 'product'], ['1', 'product@sizes'], ...LIVE_LISTS.map(pin => ['1', pin])];
         for (const [channel, template] of kinds.filter(([kindChannel, kindTemplate]) => !held.some(([c, t]) => c === kindChannel && t === kindTemplate))) {
             const css = rules(screenshotStyle(channel, template));
             assert.deepEqual([...css.keys()].sort(), [...HIDDEN].sort(), `${channel} ${template}`);

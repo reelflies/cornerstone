@@ -86,16 +86,17 @@ export const CHANNELS = {
             // (2026-10-09).
             search: '/search.php?search_query=streamer&section=product',
         },
-        // The live catalogue decides which products these pages list, so the lists can't
-        // be pinned here. Pin a listing that holds still before unmasking one.
-        // The search pin's result counts (its heading and both tabs) change with the catalogue
-        // too. The tabs by role: stock search.js swaps the active tab's navBar-action class.
-        // The listing's count (ticket 33's row) changes with the catalogue too.
+        // The live catalogue decides which products the category and search pins list, so
+        // their grids are held (below), not masked. Pin a listing that holds still before
+        // letting its cards into a shot. The search pin's result counts (its heading and both
+        // tabs) change with the catalogue too. The tabs by role: stock search.js swaps the
+        // active tab's navBar-action class. The listing's count (ticket 33's row) changes with
+        // the catalogue too.
         mask: {
-            category: ['.productGrid', '[data-rf-list-count]'],
-            'category@more': ['.productGrid', '[data-rf-list-count]'],
-            'category@noindex': ['.productGrid', '[data-rf-list-count]'],
-            search: ['.productGrid', '.page-heading', '[data-search-page-tabs] [role="tab"]'],
+            category: ['[data-rf-list-count]'],
+            'category@more': ['[data-rf-list-count]'],
+            'category@noindex': ['[data-rf-list-count]'],
+            search: ['.page-heading', '[data-search-page-tabs] [role="tab"]'],
             // Fat Albert's option rows, whose sold-out marks follow the live stock (its sizes, and
             // its colours once a size is chosen), whole, so a mark that moves to another value
             // doesn't move the mask; and the line naming the sizes. A UI state marks the options
@@ -112,7 +113,14 @@ export const CHANNELS = {
         // because tickets 39 and 40 change them; ticket 39 points these at its grid.
         // The search pin's "Did you mean" panel lists the categories the store finds for the
         // query, so the catalogue sets its height (#68's rf/spec).
+        // The category and search pins' grids: the live catalogue's cards, whose titles wrap
+        // to one line or two, so the rows' heights follow the list. A mask kept the grid's
+        // size: on 2026-10-09 the search pin at 375 grew 21px, one title line, with no theme
+        // change. Held at 1200px at both widths, which is no layout's own height.
         hold: {
+            category: { '.productGrid': 1200 },
+            'category@more': { '.productGrid': 1200 },
+            'category@noindex': { '.productGrid': 1200 },
             product: {
                 '#tab-related .productCarousel': 320,
                 '#tab-similar .productCarousel': 320,
@@ -123,6 +131,7 @@ export const CHANNELS = {
             },
             search: {
                 '.page-content > .panel': 360,
+                '.productGrid': 1200,
             },
         },
     },
