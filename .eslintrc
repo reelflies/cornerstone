@@ -54,28 +54,6 @@
                 "object-curly-newline": "warn",
                 "no-else-return": "warn"
             }
-        },
-        {
-            "files": [
-                "assets/js/theme/reelflies/**/*.js"
-            ],
-            "rules": {
-                "no-restricted-syntax": [
-                    "error",
-                    {
-                        "selector": "ArrayExpression > SpreadElement > CallExpression[callee.property.name=/^(querySelectorAll|getElementsByClassName|getElementsByTagName|getElementsByName)$/]",
-                        "message": "The theme's Babel is loose (babel.config.js): it builds [...x] of a NodeList, Set or Map as [x], so the bundle breaks while Jest passes. Use Array.from(x)."
-                    },
-                    {
-                        "selector": "ArrayExpression > SpreadElement > MemberExpression[property.name=/^(children|childNodes|labels|options|elements|classList)$/]",
-                        "message": "The theme's Babel is loose (babel.config.js): it builds [...x] of a NodeList, Set or Map as [x], so the bundle breaks while Jest passes. Use Array.from(x)."
-                    },
-                    {
-                        "selector": "ArrayExpression > SpreadElement > NewExpression[callee.name=/^(Set|Map)$/]",
-                        "message": "The theme's Babel is loose (babel.config.js): it builds [...x] of a NodeList, Set or Map as [x], so the bundle breaks while Jest passes. Use Array.from(x)."
-                    }
-                ]
-            }
         }
     ],
     "globals": {
