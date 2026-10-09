@@ -1,0 +1,126 @@
+// =============================================================================
+// SIZE PILLS (ticket 37; spec module 16; O15, UX-10, UX-21; stories 38, 39, 67, 70 and 71)
+// =============================================================================
+//
+// A product's rectangle options as pills (components/reelflies/size-pills.html), from the
+// reference's .opt, .form-option and .unavailable rules (plan/design/src/reference.src.html:
+// :655-661) and ticket 26's spike (_size-pills.scss on spike/26-skin).
+//
+// - The head: "Fly size: choose one" with "Hook size guide" at the end of the line.
+// - Each pill 56x48 with an 8px gap, tabular figures, wrapping at 320. Stock's radio stays hidden
+//   (citadel's .form-radio); its focus ring is drawn on the pill (_foundation.scss's label rule).
+// - Chosen: a 2px ink border on the tile, ink text and a check, so Add to cart stays the only solid
+//   button (UX-21).
+// - Sold out (stock's .unavailable): a diagonal strike in dun drawn inside the pill, on the tile,
+//   in place of stock's, which is sized for a square and overruns a pill (ticket 26).
+// - The line under the pills keeps one line's height whether or not it says anything, so nothing
+//   moves when the script fills it.
+//
+// -----------------------------------------------------------------------------
+
+$rf-pill-w: 56px;
+$rf-pill-h: 48px;
+
+.rf-pills-field {
+    margin-bottom: 18px;
+}
+
+.rf-pills-head {
+    align-items: baseline;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    justify-content: space-between;
+    margin: 0 0 10px;
+
+    .rf-pills-label {
+        display: inline;
+        font-size: 15px;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .rf-pills-value {
+        font-weight: 400;
+    }
+}
+
+.rf-pills-guide {
+    color: var(--rf-ink);
+    font-size: 15px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.rf-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    .form-option-wrapper {
+        display: flex;
+    }
+}
+
+[data-product-attribute] .form-option.rf-pill {
+    align-items: center;
+    background: var(--rf-paper);
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-pill);
+    color: var(--rf-ink);
+    display: inline-flex;
+    font-variant-numeric: tabular-nums;
+    gap: 6px;
+    justify-content: center;
+    margin: 0;
+    min-height: $rf-pill-h;
+    min-width: $rf-pill-w;
+    padding: 0 14px;
+
+    &:hover {
+        border-color: var(--rf-ink);
+    }
+
+    .form-option-variant {
+        font-size: 15px;
+        font-weight: 600;
+        min-width: 0;
+        padding: 0;
+    }
+
+    .rf-pill-check {
+        display: none;
+        height: 16px;
+        width: 16px;
+    }
+
+    // Stock's strike and fade, sized for a square
+    &.unavailable {
+        background: var(--rf-tile) linear-gradient(to top right, transparent calc(50% - 0.75px), var(--rf-dun) calc(50% - 0.75px), var(--rf-dun) calc(50% + 0.75px), transparent calc(50% + 0.75px));
+        opacity: 1;
+
+        &::before {
+            display: none;
+        }
+    }
+}
+
+// Chosen: stock's radio, checked, just before its pill
+[data-product-attribute] .form-radio:checked + .form-option.rf-pill {
+    background-color: var(--rf-tile);
+    border: 2px solid var(--rf-ink);
+    box-shadow: none;
+    padding: 0 13px;
+
+    .rf-pill-check {
+        display: block;
+    }
+}
+
+.rf-pills-note {
+    color: var(--rf-dun);
+    font-size: 14px;
+    line-height: 20px;
+    margin: 8px 0 0;
+    min-height: 20px;
+}

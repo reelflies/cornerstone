@@ -260,6 +260,8 @@ The screenshots and axe open each state in `UI_STATES` on the pins it names, at 
 | State | Opens | At | On | Owner |
 |---|---|---|---|---|
 | `drawer-open` | the phone menu: ticket 27's Menu button, which drives the stock toggle, opens `#menu`; in ticket 28's grouped drawer the first row's chevron then opens its children in place, so the shot shows one row open. With both menu ids empty it is the stock drawer | `phone-375` | `home` (ReelFlies_CA: the stock fallback until tree 4's ids), `category` (channel 1: the grouped drawer) | 28 |
+| `size-chosen` | the product page with its first in-stock size chosen: the ink outline on the tile and the check | `phone-375`, `desktop-1280` | `product` (channel 1) | 37 |
+| `size-sold-out` | the product page with its last two sizes marked sold out as stock's scripts mark them (`unavailable`): struck, aria-disabled, and named in the line. The state marks them itself, so the shot shows the look, not the day's stock | `phone-375`, `desktop-1280` | `product` (channel 1) | 37 |
 | `panel-open` | the desktop menu panel: ticket 27's "Shop flies" opens it from the keyboard, on the grouped panel's first Fly Type pane with focus on its rail item (28), once that pane's lazy banner has loaded (29). With both menu ids empty, the stock menu's first sub-menu opens instead, from the keyboard too | `desktop-1280` | `category` (channel 1) | 28 and 29. A Species pane state waits for a pinned page with a Species group (wave R1); until then `rail.spec.mjs` checks that pane on the fixture page |
 | `sheet-open` | a slot for the quick-add sheet and popover | | | 43 adds it |
 
@@ -576,6 +578,7 @@ export default {
 | `category-robots` | 32 | on category pins: exactly one robots meta, "noindex, follow", on `category@noindex` (the noindex template), and none that says noindex on the others |
 | `facet-links` | 33 | on every page: each element with `data-faceted-search-facet` a link with a URL, and each one whose URL carries a filter (any query parameter but `_bc_fsnf`, paging, sorting and the search query) with `_bc_fsnf=1` in it and `nofollow` in its rel (SEO-12, SEO-6). The pager's links and the clear links carry no filter and aren't checked. Through `stencil start` BigCommerce sends no facets, so it bites on the prelaunch host's category pins |
 | `size-filter` | 33 | on category pins: the Fly Sizes facet as pills (`facet-sizes.html`), not stock's list, with one "What do sizes mean?" link to `/fly-hook-size-chart/` in its block; on the fly pins (`category`, `category@noindex`), Fly Sizes among the facets whenever any facet is listed, so a renamed option fails rather than leaving stock's list (`size-facet-name.html`); and no stock no-products alert (`data-no-products-notification`), which `category.js` focuses on load. Through `stencil start` BigCommerce sends no facets, so the first two bite on the prelaunch host's category pins |
+| `size-pills` | 37 | on product pins: the options container visible in the server HTML (no `display:none`); each pill group (`data-rf-pills`) a radiogroup labelled by an id of its own, on one element, never stock's `rectangle-group-label`; and a size group with more than one size has no radio checked |
 
 **Still to come:**
 
@@ -813,6 +816,36 @@ Its templates are rendered by `render/partials/cart.test.mjs` (the groups, the r
 QA_VARIATION="ReelFlies CA" npx playwright test --config scripts/qa/playwright.config.mjs cart-screens
 node --test scripts/qa/render/partials/cart.test.mjs scripts/qa/render/theme-script.test.mjs
 npx jest assets/js/test-unit/theme/reelflies/cart
+```
+
+## The size pills (`size-pills.spec.mjs`)
+
+Ticket 37's pills (`components/reelflies/size-pills.html`, through stock `options/set-rectangle.html`'s hook) and `size-pills.js`, which follows stock's sold-out marks.
+
+- **The templates** are rendered by `render/partials/size-pills.test.mjs`:
+  - stock's radios and labels in a radiogroup
+  - a group id from the product and the option
+  - no size checked unless it is the only one, while another option keeps its chosen value
+  - "Hook size guide" on size groups only
+  - the hidden "(sold out)" and the line's words
+- **The script** is Jest's (`size-pills.spec.js`): the marks, aria-disabled, the line in the singular or the plural and as stock changes the marks, the chosen size after the label, and no radio checked or moved.
+- **The server HTML** is the `size-pills` assertion's.
+- **The look:** the product pin and its `size-chosen` and `size-sold-out` states.
+- **`size-pills.spec.mjs`** runs on channel 1's live product pages, `product` (6178) and Fat Albert (5663, with a Colour too):
+  - no size checked after scripts run
+  - the pills 56x48 at 1280 and at least 44px at 375
+  - a chosen pill outlined with the check and no solid fill
+  - stock's marks, aria-disabled and the line in step, and still in step as 5663's Colour changes
+  - the arrow keys and the focus ring
+  - "Hook size guide"
+  - nothing sideways at 320
+
+  It runs only when named:
+
+```sh
+QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs size-pills
+node --test scripts/qa/render/partials/size-pills.test.mjs scripts/qa/raw-html/assertions/size-pills.test.mjs
+npx jest assets/js/test-unit/theme/reelflies/size-pills
 ```
 
 ## Fixture renders (`render/`)
@@ -1183,7 +1216,7 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - `category-screens.spec.mjs` (ticket 32) runs with `qa:screens` too; `category.spec.mjs` runs only when named.
 - `hook-chart-screens.spec.mjs` (ticket 35) runs with `qa:screens` too.
 - `cart-screens.spec.mjs` (ticket 41) runs with `qa:screens` too, for the same reason.
-- `header.spec.mjs` (ticket 27), `menu.spec.mjs` (ticket 28), `rail.spec.mjs` (ticket 29) and `quick-search.spec.mjs` (ticket 30) run only when named, like `skin.spec.mjs`: no npm script's filter matches them. The first three wait for their scripts with `chunkLoaded` from `states.mjs`; `quick-search.spec.mjs` waits until quick-search.js has added each search form's dropdown.
+- `header.spec.mjs` (ticket 27), `menu.spec.mjs` (ticket 28), `rail.spec.mjs` (ticket 29), `quick-search.spec.mjs` (ticket 30) and `size-pills.spec.mjs` (ticket 37) run only when named, like `skin.spec.mjs`: no npm script's filter matches them. The first three wait for their scripts with `chunkLoaded` from `states.mjs`; `quick-search.spec.mjs` waits until quick-search.js has added each search form's dropdown.
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
 - `storefront.test.mjs` also covers `QA_PORT`, the start log's name, the locks a gate holds (and the ports checked again after a slot wait), trusting only the server a gate started, and stopping that server when the gate is stopped by a signal. `playwright-config.test.mjs` covers that the config reads `QA_PORT` and holds the locks only in the runner, `prepush.test.mjs` what `qa:prepush` checks before its first gate, `serve.test.mjs` the locks around a `stencil start` by hand, and `scripts/lib/lock.test.mjs` the locks themselves: the stale rules, waiting, the three slots across processes, the signals, `RF_LOCK_ROOT`, and the command line `release.sh` uses.
 - `pages.test.mjs` covers W0-8's pins, baseline names (against the baseline-scope check's parser), UI states, overlays and custom layouts; `overlays.test.mjs` the overlay files, the patch and the throwaway worktree (in git repos of its own); `custom-layouts.test.mjs` the merge into `config.stencil.json`; `playwright-config.test.mjs` the overlay's refusals, ports and folder, and the custom-layouts step before `stencil start`; `storefront.test.mjs` the overlay marker check, and that only an overlay run's own worktree moves a `stencil start` out of the checkout (an `RF_QA_THEME_DIR` left in the shell never does; `prepush.test.mjs` too).

@@ -1,3 +1,5 @@
+{{!-- ReelFlies hook (ticket 37; CUSTOMIZATIONS.md): the option as pills (components/reelflies/size-pills.html), with stock's radios and labels; the stock markup below is kept, unrendered --}}
+{{> components/reelflies/size-pills}}{{#if false}}
 <div class="form-field" data-product-attribute="set-rectangle" role="radiogroup" aria-labelledby="rectangle-group-label">
     <label class="form-label form-label--alternate form-label--inlineSmall" id="rectangle-group-label">
         {{this.display_name}}:
@@ -40,3 +42,4 @@
     </div>
     {{/each}}
 </div>
+{{/if}}

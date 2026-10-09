@@ -96,6 +96,42 @@ export const UI_STATES = {
         },
     },
 
+    // The size pills' chosen and sold-out looks (ticket 37), on the product pin: shot as the page
+    // lays out, so the pills are in view whichever state the live stock leaves them in.
+    'size-chosen': {
+        description: 'the product page with its first in-stock size chosen: the ink outline and the check',
+        ticket: '37',
+        projects: ['phone-375', 'desktop-1280'],
+        pages: ['product'],
+        async open(page) {
+            await chunkLoaded(page, 'rf-size-pills');
+            const pill = page.locator('[data-rf-pills] .rf-pill[data-product-attribute-value]:not(.unavailable)').first();
+            await pill.scrollIntoViewIfNeeded();
+            await pill.click();
+            await page.locator('[data-rf-pills] .form-radio:checked + .rf-pill .rf-pill-check').first().waitFor({ state: 'visible' });
+            await page.mouse.move(0, 0);
+        },
+    },
+    'size-sold-out': {
+        description: 'the product page with its last two sizes marked sold out, as stock\'s option scripts mark them: struck, and named in the line',
+        ticket: '37',
+        projects: ['phone-375', 'desktop-1280'],
+        pages: ['product'],
+        // Stock marks a value it can't sell with the class `unavailable` (product-details-base.js).
+        // The live stock decides which, so the state marks two itself: the look, not the stock,
+        // is what is shot. size-pills.spec.mjs checks the real marks on product@5663.
+        async open(page) {
+            await chunkLoaded(page, 'rf-size-pills');
+            await page.evaluate(() => {
+                const pills = [...document.querySelectorAll('[data-rf-pills] .rf-pill[data-product-attribute-value]')];
+                pills.forEach(pill => pill.classList.remove('unavailable'));
+                pills.slice(-2).forEach(pill => pill.classList.add('unavailable'));
+            });
+            await page.waitForFunction(() => /sold out/.test(document.querySelector('[data-rf-sold-out-line]')?.textContent || ''));
+            await page.locator('[data-rf-pills]').first().scrollIntoViewIfNeeded();
+        },
+    },
+
     // sheet-open: the quick-add sheet on a phone and its popover on desktop, on the cards of a
     // stable listing pin (ticket 43, which adds "quick-add" to <html data-rf-open>).
 };
