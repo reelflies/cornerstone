@@ -8,11 +8,11 @@
 //
 // - Each module, named by its path under assets/js/theme without .js, is built as the theme bundle
 //   builds it (fixtureBabelOptions): the Babel options babel-loader resolves, webpack.common.js's
-//   own merged with the root babel.config.js, so loose mode and its assumptions, for preset-env's
-//   default targets (the repo sets no browserslist). Then it is turned into CommonJS, with no
-//   core-js imports, and wrapped in a function, in the order given. A module that only breaks in
-//   the bundle's build, such as a loose-mode spread, breaks here too, where Jest's Node build
-//   would pass it.
+//   own merged with the root babel.config.js, so loose mode and its assumptions, for the browsers
+//   in the root .browserslistrc, which preset-env reads for both builds. Then it is turned into
+//   CommonJS, with no core-js imports, and wrapped in a function, in the order given. A module
+//   that only breaks in the bundle's build, such as a loose-mode spread, breaks here too, where
+//   Jest's Node build would pass it.
 // - A module's `require('./x')` finds another listed module by its path; anything else throws,
 //   so a module whose imports aren't listed fails loudly rather than half-working.
 // - `run` is code that runs last, with `modules` holding each module's exports by name.
