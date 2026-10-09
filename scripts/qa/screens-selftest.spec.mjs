@@ -56,32 +56,29 @@ test.describe('screenshot self-test', () => {
 
 // The stylesheet every page's screenshot applies (screenshotStyle in pages.mjs, written by
 // screenshotStylePath in fixtures.mjs; W0-5), tried on a product page in miniature: a widget
-// region, the description, the related products' tab with its carousel, and the store's
-// cookie banner, whose "Reject all" leaves a 48 px bar at the end of the page a moment
-// later. The test decides when the bar appears (window.showBar), so it needs no timer.
+// region, the details, the related patterns' grid (ticket 39), and the store's cookie banner,
+// whose "Reject all" leaves a 48 px bar at the end of the page a moment later. The test decides when the bar appears (window.showBar), so it needs no timer.
 //
 // - Nothing the stylesheet hides or holds changes the shot: not the widget's height, not
 //   the related cards' heights, and not whether the bar has appeared yet. The bar is what
 //   made the channel-1 product shot fail once at 375x4101 against its 375x4149 baseline.
-// - What it leaves alone still does: the description and the related section's heading.
+// - What it leaves alone still does: the details and the related section's heading.
 test.describe('the screenshot stylesheet', () => {
     const product = ({
-        widget = 80, cardLines = 2, description = 'A realistic hopper.', heading = 'Related Products',
+        widget = 80, cardLines = 2, description = 'A realistic hopper.', heading = 'Related patterns',
     } = {}) => {
-        const card = `<article class="card" style="flex:1;background:#c9a227">${'Card title line<br>'.repeat(cardLines)}</article>`;
+        const card = `<li class="product" style="flex:1"><article class="card" style="background:#c9a227">${'Card title line<br>'.repeat(cardLines)}</article></li>`;
         // The viewport meta, as on the storefront: without it, phone-375 lays the page out
         // 980 px wide and scales it down.
         return `<!doctype html><html lang="en"><meta name="viewport" content="width=device-width, initial-scale=1">
             <body style="margin:0;font:16px/24px sans-serif">
             <header style="height:55px;background:#f4f1ea">Header</header>
             <div data-content-region="header_bottom--global"><div data-widget-id="w1" style="height:${widget}px;background:#7b8e7a"></div></div>
-            <div class="productView-description" style="padding:10px"><p>${description}</p></div>
-            <ul class="tabs" style="margin:0;padding:10px;list-style:none"><li class="tab is-active">${heading}</li></ul>
-            <div class="tabs-contents">
-                <div id="tab-related" class="tab-content is-active" style="padding:10px;background:#ffffff">
-                    <section class="productCarousel" style="display:flex;gap:8px">${card.repeat(3)}</section>
-                </div>
-            </div>
+            <div class="productView-description" data-rf-product-details style="padding:10px"><p>${description}</p></div>
+            <section class="rf-related" data-rf-related style="padding:10px;background:#ffffff">
+                <h2 class="rf-related-heading" style="margin:0 0 10px">${heading}</h2>
+                <ul class="productGrid rf-related-grid" style="display:flex;gap:8px;margin:0;padding:0;list-style:none">${card.repeat(4)}</ul>
+            </section>
             <footer style="height:1000px;background:#2b2b2b"></footer><!-- taller than the viewport, so the page's height shows in a full-page shot -->
             <div id="consent-manager" style="position:fixed;left:0;right:0;bottom:0;padding:20px;background:#333">
                 <button type="button" onclick="document.getElementById('consent-manager').style.display = 'none'">Reject all</button>
@@ -127,17 +124,17 @@ test.describe('the screenshot stylesheet', () => {
         expect((await shot(page)).equals(before), 'the shots with the stylesheet are the same').toBe(true);
     });
 
-    test('holds the related carousel at its fixed height and takes the widget out of the layout', async ({ page }) => {
+    test('holds the related grid at its fixed height and takes the widget out of the layout', async ({ page }) => {
         await page.addStyleTag({ content: style });
-        const [carousel, widget] = await page.evaluate(() => [
-            document.querySelector('#tab-related .productCarousel').getBoundingClientRect().height,
+        const [grid, widget] = await page.evaluate(() => [
+            document.querySelector('[data-rf-related] .rf-related-grid').getBoundingClientRect().height,
             getComputedStyle(document.querySelector('[data-widget-id]')).display,
         ]);
-        expect(carousel).toBe(CHANNELS[1].hold.product['#tab-related .productCarousel']);
+        expect(grid).toBe(CHANNELS[1].hold.product['[data-rf-related] .rf-related-grid']);
         expect(widget).toBe('none');
     });
 
-    for (const [what, change] of [['the description', { description: 'A realistic hopper.<br>Now with a second line.' }], ['the related section\'s heading', { heading: 'Related patterns' }]]) {
+    for (const [what, change] of [['the description', { description: 'A realistic hopper.<br>Now with a second line.' }], ['the related section\'s heading', { heading: 'More patterns' }]]) {
         test(`still shows a change to ${what}`, async ({ page }) => {
             const before = await shot(page);
             await page.setContent(product(change));

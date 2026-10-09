@@ -1,0 +1,21 @@
+{{!--
+    The shipping line near the price (ticket 39; spec module 15, "Shipping wording"; UX-12; story
+    44), in the product page's buy box (product-price-extras.html):
+
+        {{> components/reelflies/shipping-line threshold=theme_settings.rf_ship_free_threshold
+            rate=theme_settings.rf_ship_standard_rate expedited=theme_settings.rf_ship_expedited_from}}
+
+    The values are the channel's per-variation settings (build pipeline 6.3; ticket 13's decisions
+    2 and 12), dollar amounts as typed in Theme Styles, which the words put after "$":
+
+    - threshold: free standard shipping on fly orders over it, in Canada ("60" in base). Empty, as
+      in ReelFlies US (.com keeps its flat rate), there is no line.
+    - rate: standard shipping in Canada below the threshold. Empty, until Shaun gives it, the line
+      is the free-shipping sentence alone, with no figure in its place.
+    - expedited: the tracked Expedited "from" price, a sentence after either, when set.
+
+    The words are UX-12's: "fly orders (fly boxes and gear not included)".
+--}}
+{{#if (trim threshold)}}
+<p class="rf-ship-line" data-rf-ship-line>{{> components/reelflies/icon name='truck' class='rf-ship-line-icon'}}<span>{{#if (trim rate)}}{{lang 'reelflies.product.ship_rate' rate=(trim rate) threshold=(trim threshold)}}{{else}}{{lang 'reelflies.product.ship_free' threshold=(trim threshold)}}{{/if}}{{#if (trim expedited)}} {{lang 'reelflies.product.ship_expedited' amount=(trim expedited)}}{{/if}}</span></p>
+{{/if}}

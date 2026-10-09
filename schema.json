@@ -3045,6 +3045,24 @@
         "type": "heading",
         "content": "i18n.RfProductPage"
       },
+      {
+        "type": "text",
+        "label": "i18n.RfShipFreeThreshold",
+        "force_reload": true,
+        "id": "rf_ship_free_threshold"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfShipStandardRate",
+        "force_reload": true,
+        "id": "rf_ship_standard_rate"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfShipExpeditedFrom",
+        "force_reload": true,
+        "id": "rf_ship_expedited_from"
+      },
 
       {
         "type": "heading",

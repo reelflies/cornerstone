@@ -1135,7 +1135,22 @@
         },
 
         "product": {
-            "_slot": ""
+            "_slot": "",
+            "ship_free": "Free standard shipping in Canada on fly orders over ${threshold}. Fly boxes and gear not included.",
+            "ship_rate": "Standard shipping in Canada ${rate}, free on fly orders over ${threshold} (fly boxes and gear not included).",
+            "ship_expedited": "Tracked Expedited from ${amount}.",
+            "promise": "We stand behind every fly we sell.",
+            "wishlist": "Save to wish list",
+            "about": "About this fly",
+            "shipping": "Shipping and delivery",
+            "shipping_free": "Free standard shipping in Canada on fly orders over ${threshold} (fly boxes and gear not included).",
+            "shipping_standard": "Standard Canada Post is untracked and generally takes 2 to 14 business days.",
+            "shipping_expedited": "Tracked Expedited Parcel generally takes 1 to 7 business days. Orders from outside Canada go through ReelFlies.com.",
+            "hooks": "Hooks and tying",
+            "hooks_body": "Tied by hand on a branded hook from makers such as Mustad, Daiichi, Dai-Riki or Kamasan.",
+            "hooks_chart": "A bigger hook number means a smaller hook.",
+            "hooks_chart_link": "See the hook size chart",
+            "related": "Related patterns"
         },
 
         "reviews": {
