@@ -181,6 +181,13 @@ export const HIDDEN = [
     '#consent-manager-update-banner',
 ];
 
+// What the page shots take out of the layout from the first one, before the page lays itself
+// out (hideWidgetsFromLoad in fixtures.mjs), as well as at the screenshot: the widgets. A page
+// laid out with a widget in it and then hidden can keep a sub-pixel offset further down; that
+// moved eight of 1895766's footer lines by 1px when its home widgets went active (#63, W0-5).
+// The cookie banner stays out of this list: dismissCookieBanner clicks it first.
+export const HIDDEN_FROM_LOAD = ['[data-widget-id]'];
+
 // The boxes one pinned page holds at a fixed height, as [selector, height] pairs.
 const heldBoxes = (channel, template, channels = CHANNELS) => Object.entries(channels[channel]?.hold?.[template] || {});
 

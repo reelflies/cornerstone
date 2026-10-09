@@ -12,7 +12,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { checkScope, parseBaselinePath } from '../check-baseline-scope.mjs';
 import {
-    CHANNELS, HIDDEN, PAGE_KEY, baselineName, expectedStatus, masksFor, pageKind, screenshotStyle,
+    CHANNELS, HIDDEN, HIDDEN_FROM_LOAD, PAGE_KEY, baselineName, expectedStatus, masksFor, pageKind, screenshotStyle,
 } from './pages.mjs';
 import { STATE_NAME, UI_STATES, statesFor } from './states.mjs';
 import {
@@ -140,6 +140,12 @@ describe('the screenshot stylesheet (W0-5)', () => {
             }
         }
         assert.deepEqual(HIDDEN, ['[data-widget-id]', '#consent-manager', '#consent-manager-update-banner']);
+    });
+
+    it('hides the widgets from the first layout too, and only what the screenshot also hides (W0-5, #63)', () => {
+        assert.deepEqual(HIDDEN_FROM_LOAD, ['[data-widget-id]']);
+        for (const selector of HIDDEN_FROM_LOAD) assert.ok(HIDDEN.includes(selector), `${selector} is in HIDDEN`);
+        assert.ok(!HIDDEN_FROM_LOAD.includes('#consent-manager'), 'the cookie banner stays: dismissCookieBanner clicks it');
     });
 
     it('holds channel 1\'s related and similar carousels at a fixed height, with their cards taken out', () => {
