@@ -29,6 +29,7 @@ import AxeBuilder from '@axe-core/playwright';
 import {
     PAGES, dismissCookieBanner, expect, storefrontPage, test,
 } from './fixtures.mjs';
+import { withRetries } from './retry.mjs';
 import { HEADERS, QA_CHANNEL, ROOT } from './storefront.mjs';
 import { withQuery } from './switches.mjs';
 
@@ -51,9 +52,18 @@ const XSS_QUERY = 'qzxjv<img src=qzxjw onerror="window.rfXss=1"> & qzxjk';
 // The store sends forms.search.query escaped; the page shows it as text, decoded.
 const decode = text => text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#0?39;|&#x27;/g, "'").replace(/&amp;/g, '&');
 
+// The page's own store data, from stencil start's ?debug=context: asked again after a 5xx or a 429,
+// as a pinned page is (retry.mjs), because stencil start answers 500 when its request to the store
+// drops. Anything but the page's context fails here, never reads as "no menu ids".
 async function storeContext(request, pagePath) {
-    const response = await request.get(withQuery(pagePath, 'debug=context'), { headers: HEADERS });
-    return response.json();
+    const url = withQuery(pagePath, 'debug=context');
+    const response = await withRetries(() => request.get(url, { headers: HEADERS }), {
+        what: `?debug=context on ${pagePath}`,
+        read: answer => ({ status: answer.status(), retryAfter: answer.headers()['retry-after'] }),
+    });
+    const context = await response.json().catch(() => null);
+    expect(context?.theme_settings, `?debug=context on ${pagePath} answered HTTP ${response.status()} without the page's context`).toBeTruthy();
+    return context;
 }
 
 // The links the menu ids should give, as menu-links.html resolves them: each id in order, among
