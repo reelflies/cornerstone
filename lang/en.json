@@ -1108,6 +1108,8 @@
             "choose_first": "Choose a fly size first.",
             "sold_out": "Size {size} is sold out. Choose another size.",
             "sold_out_only": "Size {size} is sold out.",
+            "sold_out_all": "Every size is sold out.",
+            "sold_out_choice": "That choice is sold out.",
             "added": "Added {qty} × {choice}.",
             "size": "size {size}",
             "cart_fly": "# fly in your cart.",

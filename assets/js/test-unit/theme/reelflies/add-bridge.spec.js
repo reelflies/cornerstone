@@ -39,6 +39,18 @@ describe('with no add flow loaded', () => {
         expect(optionChangeFailed(null, { data: { purchasable: true } })).toBe(false);
     });
 
+    it('sets the product page\'s "Choose a size" to stock\'s "Add to Cart" once a choice is answered, but not a pre-order label', () => {
+        document.body.innerHTML = `<form><div data-rf-add data-rf-stock-label="Add to Cart">
+            <input id="form-action-addToCart" type="submit" value="Choose a size">
+        </div></form>`;
+        expect(optionChangeFailed(null, { data: { purchasable: true } }, form())).toBe(false);
+        expect(button().value).toBe('Add to Cart');
+        form().querySelector('[data-rf-add]').setAttribute('data-rf-pre-order', '');
+        button().value = 'Pre-Order Now';
+        optionChangeFailed(null, { data: { purchasable: true } }, form());
+        expect(button().value).toBe('Pre-Order Now');
+    });
+
     it('holds no button: stock disables it as before', () => {
         expect(holdAddButton(button(), true)).toBe(false);
     });

@@ -440,7 +440,7 @@ This is ticket 54's "every link in the home widgets returns 200 with no redirect
   | `rf-menu` | grouped menu and phone drawer, and the desktop rail's hover intent, keys and focus | 28 and 29 (1,308 B in 29) | 8,000 B |
   | `rf-size-filter` | the Fly size filter on listings | 33 (1,892 B) | 3,000 B |
   | `rf-size-pills` | the product page's size pills, and Quick view's and the Change dialog's through `pills-in-modal.js` | 37 (1,302 B) | 3,000 B |
-  | `rf-add-flow` | the product page's add flow and sticky bar | 38 (6,319 B) | 7,000 B |
+  | `rf-add-flow` | the product page's add flow and sticky bar | 38 (6,846 B) | 7,000 B |
   | `rf-quick-add` | quick add on cards | 43 (measured in 45) | 15,000 B |
   | `rf-region-prompt` | outside-Canada prompt | 52 | 1,000 B |
 
@@ -864,20 +864,30 @@ Ticket 38's buy row (`components/reelflies/add-to-cart.html`, through stock `add
   - "Choose a size" or "Add N to cart" on the product page, the size option found by the Fly size facet's name; stock's "Add to Cart" in Quick view and stock's "Pre-Order Now"; the stepper's buttons `type="button"`
   - the product's name for the confirmation, and every word's placeholders whole
   - the stepper's start
-  - the status line with no role
+  - the status line with no role, its alert and check icons, and its text box
   - the sticky bar on the product page only
   - Quick view's reworded heading
 - **The script** is Jest's:
   - `add-words.spec.js`: the labels and the confirmation
-  - `add-bridge.spec.js`: with no flow loaded (a listing's Quick view), a failed add taken (the button usable, the overlay gone, stock's alert) and a good one left to stock; a failed option change stopped
-  - `add-flow.spec.js`: the guards on the button's click and before stock's submit, stock's hold on a choice it can't sell (`aria-disabled`, and the click saying why), the one-size wording, the choice as it was sent, a new choice clearing the last message, a pre-order label kept, a failed option change said in its own form, the bar's double tap and a blocked tap forgotten, focus handed to the main button when the bar hides, the add's success, error-answer, unreadable-answer and network-failure paths, `rf:cart-changed` after the count update, a product with no options named, a swatch named by its title, focus kept, Quick view left to stock, a failed option change, the bar's place after a jump, and its added look and its return after 4 s
-- **`add-flow.spec.mjs`** runs on channel 1's Fat Albert (`product@sizes`, several sizes and a required Colour), and on the `product` pin for its one-size case. The add and the cart's read are answered by the cart route fixtures (`fixtures/cart/routes.mjs`, which tickets 42, 43 and 44 share: `answerCartAdds`, `answerCartRead`, `cartLines`), fulfilled or aborted and never passed on, so no cart is made; the network guard fails any other write. It checks:
+  - `add-bridge.spec.js`, with no flow loaded (a listing's Quick view, or a failed chunk):
+    - a failed add taken (the button usable, the overlay gone, stock's alert) and a good one left to stock
+    - a failed option change stopped, and an answered one setting "Choose a size" to stock's "Add to Cart"
+  - `add-flow.spec.js`:
+    - the guards, on the button's click and before stock's submit: no size, a sold-out size, every size sold out, a held choice with no size, a required option left to the browser's check, and the one-size wording
+    - stock's hold on a choice it can't sell (`aria-disabled`, and the click saying why)
+    - the add's success, error-answer, unreadable-answer and network-failure paths; focus kept; Quick view and a page with no flow left to stock
+    - the header told from the cart's read, or from stock's cart summary when that fails, then `rf:cart-changed` after it
+    - the confirmation: the choice as it was sent, a swatch named by its title, a product with no options named
+    - the status line: a new choice clearing the last message, a pre-order label kept, the text in the template's box, and a failed option change said in its own form
+    - the bar: its place after a jump; its double tap and a blocked tap forgotten; its added look and its return after 4 s; a failed add, a stopped tap and stock's quantity limit said in the bar with focus on its button; its label and held look following the main button; focus handed to the main button when it hides
+- **`add-flow.spec.mjs`** runs on channel 1's Fat Albert (`product@sizes`, several sizes and a required Colour), and on the `product` pin for its one-size case. The add and the cart's read are answered by the cart route fixtures (`fixtures/cart/routes.mjs`, which tickets 42, 43 and 44 share: `answerCartAdds`, `answerCartRead`, `cartLines`), fulfilled or aborted and never passed on, so no cart is made. `answerCartRead` answers only GET; any other method on the Cart API falls back, so the network guard fails a write a test hasn't answered. It checks:
   - "Choose a size" and focus
   - "Add 3 to cart"
   - an add with no modal, announced once, with focus kept and the header's count
-  - a sold-out size
-  - a dropped add and a dropped option change
-  - the sticky bar, `--sticky-h` and tabbing at 375
+  - a size stock can't sell: stock's own sold-out pass, on its option answer fulfilled with the size out of stock, holds the button, and its click says why, announced
+  - a size with no Colour left to the browser's check (5663), then one add with both
+  - a dropped add and a dropped option change, each announced
+  - the sticky bar, `--sticky-h` and tabbing at 375, and a dropped add from the bar said in it
   - axe on the product view with the confirmation showing (the bar at rest is `qa:prepush`'s axe on `product@sizes`)
 
   It runs only when named. The bar's looks are the `sticky-bar` and `sticky-bar-added` states.

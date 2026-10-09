@@ -11,13 +11,18 @@
 // - Size chosen and plus twice: "Add 3 to cart".
 // - An add: no modal; the line "Added 3 × size N. 15 flies in your cart." with View cart; the live
 //   region changes once; focus stays on the button; the header's count shows 15.
-// - A sold-out size chosen: no add, and "Size N is sold out. Choose another size." said.
+// - A size stock can't sell (stock's own sold-out pass, on its answer fulfilled with the size out
+//   of stock): the button held, no add, and "Size N is sold out. Choose another size." shown and
+//   announced.
+// - A size with no Colour (SCOPE-3's 5663 case): left to the browser's check, nothing said, no
+//   add; with the Colour too, one add.
 // - An add the network drops: the button usable again, the error shown and announced.
-// - An option change the network drops: the pills still usable, the error announced.
+// - An option change the network drops: the pills still usable, the error shown and announced.
 // - At 375 the sticky bar after scrolling past the button, --sticky-h its height (0 hidden); an
 //   add from it confirms in the bar with focus kept there, and the bar rests again after about 4
-//   seconds; tabbing never leaves focus under it. Its two looks are product@sizes's sticky-bar
-//   and sticky-bar-added states (states.mjs).
+//   seconds; tabbing never leaves focus under it. An add from it the network drops says why in
+//   the bar, with focus on its button. Its two looks are product@sizes's sticky-bar and
+//   sticky-bar-added states (states.mjs).
 // - axe on the product view with the confirmation showing.
 //
 // It runs only when named:
@@ -38,6 +43,7 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-prac
 const SIZE_GROUP = '[data-rf-pills="size"]';
 const FAT_ALBERT = '/fat-albert/';
 const FAT_ALBERT_ID = 5663;
+// The product pin (storefrontPage's default path for 'product' when given none): 6178, one size.
 const PIN = null;
 // Fat Albert's Colour: stock swatches, required, none chosen.
 const COLOUR = '[data-product-attribute="swatch"] .form-option';
@@ -50,6 +56,7 @@ async function answerAdds(page, { fail = false, units = 15 } = {}) {
     return adds;
 }
 
+// Fat Albert unless given the pin (PIN).
 async function open(page, pagePath = FAT_ALBERT) {
     await storefrontPage(page, 'product', pagePath ?? undefined);
     await dismissCookieBanner(page);
@@ -123,7 +130,8 @@ test.describe('the add flow (ticket 38)', () => {
         const button = page.locator('#form-action-addToCart');
         await button.focus();
         await page.keyboard.press('Enter');
-        const status = page.locator('[data-rf-add-status]');
+        // The text box: the line's icons sit before it.
+        const status = page.locator('[data-rf-add-status-text]');
         await expect(status).toHaveText(new RegExp(`^Added 3 × size ${size}, .+\\. 15 flies in your cart\\. View cart$`));
         await expect(status.getByRole('link', { name: 'View cart' })).toHaveAttribute('href', /cart\.php/);
         await expect(page.locator('#previewModal')).not.toHaveClass(/open/);
@@ -167,9 +175,28 @@ test.describe('the add flow (ticket 38)', () => {
         // and the click forced past its enabled check, as a shopper's tap would go.
         await expect(button).toHaveAttribute('aria-disabled', 'true');
         await expect(button).toHaveJSProperty('disabled', false);
+        await regionChanges(page);
         await button.click({ force: true });
-        await expect(page.locator('[data-rf-add-status]')).toHaveText(`Size ${size} is sold out. Choose another size.`);
+        const message = `Size ${size} is sold out. Choose another size.`;
+        await expect(page.locator('[data-rf-add-status]')).toHaveText(message);
+        await expect.poll(() => page.evaluate(() => window.rfRegionTexts)).toContain(message);
         expect(adds).toEqual([]);
+    });
+
+    test('adds only once the Colour is chosen too: a size alone is left to the browser\'s check, never called sold out (SCOPE-3, 5663)', async ({ page }) => {
+        const adds = await answerAdds(page);
+        await open(page);
+        await chooseAndSettle(page, page.locator(`${SIZE_GROUP} .rf-pill[data-product-attribute-value]:not(.unavailable)`).first());
+        const button = page.locator('#form-action-addToCart');
+        await button.click({ force: true });
+        // The browser's own check stops the submit on the empty Colour: nothing is sent, and the
+        // flow, which would speak on the click itself, says nothing.
+        await expect(page.locator('[data-rf-add-status]')).toBeHidden();
+        expect(adds).toEqual([]);
+        await chooseAndSettle(page, page.locator(COLOUR).first());
+        await button.click();
+        await expect(page.locator('[data-rf-add-status]')).toContainText('Added');
+        expect(adds).toHaveLength(1);
     });
 
     test('with the add dropped: the button usable again, the error shown and announced (story 68)', async ({ page }) => {
@@ -188,9 +215,11 @@ test.describe('the add flow (ticket 38)', () => {
         await answerAdds(page);
         await open(page);
         await page.route('**/remote/v1/product-attributes/**', route => route.abort('failed'));
+        await regionChanges(page);
         const pills = page.locator(`${SIZE_GROUP} .rf-pill[data-product-attribute-value]:not(.unavailable)`);
         await pills.first().click();
         await expect(page.locator('[data-rf-add-status]')).toHaveText('We couldn\'t check that choice. Try again.');
+        await expect.poll(() => page.evaluate(() => window.rfRegionTexts)).toContain('We couldn\'t check that choice. Try again.');
         await pills.nth(1).click();
         await expect(page.locator(`${SIZE_GROUP} input:checked`)).toHaveCount(1);
     });
@@ -227,6 +256,21 @@ test.describe('the add flow (ticket 38)', () => {
             if (focus && focus.bar && focus.bottom > barTop + 1) under.push(focus.label);
         }
         expect(under, 'focused elements under the bar').toEqual([]);
+    });
+
+    test('on phones: an add from the bar that the network drops says why in the bar, focus on its button (story 68)', async ({ page }, testInfo) => {
+        test.skip(!phone(testInfo), 'the bar is the phone layout');
+        await answerAdds(page, { fail: true });
+        await open(page);
+        await choose(page);
+        await page.evaluate(() => window.scrollTo(0, document.querySelector('#form-action-addToCart').getBoundingClientRect().bottom + window.scrollY + 200));
+        const bar = page.locator('[data-rf-sticky-add]');
+        await expect(bar).toBeVisible();
+        await bar.locator('[data-rf-sticky-button]').click();
+        await expect(bar.locator('[data-rf-sticky-text]')).toHaveText('That didn\'t go in your cart. Try again.');
+        await expect(bar.locator('[data-rf-sticky-button]')).toBeFocused();
+        await expect(bar.locator('[data-rf-sticky-button]')).toBeEnabled();
+        await expect(bar.locator('[data-rf-sticky-text]')).toHaveText(/^Size .+, 1 fly$/, { timeout: 6000 });
     });
 
     test('has no serious or critical axe issues with the confirmation showing', async ({ page }) => {

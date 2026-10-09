@@ -60,6 +60,9 @@ describe('the buy row (components/reelflies/add-to-cart.html)', () => {
         assert.equal(words['data-rf-size'], 'size {size}');
         assert.equal(words['data-rf-size-and'], 'Size {size}, {flies}');
         assert.equal(words['data-rf-add-label'], 'Add # to cart');
+        assert.equal(words['data-rf-sold-out-all'], 'Every size is sold out.');
+        assert.equal(words['data-rf-sold-out-choice'], 'That choice is sold out.');
+        assert.equal(words['data-rf-stock-label'], 'Add to Cart');
     });
 
     it('finds the size option by the Fly size facet\'s name (size-facet-name.html), in any case, not by "Size" in a name', async () => {
@@ -99,6 +102,13 @@ describe('the buy row (components/reelflies/add-to-cart.html)', () => {
         assert.equal(wrapper.attrs['data-rf-add-label'], 'Add # to cart');
         assert.equal(wrapper.attrs['data-rf-choose-first'], 'Choose a fly size first.');
         assert.doesNotMatch(html, /product-status-message/);
+    });
+
+    it('gives the status line the reference\'s alert and check icons, then the text box add-flow.js writes', async () => {
+        const html = await row([SIZES]);
+        const status = html.slice(html.indexOf('<p class="rf-add-status"'), html.indexOf('</p>', html.indexOf('<p class="rf-add-status"')) + 4);
+        // The icon partial ends with a newline: whitespace a flex box doesn't draw.
+        assert.match(status, /^<p [^>]*><svg class="rf-icon rf-add-status-alert"[^>]*><use href="#rf-icon-alert"><\/use><\/svg>\s*<svg class="rf-icon rf-add-status-check"[^>]*><use href="#rf-icon-check"><\/use><\/svg>\s*<span data-rf-add-status-text><\/span><\/p>$/);
     });
 });
 

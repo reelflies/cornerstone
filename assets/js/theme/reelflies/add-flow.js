@@ -8,9 +8,11 @@
 //   "Add 3 to cart", following the stepper (add-words.js). The sticky phone bar says the same.
 // - Before the add (capture listeners, so no hook): with no size chosen, "Choose a fly size
 //   first." in the status line and the live region, and focus on the first in-stock pill; with a
-//   sold-out size chosen, "Size 14 is sold out. Choose another size.", and no cart request either
-//   way. It checks on the button's click, which comes before the browser's own check of the
-//   required options (that check would stop the submit unseen), and again on submit.
+//   sold-out size chosen, "Size 14 is sold out. Choose another size."; with every size sold out,
+//   "Every size is sold out."; with another choice stock can't sell, "That choice is sold out.";
+//   and no cart request in any of them. It checks on the button's click, which comes before the
+//   browser's own check of the required options (that check would stop the submit unseen), and
+//   again on submit. A required option left empty is left to the browser's check.
 // - The confirmation names every chosen option: the size, then the rest in the page's order, a
 //   swatch by its title, a select by its option's text.
 // - addFinished, which stock's add callback calls first (its hook in product-details.js): the
@@ -18,16 +20,21 @@
 //   cart's) shown in the status line and the live region; a success confirmed in place, "Added
 //   3 × size 14. 15 flies in your cart." with View cart, and no modal. The count reads the cart
 //   (the Storefront Cart API) by cart-count.js's brand rule, and the header's count hears the
-//   stock cart-quantity-update event. Quick view keeps stock's modal (ticket 43 replaces it).
+//   stock cart-quantity-update event, from stock's own cart summary when that read fails or is
+//   late. Then rf:cart-changed { source: 'product', productId } goes out on document (build
+//   pipeline 6.9; cart-events.js). Quick view keeps stock's modal (ticket 43 replaces it).
 // - The sticky bar (sticky-add.html) below 801px, once the main button has scrolled out of view:
-//   the choice and the same button. Adding from it confirms in the bar for about 4 seconds, with
-//   focus kept in the bar. While it shows, --sticky-h on the root is its height, which ticket 52's
-//   card sits above and the page's scroll padding matches.
+//   the choice and the same button, which follows the main one's label and its held look. Adding
+//   from it confirms in the bar for about 4 seconds, with focus kept in the bar; a tap the flow
+//   stops, or an add that fails, says why in the bar for as long, with focus on its button. While
+//   it shows, --sticky-h on the root is its height, which ticket 52's card sits above and the
+//   page's scroll padding matches.
 //
 // Every message goes to ticket 25's live region after the visible line renders; the line has no
 // role, and focus stays on the button that was used.
 
 import $ from 'jquery';
+import utils from '@bigcommerce/stencil-utils';
 import { announce } from './live-region';
 import { buttonLabel, confirmation, stickyText } from './add-words';
 import { countCart, flyBrandList } from './cart-count';
@@ -54,6 +61,8 @@ export function wordsOf(element) {
         chooseFirst: read('choose-first'),
         soldOut: read('sold-out'),
         soldOutOnly: read('sold-out-only'),
+        soldOutAll: read('sold-out-all'),
+        soldOutChoice: read('sold-out-choice'),
         added: read('added'),
         size: read('size'),
         cartFly: read('cart-fly'),
@@ -97,27 +106,36 @@ export function choiceOf(form) {
             return select && select.value ? select.options[select.selectedIndex].text.trim() : '';
         })
         .filter(Boolean);
+    // A required option with nothing chosen: the browser's own check says so.
+    const missing = Array.from(form.querySelectorAll(OPTION_FIELDS)).some(field => field.querySelector('[required]')
+        && !Array.from(field.querySelectorAll('input, select, textarea')).some(input => ((input.type === 'radio' || input.type === 'checkbox') ? input.checked : input.value)));
     const qty = Math.max(1, parseInt((form.querySelector('[name="qty[]"]') || {}).value, 10) || 1);
+    const inStock = radios.filter(radio => radio.getAttribute('aria-disabled') !== 'true');
     return {
         needsSize: radios.length > 1,
         sizes: radios.length,
         chosen: checked ? valueOf(checked) : '',
         soldOut: Boolean(checked && checked.getAttribute('aria-disabled') === 'true'),
-        firstInStock: radios.find(radio => radio.getAttribute('aria-disabled') !== 'true') || radios[0] || null,
+        allSoldOut: radios.length > 0 && inStock.length === 0,
+        firstInStock: inStock[0] || radios[0] || null,
+        missing,
         others,
         qty,
     };
 }
 
+// The status line: the message (and View cart) in its text box, after the template's alert or
+// check icon, which the error class picks.
 function showStatus(root, text, { error = false, link = null } = {}) {
     const status = root.querySelector('[data-rf-add-status]');
     if (!status) return;
-    status.textContent = text;
+    const box = status.querySelector('[data-rf-add-status-text]') || status;
+    box.textContent = text;
     if (link) {
         const anchor = status.ownerDocument.createElement('a');
         anchor.href = link.href;
         anchor.textContent = link.text;
-        status.append(' ', anchor);
+        box.append(' ', anchor);
     }
     status.classList.toggle('rf-add-status--error', error);
     status.hidden = false;
@@ -148,14 +166,17 @@ export async function readCartCount(flyBrands, doFetch = window.fetch) {
     return countCart(items, flyBrandList(flyBrands));
 }
 
-// deps: jquery (stock's cart-quantity-update goes through it, as rise.js's), notify and doFetch,
-// for tests.
+// deps: jquery (stock's cart-quantity-update goes through it, as rise.js's), notify, doFetch and
+// readQuantity (stock's cart summary, as cart-preview.js reads it; null when it fails), for tests.
 export function createAddFlow(root, context = {}, {
     doc = document,
     jquery = $,
     currencySelector = stockCurrencySelector,
     notify = units => jquery(doc.body).trigger('cart-quantity-update', units),
     doFetch = (...args) => window.fetch(...args),
+    readQuantity = () => new Promise(resolve => {
+        utils.api.cart.getCartQuantity({}, (err, quantity) => resolve(err ? null : quantity));
+    }),
 } = {}) {
     const form = root.closest('form') || root.querySelector('form');
     const words = wordsOf(root);
@@ -169,6 +190,18 @@ export function createAddFlow(root, context = {}, {
     // in flight, and the confirmation names what was added.
     let sent = null;
 
+    // The bar's button follows the main one: its label (stock's "Adding to cart…" while an add is
+    // in flight, "Pre-Order Now"), and its held look while stock holds or disables it for any
+    // other reason than the bar's own add in flight.
+    const mirror = () => {
+        const barButton = sticky && sticky.querySelector('[data-rf-sticky-button]');
+        if (!barButton || !button) return;
+        if (barButton.textContent !== button.value) barButton.textContent = button.value;
+        const held = button.getAttribute('aria-disabled') === 'true' || (button.disabled && !barButton.disabled);
+        if (held) barButton.setAttribute('aria-disabled', 'true');
+        else barButton.removeAttribute('aria-disabled');
+    };
+
     const sync = () => {
         const choice = choiceOf(form);
         const label = buttonLabel(choice, words);
@@ -176,33 +209,34 @@ export function createAddFlow(root, context = {}, {
         if (button && !root.hasAttribute('data-rf-pre-order') && button.value !== label && !button.disabled) button.value = label;
         if (sticky) {
             const text = sticky.querySelector('[data-rf-sticky-text]');
-            const stickyButton = sticky.querySelector('[data-rf-sticky-button]');
-            if (text && !sticky.hasAttribute('data-rf-added')) text.textContent = stickyText(choice, words);
-            if (stickyButton) stickyButton.textContent = label;
+            if (text && !sticky.hasAttribute('data-rf-bar')) text.textContent = stickyText(choice, words);
         }
+        mirror();
     };
 
-    // Nothing is added without a size, or with a sold-out one: says why, and with no size puts
-    // focus on the first size it can sell. Returns whether it stopped the add.
+    // Nothing is added without a size, or with a sold-out choice: says why, and with no size puts
+    // focus on the first size it can sell. Returns the message when it stopped the add.
     const stopped = () => {
         const choice = choiceOf(form);
         // Stock holds the button (aria-disabled, add-bridge.js's holdAddButton) when the choice
         // can't be sold: the chosen size is out in the chosen colour, or the product can't be
-        // bought as chosen.
-        const held = Boolean(button && button.getAttribute('aria-disabled') === 'true');
+        // bought as chosen. With a required option still empty, the browser's check says that
+        // instead: stock may hold the button only because the choice isn't whole.
+        const held = Boolean(button && button.getAttribute('aria-disabled') === 'true') && !choice.missing;
         let message = '';
-        if (choice.needsSize && !choice.chosen) message = words.chooseFirst;
-        // A product with one size has no other to choose.
+        // Every size sold out: no other size to choose (a product with one size names it).
+        if (choice.allSoldOut && choice.sizes > 1) message = words.soldOutAll || words.soldOut.replace('{size}', choice.chosen);
+        else if (choice.needsSize && !choice.chosen) message = words.chooseFirst;
         else if (choice.soldOut || (held && choice.chosen)) message = (choice.sizes === 1 && words.soldOutOnly ? words.soldOutOnly : words.soldOut).replace('{size}', choice.chosen);
-        else if (held) message = words.error;
-        if (!message) return false;
+        else if (held) message = words.soldOutChoice || words.error;
+        if (!message) return '';
         showStatus(root, message, { error: true });
         announce(message, doc);
-        if (choice.needsSize && !choice.chosen && choice.firstInStock) {
+        if (message === words.chooseFirst && choice.firstInStock) {
             if (choice.firstInStock.scrollIntoView) choice.firstInStock.scrollIntoView({ block: 'center' });
             choice.firstInStock.focus({ preventScroll: true });
         }
-        return true;
+        return message;
     };
     const stop = event => {
         event.preventDefault();
@@ -221,24 +255,28 @@ export function createAddFlow(root, context = {}, {
         else if (!sent) sent = choiceOf(form);
     };
 
-    const showBarAdded = text => {
+    // The bar's own message for about 4 seconds, as data-rf-bar: "added" after an add from it,
+    // "Added 3 × size 14" with View cart, focus on View cart; "error" after a tap the flow stopped
+    // or an add from it that failed, the reason, with focus on the bar's button, so it never
+    // drops to the page with the message above the screen. Then the bar rests again.
+    const showBar = (text, look) => {
         if (!sticky) return;
         const textBox = sticky.querySelector('[data-rf-sticky-text]');
         const stickyButton = sticky.querySelector('[data-rf-sticky-button]');
         const view = sticky.querySelector('[data-rf-sticky-view]');
-        sticky.setAttribute('data-rf-added', '');
+        const added = look === 'added';
+        sticky.setAttribute('data-rf-bar', look);
         if (textBox) textBox.textContent = text;
-        if (view) {
-            view.hidden = false;
-            view.focus({ preventScroll: true });
-        }
-        if (stickyButton) stickyButton.hidden = true;
-        placeSticky(); // the added look's own height, in --sticky-h
+        if (view) view.hidden = !added;
+        if (stickyButton) stickyButton.hidden = added;
+        const target = added ? view : stickyButton;
+        if (target) target.focus({ preventScroll: true });
+        placeSticky(); // the message's own height, in --sticky-h
         clearTimeout(barTimer);
         // data-rf-bar-ms holds the look longer for the screenshot state (states.mjs).
         barTimer = setTimeout(() => {
             const hadFocus = view && doc.activeElement === view;
-            sticky.removeAttribute('data-rf-added');
+            sticky.removeAttribute('data-rf-bar');
             if (view) view.hidden = true;
             if (stickyButton) stickyButton.hidden = false;
             // At rest the bar shows only while the main button is above the screen; placeSticky
@@ -252,6 +290,18 @@ export function createAddFlow(root, context = {}, {
     // Stock's add callback calls this first (through add-bridge.js). `form` is the form that
     // added: the page's, or Quick view's, whose own status line takes its failure. On success it
     // does what stock's callback did before its modal: currencySelector with the cart's id.
+    // A read's answer within COUNT_MS, or null when it fails or is later.
+    const within = async read => {
+        let timer = null;
+        try {
+            return await Promise.race([read, new Promise(resolve => { timer = doc.defaultView.setTimeout(() => resolve(null), COUNT_MS); })]);
+        } catch (error) {
+            return null;
+        } finally {
+            doc.defaultView.clearTimeout(timer);
+        }
+    };
+
     const finished = async (err, response, {
         label, overlay, quickView = false, form: from = form,
     } = {}) => {
@@ -275,6 +325,7 @@ export function createAddFlow(root, context = {}, {
         if (!answer.ok) {
             const message = answer.message || words.error;
             showStatus(from.querySelector(ADD) || root, message, { error: true });
+            if (wasSticky) showBar(message, 'error');
             announce(message, doc);
             sync();
             return true;
@@ -286,26 +337,18 @@ export function createAddFlow(root, context = {}, {
         // The line shows at once; the cart's count joins it when the Cart API answers, within
         // COUNT_MS, and only then is the whole line said, once.
         showStatus(root, confirmation({ qty: choice.qty, choice: choiceText, count: null }, words), { link });
-        if (wasSticky) showBarAdded(words.added.replace('{qty}', choice.qty).replace('{choice}', choiceText).replace(/\.$/, ''));
-        let count = null;
-        let timer = null;
-        try {
-            count = await Promise.race([
-                readCartCount(context.rfFlyBrands, doFetch),
-                new Promise(resolve => { timer = doc.defaultView.setTimeout(() => resolve(null), COUNT_MS); }),
-            ]);
-        } catch (error) {
-            count = null;
-        }
-        doc.defaultView.clearTimeout(timer);
-        if (count) notify(count.units);
-        // Build pipeline 6.9's event, after stock's: the rise ring and tickets 42, 43, 44 and 52.
-        const productId = Number((form.querySelector('[name="product_id"]') || {}).value) || null;
-        doc.dispatchEvent(new doc.defaultView.CustomEvent(CHANGED_EVENT, { detail: { source: 'add', productId } }));
+        if (wasSticky) showBar(words.added.replace('{qty}', choice.qty).replace('{choice}', choiceText).replace(/\.$/, ''), 'added');
+        const count = await within(readCartCount(context.rfFlyBrands, doFetch));
         const message = confirmation({ qty: choice.qty, choice: choiceText, count }, words);
         if (count) showStatus(root, message, { link });
         announce(message, doc);
         sync();
+        // The header's count, by stock's event: from the cart's read, or, when that failed or was
+        // late, from stock's cart summary. Then build pipeline 6.9's event, after stock's.
+        const units = count ? count.units : await within(readQuantity());
+        if (typeof units === 'number') notify(units);
+        const productId = Number((form.querySelector('[name="product_id"]') || {}).value) || null;
+        doc.dispatchEvent(new doc.defaultView.CustomEvent(CHANGED_EVENT, { detail: { source: 'product', productId } }));
         return true;
     };
 
@@ -323,7 +366,7 @@ export function createAddFlow(root, context = {}, {
         placeSticky = () => {
             queued = false;
             const past = button.getBoundingClientRect().bottom < 0;
-            const shown = phone.matches && (past || sticky.hasAttribute('data-rf-added'));
+            const shown = phone.matches && (past || sticky.hasAttribute('data-rf-bar'));
             // Focus never goes down with the bar: it moves to the main button.
             if (!shown && sticky.contains(doc.activeElement)) button.focus({ preventScroll: true });
             sticky.hidden = !shown;
@@ -340,6 +383,11 @@ export function createAddFlow(root, context = {}, {
         placeSticky();
     };
 
+    // Stock changes the main button's label, disabled state and hold outside the flow (its add,
+    // its sold-out pass, its quantity limit): the bar follows each change.
+    if (sticky && button && doc.defaultView.MutationObserver) {
+        new doc.defaultView.MutationObserver(mirror).observe(button, { attributes: true, attributeFilter: ['value', 'disabled', 'aria-disabled'] });
+    }
     form.addEventListener('change', sync);
     form.addEventListener('click', onClick, true);
     form.addEventListener('click', () => setTimeout(sync, 0));
@@ -347,11 +395,23 @@ export function createAddFlow(root, context = {}, {
     watchSticky();
 
     if (sticky) {
-        sticky.querySelector('[data-rf-sticky-button]')?.addEventListener('click', () => {
-            // A second tap while an add is in flight (stock disables the main button) adds nothing.
-            if (button && button.disabled) return;
-            // requestSubmit checks the required options first, so the bar says why first.
-            if (stopped()) return;
+        const barButton = sticky.querySelector('[data-rf-sticky-button]');
+        barButton?.addEventListener('click', () => {
+            // The main button disabled: an add in flight (stock disables it, and the bar's button
+            // with it, so a second tap adds nothing), or stock's quantity limit, whose alert above
+            // the screen is said in the bar too.
+            if (button && button.disabled) {
+                const limit = form.querySelector('.productAttributes-message[data-qty-limit] .alertBox-message');
+                if (limit && limit.textContent.trim()) showBar(limit.textContent.trim(), 'error');
+                return;
+            }
+            // requestSubmit checks the required options first, so the bar says why first: in the
+            // bar too, unless focus went to a size to choose.
+            const said = stopped();
+            if (said) {
+                if (!form.contains(doc.activeElement)) showBar(said, 'error');
+                return;
+            }
             fromSticky = true;
             sent = choiceOf(form);
             if (typeof form.requestSubmit === 'function') form.requestSubmit(button || undefined);
@@ -359,7 +419,6 @@ export function createAddFlow(root, context = {}, {
             // Stock disables the main button as soon as an add starts: the bar's waits with it. If
             // nothing started (the browser's own check of a required option stopped it), the next
             // add isn't the bar's.
-            const barButton = sticky.querySelector('[data-rf-sticky-button]');
             if (button && button.disabled) barButton.disabled = true;
             else {
                 fromSticky = false;

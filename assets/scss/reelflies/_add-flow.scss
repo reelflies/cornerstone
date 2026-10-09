@@ -6,18 +6,22 @@
 // (sticky-add.html), from the reference's .buy-row, .status and #stickyBuy rules and ticket 26's
 // spike (_add-flow.scss on spike/26-skin).
 //
-// - The stepper and the button on one row: the stepper's − and + 44px targets, the button the buy
-//   colour, a 48px pill filling the rest. Stock sets the wrapper's display under
-//   .productView-options .form, so these rules go through the same selector. The wallet buttons
-//   take a row of their own.
-// - The status line under the row: ink, or the error colour for an error, with View cart a link.
+// - The stepper and the button on one row, both 52px tall as the reference's: the stepper's − and
+//   + 44px targets, the button the buy colour, a pill filling the rest, its label 17px semibold.
+//   Stock sets the wrapper's display under .productView-options .form, so these rules go through
+//   the same selector. The wallet buttons take a row of their own.
+// - The status line under the row, the reference's .status: a soft box with the check icon, or
+//   the error tint and the alert icon for an error, with View cart a link.
 // - The sticky bar below 801px: fixed to the bottom, the choice and the same button, or after an
-//   add from it, "Added 3 × size 14" with View cart. While it shows, add-flow.js sets --sticky-h,
-//   and the page pads its scroll by it, so a focused element never sits behind it.
+//   add from it, "Added 3 × size 14" with View cart, or the reason a tap or an add failed, in the
+//   error colour. While it shows, add-flow.js sets --sticky-h, and the page pads its scroll by
+//   it, so a focused element never sits behind it.
 //
 // -----------------------------------------------------------------------------
 
 $rf-add-phone: "not all and (min-width: #{$screen-medium})";
+$rf-add-height: 52px; // the reference's .buy-row: the stepper and the button
+$rf-add-error-tint: #fdecea; // the reference's .status.err; the error colour on it is 5.75:1
 
 .productView-options .form .rf-add {
     align-items: center;
@@ -54,7 +58,10 @@ $rf-add-phone: "not all and (min-width: #{$screen-medium})";
     align-items: center;
     border: 1px solid var(--rf-edge);
     border-radius: var(--rf-radius-pill);
+    box-sizing: border-box;
     display: inline-flex;
+    height: $rf-add-height;
+    padding: 0 3px;
 
     .form-input--incrementTotal {
         background: transparent;
@@ -97,8 +104,10 @@ $rf-add-phone: "not all and (min-width: #{$screen-medium})";
     border-color: var(--rf-buy);
     border-radius: var(--rf-radius-pill);
     color: var(--rf-buy-ink);
+    font-size: 17px;
+    font-weight: 600;
     margin: 0;
-    min-height: var(--rf-target-row);
+    min-height: $rf-add-height;
     width: 100%;
 
     &:hover,
@@ -120,12 +129,43 @@ $rf-add-phone: "not all and (min-width: #{$screen-medium})";
 }
 
 .rf-add-status {
+    align-items: flex-start;
+    background: var(--rf-tile);
+    border-radius: 12px;
     color: var(--rf-ink);
+    display: flex;
     font-size: 15px;
+    gap: 10px;
+    line-height: 22px;
     margin: 0;
+    padding: 12px 14px;
+
+    &[hidden] {
+        display: none;
+    }
+
+    .rf-icon {
+        color: var(--rf-success);
+        flex: none;
+        margin-top: 1px;
+    }
+
+    .rf-add-status-alert,
+    &.rf-add-status--error .rf-add-status-check {
+        display: none;
+    }
 
     &.rf-add-status--error {
+        background: $rf-add-error-tint;
         color: var(--rf-error);
+
+        .rf-icon {
+            color: var(--rf-error);
+        }
+
+        .rf-add-status-alert {
+            display: block;
+        }
     }
 
     a {
@@ -174,12 +214,26 @@ $rf-add-phone: "not all and (min-width: #{$screen-medium})";
     background: var(--rf-buy);
     border-color: var(--rf-buy);
     color: var(--rf-buy-ink);
+    font-weight: 600;
+
+    // The main button's held look, which add-flow.js mirrors.
+    &[aria-disabled="true"],
+    &:disabled {
+        background: var(--rf-tile-2);
+        border-color: var(--rf-tile-2);
+        color: var(--rf-dun);
+        cursor: not-allowed;
+    }
 }
 
 .rf-sticky-add-text {
     font-variant-numeric: tabular-nums;
     font-weight: 600;
     margin: 0;
+
+    .rf-sticky-add[data-rf-bar="error"] & {
+        color: var(--rf-error);
+    }
 }
 
 // While the bar shows, the page's end can scroll above it (the body's padding) and a focused

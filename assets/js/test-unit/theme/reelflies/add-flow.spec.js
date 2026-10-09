@@ -19,6 +19,8 @@ const WORDS = {
     'view-cart': 'View cart',
     error: 'That didn\'t go in your cart. Try again.',
     'sold-out-only': 'Size {size} is sold out.',
+    'sold-out-all': 'Every size is sold out.',
+    'sold-out-choice': 'That choice is sold out.',
     'option-error': 'We couldn\'t check that choice. Try again.',
     'no-size': 'No size chosen',
     'size-and': 'Size {size}, {flies}',
@@ -59,6 +61,7 @@ let bridge;
 let stockSubmit;
 let notify;
 let doFetch;
+let readQuantity;
 
 // Fake timers and a stub matchMedia, which some cases set, never outlive their case.
 afterEach(() => {
@@ -77,10 +80,11 @@ beforeEach(async () => {
     document.querySelector('form').addEventListener('submit', stockSubmit);
     notify = jest.fn();
     doFetch = jest.fn(async () => ({ ok: true, json: async () => CART(15) }));
+    readQuantity = jest.fn(async () => 16);
 });
 
 const load = () => {
-    addFlow.load({ rfFlyBrands: 'ReelFlies', urls: { cart: '/cart.php' } }, document, { notify, doFetch });
+    addFlow.load({ rfFlyBrands: 'ReelFlies', urls: { cart: '/cart.php' } }, document, { notify, doFetch, readQuantity });
 };
 const submit = () => document.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
@@ -163,7 +167,7 @@ describe('the add\'s answer (stories 34, 42 and 68)', () => {
         }
     });
 
-    it('leaves Quick view\'s success to stock\'s modal, and with no flow loaded leaves everything to stock', () => {
+    it('leaves a success to stock\'s modal in Quick view, and on a page with no flow loaded', () => {
         document.body.insertAdjacentHTML('beforeend', '<div class="quickView"><form id="qv"><div data-rf-add><input id="form-action-addToCart"><p data-rf-add-status hidden></p></div></form></div>');
         load();
         expect(bridge.addFinished(null, { data: { cart_item: {} } }, { form: document.getElementById('qv') })).toBe(false);
@@ -216,7 +220,9 @@ describe('the status line and the label', () => {
 
 describe('after an add, the rest of the page is told', () => {
     it('sends rf:cart-changed on document after stock\'s count update, with the source and the product (build pipeline 6.9)', async () => {
-        const changed = jest.fn();
+        const order = [];
+        notify.mockImplementation(() => order.push('count'));
+        const changed = jest.fn(() => order.push('changed'));
         document.addEventListener('rf:cart-changed', changed);
         load();
         choose('s1');
@@ -224,8 +230,43 @@ describe('after an add, the rest of the page is told', () => {
         await settle();
         document.removeEventListener('rf:cart-changed', changed);
         expect(notify).toHaveBeenCalledWith(15);
+        expect(order).toEqual(['count', 'changed']);
+        expect(changed.mock.calls[0][0].detail).toEqual({ source: 'product', productId: 4877 });
+        expect(readQuantity).not.toHaveBeenCalled();
+    });
+
+    it('when the cart\'s read fails, says the line without the count, tells the header from stock\'s cart summary, then sends rf:cart-changed', async () => {
+        doFetch.mockImplementation(async () => { throw new Error('offline'); });
+        const order = [];
+        notify.mockImplementation(() => order.push('count'));
+        const changed = jest.fn(() => order.push('changed'));
+        document.addEventListener('rf:cart-changed', changed);
+        load();
+        choose('s1');
+        bridge.addFinished(null, { data: { cart_item: {} } }, { form: document.querySelector('form') });
+        await settle();
+        await settle();
+        document.removeEventListener('rf:cart-changed', changed);
+        expect(announce).toHaveBeenCalledTimes(1);
+        expect(announce.mock.calls[0][0]).not.toMatch(/in your cart/);
+        expect(readQuantity).toHaveBeenCalledTimes(1);
+        expect(notify).toHaveBeenCalledWith(16);
+        expect(order).toEqual(['count', 'changed']);
+    });
+
+    it('when stock\'s cart summary fails too, still sends rf:cart-changed, with the header left as it was', async () => {
+        doFetch.mockImplementation(async () => { throw new Error('offline'); });
+        readQuantity.mockImplementation(async () => null);
+        const changed = jest.fn();
+        document.addEventListener('rf:cart-changed', changed);
+        load();
+        choose('s1');
+        bridge.addFinished(null, { data: { cart_item: {} } }, { form: document.querySelector('form') });
+        await settle();
+        await settle();
+        document.removeEventListener('rf:cart-changed', changed);
+        expect(notify).not.toHaveBeenCalled();
         expect(changed).toHaveBeenCalledTimes(1);
-        expect(changed.mock.calls[0][0].detail).toEqual({ source: 'add', productId: 4877 });
     });
 
     it('names the product, from the buy row, on a product with no options', async () => {
@@ -283,7 +324,7 @@ describe('the sticky bar (story 43)', () => {
         document.querySelector('[data-rf-sticky-button]').click();
         bridge.addFinished(null, { data: { cart_item: {} } }, { form: document.querySelector('form') });
         await settle();
-        expect(document.querySelector('[data-rf-sticky-add]').hasAttribute('data-rf-added')).toBe(false);
+        expect(document.querySelector('[data-rf-sticky-add]').hasAttribute('data-rf-bar')).toBe(false);
         expect(document.activeElement).toBe(button());
     });
 
@@ -344,6 +385,84 @@ describe('the sticky bar (story 43)', () => {
         expect(bar.querySelector('[data-rf-sticky-text]').textContent).toBe('Size 14, 3 flies');
     });
 
+    it('after an add from the bar that fails: the reason in the bar for about 4 seconds, with focus on its button, never dropped to the page', async () => {
+        jest.useFakeTimers();
+        window.matchMedia = () => ({ matches: true, addEventListener() {} });
+        button().getBoundingClientRect = () => ({ bottom: -20 });
+        load();
+        choose('s1');
+        document.querySelector('form').requestSubmit = jest.fn(() => { button().disabled = true; });
+        const barButton = document.querySelector('[data-rf-sticky-button]');
+        barButton.click();
+        // A disabled button loses focus in a browser (jsdom keeps it): the page has it now.
+        barButton.blur();
+        bridge.addFinished(new Error('offline'), undefined, { label: 'Add 1 to cart', form: document.querySelector('form') });
+        await Promise.resolve();
+        const bar = document.querySelector('[data-rf-sticky-add]');
+        expect(bar.getAttribute('data-rf-bar')).toBe('error');
+        expect(bar.querySelector('[data-rf-sticky-text]').textContent).toBe('That didn\'t go in your cart. Try again.');
+        expect(barButton.disabled).toBe(false);
+        expect(barButton.hidden).toBe(false);
+        expect(document.activeElement).toBe(barButton);
+        expect(announce).toHaveBeenCalledWith('That didn\'t go in your cart. Try again.', document);
+        jest.advanceTimersByTime(4000);
+        expect(bar.hasAttribute('data-rf-bar')).toBe(false);
+        expect(bar.querySelector('[data-rf-sticky-text]').textContent).toBe('Size 14, 1 fly');
+    });
+
+    it('says in the bar why a tap from it stopped, focus kept on its button, but leaves focus on the size to choose', () => {
+        document.body.innerHTML = PAGE(['14']);
+        window.matchMedia = () => ({ matches: true, addEventListener() {} });
+        button().getBoundingClientRect = () => ({ bottom: -20 });
+        load();
+        const bar = document.querySelector('[data-rf-sticky-add]');
+        const barButton = bar.querySelector('[data-rf-sticky-button]');
+        document.querySelector('form').requestSubmit = jest.fn();
+        barButton.focus();
+        barButton.click();
+        expect(document.activeElement).toBe(document.getElementById('s0'));
+        expect(bar.hasAttribute('data-rf-bar')).toBe(false);
+        choose('s1');
+        barButton.focus();
+        barButton.click();
+        expect(bar.getAttribute('data-rf-bar')).toBe('error');
+        expect(bar.querySelector('[data-rf-sticky-text]').textContent).toBe('Size 14 is sold out. Choose another size.');
+        expect(document.activeElement).toBe(barButton);
+        expect(document.querySelector('form').requestSubmit).not.toHaveBeenCalled();
+    });
+
+    it('follows the main button: its label while an add is in flight, and its held look', async () => {
+        load();
+        choose('s1');
+        const barButton = document.querySelector('[data-rf-sticky-button]');
+        expect(barButton.textContent).toBe('Add 1 to cart');
+        button().value = 'Adding to cart…';
+        await Promise.resolve();
+        expect(barButton.textContent).toBe('Adding to cart…');
+        button().value = 'Add 1 to cart';
+        bridge.holdAddButton(button(), true);
+        await Promise.resolve();
+        expect(barButton.getAttribute('aria-disabled')).toBe('true');
+        bridge.holdAddButton(button(), false);
+        await Promise.resolve();
+        expect(barButton.hasAttribute('aria-disabled')).toBe(false);
+    });
+
+    it('says stock\'s quantity limit in the bar when the main button is disabled for it, and adds nothing', async () => {
+        load();
+        choose('s1');
+        document.getElementById('add-to-cart-wrapper').insertAdjacentHTML('beforeend', '<div class="productAttributes-message" data-qty-limit="true"><p class="alertBox-message">The maximum purchasable quantity is 2</p></div>');
+        button().disabled = true; // stock's showQtyLimitMessage
+        await Promise.resolve();
+        const bar = document.querySelector('[data-rf-sticky-add]');
+        const barButton = bar.querySelector('[data-rf-sticky-button]');
+        expect(barButton.getAttribute('aria-disabled')).toBe('true');
+        document.querySelector('form').requestSubmit = jest.fn();
+        barButton.click();
+        expect(bar.querySelector('[data-rf-sticky-text]').textContent).toBe('The maximum purchasable quantity is 2');
+        expect(document.querySelector('form').requestSubmit).not.toHaveBeenCalled();
+    });
+
     it('hands focus to the main button when the bar hides with it inside, as after scrolling back up during the added look', async () => {
         jest.useFakeTimers();
         window.matchMedia = () => ({ matches: true, addEventListener() {} });
@@ -372,6 +491,48 @@ describe('the wording of the guards and failures', () => {
         bridge.holdAddButton(button(), true);
         button().dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
         expect(status().textContent).toBe('Size 14 is sold out.');
+    });
+
+    it('says every size is sold out, rather than sending the shopper to a size that can\'t be bought', () => {
+        document.body.innerHTML = PAGE(['12', '14', '16']);
+        document.querySelector('form').addEventListener('submit', stockSubmit);
+        load();
+        button().focus();
+        button().dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(status().textContent).toBe('Every size is sold out.');
+        expect(document.activeElement).toBe(button());
+        choose('s1');
+        button().dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(status().textContent).toBe('Every size is sold out.');
+        expect(stockSubmit).not.toHaveBeenCalled();
+    });
+
+    it('says "That choice is sold out." when stock holds a product with no size', () => {
+        document.body.innerHTML = PAGE([]).replace(/<div data-rf-pills[\s\S]*?<\/div>/, '');
+        load();
+        bridge.holdAddButton(button(), true);
+        const clicked = button().dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(clicked).toBe(false);
+        expect(status().textContent).toBe('That choice is sold out.');
+    });
+
+    it('leaves a required option still empty to the browser\'s check, rather than calling a held size sold out', () => {
+        document.body.innerHTML = PAGE([]).replace('<div data-product-option-change>', '<div data-product-option-change><div class="form-field"><input type="radio" name="attribute[9]" value="1" required></div>');
+        load();
+        choose('s1');
+        bridge.holdAddButton(button(), true);
+        const clicked = button().dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(clicked).toBe(true);
+        expect(status().hidden).toBe(true);
+    });
+
+    it('writes the message into the template\'s text box, after its icons, the error class picking the alert', () => {
+        document.body.innerHTML = PAGE(['12']).replace('<p data-rf-add-status hidden></p>', '<p data-rf-add-status hidden><svg class="rf-add-status-alert"></svg><svg class="rf-add-status-check"></svg><span data-rf-add-status-text></span></p>');
+        load();
+        button().dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(status().querySelectorAll('svg')).toHaveLength(2);
+        expect(status().querySelector('[data-rf-add-status-text]').textContent).toBe('Choose a fly size first.');
+        expect(status().classList.contains('rf-add-status--error')).toBe(true);
     });
 
     it('says a failed option change in the form whose option it was, a Quick view over the page', () => {

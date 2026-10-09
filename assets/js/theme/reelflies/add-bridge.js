@@ -10,7 +10,9 @@
 //   overlay gone, and stock's alert says what the flow would have said.
 // - optionChangeFailed(err, response, scope): true when an option change failed, after the flow
 //   has said so in that scope's form; the pills stay usable, and stock's callback stops before it
-//   reads the answer. With no flow, a failure still stops stock there, silently.
+//   reads the answer. With no flow, a failure still stops stock there, silently, and an answered
+//   choice sets the button to stock's "Add to Cart" (data-rf-stock-label), since nothing else
+//   would take its "Choose a size" away.
 // - holdAddButton(button, held): true when the button is the flow's own (the product page's), whose
 //   "can't be sold" state is aria-disabled rather than disabled, so its click reaches the flow,
 //   which says why ("Size 14 is sold out."). Stock disables any other button as before.
@@ -20,7 +22,8 @@ import { showAlertModal } from '../global/modal';
 const answered = (err, response) => !err && response && typeof response === 'object'
     && response.data && typeof response.data === 'object';
 
-function stockAdd(err, response, { label, overlay, form } = {}) {
+// What the hooks do with no flow loaded.
+function noFlowAdd(err, response, { label, overlay, form } = {}) {
     if (answered(err, response)) return false;
     const button = form && form.querySelector('#form-action-addToCart');
     if (button) {
@@ -33,7 +36,14 @@ function stockAdd(err, response, { label, overlay, form } = {}) {
     return true;
 }
 
-const stockOption = (err, response) => !answered(err, response);
+function noFlowOption(err, response, scope) {
+    if (!answered(err, response)) return true;
+    const row = scope && scope.querySelector && scope.querySelector('[data-rf-add]');
+    const button = row && row.querySelector('#form-action-addToCart');
+    const label = row && row.getAttribute('data-rf-stock-label');
+    if (button && label && !button.disabled && !row.hasAttribute('data-rf-pre-order')) button.value = label;
+    return false;
+}
 
 const handlers = { add: null, option: null, holds: null };
 
@@ -44,11 +54,11 @@ export function setAddHandlers({ add = null, option = null, holds = null } = {})
 }
 
 export function addFinished(err, response, options = {}) {
-    return (handlers.add || stockAdd)(err, response, options);
+    return (handlers.add || noFlowAdd)(err, response, options);
 }
 
 export function optionChangeFailed(err, response, scope = null) {
-    return (handlers.option || stockOption)(err, response, scope);
+    return (handlers.option || noFlowOption)(err, response, scope);
 }
 
 export function holdAddButton(button, held) {

@@ -54,16 +54,21 @@ async function setSizeMarks(page, positions) {
 }
 
 // Stock's answer to a choice also sets the buy row from the live stock: the add button's and the
-// stepper's disabled state, and the variant's message (product-details-base.js). A state that
-// chooses resets them after the answer, so the look, not the day's stock, is shot.
+// stepper's disabled state, the flow's own button held with aria-disabled instead (add-bridge.js's
+// holdAddButton), and the variant's message (product-details-base.js). A state that chooses resets
+// them after the answer, so the look, not the day's stock, is shot, and the bar's add goes ahead.
 async function settleBuyRow(page) {
     await page.evaluate(() => {
         document.querySelectorAll('.productAttributes-message').forEach(box => box.style.setProperty('display', 'none'));
         document.querySelectorAll('#form-action-addToCart, [data-quantity-change] button').forEach(control => control.removeAttribute('disabled'));
+        document.getElementById('form-action-addToCart')?.removeAttribute('aria-disabled');
         const wrapper = document.getElementById('add-to-cart-wrapper');
         if (wrapper) wrapper.style.display = '';
     });
 }
+
+// product@sizes's product, Fat Albert (pages.mjs), whose adds the bar's states answer.
+const FAT_ALBERT_ID = 5663;
 
 export const UI_STATES = {
     'drawer-open': {
@@ -205,8 +210,8 @@ export const UI_STATES = {
         projects: ['phone-375'],
         pages: ['product@sizes'],
         async open(page) {
-            await answerCartAdds(page, { productId: 5663 });
-            await answerCartRead(page, cartLines(5663, 1));
+            await answerCartAdds(page, { productId: FAT_ALBERT_ID });
+            await answerCartRead(page, cartLines(FAT_ALBERT_ID, 1));
             await UI_STATES['sticky-bar'].open(page);
             // The bar keeps its added look for about 4 s; held for the shot.
             await page.locator('[data-rf-sticky-add]').evaluate(bar => bar.setAttribute('data-rf-bar-ms', '600000'));

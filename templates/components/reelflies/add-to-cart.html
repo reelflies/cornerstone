@@ -13,13 +13,14 @@
       "Pre-Order Now" everywhere.
     - Under it, the status line (data-rf-add-status): plain markup with no role, where add-flow.js
       writes "Choose a fly size first.", a sold-out size, an error, or "Added 3 × size 14. 15 flies
-      in your cart." with View cart. Each message also goes to ticket 25's live region. Stock's
-      own status span is gone, so nothing is announced twice.
+      in your cart." with View cart, each after the reference's alert or check icon. Each message
+      also goes to ticket 25's live region. Stock's own status span is gone, so nothing is
+      announced twice.
     - The wrapper carries the product's name (data-rf-product), which the confirmation names on a
-      product with no options, and the flow's words (data-rf-*), each with # or {name} where a
-      value goes.
-      The lang helper fills a {name} it isn't given with "undefined", so each passes its own
-      {name} back as the value, and add-flow.js fills it later.
+      product with no options, stock's "Add to Cart" (data-rf-stock-label), which add-bridge.js
+      uses if the flow never loads, and the flow's words (data-rf-*), each with # or {name} where
+      a value goes. The lang helper fills a {name} it isn't given with "undefined", so each passes
+      its own {name} back as the value, and add-flow.js fills it later.
 
     Port an upstream change to the stock markup here; render/partials/add-flow.test.mjs holds the
     ids and attributes stock reads.
@@ -33,12 +34,15 @@
      class="add-to-cart-wrapper rf-add"
      data-rf-add
      data-rf-product="{{product.title}}"
+     data-rf-stock-label="{{lang 'products.add_to_cart'}}"
      {{#if product.pre_order}}data-rf-pre-order{{/if}}
      data-rf-choose="{{lang 'reelflies.add_flow.choose'}}"
      data-rf-add-label="{{lang 'reelflies.add_flow.add'}}"
      data-rf-choose-first="{{lang 'reelflies.add_flow.choose_first'}}"
      data-rf-sold-out="{{lang 'reelflies.add_flow.sold_out' size='{size}'}}"
      data-rf-sold-out-only="{{lang 'reelflies.add_flow.sold_out_only' size='{size}'}}"
+     data-rf-sold-out-all="{{lang 'reelflies.add_flow.sold_out_all'}}"
+     data-rf-sold-out-choice="{{lang 'reelflies.add_flow.sold_out_choice'}}"
      data-rf-added="{{lang 'reelflies.add_flow.added' qty='{qty}' choice='{choice}'}}"
      data-rf-size="{{lang 'reelflies.add_flow.size' size='{size}'}}"
      data-rf-cart-fly="{{lang 'reelflies.add_flow.cart_fly'}}"
@@ -112,6 +116,6 @@
                 </div>
             {{/if}}
         </div>
-        <p class="rf-add-status" data-rf-add-status hidden></p>
+        <p class="rf-add-status" data-rf-add-status hidden>{{> components/reelflies/icon name='alert' class='rf-add-status-alert'}}{{> components/reelflies/icon name='check' class='rf-add-status-check'}}<span data-rf-add-status-text></span></p>
     {{/or}}
 </div>
