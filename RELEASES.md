@@ -79,6 +79,22 @@ Every theme push to a storefront goes through `scripts/release.sh` ([docs/releas
 - Operator: Shaun Bathgate
 - Confirmation: non-interactive (agent), `--confirm-nonprod 1895766`
 
+### 2026-10-09 19:03 UTC · channel 1895766 (ReelFlies_CA) · ReelFlies CA
+
+- Theme: ReelFlies 6.22.0, uuid `017cec70-a642-013f-6e24-1a758bdc9f24`
+- New uuid: yes; before the push the channel ran theme `4d6c3140-a634-013f-a085-2e177230027f`
+- Commit: `377b23606012c874d14861bea7361ba048ed0362` on `master`
+- Bundle: `reelflies-ca-6.22.0-377b236.zip`, 12,244,445 B, sha256 `d15b78a23fcaecad29c10f5fdd66d8c67f0d32a7fa5563789e987d79e1bd3157`
+- main.js: 249,541 B
+- Step 1: no differences from the live saved settings
+- Changed in repo: none since `97244cf`, the channel's last release
+- rf_* values pushed: `rf_cart_state` = true, `rf_fly_brands` = "ReelFlies", `rf_menu_exclude_ids` = "", `rf_menu_species_root_id` = "", `rf_menu_type_ids` = "", `rf_price_unit_exclude` = "", `rf_quick_add` = true, `rf_region_prompt` = false, `rf_rise` = true, `rf_ship_expedited_from` = "", `rf_ship_free_threshold` = "60", `rf_ship_standard_rate` = "", `rf_store_same_as` = ""
+- New switches: none
+- Verify: the live saved settings match config.json
+- Lighthouse: pending host batch
+- Operator: Shaun Bathgate
+- Confirmation: non-interactive (agent), `--confirm-nonprod 1895766`
+
 ## Switch toggles
 
 Log every module switch (`rf_*`) toggled in a storefront's Theme Styles here, one row per toggle, in this format. From T-14 to T+30, switch toggles and widget unpublishing are the only changes allowed, apart from P1 fixes through `scripts/release.sh` (SCOPE-3).
@@ -96,6 +112,7 @@ Every theme the release tooling deletes from My Themes, one row each, written by
 |---|---|---|---|---|---|---|
 | 2026-10-08 23:03 | deleted (--prune-only) | `58abad50-a3c0-013f-e2b6-2ec98cc9ce73` | ReelFlies 6.22.0 | `5d0d0cb8ca42405d8555de6a84f20843060d7cde` | `367071ace794697e59a36129ba4f958a2d27daf85aa9bf73411d42c6cfc763dc` | Shaun Bathgate (no terminal) |
 | 2026-10-09 17:25 | deleted (prune after a release) | `174ad580-a42a-013f-3c01-06627e5707c7` | ReelFlies (1) 6.22.0 | `a30586f5913f2ae391729c9fe0c05885e8712326` | `5ae0f7917aa83549954f5f1c9a58bfe548820e9c6a4df4dd0bac77757c6ed1f2` | Shaun Bathgate (no terminal) |
+| 2026-10-09 19:03 | deleted (prune after a release) | `9781b9a0-a4ae-013f-3d64-06627e5707c7` | ReelFlies (2) 6.22.0 | `3ee4c18b33c45d75e6f0a69a32d12a1ededf6330` | `269b680f91946a424c498df7aefedb4b5517106a21b7df30a798edff7bd4f116` | Shaun Bathgate (no terminal) |
 
 ## Store writes
 
