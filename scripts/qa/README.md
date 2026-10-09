@@ -765,7 +765,7 @@ Ticket 41's cart (spec module 18) on the fixture page: the real cart page render
 - **The look,** at 375 and 1280: each cart without the fixed phone bar, and the bar on its own at 375 (widget baselines, `widget cart-page`).
 - **Grouping:** one group per pattern, sizes in hook order once sorted; until then a group of several sizes keeps them out of view, and sorting moves no group and not the summary (CLS); a pattern with sizes priced differently shows each size's unit price; the lines add up to the subtotal.
 - **Photos:** each group's 64px photo, linked to the product, at 320, 360, 375, 414 and 1280.
-- **Rows and totals (story 71):** in both carts at 320, 360, 375, 390, 400, 409, 410, 414, 430 and 1280, every row and its controls inside the group, no line total wider than its column, and nothing scrolling sideways.
+- **Rows and totals (story 71):** in both carts at 320, 359, 360, 375, 390, 400, 414, 419, 420, 430 and 1280 (either side of the 360px tightening and the 420px one-line breakpoint), every row and its controls inside the group, no line total wider than its column, and nothing scrolling sideways. The discounted cart has a coupon on every line, a "Size Assorted" tag and a four-figure total. These checks and the photo checks set their own viewport, so they run in the phone project only.
 - **The phone bar:** the total for the flies and Check out; tabbing from the top to the summary's Check out never leaves the focused element under it, and a second test shows that check fails with the page's scroll padding taken away.
 - **axe** in the cart.
 

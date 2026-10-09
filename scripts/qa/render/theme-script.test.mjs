@@ -10,7 +10,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { THEME_DIR } from './render.mjs';
-import { bundleBabelOptions, themeScript } from './theme-script.mjs';
+import { bundleBabelOptions, fixtureBabelOptions, themeScript } from './theme-script.mjs';
 
 const require = createRequire(import.meta.url);
 const babel = require('@babel/core');
@@ -50,14 +50,16 @@ const WHOLE = {
     list: ['a', 'b'], set: ['c', 'd'], map: ['e'], first: 'a', rest: ['b'], loop: ['c', 'd'],
 };
 
-test('the bundle\'s Babel options are loose, and spread, destructure and loop over a NodeList, a Set and a Map whole', () => {
+test('the bundle\'s Babel options, as babel-loader resolves them, are loose with babel.config.js\'s assumption', () => {
     const { assumptions, env } = bundleBabelOptions();
     assert.equal(env.loose, true);
     assert.deepEqual(assumptions, { iterableIsArray: false });
-    const { useBuiltIns, corejs, ...rest } = env; // eslint-disable-line no-unused-vars
-    const { code } = babel.transformSync(SPREADS, {
-        babelrc: false, configFile: false, cwd: THEME_DIR, filename: 'probe.js', assumptions, presets: [['@babel/preset-env', { ...rest, modules: 'commonjs' }]],
-    });
+});
+
+test('a fixture page\'s modules, built with those options, spread, destructure and loop over a NodeList, a Set and a Map whole', () => {
+    const options = fixtureBabelOptions();
+    assert.deepEqual(options.assumptions, bundleBabelOptions().assumptions);
+    const { code } = babel.transformSync(SPREADS, { ...options, filename: 'probe.js' });
     assert.doesNotMatch(code, /\[\]\.concat\(/);
     assert.deepEqual(runCompiled(code), WHOLE);
 });
@@ -71,10 +73,14 @@ test('so does babel.config.js, which the theme\'s own builds read', () => {
 });
 
 test('without the assumption, loose mode spreads a NodeList as one element, the bug this guards', () => {
-    const { env } = bundleBabelOptions();
-    const { useBuiltIns, corejs, ...rest } = env; // eslint-disable-line no-unused-vars
-    const { code } = babel.transformSync(SPREADS, {
-        babelrc: false, configFile: false, cwd: THEME_DIR, filename: 'probe.js', presets: [['@babel/preset-env', { ...rest, modules: 'commonjs' }]],
-    });
+    const { assumptions, ...options } = fixtureBabelOptions();
+    const { code } = babel.transformSync(SPREADS, { ...options, filename: 'probe.js' });
     assert.match(code, /\[\]\.concat\(list\)/);
+});
+
+test('themeScript builds each module with fixtureBabelOptions: a module\'s spread goes through the iterator helper', () => {
+    // open-state.js spreads an array; with loose mode alone that would be [].concat(tokens).
+    const script = themeScript(['reelflies/open-state']);
+    assert.match(script, /_toConsumableArray\(tokens\)/);
+    assert.doesNotMatch(script, /\[\]\.concat\(tokens/);
 });

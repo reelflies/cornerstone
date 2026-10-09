@@ -16,11 +16,10 @@
 //   of view at their full height, so sorting moves nothing. If the script never comes, they show
 //   after 10s, in the store's order.
 // - A size row is one line from $rf-cart-row-one: the size, the stepper, the line total and
-//   Remove. Below that, at every phone width under it, it takes two: the size, then the stepper,
-//   the total and Remove, in the order they are read. A line total never breaks inside a price,
-//   and its column is never narrower than its widest price, a coupon's struck total included.
-//   Below $rf-cart-narrow the steppers' buttons are 40px wide (still 44px tall) and the gaps 8px,
-//   so "$1,258.20" fits beside them at 320.
+//   Remove. Narrower, it takes two: the size, then the stepper, the total and Remove, in the order
+//   they are read. A line total never breaks inside a price, and its column is never narrower
+//   than its widest price, a coupon's struck total included. Below $rf-cart-narrow the steppers'
+//   buttons are 40px wide (still 44px tall) and the gaps 8px, so "$1,258.20" fits at 320.
 // - The summary (stock totals, then cart-summary.html): "Order summary", the totals, Check out,
 //   the promise line, "Have a coupon code?". Below 801px the phone bar (data-rf-cart-bar) is fixed
 //   to the bottom, and the page pads its scroll by the bar's height, so a focused element never
@@ -28,8 +27,8 @@
 //
 // -----------------------------------------------------------------------------
 
-$rf-cart-row-one: 410px; // the narrowest width a size row fits on one line with a four-figure total
-$rf-cart-narrow: 360px; // below it, the row's second line is tighter, so a four-figure total fits at 320
+$rf-cart-row-one: 420px; // a row's one line fits from here, "Size Assorted" or "$1,258.20" included
+$rf-cart-narrow: 360px; // below it the second line is tighter, so a four-figure total fits at 320
 $rf-cart-bar-h: 4.5rem; // the phone bar's height (72px at 16px text); the scroll padding matches it
 
 .page-content[data-cart] {
@@ -201,7 +200,7 @@ $rf-cart-bar-h: 4.5rem; // the phone bar's height (72px at 16px text); the scrol
     margin: 0;
     row-gap: 6px;
 
-    @media (max-width: $rf-cart-narrow - 1px) {
+    @media not all and (min-width: $rf-cart-narrow) {
         column-gap: 8px;
     }
 
@@ -281,7 +280,7 @@ $rf-cart-bar-h: 4.5rem; // the phone bar's height (72px at 16px text); the scrol
     justify-content: center;
     width: var(--rf-target-buy);
 
-    @media (max-width: $rf-cart-narrow - 1px) {
+    @media not all and (min-width: $rf-cart-narrow) {
         width: 40px;
     }
 

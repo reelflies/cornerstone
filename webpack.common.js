@@ -24,9 +24,6 @@ module.exports = {
                 use: {
                     loader: 'babel-loader',
                     options: {
-                        // ReelFlies hook (ticket 41; CUSTOMIZATIONS.md): as babel.config.js, so the
-                        // bundle spreads a NodeList, Set or Map through its iterator, not as [x]
-                        assumptions: { iterableIsArray: false },
                         plugins: [
                             '@babel/plugin-syntax-dynamic-import', // add support for dynamic imports (used in app.js)
                             'lodash', // Tree-shake lodash

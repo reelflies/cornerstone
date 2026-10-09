@@ -51,8 +51,8 @@ export function aimingAt(from, to, pane) {
 export default function startMenu({ doc = document, win = window } = {}) {
     const nav = doc.querySelector(MENU_SELECTOR);
     if (!nav) return null;
-    // Not [...nodeList]: the theme's Babel runs in loose mode, which builds that as
-    // [].concat(nodeList), an array holding the NodeList itself.
+    // Written when loose Babel built [...nodeList] as [].concat(nodeList), before babel.config.js's
+    // iterableIsArray assumption (ticket 41's follow-up); either form works now.
     const toggles = Array.prototype.slice.call(nav.querySelectorAll(TOGGLE_SELECTOR));
     const rail = Array.prototype.slice.call(nav.querySelectorAll(RAIL_SELECTOR));
     const shop = doc.querySelector(SHOP_SELECTOR);

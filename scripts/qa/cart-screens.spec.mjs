@@ -13,9 +13,10 @@
 // - A pattern whose sizes are priced differently shows each size's unit price, and the lines add
 //   up to the subtotal.
 // - Every group keeps its 64px photo, linked to the product, at 320, 360, 375, 414 and 1280.
-// - In both carts, at every width from 320 to 430 round the one-line breakpoint and at 1280, every
-//   row and its line total fit inside the group, no total is wider than its column, and nothing
-//   scrolls sideways (story 71).
+// - In both carts, at eleven widths (320, either side of 360 and of the one-line breakpoint at
+//   420, the common phones, and 1280), every row and its line total fit inside the group, no total
+//   is wider than its column, and nothing scrolls sideways (story 71). These width checks set
+//   their own viewport, so they run in the phone project only.
 // - At 375 the phone bar shows the total for the flies and Check out, and tabbing to Check out
 //   never leaves the focused element under it; without the page's scroll padding it would.
 // - axe finds no serious or critical issue in the cart.
@@ -45,6 +46,9 @@ const DISCOUNTED = fixture('discounted');
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
 const SORT = "modules['reelflies/cart-groups'].sortCartRows(document);";
 const phone = testInfo => testInfo.project.name === 'phone-375';
+// An element shot of the cart: the phone bar is fixed to the viewport and the phone header sticky,
+// so either would cover the lines wherever the viewport was.
+const SHOT_STYLE = '[data-rf-cart-bar] { visibility: hidden !important; } [data-rf-header] { position: static !important; }';
 
 async function sortRows(page) {
     await page.addScriptTag({ content: themeScript(['reelflies/hook-order', 'reelflies/cart-groups'], SORT) });
@@ -83,10 +87,8 @@ async function focusUnderBar(page) {
 test.describe('the cart (ticket 41)', () => {
     test('matches its baseline', async ({ page }, testInfo) => {
         await open(page);
-        // The phone bar is fixed to the viewport, so a shot of the whole page would draw it over the
-        // lines wherever the viewport was: the page is shot without it, and the bar on its own.
-        // The phone header is sticky too, and would cover the cart's top in an element shot.
-        await page.addStyleTag({ content: '[data-rf-cart-bar] { visibility: hidden !important; } [data-rf-header] { position: static !important; }' });
+        // The page without the phone bar (SHOT_STYLE), then the bar on its own.
+        await page.addStyleTag({ content: SHOT_STYLE });
         await expect(page.locator('[data-cart]')).toHaveScreenshot(['widgets', slug(QA_VARIATION), 'cart-page-twelve.png']);
         if (phone(testInfo)) {
             await page.addStyleTag({ content: '[data-rf-cart-bar] { visibility: visible !important; }' });
@@ -96,7 +98,7 @@ test.describe('the cart (ticket 41)', () => {
 
     test('matches its baseline with a coupon on every line (story 71)', async ({ page }) => {
         await open(page, { cart: DISCOUNTED });
-        await page.addStyleTag({ content: '[data-rf-cart-bar] { visibility: hidden !important; } [data-rf-header] { position: static !important; }' });
+        await page.addStyleTag({ content: SHOT_STYLE });
         await expect(page.locator('[data-cart]')).toHaveScreenshot(['widgets', slug(QA_VARIATION), 'cart-page-discounted.png']);
     });
 
@@ -142,7 +144,8 @@ test.describe('the cart (ticket 41)', () => {
     });
 
     for (const width of [320, 360, 375, 414, 1280]) {
-        test(`keeps each group's 64px photo, linked to the product, at ${width} (story 56)`, async ({ page }) => {
+        test(`keeps each group's 64px photo, linked to the product, at ${width} (story 56)`, async ({ page }, testInfo) => {
+            test.skip(!phone(testInfo), 'the viewport is set here, once');
             await page.setViewportSize({ width, height: 900 });
             await open(page);
             const photos = await page.locator('.rf-cart-group > .rf-cart-photo').evaluateAll(links => links.map(link => ({
@@ -159,8 +162,9 @@ test.describe('the cart (ticket 41)', () => {
     }
 
     for (const cart of [CART, DISCOUNTED]) {
-        for (const width of [320, 360, 375, 390, 400, 409, 410, 414, 430, 1280]) {
-            test(`fits every row and its line total inside its group in ${cart.name}.json at ${width} (story 71)`, async ({ page }) => {
+        for (const width of [320, 359, 360, 375, 390, 400, 414, 419, 420, 430, 1280]) {
+            test(`fits every row and its line total inside its group in ${cart.name}.json at ${width} (story 71)`, async ({ page }, testInfo) => {
+                test.skip(!phone(testInfo), 'the viewport is set here, once');
                 await page.setViewportSize({ width, height: 900 });
                 await open(page, { cart });
                 const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
