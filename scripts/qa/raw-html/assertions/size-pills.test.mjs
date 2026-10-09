@@ -40,3 +40,10 @@ test('fails hidden options, a size checked for the shopper, and a group without 
     assert.match(problems(good, /aria-labelledby="rf-option-4877-117-label"/, 'aria-labelledby="rectangle-group-label"'), /not an id of its own/);
     assert.match(problems(good, 'id="rf-option-4877-117-label"', 'id="other"'), /is on 0 elements, not one/);
 });
+
+test('fails a size group without its one "Hook size guide" link, and stock\'s rectangle markup come back', async () => {
+    const good = await page([SIZES]);
+    assert.match(problems(good, /<a class="rf-pills-guide"[^>]*>[^<]*<\/a>/, ''), /the size group has 0 links to \/fly-hook-size-chart\//);
+    assert.match(problems(good, 'data-rf-pills="size"', ''), /stock's markup/);
+    assert.match(problems(good, 'id="rf-option-4877-117-label"', 'id="rectangle-group-label"'), /stock's markup/);
+});

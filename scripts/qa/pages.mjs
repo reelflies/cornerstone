@@ -64,6 +64,10 @@ export const CHANNELS = {
             // look automatic (all hoppers named like it), so a new hopper could change
             // them: `hold` below keeps that from moving the page.
             product: '/realistic-flying-hot-butt-hopper-brown/',
+            // Ticket 37: Fat Albert (5663), with several sizes and a required Colour (stock
+            // swatches), so the size pills' default (no size chosen) and their UI states are shot,
+            // and the size-pills assertion's multi-size rule bites. The product pin has one size.
+            'product@sizes': '/fat-albert/',
             category: '/flies/realistic-trout-flies/', // tree 1; 12 cards with Quick view, and facets
             // Ticket 32: a More from ReelFlies category (a top-level category outside the menu
             // ids), whose four subcategories have images, so its plain header and thumbnail
@@ -92,6 +96,13 @@ export const CHANNELS = {
             'category@more': ['.productGrid', '[data-rf-list-count]'],
             'category@noindex': ['.productGrid', '[data-rf-list-count]'],
             search: ['.productGrid', '.page-heading', '[data-search-page-tabs] [role="tab"]'],
+            // Fat Albert's sizes the live stock marks sold out, and the line naming them. A UI
+            // state marks the size group (data-rf-qa-state) and sets its own marks, so it isn't
+            // masked (states.mjs).
+            'product@sizes': [
+                '[data-rf-pills="size"]:not([data-rf-qa-state]) .rf-pill.unavailable',
+                '[data-rf-pills="size"]:not([data-rf-qa-state]) [data-rf-sold-out-line]',
+            ],
         },
         // The related products' cards (Related Products, and Customers Also Viewed when the
         // store shows it), whose titles wrap to two or three lines, so the live list sets
@@ -101,6 +112,10 @@ export const CHANNELS = {
         // query, so the catalogue sets its height (#68's rf/spec).
         hold: {
             product: {
+                '#tab-related .productCarousel': 320,
+                '#tab-similar .productCarousel': 320,
+            },
+            'product@sizes': {
                 '#tab-related .productCarousel': 320,
                 '#tab-similar .productCarousel': 320,
             },

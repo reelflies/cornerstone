@@ -1,18 +1,21 @@
 // The size pills on live product pages (ticket 37; spec modules 15 and 16; O14, O15, UX-10, UX-21;
 // stories 37, 38, 39, 67, 68 and 71), at 375 and 1280, on channel 1: Fat Albert (5663,
-// /fat-albert/), which has six sizes and a Colour, and the product pin (6178), which has one size. ReelFlies_CA has no
-// products until refactor 14. The live stock decides which sizes are sold out, so the checks hold
-// the pills to stock's own marks rather than to a list; the looks are the screenshots' (the
-// product pin, and the size-chosen and size-sold-out states in states.mjs).
+// /fat-albert/, the product@sizes pin), which has several sizes and a required Colour (stock
+// swatches), and the product pin (6178), which has one size. ReelFlies_CA has no products until
+// refactor 14. The live stock decides which sizes are sold out, so the checks hold the pills to
+// stock's own marks rather than to a list; the looks are the screenshots' (product@sizes, and its
+// size-default, size-chosen and size-sold-out states in states.mjs).
 //
 // - No size is checked on a multi-size product, after scripts run (the raw HTML is the
 //   size-pills assertion's); a single-size product opens with its size checked and named.
 // - Each pill is 56x48 at 1280 and at least 44px tall at 375; a chosen pill has the ink outline,
 //   the check and no solid fill.
 // - Every pill stock marks unavailable is aria-disabled with "(sold out)" in its name, and the line
-//   names exactly those; on 5663, changing the Colour keeps the marks and the line in step.
+//   names exactly those; on 5663, changing the Colour (its swatches) keeps the marks and the line
+//   in step.
 // - The arrow keys move through the sizes, with the focus ring on the pill.
-// - "Hook size guide" links to the chart; nothing scrolls sideways at 320.
+// - "Hook size guide" links to the chart; at 320 Fat Albert's pills wrap to more than one row and
+//   nothing scrolls sideways.
 //
 // It runs only when named:
 //
@@ -27,7 +30,7 @@ import { QA_CHANNEL } from './storefront.mjs';
 import { chunkLoaded } from './states.mjs';
 
 const FAT_ALBERT = '/fat-albert/';
-const SIZE_GROUP = '[data-rf-pills]:has(.rf-pills-guide)';
+const SIZE_GROUP = '[data-rf-pills="size"]';
 const phone = testInfo => testInfo.project.name === 'phone-375';
 
 async function open(page, pagePath) {
@@ -84,12 +87,13 @@ test.describe('the size pills (ticket 37)', () => {
         const pill = group.locator('.rf-pill[data-product-attribute-value]:not(.unavailable)').first();
         await pill.click();
         await expect(pill.locator('.rf-pill-check')).toBeVisible();
-        // Stock's .form-option eases its border over 0.15s, so the look is read once it settles.
+        // Stock's .form-option eases its border over 0.15s, so the look is read once it settles. The
+        // 2px outline is a 1px ink border and a 1px ink inset, as the size filter's pills.
         const look = () => pill.evaluate(element => {
             const style = getComputedStyle(element);
-            return `${style.borderTopWidth} ${style.backgroundColor}`;
+            return `${style.borderTopWidth} ${style.borderTopColor} ${style.boxShadow} ${style.backgroundColor}`;
         });
-        await expect.poll(look, { message: 'a 2px outline on the tile, not a solid fill' }).toBe('2px rgb(241, 243, 240)');
+        await expect.poll(look, { message: 'a 2px ink outline on the tile, not a solid fill' }).toBe('1px rgb(33, 39, 33) rgb(33, 39, 33) 0px 0px 0px 1px inset rgb(241, 243, 240)');
         await expect(group.locator('[data-option-value]')).toHaveText(await pill.locator('.form-option-variant').innerText());
     });
 
@@ -107,11 +111,10 @@ test.describe('the size pills (ticket 37)', () => {
 
     test('on 5663, changing the Colour keeps the sold-out marks, aria-disabled and the line in step (story 39)', async ({ page }) => {
         await open(page, FAT_ALBERT);
-        const groups = page.locator('[data-rf-pills]');
-        const colour = groups.filter({ hasNot: page.locator('.rf-pills-guide') }).first();
+        // Fat Albert's Colour is stock swatches (set-swatch.html), not pills.
+        const choices = page.locator('[data-product-attribute="swatch"] .form-option');
         const sizes = page.locator(SIZE_GROUP).first();
-        test.skip(!(await colour.count()), 'Fat Albert has no second rectangle option on this run');
-        const choices = colour.locator('.rf-pill[data-product-attribute-value]');
+        expect(await choices.count(), 'Fat Albert\'s Colour swatches').toBeGreaterThan(1);
         for (let index = 0; index < Math.min(await choices.count(), 3); index += 1) { // eslint-disable-line no-await-in-loop
             const answer = page.waitForResponse(response => /\/remote\/v1\/product-attributes\//.test(response.url()));
             await choices.nth(index).click(); // eslint-disable-line no-await-in-loop
@@ -123,10 +126,12 @@ test.describe('the size pills (ticket 37)', () => {
         }
     });
 
-    test('links "Hook size guide" to the chart, and scrolls nothing sideways at 320 (stories 15 and 71)', async ({ page }) => {
+    test('links "Hook size guide" to the chart, and at 320 wraps the pills and scrolls nothing sideways (stories 15 and 71)', async ({ page }) => {
         await page.setViewportSize({ width: 320, height: 800 });
-        await open(page, undefined);
+        await open(page, FAT_ALBERT);
         await expect(page.locator(`${SIZE_GROUP} .rf-pills-guide`).first()).toHaveAttribute('href', '/fly-hook-size-chart/');
+        const rows = await page.locator(`${SIZE_GROUP} .rf-pill[data-product-attribute-value]`).evaluateAll(pills => new Set(pills.map(pill => Math.round(pill.getBoundingClientRect().top))).size);
+        expect(rows, 'the pills wrap').toBeGreaterThan(1);
         expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
     });
 });

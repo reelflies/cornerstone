@@ -36,6 +36,20 @@ export const STATE_NAME = /^[a-z0-9][a-z0-9-]*$/;
 export const chunkLoaded = (page, name) => page.waitForFunction(chunk => performance.getEntriesByType('resource')
     .some(entry => new URL(entry.name).pathname.endsWith(`/theme-bundle.chunk.${chunk}.js`)), name);
 
+// Ticket 37's states: the size group marked as a state's (data-rf-qa-state, which the pin's mask
+// leaves alone), every live sold-out mark cleared, then `unavailable` on the sizes at `positions`
+// (negative from the end), and size-pills.js's line in step.
+async function setSizeMarks(page, positions) {
+    await page.evaluate(marks => {
+        const field = document.querySelector('[data-rf-pills="size"]');
+        field.setAttribute('data-rf-qa-state', '');
+        const pills = Array.from(field.querySelectorAll('.rf-pill[data-product-attribute-value]'));
+        pills.forEach(pill => pill.classList.remove('unavailable'));
+        marks.forEach(position => pills[(position + pills.length) % pills.length].classList.add('unavailable'));
+    }, positions);
+    await page.waitForFunction(count => document.querySelectorAll('[data-rf-pills="size"] input[aria-disabled="true"]').length === count, positions.length);
+}
+
 export const UI_STATES = {
     'drawer-open': {
         description: 'the phone menu, open; the grouped drawer with its first row open in place',
@@ -96,19 +110,36 @@ export const UI_STATES = {
         },
     },
 
-    // The size pills' chosen and sold-out looks (ticket 37), on the product pin: shot as the page
-    // lays out, so the pills are in view whichever state the live stock leaves them in.
-    'size-chosen': {
-        description: 'the product page with its first in-stock size chosen: the ink outline and the check',
+    // The size pills' default, chosen and sold-out looks (ticket 37), on Fat Albert
+    // (product@sizes), shot as the page lays out. The live stock marks some sizes sold out, and
+    // stock's option change marks them again after a choice, so each state clears the marks
+    // after stock has answered, then sets its own; it marks the group (data-rf-qa-state) so the
+    // pin's mask of the live marks (pages.mjs) leaves it alone. size-pills.spec.mjs checks the
+    // real marks.
+    'size-default': {
+        description: 'the product page with no size chosen and no size sold out: "Fly Sizes: choose one"',
         ticket: '37',
         projects: ['phone-375', 'desktop-1280'],
-        pages: ['product'],
+        pages: ['product@sizes'],
         async open(page) {
             await chunkLoaded(page, 'rf-size-pills');
-            const pill = page.locator('[data-rf-pills] .rf-pill[data-product-attribute-value]:not(.unavailable)').first();
+            await setSizeMarks(page, []);
+        },
+    },
+    'size-chosen': {
+        description: 'the product page with its first size chosen: the ink outline and the check',
+        ticket: '37',
+        projects: ['phone-375', 'desktop-1280'],
+        pages: ['product@sizes'],
+        async open(page) {
+            await chunkLoaded(page, 'rf-size-pills');
+            const answered = page.waitForResponse(response => /\/remote\/v1\/product-attributes\//.test(response.url()));
+            const pill = page.locator('[data-rf-pills="size"] .rf-pill[data-product-attribute-value]').first();
             await pill.scrollIntoViewIfNeeded();
             await pill.click();
-            await page.locator('[data-rf-pills] .form-radio:checked + .rf-pill .rf-pill-check').first().waitFor({ state: 'visible' });
+            await answered;
+            await setSizeMarks(page, []);
+            await page.locator('[data-rf-pills="size"] .form-radio:checked + .rf-pill .rf-pill-check').waitFor({ state: 'visible' });
             await page.mouse.move(0, 0);
         },
     },
@@ -116,19 +147,14 @@ export const UI_STATES = {
         description: 'the product page with its last two sizes marked sold out, as stock\'s option scripts mark them: struck, and named in the line',
         ticket: '37',
         projects: ['phone-375', 'desktop-1280'],
-        pages: ['product'],
-        // Stock marks a value it can't sell with the class `unavailable` (product-details-base.js).
-        // The live stock decides which, so the state marks two itself: the look, not the stock,
-        // is what is shot. size-pills.spec.mjs checks the real marks on product@5663.
+        pages: ['product@sizes'],
+        // Stock marks a value it can't sell with the class `unavailable` (product-details-base.js);
+        // the look, not the live stock, is what is shot.
         async open(page) {
             await chunkLoaded(page, 'rf-size-pills');
-            await page.evaluate(() => {
-                const pills = [...document.querySelectorAll('[data-rf-pills] .rf-pill[data-product-attribute-value]')];
-                pills.forEach(pill => pill.classList.remove('unavailable'));
-                pills.slice(-2).forEach(pill => pill.classList.add('unavailable'));
-            });
-            await page.waitForFunction(() => /sold out/.test(document.querySelector('[data-rf-sold-out-line]')?.textContent || ''));
-            await page.locator('[data-rf-pills]').first().scrollIntoViewIfNeeded();
+            await setSizeMarks(page, [-2, -1]);
+            await page.waitForFunction(() => /are sold out/.test(document.querySelector('[data-rf-pills="size"] [data-rf-sold-out-line]')?.textContent || ''));
+            await page.locator('[data-rf-pills="size"]').scrollIntoViewIfNeeded();
         },
     },
 

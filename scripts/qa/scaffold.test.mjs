@@ -341,7 +341,7 @@ describe('the JavaScript and template slots', () => {
     }
 
     it('reelflies/global.js: GLOBAL_MODULES has one slot per module, in ticket order, with blank lines between', () => {
-        assert.deepEqual(slotProblems(arrayBody('assets/js/theme/reelflies/global.js', 'GLOBAL_MODULES'), [27, 28, 30, 52], JS_SLOT), []);
+        assert.deepEqual(slotProblems(arrayBody('assets/js/theme/reelflies/global.js', 'GLOBAL_MODULES'), [27, 28, 30, 37, 52], JS_SLOT), []);
     });
 
     it('js-settings.html: one slot per switch ticket, in ticket order, with blank lines between', () => {

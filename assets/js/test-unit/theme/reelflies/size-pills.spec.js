@@ -1,4 +1,7 @@
 import sizePills, { soldOutLine, updatePills, watchPills } from '../../../theme/reelflies/size-pills';
+import { announce } from '../../../theme/reelflies/live-region';
+
+jest.mock('../../../theme/reelflies/live-region', () => ({ announce: jest.fn() }));
 
 // A Fly Sizes group as components/reelflies/size-pills.html renders it: stock's radio and label
 // pairs, a hidden "(sold out)" in each label, and the line under the pills with its words.
@@ -89,5 +92,54 @@ describe('the chosen size after the label', () => {
         expect(radio('103').checked).toBe(true);
         expect([...document.querySelectorAll('input')].map(input => input.value)).toEqual(order);
         expect(document.querySelector('[data-option-value]').textContent).toBe('16');
+    });
+});
+
+describe('watching a group', () => {
+    beforeEach(() => {
+        announce.mockClear();
+        document.body.innerHTML = `<form>${FIELD(SIZES)}<input type="radio" name="attribute[13]" value="9" id="colour"></form>`;
+    });
+    const field = () => document.querySelector('[data-rf-pills]');
+    const applied = () => document.dispatchEvent(new CustomEvent('onProductOptionsChanged'));
+
+    it('says a change to the line that answers the shopper\'s choice, as a colour that leaves sizes sold out, and not the line on load', () => {
+        label('101').classList.add('unavailable');
+        watchPills(field());
+        expect(line()).toBe('Size 12 is sold out.');
+        expect(announce).not.toHaveBeenCalled();
+        document.getElementById('colour').checked = true;
+        document.getElementById('colour').dispatchEvent(new Event('change', { bubbles: true }));
+        label('101').classList.remove('unavailable');
+        label('102').classList.add('unavailable');
+        label('103').classList.add('unavailable');
+        applied();
+        expect(announce).toHaveBeenCalledTimes(1);
+        expect(announce).toHaveBeenCalledWith('Sizes 14 and 16 are sold out.', document);
+        label('104').classList.add('unavailable');
+        applied();
+        expect(announce).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves a group it already watches alone, and stops when told', async () => {
+        const unwatch = watchPills(field());
+        expect(field().hasAttribute('data-rf-pills-watched')).toBe(true);
+        expect(watchPills(field())).toEqual(expect.any(Function));
+        unwatch();
+        expect(field().hasAttribute('data-rf-pills-watched')).toBe(false);
+        label('102').classList.add('unavailable');
+        applied();
+        await settle();
+        expect(line()).toBe('');
+    });
+
+    it('stops by itself once its group has left the page, as Quick view replaces its own', () => {
+        const removeListener = jest.spyOn(document, 'removeEventListener');
+        const group = field();
+        watchPills(group);
+        group.remove();
+        applied();
+        expect(removeListener).toHaveBeenCalledWith('onProductOptionsChanged', expect.any(Function));
+        removeListener.mockRestore();
     });
 });

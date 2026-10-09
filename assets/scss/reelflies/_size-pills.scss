@@ -3,18 +3,22 @@
 // =============================================================================
 //
 // A product's rectangle options as pills (components/reelflies/size-pills.html), from the
-// reference's .opt, .form-option and .unavailable rules (plan/design/src/reference.src.html:
-// :655-661) and ticket 26's spike (_size-pills.scss on spike/26-skin).
+// reference's .opt, .form-option and .unavailable rules (plan/design/src/reference.src.html:395-401
+// and :656-661) and ticket 26's spike (_size-pills.scss on spike/26-skin).
 //
-// - The head: "Fly size: choose one" with "Hook size guide" at the end of the line.
+// - The head: "Fly Sizes: choose one" with "Hook size guide" at the end of the line.
 // - Each pill 56x48 with an 8px gap, tabular figures, wrapping at 320. Stock's radio stays hidden
 //   (citadel's .form-radio); its focus ring is drawn on the pill (_foundation.scss's label rule).
-// - Chosen: a 2px ink border on the tile, ink text and a check, so Add to cart stays the only solid
-//   button (UX-21).
-// - Sold out (stock's .unavailable): a diagonal strike in dun drawn inside the pill, on the tile,
-//   in place of stock's, which is sized for a square and overruns a pill (ticket 26).
-// - The line under the pills keeps one line's height whether or not it says anything, so nothing
-//   moves when the script fills it.
+// - Chosen: a 2px ink outline on the tile (a 1px border and a 1px inset, as the size filter's
+//   pills, _facets.scss, so the pill's box never changes), ink text and a check, so Add to cart
+//   stays the only solid button (UX-21).
+// - Sold out (stock's .unavailable): dun text and a quieter border, with a diagonal strike in dun
+//   drawn inside the pill on the tile, in place of stock's, which is sized for a square and
+//   overruns a pill (ticket 26). Chosen and sold out together, the chosen outline and ink text.
+// - The line under the pills, left-aligned, keeps one line's height whether or not it says
+//   anything, so nothing moves when the script fills it. A line naming five or more sizes wraps
+//   to two at 320 and moves what is below it once, on load; accepted, as a fly sold out in five
+//   sizes is rare.
 //
 // -----------------------------------------------------------------------------
 
@@ -94,9 +98,12 @@ $rf-pill-h: 48px;
         width: 16px;
     }
 
-    // Stock's strike and fade, sized for a square
+    // Sold out: the strike drawn inside the pill, in place of stock's strike and fade, which are
+    // sized for a square
     &.unavailable {
         background: var(--rf-tile) linear-gradient(to top right, transparent calc(50% - 0.75px), var(--rf-dun) calc(50% - 0.75px), var(--rf-dun) calc(50% + 0.75px), transparent calc(50% + 0.75px));
+        border-color: var(--rf-tile-2);
+        color: var(--rf-dun);
         opacity: 1;
 
         &::before {
@@ -108,9 +115,9 @@ $rf-pill-h: 48px;
 // Chosen: stock's radio, checked, just before its pill
 [data-product-attribute] .form-radio:checked + .form-option.rf-pill {
     background-color: var(--rf-tile);
-    border: 2px solid var(--rf-ink);
-    box-shadow: none;
-    padding: 0 13px;
+    border-color: var(--rf-ink);
+    box-shadow: inset 0 0 0 1px var(--rf-ink);
+    color: var(--rf-ink);
 
     .rf-pill-check {
         display: block;
@@ -123,4 +130,5 @@ $rf-pill-h: 48px;
     line-height: 20px;
     margin: 8px 0 0;
     min-height: 20px;
+    text-align: left;
 }

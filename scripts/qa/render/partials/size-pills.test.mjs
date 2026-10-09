@@ -1,15 +1,19 @@
 // The size pills (ticket 37; spec modules 15 and 16; O14, O15, R9, UX-10, UX-21; stories 15, 37,
 // 38, 39, 68 and 70): stock products/options/set-rectangle.html's hook
 // (components/reelflies/size-pills.html), and product-view.html's, on option contexts shaped as
-// BigCommerce's (product.options, each with its values).
+// BigCommerce's (product.options, each with its values); in the cart's Change dialog
+// (cart/modals/configure-product.html), where the line's own value stays checked; and against
+// stock's own block, kept unrendered below the hook.
 //
 //   node --test scripts/qa/render/partials/size-pills.test.mjs
 
+import fs from 'fs';
+import path from 'path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { findTags, outerHtml, textOf } from '../../raw-html/html.mjs';
 import { unbalancedTags } from '../html-checks.mjs';
-import { renderPartial } from '../render.mjs';
+import { THEME_DIR, renderPartial } from '../render.mjs';
 
 const value = (id, label, selected = false) => ({
     id, label, selected, data: label,
@@ -83,5 +87,60 @@ describe('the pills (components/reelflies/size-pills.html)', () => {
         assert.equal(line.attrs['data-rf-one'], 'Size # is sold out.');
         assert.equal(line.attrs['data-rf-many'], 'Sizes # are sold out.');
         assert.equal(findTags(html, 'svg').filter(tag => !/rf-pill-check/.test(tag.attrs.class || '')).length, 0);
+    });
+});
+
+describe('which option is the size', () => {
+    it('is the one named as the Fly size facet (size-facet-name.html), in any case, and is marked data-rf-pills="size"', async () => {
+        const marker = html => findTags(html, 'div').find(tag => tag.attrs.role === 'radiogroup').attrs['data-rf-pills'];
+        assert.equal(marker(await option(SIZES)), 'size');
+        assert.equal(marker(await option({ ...SIZES, display_name: 'fly sizes' })), 'size');
+        assert.equal(marker(await option(COLOUR)), '');
+        const box = await option({ ...SIZES, display_name: 'Box Size' });
+        assert.equal(marker(box), '');
+        assert.equal(findTags(box, 'a').filter(tag => tag.attrs.href === '/fly-hook-size-chart/').length, 0);
+        assert.deepEqual(radios(box).map(tag => 'checked' in tag.attrs), [false, true, false], 'not a size: stock\'s choice kept');
+    });
+
+    it('keeps stock\'s "(Required)" for screen readers and setProductVariant, which reads it, where "choose one" says it on screen', async () => {
+        const label = outerHtml(await option(SIZES), 'span', attrs => /rf-pills-label/.test(attrs.class || ''));
+        assert.match(outerHtml(label, 'span', attrs => attrs.class === 'is-srOnly'), /\(Required\)/);
+    });
+});
+
+describe('the cart\'s Change dialog (cart/modals/configure-product.html)', () => {
+    it('keeps the line\'s own size checked and named, with a label id from the option alone', async () => {
+        const html = await renderPartial('components/cart/modals/configure-product', {
+            product_name: 'Fat Albert', quote_item_id: 'line-1', options: [SIZES, COLOUR],
+        });
+        const sizes = radios(html).filter(tag => tag.attrs.name === 'attribute[117]');
+        assert.deepEqual(sizes.map(tag => 'checked' in tag.attrs), [false, true, false]);
+        assert.ok('data-default' in sizes[1].attrs, 'CartItemDetails reads [data-default]');
+        const group = findTags(html, 'div').find(tag => tag.attrs.role === 'radiogroup' && tag.attrs['data-rf-pills'] === 'size');
+        assert.equal(group.attrs['aria-labelledby'], 'rf-option-117-label');
+        assert.equal(textOf(outerHtml(html, 'span', attrs => 'data-option-value' in attrs)), '14');
+        assert.doesNotMatch(html, /undefined/);
+    });
+});
+
+describe('against stock\'s own block (kept below the hook, unrendered)', () => {
+    it('gives each radio and label the attributes stock\'s block gives them, with the same values', () => {
+        const source = fs.readFileSync(path.join(THEME_DIR, 'templates/components/products/options/set-rectangle.html'), 'utf8');
+        const stock = source.slice(source.indexOf('{{#if false}}'));
+        const ours = fs.readFileSync(path.join(THEME_DIR, 'templates/components/reelflies/size-pills.html'), 'utf8');
+        // The value radios' and labels' static attributes, as written: name="value" pairs.
+        const pairs = (html, tag, marker) => {
+            const element = html.match(new RegExp(`<${tag}\\s[^>]*${marker}[^>]*>`, 's'))[0];
+            return Object.fromEntries([...element.matchAll(/([a-z-]+)="([^"]*)"/g)].map(([, name, text]) => [name, text]));
+        };
+        const stockRadio = pairs(stock, 'input', 'value="{{id}}"');
+        const ourRadio = pairs(ours, 'input', 'value="{{id}}"');
+        for (const [name, text] of Object.entries(stockRadio)) assert.equal(ourRadio[name], text, `the radio's ${name}`);
+        const stockLabel = pairs(stock, 'label', 'data-product-attribute-value');
+        const ourLabel = pairs(ours, 'label', 'data-product-attribute-value');
+        for (const [name, text] of Object.entries(stockLabel)) {
+            if (name === 'class') assert.ok(text.split(/\s+/).every(part => ourLabel.class.split(/\s+/).includes(part)), `the label's classes ${text}`);
+            else assert.equal(ourLabel[name], text, `the label's ${name}`);
+        }
     });
 });

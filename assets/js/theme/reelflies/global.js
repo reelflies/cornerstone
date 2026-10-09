@@ -16,6 +16,7 @@
 
 import $ from 'jquery';
 import followReducedMotion from './reduced-motion';
+import watchModalPills from './pills-in-modal';
 
 export const GLOBAL_MODULES = [
     // 27 header: Escape and "Shop flies" (header.js), and the rise ring behind rf_rise (rise.js)
@@ -27,6 +28,9 @@ export const GLOBAL_MODULES = [
 
     // 30 quick search: the dropdown under each ReelFlies search form, and the phone header's search toggle
     context => import(/* webpackChunkName: "rf-quick-search" */ './quick-search').then(module => module.default(context)),
+
+    // 37 size pills: Quick view's and the cart's Change dialog's pills in #modal (pills-in-modal.js)
+    () => watchModalPills(),
 
     // 52 outside-Canada prompt
 ];
