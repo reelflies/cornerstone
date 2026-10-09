@@ -88,8 +88,9 @@ export const CHANNELS = {
             search: '/search.php?search_query=streamer&section=product',
             // Ticket 34: the Species hub's stand-in until wave R2 pins /species/ on 1895766 (once
             // refactor 14 has placed the products): tree 1's Saltwater, Warmwater & Salmon (272),
-            // which custom-layouts.json renders with the hub template. Its nine subcategories are the tiles, each with its image and count;
-            // tree 1 puts their children past Menu Display Depth 3, so no tile has Fly Type links.
+            // which custom-layouts.json renders with the hub template. Its nine subcategories are
+            // the tiles, each with its image and count; tree 1 puts their children past Menu
+            // Display Depth 3, so no tile has Fly Type links.
             'species-hub': '/flies/saltwater-warmwater-salmon/',
         },
         // The live catalogue decides which products the category and search pins list, so
