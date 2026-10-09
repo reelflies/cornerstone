@@ -125,3 +125,20 @@ describe('page modules', () => {
         });
     });
 });
+
+describe('the product page\'s add-flow slot (ticket 38)', () => {
+    afterEach(() => {
+        jest.dontMock('../../../theme/reelflies/add-flow');
+        jest.resetModules();
+    });
+
+    it('when the flow\'s chunk fails to load, puts stock\'s "Add to Cart" on the flow\'s buttons, then passes the failure on to be reported', async () => {
+        jest.resetModules();
+        jest.doMock('../../../theme/reelflies/add-flow', () => { throw new Error('ChunkLoadError'); });
+        const { TEMPLATES: templates } = await import('../../../theme/reelflies/page-modules');
+        document.body.innerHTML = '<div data-rf-add data-rf-stock-label="Add to Cart"><input id="form-action-addToCart" value="Choose a size"></div>';
+        const slot = templates['pages/product'].find(load => String(load).includes('add-flow'));
+        await expect(slot()).rejects.toThrow('ChunkLoadError');
+        expect(document.getElementById('form-action-addToCart').value).toBe('Add to Cart');
+    });
+});

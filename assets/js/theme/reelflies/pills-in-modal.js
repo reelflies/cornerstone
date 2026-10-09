@@ -4,8 +4,8 @@
 // loads size-pills.js's chunk to watch them as the product page does. It is small, because it
 // starts on every page. It keeps each group's stop, and stops a group once it has left the page,
 // at the modal's next change: on the cart page stock's option event, which would stop it too,
-// never fires. A chunk that fails to load is reported (`onError`, the global modules' console
-// report), and the next pills to appear try again.
+// never fires. A chunk that fails to load is reported (`onError`, by default a console error as
+// global.js reports a module), and the next pills to appear try again.
 
 export const PILLS = '[data-rf-pills]:not([data-rf-pills-watched])';
 

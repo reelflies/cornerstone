@@ -20,7 +20,9 @@ product:
     {{/each}}
 
     <div>
+        {{assignVar 'rf_product_page' 1}}{{!-- ReelFlies hook (ticket 38; CUSTOMIZATIONS.md): the buy row's own labels on the product page, where add-flow.js runs; Quick view keeps stock's --}}
         {{> components/products/product-view}}
+        {{> components/reelflies/sticky-add}}{{!-- ReelFlies hook (ticket 38; CUSTOMIZATIONS.md): the phone's sticky add bar, on the product page only, never in Quick view --}}
 
         {{{region name="product_below_content"}}}
 

@@ -1,0 +1,122 @@
+{{!--
+    The buy row (ticket 38; spec module 15; O14, UX-10; stories 34, 37, 41, 42 and 68), from stock
+    products/add-to-cart.html's hook, which keeps the stock markup unrendered. It is stock's, with
+    the ids, names and data attributes stock product-details.js drives, and these changes:
+
+    - The stepper starts at 1 (or the product's minimum), with − and + from the ReelFlies icons and
+      44px targets.
+    - The button says what it will do: "Choose a size" on a product whose size option (the Fly
+      size facet's name, size-facet-name.html, in any case, as size-pills.html finds it) has
+      several values, else "Add 1 to cart"; add-flow.js keeps it in step with the pills and the
+      stepper. Only on the product page (pages/product.html's hook sets rf_product_page), where
+      add-flow.js runs: Quick view keeps stock's "Add to Cart", and a pre-order product stock's
+      "Pre-Order Now" everywhere.
+    - Under it, the status line (data-rf-add-status): plain markup with no role, where add-flow.js
+      writes "Choose a fly size first.", a sold-out size, an error, or "Added 3 × size 14. 15 flies
+      in your cart." with View cart, each after the reference's alert or check icon. Each message
+      also goes to ticket 25's live region. Stock's own status span is gone, so nothing is
+      announced twice.
+    - The wrapper carries the product's name (data-rf-product), which the confirmation names on a
+      product with no options, stock's "Add to Cart" (data-rf-stock-label), which
+      add-flow-failed.js puts on the button if the flow's chunk fails to load, and the flow's words
+      (data-rf-*), each with # or {name} where a value goes. The lang helper fills a {name} it
+      isn't given with "undefined", so each passes its own {name} back as the value, and
+      add-flow.js fills it later.
+
+    Port an upstream change to the stock markup here; render/partials/add-flow.test.mjs holds the
+    ids and attributes stock reads.
+--}}
+{{> components/reelflies/size-facet-name}}
+{{~assignVar 'rf_add_needs_size' 0~}}
+{{~#each product.options~}}{{~#if (toLowerCase display_name) '===' (toLowerCase (getVar 'rf_size_facet'))~}}{{~#if values.length '>' 1~}}{{~assignVar 'rf_add_needs_size' 1~}}{{~/if~}}{{~/if~}}{{~/each~}}
+{{~assignVar 'rf_add_qty' 1~}}
+{{~#if product.min_purchase_quantity~}}{{~assignVar 'rf_add_qty' product.min_purchase_quantity~}}{{~/if~}}
+<div id="add-to-cart-wrapper"
+     class="add-to-cart-wrapper rf-add"
+     data-rf-add
+     data-rf-product="{{product.title}}"
+     data-rf-stock-label="{{lang 'products.add_to_cart'}}"
+     {{#if product.pre_order}}data-rf-pre-order{{/if}}
+     data-rf-choose="{{lang 'reelflies.add_flow.choose'}}"
+     data-rf-add-label="{{lang 'reelflies.add_flow.add'}}"
+     data-rf-choose-first="{{lang 'reelflies.add_flow.choose_first'}}"
+     data-rf-sold-out="{{lang 'reelflies.add_flow.sold_out' size='{size}'}}"
+     data-rf-sold-out-only="{{lang 'reelflies.add_flow.sold_out_only' size='{size}'}}"
+     data-rf-sold-out-all="{{lang 'reelflies.add_flow.sold_out_all'}}"
+     data-rf-sold-out-choice="{{lang 'reelflies.add_flow.sold_out_choice'}}"
+     data-rf-added="{{lang 'reelflies.add_flow.added' qty='{qty}' choice='{choice}'}}"
+     data-rf-size="{{lang 'reelflies.add_flow.size' size='{size}'}}"
+     data-rf-cart-fly="{{lang 'reelflies.add_flow.cart_fly'}}"
+     data-rf-cart-flies="{{lang 'reelflies.add_flow.cart_flies'}}"
+     data-rf-cart-item="{{lang 'reelflies.add_flow.cart_item'}}"
+     data-rf-cart-items="{{lang 'reelflies.add_flow.cart_items'}}"
+     data-rf-view-cart="{{lang 'reelflies.add_flow.view_cart'}}"
+     data-rf-error="{{lang 'reelflies.add_flow.error'}}"
+     data-rf-option-error="{{lang 'reelflies.add_flow.option_error'}}"
+     data-rf-no-size="{{lang 'reelflies.add_flow.no_size'}}"
+     data-rf-size-and="{{lang 'reelflies.add_flow.size_and' size='{size}' flies='{flies}'}}"
+     data-rf-one-fly="{{lang 'reelflies.add_flow.one_fly'}}"
+     data-rf-many-flies="{{lang 'reelflies.add_flow.many_flies'}}"
+     data-rf-quantity="{{lang 'reelflies.add_flow.quantity'}}"
+     {{#unless product.can_purchase}}style="display: none"{{/unless}}>
+    {{#if product.show_quantity_input}}
+        {{inject 'productQuantityErrorMessage' (lang 'products.quantity_error_message')}}
+        <div class="form-field form-field--increments rf-add-qty">
+            <label class="form-label form-label--alternate is-srOnly" for="qty[]">{{lang 'products.quantity'}}</label>
+            <div class="form-increment rf-add-stepper" data-quantity-change>
+                <button type="button" class="button button--icon rf-add-step" data-action="dec">
+                    <span class="is-srOnly">{{lang 'products.quantity_decrease' name=product.title}}</span>
+                    {{> components/reelflies/icon name='minus'}}
+                </button>
+                <input class="form-input form-input--incrementTotal"
+                       id="qty[]"
+                       name="qty[]"
+                       type="tel"
+                       value="{{getVar 'rf_add_qty'}}"
+                       data-quantity-min="{{product.min_purchase_quantity}}"
+                       data-quantity-max="{{product.max_purchase_quantity}}"
+                       min="1"
+                       pattern="[0-9]*"
+                       aria-live="polite">
+                <button type="button" class="button button--icon rf-add-step" data-action="inc">
+                    <span class="is-srOnly">{{lang 'products.quantity_increase' name=product.title}}</span>
+                    {{> components/reelflies/icon name='plus'}}
+                </button>
+            </div>
+        </div>
+    {{/if}}
+
+    {{#if product.out_of_stock}}
+        {{#unless product.available_to_sell}}
+            {{#if product.out_of_stock_message}}
+                {{> components/common/alert/alert-error product.out_of_stock_message}}
+            {{else}}
+                {{> components/common/alert/alert-error (lang 'products.sold_out')}}
+            {{/if}}
+        {{/unless}}
+    {{/if}}
+
+    <div class="alertBox alertBox--error productAttributes-message" style="display:none">
+        <div class="alertBox-column alertBox-icon">
+            <icon glyph="ic-error" class="icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"></path></svg></icon>
+        </div>
+        <p class="alertBox-column alertBox-message"></p>
+    </div>
+    {{#or customer (unless settings.hide_price_from_guests)}}
+        <div class="add-to-cart-buttons {{#if product.pre_order}}pre-order-buttons{{/if}}">
+            <div class="form-action">
+                <input id="form-action-addToCart"
+                       data-wait-message="{{lang 'products.adding_to_cart'}}"
+                       class="button button--primary rf-add-button"
+                       type="submit"
+                       value="{{#if product.pre_order}}{{lang 'products.pre_order'}}{{else if (getVar 'rf_product_page')}}{{#if (getVar 'rf_add_needs_size')}}{{lang 'reelflies.add_flow.choose'}}{{else}}{{strReplace (lang 'reelflies.add_flow.add') '#' (concat '' (getVar 'rf_add_qty'))}}{{/if}}{{else}}{{lang 'products.add_to_cart'}}{{/if}}">
+            </div>
+            {{#if this.with_wallet_buttons}}
+                <div class="add-to-cart-wallet-buttons" data-add-to-cart-wallet-buttons>
+                    {{> components/common/wallet-buttons}}
+                </div>
+            {{/if}}
+        </div>
+        <p class="rf-add-status" data-rf-add-status hidden>{{> components/reelflies/icon name='alert' class='rf-add-status-alert'}}{{> components/reelflies/icon name='check' class='rf-add-status-check'}}<span data-rf-add-status-text></span></p>
+    {{/or}}
+</div>

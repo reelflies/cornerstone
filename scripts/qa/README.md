@@ -264,6 +264,8 @@ The screenshots and axe open each state in `UI_STATES` on the pins it names, at 
 | `size-default` | Fat Albert with no size chosen and no size sold out: "Fly Sizes: choose one" over the pills. Like the two below, it clears the live stock's marks (the sizes', and the colours' once a size is chosen) after stock has answered and marks the options (`data-rf-qa-state`), so the pin's mask of the live marks leaves them alone | `phone-375`, `desktop-1280` | `product@sizes` (channel 1) | 37 |
 | `size-chosen` | Fat Albert with its first size chosen: the ink outline on the tile and the check | `phone-375`, `desktop-1280` | `product@sizes` (channel 1) | 37 |
 | `size-sold-out` | Fat Albert with its last two sizes marked sold out as stock's scripts mark them (`unavailable`): struck, aria-disabled, and named in the line. The state marks them itself, so the shot shows the look, not the day's stock | `phone-375`, `desktop-1280` | `product@sizes` (channel 1) | 37 |
+| `sticky-bar` | the phone's sticky add bar at rest: a Colour and a size chosen (every option's live marks cleared, and the buy row settled) and the main button scrolled past | `phone-375` | `product@sizes` (channel 1) | 38 |
+| `sticky-bar-added` | the sticky add bar just after an add from it, "Added 1 × size N" with View cart. The add is answered by the state (page.route), so nothing reaches the store, and `data-rf-bar-ms` holds the look for the shot | `phone-375` | `product@sizes` (channel 1) | 38 |
 | `sheet-open` | a slot for the quick-add sheet and popover | | | 43 adds it |
 
 - **A state shot** is the viewport as it shows with the state open, because a fixed drawer or sheet covers the viewport rather than the page. A state can ask for `fullPage: true`. It has the page's masks and stylesheet. Its baseline is `<key>~<state>-<project>-<platform>.png`, covered on the `Baselines:` line by its page kind.
@@ -437,7 +439,8 @@ This is ticket 54's "every link in the home widgets returns 200 with no redirect
   |---|---|---|---|
   | `rf-menu` | grouped menu and phone drawer, and the desktop rail's hover intent, keys and focus | 28 and 29 (1,308 B in 29) | 8,000 B |
   | `rf-size-filter` | the Fly size filter on listings | 33 (1,892 B) | 3,000 B |
-  | `rf-size-pills` | the product page's size pills, and Quick view's and the Change dialog's through `pills-in-modal.js` | 37 (1,291 B) | 3,000 B |
+  | `rf-size-pills` | the product page's size pills, and Quick view's and the Change dialog's through `pills-in-modal.js` | 37 (1,302 B) | 3,000 B |
+  | `rf-add-flow` | the product page's add flow and sticky bar | 38 (6,817 B) | 7,000 B |
   | `rf-quick-add` | quick add on cards | 43 (measured in 45) | 15,000 B |
   | `rf-region-prompt` | outside-Canada prompt | 52 | 1,000 B |
 
@@ -852,6 +855,50 @@ node --test scripts/qa/render/partials/size-pills.test.mjs scripts/qa/raw-html/a
 npx jest assets/js/test-unit/theme/reelflies/size-pills
 ```
 
+## The add flow (`add-flow.spec.mjs`)
+
+Ticket 38's buy row (`components/reelflies/add-to-cart.html`, through stock `add-to-cart.html`'s hook), the sticky add bar (`sticky-add.html`, from `pages/product.html`), and `add-flow.js`, which stock `product-details.js` hands the add's answer to through `add-bridge.js`.
+
+- **The templates** are rendered by `render/partials/add-flow.test.mjs`:
+  - stock's ids and attributes, as stock's kept block gives them
+  - "Choose a size" or "Add N to cart" on the product page, the size option found by the Fly size facet's name; stock's "Add to Cart" in Quick view and stock's "Pre-Order Now"; the stepper's buttons `type="button"`
+  - the product's name for the confirmation, and every word's placeholders whole
+  - the stepper's start
+  - the status line with no role, its alert and check icons, and its text box
+  - the sticky bar on the product page only
+  - Quick view's reworded heading
+- **The script** is Jest's:
+  - `add-words.spec.js`: the labels and the confirmation
+  - `add-bridge.spec.js`, with no flow loaded (a listing's Quick view, or a failed chunk):
+    - a failed add taken (the button usable, the overlay gone, stock's alert) and a good one left to stock
+    - a failed option change stopped
+  - `add-flow-failed.spec.js` and `page-modules.spec.js`: when the flow's chunk fails to load, the slot's catch loads `add-flow-failed.js` (its own small chunk), which puts stock's "Add to Cart" on the flow's buttons (never a pre-order label) and passes the error on to the loader
+  - `add-flow.spec.js`:
+    - the guards, on the button's click and before stock's submit: no size, a sold-out size, every size sold out (or out in the Colour chosen), a held choice with no size, a required option left to the browser's check, and the one-size wording
+    - stock's hold on a choice it can't sell (`aria-disabled`, and the click saying why)
+    - the add's success, error-answer, unreadable-answer and network-failure paths; focus kept; Quick view and a page with no flow left to stock
+    - the header told from the cart's read, or from stock's cart summary when that fails, then `rf:cart-changed` after it
+    - the confirmation: the choice as it was sent, a swatch named by its title, a product with no options named
+    - the status line: a new choice clearing the last message, a pre-order label kept, the text in the template's box, and a failed option change said in its own form
+    - the bar: its place after a jump; its double tap and a blocked tap forgotten; its added look and its return after 4 s; a failed add, a stopped tap and stock's quantity limit said in the bar with focus on its button; its label and held look following the main button; focus handed to the main button when it hides
+- **`add-flow.spec.mjs`** runs on channel 1's Fat Albert (`product@sizes`, several sizes and a required Colour), and on the `product` pin for its one-size case. The add and the cart's read are answered by the cart route fixtures (`fixtures/cart/routes.mjs`, which tickets 42, 43 and 44 share: `answerCartAdds`, `answerCartRead`, `cartLines`), fulfilled or aborted and never passed on, so no cart is made. `answerCartRead` answers only GET; any other method on the Cart API falls back, so the network guard fails a write a test hasn't answered. It checks:
+  - "Choose a size" and focus
+  - "Add 3 to cart"
+  - an add with no modal, announced once, with focus kept and the header's count
+  - a size stock can't sell: stock's own sold-out pass, on its option answer fulfilled with the size out of stock, holds the button, and its click says why, announced
+  - a size with no Colour left to the browser's check (5663), then one add with both
+  - a dropped add and a dropped option change, each announced
+  - the sticky bar, `--sticky-h` and tabbing at 375, and a dropped add from the bar said in it
+  - axe on the product view with the confirmation showing (the bar at rest is `qa:prepush`'s axe on `product@sizes`)
+
+  It runs only when named. The bar's looks are the `sticky-bar` and `sticky-bar-added` states.
+
+```sh
+QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs add-flow.spec
+node --test scripts/qa/render/partials/add-flow.test.mjs
+npx jest assets/js/test-unit/theme/reelflies/add
+```
+
 ## Fixture renders (`render/`)
 
 The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixture JSON instead of store data. So a template can be tested before the store has its data: ReelFlies_CA has no tree-4 categories until refactor 13, but the Species pages, the hub, the chips, the description split and the hook chart rows can be tested now. And a widget is checked from its source, not from what the store shows. Tickets 32, 34, 35, 36 and 46–49 use it.
@@ -1220,7 +1267,7 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - `category-screens.spec.mjs` (ticket 32) runs with `qa:screens` too; `category.spec.mjs` runs only when named.
 - `hook-chart-screens.spec.mjs` (ticket 35) runs with `qa:screens` too.
 - `cart-screens.spec.mjs` (ticket 41) runs with `qa:screens` too, for the same reason.
-- `header.spec.mjs` (ticket 27), `menu.spec.mjs` (ticket 28), `rail.spec.mjs` (ticket 29), `quick-search.spec.mjs` (ticket 30) and `size-pills.spec.mjs` (ticket 37) run only when named, like `skin.spec.mjs`: no npm script's filter matches them. The first three and `size-pills.spec.mjs` wait for their scripts with `chunkLoaded` from `states.mjs`; `quick-search.spec.mjs` waits until quick-search.js has added each search form's dropdown.
+- `header.spec.mjs` (ticket 27), `menu.spec.mjs` (ticket 28), `rail.spec.mjs` (ticket 29), `quick-search.spec.mjs` (ticket 30), `size-pills.spec.mjs` (ticket 37) and `add-flow.spec.mjs` (ticket 38) run only when named, like `skin.spec.mjs`: no npm script's filter matches them. The first three, `size-pills.spec.mjs` and `add-flow.spec.mjs` wait for their scripts with `chunkLoaded` from `states.mjs`; `quick-search.spec.mjs` waits until quick-search.js has added each search form's dropdown.
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
 - `storefront.test.mjs` also covers `QA_PORT`, the start log's name, the locks a gate holds (and the ports checked again after a slot wait), trusting only the server a gate started, and stopping that server when the gate is stopped by a signal. `playwright-config.test.mjs` covers that the config reads `QA_PORT` and holds the locks only in the runner, `prepush.test.mjs` what `qa:prepush` checks before its first gate, `serve.test.mjs` the locks around a `stencil start` by hand, and `scripts/lib/lock.test.mjs` the locks themselves: the stale rules, waiting, the three slots across processes, the signals, `RF_LOCK_ROOT`, and the command line `release.sh` uses.
 - `pages.test.mjs` covers W0-8's pins, baseline names (against the baseline-scope check's parser), UI states, overlays and custom layouts; `overlays.test.mjs` the overlay files, the patch and the throwaway worktree (in git repos of its own); `custom-layouts.test.mjs` the merge into `config.stencil.json`; `playwright-config.test.mjs` the overlay's refusals, ports and folder, and the custom-layouts step before `stencil start`; `storefront.test.mjs` the overlay marker check, and that only an overlay run's own worktree moves a `stencil start` out of the checkout (an `RF_QA_THEME_DIR` left in the shell never does; `prepush.test.mjs` too).

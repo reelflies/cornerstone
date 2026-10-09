@@ -1,0 +1,253 @@
+// =============================================================================
+// ADD FLOW (ticket 38; spec module 15; O14, UX-10, GEO-3; stories 34, 41, 42, 43 and 67)
+// =============================================================================
+//
+// The buy row (components/reelflies/add-to-cart.html) and the phone's sticky add bar
+// (sticky-add.html), from the reference's .buy-row, .status and #stickyBuy rules and ticket 26's
+// spike (_add-flow.scss on spike/26-skin).
+//
+// - The stepper and the button on one row, both 52px tall as the reference's: the stepper's − and
+//   + 44px targets, the button the buy colour, a pill filling the rest, its label 17px semibold.
+//   Stock sets the wrapper's display under .productView-options .form, so these rules go through
+//   the same selector. The wallet buttons take a row of their own.
+// - The status line under the row, the reference's .status: a soft box with the check icon, or
+//   the error tint and the alert icon for an error, with View cart a link.
+// - The sticky bar below 801px: fixed to the bottom, the choice and the same button, or after an
+//   add from it, "Added 3 × size 14" with View cart, or the reason a tap or an add failed, in the
+//   error colour. While it shows, add-flow.js sets --sticky-h, and the page pads its scroll by
+//   it, so a focused element never sits behind it.
+//
+// -----------------------------------------------------------------------------
+
+$rf-add-phone: "not all and (min-width: #{$screen-medium})";
+$rf-add-height: 52px; // the reference's .buy-row: the stepper and the button
+$rf-add-error-tint: #fdecea; // the reference's .status.err; the error colour on it is 5.75:1
+
+.productView-options .form .rf-add {
+    align-items: center;
+    column-gap: 12px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    row-gap: 12px;
+
+    > .rf-add-qty,
+    > .add-to-cart-buttons {
+        margin: 0;
+    }
+
+    > .alertBox,
+    > .rf-add-status {
+        grid-column: 1 / -1;
+    }
+
+    .add-to-cart-buttons {
+        display: contents;
+    }
+
+    .form-action {
+        margin: 0;
+        width: 100%;
+    }
+
+    .add-to-cart-wallet-buttons {
+        grid-column: 1 / -1;
+    }
+}
+
+.rf-add-stepper {
+    align-items: center;
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-pill);
+    box-sizing: border-box;
+    display: inline-flex;
+    height: $rf-add-height;
+    padding: 0 3px;
+
+    .form-input--incrementTotal {
+        background: transparent;
+        border: 0;
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        height: var(--rf-target-buy);
+        margin: 0;
+        padding: 0;
+        text-align: center;
+        width: 40px;
+    }
+}
+
+.rf-add-step.button--icon {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: var(--rf-radius-pill);
+    color: var(--rf-ink);
+    display: inline-flex;
+    height: var(--rf-target-buy);
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    width: var(--rf-target-buy);
+
+    &:hover {
+        background: var(--rf-tile);
+    }
+
+    .rf-icon {
+        height: 18px;
+        width: 18px;
+    }
+}
+
+.rf-add-button.button {
+    background: var(--rf-buy);
+    border-color: var(--rf-buy);
+    border-radius: var(--rf-radius-pill);
+    color: var(--rf-buy-ink);
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0;
+    min-height: $rf-add-height;
+    width: 100%;
+
+    &:hover,
+    &:focus {
+        background: var(--rf-buy-hover);
+        border-color: var(--rf-buy-hover);
+        color: var(--rf-buy-ink);
+    }
+}
+
+// Held when the choice can't be sold (add-bridge.js's holdAddButton): the button stays focusable
+// and its click says why, but it reads as unavailable, as stock's disabled button does. The bar's
+// button follows the main one's (add-flow.js), so both share this look. After the hover rules,
+// which it beats.
+.rf-add-button.button,
+.rf-sticky-add-button.button {
+    &[aria-disabled="true"],
+    &:disabled {
+        background: var(--rf-tile-2);
+        border-color: var(--rf-tile-2);
+        color: var(--rf-dun);
+        cursor: not-allowed;
+    }
+}
+
+.rf-add-status {
+    align-items: flex-start;
+    background: var(--rf-tile);
+    border-radius: var(--rf-radius-mid);
+    color: var(--rf-ink);
+    display: flex;
+    font-size: 15px;
+    gap: 10px;
+    line-height: 22px;
+    margin: 0;
+    padding: 12px 14px;
+    text-align: left; // stock centres .productView-options below 551px
+
+    &[hidden] {
+        display: none;
+    }
+
+    .rf-icon {
+        color: var(--rf-success);
+        flex: none;
+        margin-top: 1px;
+    }
+
+    .rf-add-status-alert,
+    &.rf-add-status--error .rf-add-status-check {
+        display: none;
+    }
+
+    &.rf-add-status--error {
+        background: $rf-add-error-tint;
+        color: var(--rf-error);
+
+        .rf-icon {
+            color: var(--rf-error);
+        }
+
+        .rf-add-status-alert {
+            display: block;
+        }
+    }
+
+    a {
+        color: var(--rf-ink);
+        font-weight: 600;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+}
+
+// The sticky bar
+.rf-sticky-add {
+    align-items: center;
+    background: var(--rf-paper);
+    bottom: 0;
+    box-shadow: 0 -1px 0 var(--rf-tile-2);
+    box-sizing: border-box;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    left: 0;
+    padding: 0.625rem var(--rf-gutter) calc(0.625rem + env(safe-area-inset-bottom, 0px));
+    position: fixed;
+    right: 0;
+    z-index: zIndex("high");
+
+    @include breakpoint("medium") {
+        display: none;
+    }
+
+    .button {
+        border-radius: var(--rf-radius-pill);
+        margin: 0;
+        min-height: var(--rf-target-row);
+    }
+}
+
+// The bar's display: flex, and .button's display on its button and link, would otherwise beat
+// the hidden attribute.
+.rf-sticky-add[hidden],
+.rf-sticky-add [hidden] {
+    display: none;
+}
+
+.rf-sticky-add-button.button {
+    background: var(--rf-buy);
+    border-color: var(--rf-buy);
+    color: var(--rf-buy-ink);
+    flex: none;
+    font-weight: 600;
+    white-space: nowrap; // the bar's message wraps beside it, never its label
+}
+
+.rf-sticky-add-text {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    margin: 0;
+
+    .rf-sticky-add[data-rf-bar="error"] & {
+        color: var(--rf-error);
+    }
+}
+
+// While the bar shows, the page's end can scroll above it (the body's padding) and a focused
+// element is never left under it (the scroll padding). --sticky-h is 0 while it's hidden, and on
+// every page without the bar (build pipeline 6.9's contract, for ticket 52's card).
+:root {
+    --sticky-h: 0px;
+}
+
+@media #{$rf-add-phone} {
+    html {
+        scroll-padding-bottom: calc(var(--sticky-h, 0px) + 8px);
+    }
+
+    body {
+        padding-bottom: var(--sticky-h, 0px);
+    }
+}
