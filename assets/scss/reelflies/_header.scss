@@ -159,11 +159,17 @@ body {
     }
 }
 
+// The PNG's ground is opaque white, and on phones it fills the bar to its last pixel row, where
+// the divider is: the link multiplies onto the bar, so the divider shows through the logo's white
+// and nothing else changes on the white paper. The link, not the image: stock's
+// .header-logo__link is its own stacking context (position and z-index), inside which the image
+// would have nothing to blend with.
 .rf-header-logo .rf-header-logo-link {
     border-radius: var(--rf-radius-small);
     display: block;
     height: auto;
     margin: 0;
+    mix-blend-mode: multiply;
     width: auto;
 
     // On phones the link fills the 56px sticky bar, so a ring outside it would lose its top edge
@@ -177,13 +183,9 @@ body {
     }
 }
 
-// The PNG's ground is opaque white, and on phones it fills the bar to its last pixel row, where
-// the divider is: multiply lets the divider show through it, and on the white paper changes
-// nothing else.
 .rf-header-logo-image {
     display: block;
     height: 56px;
-    mix-blend-mode: multiply;
     object-fit: contain;
     width: 78px;
 }
