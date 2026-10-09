@@ -5,6 +5,7 @@
     "chrome": true,
     "configuration": {},
     "page_context": {
+        "template": "pages/category",
         "page_type": "category",
         "breadcrumbs": [
             {

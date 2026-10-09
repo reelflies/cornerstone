@@ -7,9 +7,10 @@
     - One link per subcategory, in the store's order. On a Species page they are its Species ×
       Fly Type pages (decision 3: the menu lists only the Species, so the chips and the hub are
       the way to them). Every link is in the HTML, hidden or not, so a crawler finds them all.
-    - A chip has a 1px #879186 border (--rf-edge), and a 72x48 thumbnail only when its
-      subcategory has its own image in the store's data (ticket 07's probe 14); otherwise its
-      name alone. The thumbnail is lazy: it is small, and a chip the list hides never loads it.
+    - A chip has a 1px #879186 border (--rf-edge), and a 72x48 thumbnail (48x32 on phones, so
+      a chip with one is as tall as one without) only when its subcategory has its own image in
+      the store's data (ticket 07's probe 14); otherwise its name alone. The thumbnail is lazy:
+      it is small, and a chip the list hides never loads it.
     - At most two rows, never a sideways scroll (category-chips.js): the chips that don't fit
       are hidden, and the last item, the "more" chip, shows them all. It reads "+N more" from
       801px and "Show all N" on phones. Until the script lays the list out, CSS clips it to two

@@ -29,7 +29,7 @@ $rf-banner-column:      45%;        // the H1's and the intro's width on the ban
 $rf-banner-scrim-rgb:   rgb(nth($rf-scrim, 1), nth($rf-scrim, 2), nth($rf-scrim, 3)); // $rf-scrim as a colour (CD-6)
 $rf-banner-scrim:       linear-gradient(to right, rgba($rf-banner-scrim-rgb, 0.82) 0%, rgba($rf-banner-scrim-rgb, 0.72) 50%, rgba($rf-banner-scrim-rgb, 0) 78%);
 $rf-chip-height:        40px;       // a chip with its name alone
-$rf-chip-thumb-height:  56px;       // a chip with a 72x48 thumbnail, inset 3px and bordered
+$rf-chip-thumb-height:  56px;       // from 801px, a chip with a 72x48 thumbnail, inset 3px and bordered
 $rf-chips-gap:          8px;
 
 
@@ -64,8 +64,12 @@ ol.breadcrumbs {
         transform: none;
     }
 
+    // At least 24px tall (WCAG 2.5.8): a trail that wraps on a phone stacks its links.
     .breadcrumb-label {
+        align-items: center;
         color: var(--rf-dun);
+        display: inline-flex;
+        min-height: 24px;
         text-decoration: none;
 
         &:hover {
@@ -175,14 +179,14 @@ ol.breadcrumbs {
     list-style: none;
     margin: 0;
     padding: 16px 0 4px;
-
-    @include breakpoint("medium") {
-        padding-top: 20px;
-    }
 }
 
+// Phones: a 48x32 thumbnail, so a chip with one is as tall as one without (40px) and two rows
+// stay low on the first screen (stories 20 and 21). From 801px, 72x48.
 .rf-chips--thumbs {
-    --rf-chip-h: #{$rf-chip-thumb-height};
+    @include breakpoint("medium") {
+        --rf-chip-h: #{$rf-chip-thumb-height};
+    }
 }
 
 // Two rows until category-chips.js has laid the list out (the chips' own height, twice, and the
@@ -226,16 +230,25 @@ ol.breadcrumbs {
 }
 
 .rf-chip--thumb {
-    padding: 3px 14px 3px 3px;
+    padding: 3px 12px 3px 3px;
+
+    @include breakpoint("medium") {
+        padding-right: 14px;
+    }
 }
 
 .rf-chip-image {
     background: var(--rf-tile);
     border-radius: var(--rf-radius-small);
     flex: none;
-    height: 48px;
+    height: 32px;
     object-fit: cover;
-    width: 72px;
+    width: 48px;
+
+    @include breakpoint("medium") {
+        height: 48px;
+        width: 72px;
+    }
 }
 
 .rf-chip-name {
@@ -253,7 +266,7 @@ ol.breadcrumbs {
 // above the first row counts (stories 20 and 21).
 .rf-chips + .page {
     @include breakpoint("medium") {
-        margin-top: 20px;
+        margin-top: 16px;
     }
 }
 
