@@ -1077,7 +1077,12 @@
         },
 
         "hub": {
-            "_slot": ""
+            "_slot": "",
+            "heading": "Fly Fishing Flies by Species",
+            "tiles": "Species",
+            "count": "{count, plural, one {# pattern} other {# patterns}}",
+            "types": "{name} by fly type",
+            "products": "All flies"
         },
 
         "chart": {

@@ -1,0 +1,85 @@
+---
+category:
+    products:
+        limit: {{theme_settings.categorypage_products_per_page}}
+---
+{{!--
+    The Species hub (ticket 34; spec module 10; R8, SEO-2; stories 13, 14, 70 and 72): the custom
+    category template of the Species root, "Flies by Species" at /species/, the page that lists the
+    fly catalogue by Species. A template association on the root chooses it (on 1895766 through
+    the store-write helper), with no theme push, once the active theme contains it. Everything a
+    crawler needs is in the server HTML, and it is never a bare grid or an empty listing.
+
+    - The breadcrumbs, as stock, then one <main>.
+    - The plain listing header (listing-header.html; the root never gets a banner, O10): the H1
+      "Fly Fishing Flies by Species" (reelflies.hub.heading; the root's name is the menu's label),
+      and the root's intro: its description before <!--more-->, or the whole description when it
+      has no marker, since the root's copy is its intro. Appending a marker does both: the intro
+      is the part before the first one.
+    - One tile per Species page (category.subcategories, in the store's order;
+      category-tile.html), with its Species × Fly Type pages as links, from the categories data.
+      The first two photos are eager, the first the page's one fetchpriority="high".
+    - The grid (probe 8: the root rolls up its Species pages' products): ticket 31's cards, 24 a
+      page (the front matter), every photo lazy with no fetchpriority, since the tiles fill the
+      first screen, and the stock numbered pager. No sort bar, Filter or facet sidebar: the hub
+      routes by Species. It isn't #product-listing-container, so stock faceted search, which
+      category.js starts on every category page, never swaps it for the stock listing. With no
+      products there is no grid and no message.
+    - The Page Builder regions under the header and after the grid, as the category page has.
+    - The description after its marker, when it has one, at the end, as on the category page.
+    - The stock head's self-referencing canonical, no robots meta (refactor 11: the hub is
+      indexed), and the stock rel prev and next links. The front matter, the inject and the head
+      block are pages/category.html's (render/partials/species-hub.test.mjs holds them).
+
+    Inside a page's {{#partial "page"}} block @root is empty: this reads the page's own context,
+    and passes what each partial needs as hash arguments.
+--~}}
+{{inject "categoryProductsPerPage" theme_settings.categorypage_products_per_page}}
+{{#partial "head"}}
+    {{#if pagination.category.previous}}
+        <link rel="prev" href="{{{pagination.category.previous}}}">
+    {{/if}}
+    {{#if pagination.category.next}}
+        <link rel="next" href="{{{pagination.category.next}}}">
+    {{/if}}
+{{/partial}}
+
+{{#partial "page"}}
+
+{{> components/common/breadcrumbs breadcrumbs=breadcrumbs}}
+<main class="rf-hub" data-rf-hub>
+    {{> components/reelflies/listing-header rf_name=(lang 'reelflies.hub.heading') rf_description=(multiConcat category.description '<!--more-->')}}
+    {{{region name="category_below_header"}}}
+    {{#if category.subcategories.length}}
+    <ul class="rf-hub-tiles" aria-label="{{lang 'reelflies.hub.tiles'}}" data-rf-hub-tiles>
+        {{#each category.subcategories}}
+        {{> components/reelflies/category-tile rf_tile=this rf_position=(add @index 1) rf_categories=../categories rf_default_image=../theme_settings.default_image_product}}
+        {{/each}}
+    </ul>
+    {{/if}}
+    {{#if category.products}}
+    <section class="rf-hub-products" aria-labelledby="rf-hub-products-title" data-list-name="Category: {{category.name}}" data-rf-hub-products>
+        <div class="rf-hub-products__head">
+            <h2 class="rf-hub-products__title" id="rf-hub-products-title">{{lang 'reelflies.hub.products'}}</h2>
+            <p class="rf-hub-products__count" data-rf-hub-count>{{lang 'reelflies.hub.count' count=category.total_products}}</p>
+        </div>
+        <ul class="productGrid">
+            {{#each category.products}}
+            <li class="product">
+                {{> components/products/card settings=../settings show_compare=../category.show_compare show_rating=../settings.show_product_rating theme_settings=../theme_settings customer=../customer event="list" position=(add @index 1)}}
+            </li>
+            {{/each}}
+        </ul>
+        {{> components/common/paginator pagination.category}}
+    </section>
+    {{/if}}
+    <div class="page-region">
+        {{{region name="category_below_content"}}}
+    </div>
+    {{#contains category.description '<!--more-->'}}
+    {{> components/reelflies/description-part rf_description=category.description rf_part='rest'}}
+    {{/contains}}
+</main>
+
+{{/partial}}
+{{> layout/base}}

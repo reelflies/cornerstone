@@ -64,6 +64,11 @@ test('the harness runs checkAll once on the pages each assertion applies to that
     const onHost = result(checkPages([page('home', 1, 200, host), page('404', 0, 404, host)], [stripEveryPage]));
     assert.equal(onHost.status, 'fail');
     assert.match(onHost.problems[0], /not on 404 \/404/);
+    // So is a pin the store renders with a custom template (ticket 34's species-hub), by its key.
+    assert.equal(result(checkPages([page('home', 1), page('species-hub', 0)], [stripEveryPage])).status, 'pass');
+    const hubOnHost = result(checkPages([page('home', 1, 200, host), page('species-hub', 0, 200, host)], [stripEveryPage]));
+    assert.equal(hubOnHost.status, 'fail');
+    assert.match(hubOnHost.problems[0], /not on species-hub \/species-hub/);
     const onlyHome = { ...stripEveryPage, pages: ['home'] };
     assert.equal(result(checkPages(pages, [onlyHome])).status, 'pass');
     assert.equal(result(checkPages([page('cart', 0, 500)], [stripEveryPage])).status, 'skip');

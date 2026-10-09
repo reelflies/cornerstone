@@ -18,13 +18,22 @@
 // pages/errors/* (its server/lib/page-type-util.js), so it never asks the store for that page's
 // regions, though the store accepts its placement. On the prelaunch host (QA_BASE_URL, Shaun's
 // cookie batch) the 404 page must show the strip like every other.
+//
+// A pin the store renders with a custom template (pages/custom/*) counts only there too, by its
+// key (CUSTOM_TEMPLATE_PINS): stencil start maps no custom file to a page type either, and it
+// renders the template only through custom-layouts.json, so the regions it fills come from the
+// stock template's placement, not the custom file's (docs/widgets.md, "Custom templates").
 
 import { findTags } from '../html.mjs';
 
 const strips = html => findTags(html, 'div').filter(tag => 'data-rf-strip' in tag.attrs).length;
 const LOCAL_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
-// A 404 page rendered by a local stencil start, whose regions are never filled.
-const localNotFound = page => page.kind === '404' && LOCAL_HOSTS.includes(new URL(page.url).hostname);
+// The pins rendered with a custom template: ticket 34's Species hub. Wave R1 adds 1895766's
+// category@noindex and hook-chart pins here when it pins them.
+export const CUSTOM_TEMPLATE_PINS = ['species-hub'];
+// A 404 page, or a custom template's pin, rendered by a local stencil start, whose regions for it
+// are never the store's.
+const localNotFound = page => (page.kind === '404' || CUSTOM_TEMPLATE_PINS.includes(page.key)) && LOCAL_HOSTS.includes(new URL(page.url).hostname);
 
 export default {
     id: 'strip-every-page',

@@ -205,8 +205,19 @@ describe('the screenshot stylesheet (W0-5)', () => {
         }
     });
 
+    it('holds the Species hub stand-in\'s live grid and masks its counts, leaving its tiles in the shot (ticket 34)', () => {
+        const grid = '[data-rf-hub-products] .productGrid';
+        const css = rules(screenshotStyle('1', 'species-hub'));
+        assert.equal(css.get(grid)?.height, '1200px !important');
+        assert.equal(css.get(`${grid} > *`)?.display, 'none !important');
+        assert.ok(!css.has('.productGrid'), 'only the hub\'s grid');
+        const masks = masksFor('1', 'species-hub');
+        assert.ok(masks.includes('[data-rf-hub-count]'), 'the tiles\' and the grid\'s counts');
+        for (const selector of ['[data-rf-hub-tiles]', '.rf-hub-tile', '.rf-hub-tile__img']) assert.ok(!masks.includes(selector), `${selector} stays in the shot`);
+    });
+
     it('holds nothing on any other page or channel, so cards stay in those shots', () => {
-        const held = [['1', 'product'], ['1', 'product@sizes'], ...LIVE_LISTS.map(pin => ['1', pin])];
+        const held = [['1', 'product'], ['1', 'product@sizes'], ['1', 'species-hub'], ...LIVE_LISTS.map(pin => ['1', pin])];
         for (const [channel, template] of kinds.filter(([kindChannel, kindTemplate]) => !held.some(([c, t]) => c === kindChannel && t === kindTemplate))) {
             const css = rules(screenshotStyle(channel, template));
             assert.deepEqual([...css.keys()].sort(), [...HIDDEN].sort(), `${channel} ${template}`);

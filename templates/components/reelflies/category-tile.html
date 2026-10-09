@@ -1,0 +1,64 @@
+{{!--
+    One Species page's tile on the Species hub (ticket 34; spec module 10; R8, SEO-2; stories 13,
+    14, 70 and 72), the reference's .hub-tile (plan/design/src/reference.src.html:690-701):
+
+        {{> components/reelflies/category-tile rf_tile=this rf_position=(add @index 1) rf_categories=../categories rf_default_image=../theme_settings.default_image_product}}
+
+    rf_tile is one of category.subcategories (its id, name, url, image, description and
+    product_count), rf_position its place from 1, rf_categories the page's categories data and
+    rf_default_image the theme's default product image.
+
+    - The photo: the Species page's own category image in a 3:2 box (600x400), cropped to fill it,
+      with a real srcset (160w to 960w), sizes and its dimensions; the theme's default product
+      image when the page has none, so no <img> is ever broken. It is a second link to the page,
+      aria-hidden and out of the tab order, as the reference's: the name is the link a screen
+      reader or a keyboard meets.
+      - The first two photos are eager and the first takes fetchpriority="high", the page's only
+        one; every later photo is loading="lazy" (O23; story 70). The server can't know the
+        columns, so two is the phones' whole first row and the first two of the desktop's three
+        (_hub.scss), and no photo off a phone's first screen competes with the first tile's. The
+        raw-HTML assertion species-hub holds the same number (EAGER).
+      - sizes: the tile's own width, measured at 320, 375, 600, 801, 1024, 1135 and 1280: half the
+        page less its 24px gutters and the 12px gap on phones, a third less the gutters and the
+        two 20px gaps from 801px, and a third of the 1088px container from 1136px.
+    - The name, an <h2> holding the link (the cards below are <h3>).
+    - The count: the Species page's product_count as "N patterns", only when above 0. It counts the
+      products placed on that page itself, not its children's, Assortments included (the ticket's
+      open question; default taken, revisitable).
+    - The intro: the description before its <!--more--> marker (description-part.html, as ticket
+      32's pages split it); with no marker, none.
+    - The Fly Type links: the Species page's children in the categories data, found by its id with
+      the Species root at the top level or one level down (as category-banner-rule.html finds it),
+      as <a href> links (category-tile-types.html). None when the data carries none: a Species
+      with no Fly Type pages, or a Menu Display Depth below 3 (refactor 07 keeps it at 3 or more on
+      1895766).
+--}}
+{{~assignVar 'rf_tile_load' 'lazy'~}}
+{{~#if rf_position '<=' 2~}}{{~assignVar 'rf_tile_load' 'eager'~}}{{~/if~}}
+{{~#if rf_position '==' 1~}}{{~assignVar 'rf_tile_load' 'high'~}}{{~/if~}}
+<li class="rf-hub-tile">
+    <a class="rf-hub-tile__media" href="{{rf_tile.url}}" tabindex="-1" aria-hidden="true">
+        {{#if rf_tile.image.data}}
+        <img class="rf-hub-tile__img" src="{{getImageSrcset rf_tile.image 1x='480w'}}" srcset="{{getImageSrcset rf_tile.image 160w='160w' 320w='320w' 480w='480w' 640w='640w' 960w='960w'}}" sizes="(min-width: 1136px) 349px, (min-width: 801px) calc(33.33vw - 29px), calc(50vw - 30px)" width="600" height="400" alt=""{{#if (getVar 'rf_tile_load') '==' 'high'}} fetchpriority="high"{{/if}}{{#if (getVar 'rf_tile_load') '==' 'lazy'}} loading="lazy"{{/if}} decoding="async">
+        {{else}}
+        <img class="rf-hub-tile__img rf-hub-tile__img--default" src="{{cdn rf_default_image}}" srcset="{{cdn rf_default_image}} 500w" sizes="(min-width: 1136px) 349px, (min-width: 801px) calc(33.33vw - 29px), calc(50vw - 30px)" width="600" height="400" alt=""{{#if (getVar 'rf_tile_load') '==' 'high'}} fetchpriority="high"{{/if}}{{#if (getVar 'rf_tile_load') '==' 'lazy'}} loading="lazy"{{/if}} decoding="async">
+        {{/if}}
+    </a>
+    <div class="rf-hub-tile__body">
+        <h2 class="rf-hub-tile__name"><a href="{{rf_tile.url}}">{{rf_tile.name}}</a></h2>
+        {{#if rf_tile.product_count}}
+        <p class="rf-hub-tile__count" data-rf-hub-count>{{lang 'reelflies.hub.count' count=rf_tile.product_count}}</p>
+        {{/if}}
+        {{> components/reelflies/description-part rf_description=rf_tile.description rf_part='intro'}}
+        {{#with rf_tile as |rfSpecies|}}
+        {{~#each ../rf_categories as |rfTop|~}}
+        {{~#each rfTop.children as |rfKid|~}}
+        {{~#if rfKid.id '==' rfSpecies.id~}}{{> components/reelflies/category-tile-types rf_name=rfSpecies.name rf_types=rfKid.children}}{{~/if~}}
+        {{~#each rfKid.children as |rfGrandKid|~}}
+        {{~#if rfGrandKid.id '==' rfSpecies.id~}}{{> components/reelflies/category-tile-types rf_name=rfSpecies.name rf_types=rfGrandKid.children}}{{~/if~}}
+        {{~/each~}}
+        {{~/each~}}
+        {{~/each~}}
+        {{/with}}
+    </div>
+</li>
