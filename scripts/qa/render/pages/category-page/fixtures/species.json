@@ -1,5 +1,5 @@
 {
-    "description": "A Species page: the banner and its Species × Fly Type chips (ticket 32), on tree 4's shape: render/partials/category/pages.json's \"species\" page with tree 4's categories and menu ids (render/partials/menu/tree-4.json) and ticket 31's six cards, with the facet sidebar the live category pages have (faceted search on, no facets to list until ticket 33). The widget itself is empty: category-screens.spec.mjs shoots the page's body.",
+    "description": "A Species page: the banner and its Species × Fly Type chips (ticket 32), on tree 4's shape: render/partials/category/pages.json's \"species\" page with tree 4's categories and menu ids (render/partials/menu/tree-4.json) and ticket 31's six cards, with the facet sidebar: Fly Sizes shows its first fifteen values, as ticket 21 sets the facet, then \"Show more\" (ticket 33). The widget itself is empty: category-screens.spec.mjs shoots the page's body.",
     "page": "pages/category",
     "region": "category_below_content",
     "chrome": true,
@@ -282,7 +282,131 @@
                     }
                 }
             ],
-            "facets": []
+            "facets": [
+                {
+                    "facet": "Fly Sizes",
+                    "title": "Fly Sizes",
+                    "partial": "multi",
+                    "visible": true,
+                    "start_collapsed": false,
+                    "show_product_counts": true,
+                    "show_more_toggle": true,
+                    "has_more_results": true,
+                    "selected": false,
+                    "remove_url": "https://reelflies.ca/species/trout-flies/?_bc_fsnf=1",
+                    "items": [
+                        {
+                            "id": "12",
+                            "title": "12",
+                            "count": 40,
+                            "selected": false,
+                            "url": "https://reelflies.ca/species/trout-flies/?_bc_fsnf=1&Fly+Sizes=12"
+                        },
+                        {
+                            "id": "14",
+                            "title": "14",
+                            "count": 44,
+                            "selected": false,
+                            "url": "https://reelflies.ca/species/trout-flies/?_bc_fsnf=1&Fly+Sizes=14"
+                        },
+                        {
+                            "id": "10",
+                            "title": "10",
+                            "count": 33,
+                            "selected": false,
+                            "url": "https://reelflies.ca/species/trout-flies/?_bc_fsnf=1&Fly+Sizes=10"
+                        },
+                        {
+                            "id": "16",
+                            "title": "16",
+                            "count": 38,
+                            "selected": false,
+                            "url": "https://reelflies.ca/species/trout-flies/?_bc_fsnf=1&Fly+Sizes=16"
+                        },
+                        {
+                            "id": "8",
+                            "title": "8",
+                            "count": 25,
+                            "selected": false,
+                            "url": "https://reelflies.ca/species/trout-flies/?_bc_fsnf=1&Fly+Sizes=8"
+                        },
+                        {
+                            "id": "6",
+                            "title": "6",
+                            "count": 14,
+                            "selected": false,
+                            "url": "https://reelflies.ca/species/trout-flies/?_bc_fsnf=1&Fly+Sizes=6"
+                        },
+                        {
+                            "id": "18",
+                            "title": "18",
+                            "count": 29,
+                            "selected": false,
+                            "url": "https://reelflies.ca/species/trout-flies/?_bc_fsnf=1&Fly+Sizes=18"
+                        },
+                        {
+                            "id": "4",
+                            "title": "4",
+                            "count": 9,
+                            "selected": false,
+                            "url": "https://reelflies.ca/species/trout-flies/?_bc_fsnf=1&Fly+Sizes=4"
+                        },
+                        {
+                            "id": "2",
+                            "title": "2",
+                            "count": 4,
+                            "selected": false,
+                            "url": "https://reelflies.ca/species/trout-flies/?_bc_fsnf=1&Fly+Sizes=2"
+                        },
+                        {
+                            "id": "1/0",
+                            "title": "1/0",
+                            "count": 2,
+                            "selected": false,
+                            "url": "https://reelflies.ca/species/trout-flies/?_bc_fsnf=1&Fly+Sizes=1/0"
+                        },
+                        {
+                            "id": "20",
+                            "title": "20",
+                            "count": 17,
+                            "selected": false,
+                            "url": "https://reelflies.ca/species/trout-flies/?_bc_fsnf=1&Fly+Sizes=20"
+                        },
+                        {
+                            "id": "22",
+                            "title": "22",
+                            "count": 11,
+                            "selected": false,
+                            "url": "https://reelflies.ca/species/trout-flies/?_bc_fsnf=1&Fly+Sizes=22"
+                        },
+                        {
+                            "id": "1",
+                            "title": "1",
+                            "count": 3,
+                            "selected": false,
+                            "url": "https://reelflies.ca/species/trout-flies/?_bc_fsnf=1&Fly+Sizes=1"
+                        },
+                        {
+                            "id": "24",
+                            "title": "24",
+                            "count": 6,
+                            "selected": false,
+                            "url": "https://reelflies.ca/species/trout-flies/?_bc_fsnf=1&Fly+Sizes=24"
+                        },
+                        {
+                            "id": "2/0",
+                            "title": "2/0",
+                            "count": 2,
+                            "selected": false,
+                            "url": "https://reelflies.ca/species/trout-flies/?_bc_fsnf=1&Fly+Sizes=2/0"
+                        }
+                    ]
+                }
+            ],
+            "selected": {
+                "items": [],
+                "remove_all_url": ""
+            }
         },
         "categories": [
             {
@@ -796,8 +920,7 @@
                 "current": 1,
                 "next": "?page=2",
                 "start": 1,
-                "end": 24,
-                "total": 48
+                "end": 24
             }
         },
         "theme_settings": {

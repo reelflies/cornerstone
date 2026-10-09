@@ -81,7 +81,7 @@ test('fails a marker inside an element, which splits it and lets the header swal
 test('fails the description\'s rest before the grid, and a printed <!--more--> marker', async () => {
     const good = await page('fly-type');
     const rest = good.html.match(/<div class="rf-listing-description" data-rf-description>[\s\S]*?<\/div>/)[0];
-    const moved = good.html.replace(rest, '').replace('<div class="page">', `${rest}<div class="page">`);
+    const moved = good.html.replace(rest, '').replace(/<div class="page[ "]/, opening => `${rest}${opening}`);
     assert.match(categoryPage.check({ ...good, html: moved }).join('\n'), /comes before the product grid/);
     assert.match(problems(good, '</h1>', '</h1><!--more-->'), /marker is in the page/);
 });
