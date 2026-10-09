@@ -134,7 +134,7 @@ describe('the harness', () => {
     });
 
     it('checks the 404 page, which must answer 404, and fails it when it answers 200', () => {
-        const notFound = { ...fixture('good-product.html', '404'), status: 404 };
+        const notFound = { ...fixture('good-404.html', '404'), status: 404 };
         assert.deepEqual(failed(checkPage(notFound, assertions)), []);
         assert.ok(checkPage(notFound, assertions).some(result => result.status === 'pass'));
         assert.deepEqual(failed(checkPage({ ...notFound, status: 200 }, assertions)), ['page-renders']);
@@ -188,7 +188,7 @@ describe('the harness', () => {
     });
 
     it('expects 404 from a kind@name pin of the 404 kind', () => {
-        const typo = { ...fixture('good-product.html', '404'), key: '404@typo', status: 404 };
+        const typo = { ...fixture('good-404.html', '404'), key: '404@typo', status: 404 };
         assert.deepEqual(failed(checkPage(typo, assertions)), []);
     });
 

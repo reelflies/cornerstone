@@ -231,8 +231,16 @@ describe('the screenshot stylesheet (W0-5)', () => {
         for (const selector of ['[data-rf-hub-tiles]', '.rf-hub-tile', '.rf-hub-tile__img']) assert.ok(!masks.includes(selector), `${selector} stays in the shot`);
     });
 
+    it('holds search@none\'s "Did you mean" panel on both channels, whose words follow the store\'s content (ticket 51)', () => {
+        for (const channel of ['1895766', '1']) {
+            const css = rules(screenshotStyle(channel, 'search@none'));
+            assert.equal(css.get('.page-content > .panel')?.height, '200px !important', channel);
+            assert.equal(css.get('.page-content > .panel > *')?.display, 'none !important', channel);
+        }
+    });
+
     it('holds nothing on any other page or channel, so cards stay in those shots', () => {
-        const held = [['1', 'product'], ['1', 'product@sizes'], ['1', 'species-hub'], ...LIVE_LISTS.map(pin => ['1', pin])];
+        const held = [['1', 'product'], ['1', 'product@sizes'], ['1', 'species-hub'], ...LIVE_LISTS.map(pin => ['1', pin]), ['1895766', 'search@none'], ['1', 'search@none']];
         for (const [channel, template] of kinds.filter(([kindChannel, kindTemplate]) => !held.some(([c, t]) => c === kindChannel && t === kindTemplate))) {
             const css = rules(screenshotStyle(channel, template));
             assert.deepEqual([...css.keys()].sort(), [...HIDDEN].sort(), `${channel} ${template}`);

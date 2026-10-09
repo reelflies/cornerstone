@@ -72,7 +72,10 @@ cart: true
             {{/or}}
 
         {{else}}
+            {{> components/reelflies/cart-empty}}{{!-- ReelFlies hook (ticket 51; CUSTOMIZATIONS.md): plain text, the reference's line, Shop dry flies and the Fly Type links; stock's focusable heading stays below, unrendered --}}
+            {{#if false}}
             <h3 tabindex="0">{{lang 'cart.checkout.empty_cart'}}</h3>
+            {{/if}}
         {{/if}}
 
     </div>

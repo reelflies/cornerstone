@@ -1,0 +1,30 @@
+{{!--
+    Help for a search with no results (ticket 51; spec module 24; O20; stories 66 and 68), included
+    by the hook in stock pages/search.html at the top of its <main class="page-content">, under the
+    page's one H1 (components/search/heading.html).
+
+    Whenever result_count is 0 for a query that ran (not an empty search, not search_error), with
+    or without the platform's suggestions panel: stock showed its tips only inside that panel, so
+    most empty searches showed nothing helpful. Stock's own no-match line and tips, which render
+    only then, stay in the hooked file, unrendered, so nothing is said twice; its "Did you mean",
+    categories and brands stay.
+
+    - "No flies match “{query}”." The store sends forms.search.query already escaped (a search for
+      a&b<i> arrives as a&amp;b&lt;i&gt;), so the line prints it as stock's own heading does
+      (components/search/heading.html): triple braces, through sanitize, which also strips any
+      tag, so a query reaches the page as text whether the store escaped it or not. Double braces
+      would escape it twice, and "a & b" would read "a &amp; b".
+    - The reference's tip (quick search's no-match copy, plan/design/src/reference.src.html).
+    - The Fly Type links (404-links.html); none while both menu ids are empty.
+
+    The search_below_content region stays free for Page Builder. Inside the page's
+    {{#partial "page"}} block @root is empty: this reads the page's own context, and passes the
+    links what they need as hash arguments.
+--}}
+{{#if result_count '===' 0}}{{#if forms.search.query}}{{#unless forms.search.search_error}}
+<div class="rf-dead-end rf-search-empty" data-rf-search-empty>
+    <p class="rf-dead-end__title" data-rf-search-empty-line>{{{lang 'reelflies.search_empty.no_match' query=(sanitize forms.search.query)}}}</p>
+    <p class="rf-dead-end__message">{{lang 'reelflies.search_empty.tip'}}</p>
+    {{> components/reelflies/404-links rf_type_ids=theme_settings.rf_menu_type_ids rf_species_id=theme_settings.rf_menu_species_root_id rf_categories=categories}}
+</div>
+{{/unless}}{{/if}}{{/if}}
