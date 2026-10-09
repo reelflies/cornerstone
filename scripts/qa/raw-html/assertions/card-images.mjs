@@ -1,14 +1,16 @@
 // The listing's card photos (ticket 31; SEO-14, O23; story 70), on category, search and brand
-// pages: the cards in the stock grid (.productGrid), which components/reelflies/card-image.html
-// renders.
+// pages: the cards in the listing's grid (.productGrid in #product-listing-container), which
+// components/reelflies/card-image.html renders.
 //
+// - Every product in the grid is a card (article.card) with a photo, or the default image.
 // - Every card's photo has a real srcset (no lazysizes stand-in), sizes, a width and a height,
 //   and never loads through lazysizes (no lazyload class, no data-srcset or data-sizes).
 // - The first three load eagerly (no loading attribute), and every later one is loading="lazy".
-// - One image on the page has fetchpriority="high": the banner's when the page has one (ticket
-//   32), else the first card's. No later card has it.
+// - One image on the page has fetchpriority="high": the banner's (.rf-listing-banner, ticket 32)
+//   when the page has one, else the first card's. No other image has it.
 //
-// A page with no grid passes (an empty search, a brand with no products).
+// A category pin must list products. A search or brand page with no grid passes (an empty
+// search, a brand with no products).
 
 import {
     elementsHtml, findTags, markupOnly, outerHtml,
@@ -17,11 +19,18 @@ import {
 const EAGER = 3;
 const isCard = attrs => /(^|\s)card(\s|$)/.test(attrs.class || '');
 
-export function cardImageProblems(html) {
-    const grid = outerHtml(html, 'ul', attrs => /(^|\s)productGrid(\s|$)/.test(attrs.class || ''));
-    if (!grid) return [];
+const LISTING = attrs => attrs.id === 'product-listing-container';
+const isBanner = tag => /(^|\s)rf-listing-banner(\s|$)/.test(tag.attrs.class || '');
+
+export function cardImageProblems(html, kind) {
+    const listing = findTags(html).find(tag => LISTING(tag.attrs));
+    const scope = listing ? outerHtml(html, listing.name, LISTING) : html;
+    const grid = outerHtml(scope, 'ul', attrs => /(^|\s)productGrid(\s|$)/.test(attrs.class || ''));
+    if (!grid) return kind === 'category' ? ['the category page has no product grid (.productGrid): a pinned category lists products'] : [];
     const problems = [];
+    const items = elementsHtml(grid, 'li', attrs => /(^|\s)product(\s|$)/.test(attrs.class || ''));
     const photos = elementsHtml(grid, 'article', isCard).map(card => findTags(card, 'img')[0]);
+    if (items.length !== photos.length) problems.push(`the grid has ${items.length} products but ${photos.length} cards (article.card)`);
     photos.forEach((img, index) => {
         const name = `card ${index + 1}'s photo`;
         if (!img) {
@@ -39,6 +48,7 @@ export function cardImageProblems(html) {
     const high = findTags(markupOnly(html), 'img').filter(tag => tag.attrs.fetchpriority === 'high');
     if (photos.length && high.length === 0) problems.push('no image on the page has fetchpriority="high": with no banner, the first card\'s photo takes it');
     if (high.length > 1) problems.push(`${high.length} images have fetchpriority="high": one at most, the banner's or else the first card's`);
+    if (high.length === 1 && !isBanner(high[0]) && photos[0] && high[0].raw !== photos[0].raw) problems.push(`the page's fetchpriority="high" is on ${high[0].attrs.src || 'an image'}, not the banner or the first card's photo`);
     return problems;
 }
 
@@ -48,6 +58,6 @@ export default {
     description: 'the listing\'s card photos: real srcset and sizes, the first three eager and the rest lazy, one fetchpriority="high" on the page',
     pages: ['category', 'search', 'brand'],
     check(page) {
-        return cardImageProblems(page.html);
+        return cardImageProblems(page.html, page.kind);
     },
 };

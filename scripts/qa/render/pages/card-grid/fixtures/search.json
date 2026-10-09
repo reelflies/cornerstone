@@ -1,5 +1,5 @@
 {
-    "description": "The card grid on the real search page (ticket 31), with the products of render/partials/card/products.json and tree 1's Gear and Assortment roots, so both gated variations show \"/ fly\". The widget itself is empty: card-screens.spec.mjs shoots .productGrid.",
+    "description": "The card grid on the real search page (ticket 31), with the products of render/partials/card/products.json and tree 1's Gear and Assortment roots, so both gated variations show \"/ fly\". The page has the facet sidebar, as the live search and category pages do (faceted search on, no facets to list), so the grid is as wide as theirs. The widget itself is empty: card-screens.spec.mjs shoots .productGrid.",
     "page": "pages/search",
     "region": "search_below_content",
     "chrome": true,
@@ -226,7 +226,9 @@
                     }
                 }
             ],
-            "show_compare": true
+            "show_compare": true,
+            "faceted_search_enabled": true,
+            "facets": []
         },
         "forms": {
             "search": {

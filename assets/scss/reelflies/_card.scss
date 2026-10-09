@@ -39,6 +39,8 @@
         display: none;
     }
 
+    // The cells: stock's widths, paddings and its sidebar rule undone. `&#{&}` doubles the class
+    // (.productGrid.productGrid) to outrank stock's own .productGrid .product.
     &#{&} .product,
     .page-sidebar + .page-content & .product {
         display: block;

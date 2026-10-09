@@ -14,15 +14,17 @@
       names, the channel's Gear and Assortment roots, such as "Fly Gear,Fly Selections & Fly
       Boxes" on tree 1). A root matches as a whole name: the path is the root itself or starts
       with the root and "/".
-    - With the setting empty, the rule can't tell a fly from Gear, so no unit shows.
+    - With the setting empty, or naming no root (only commas or spaces), the rule can't tell a
+      fly from Gear, so no unit shows.
     - It renders a leading space and the unit, or nothing, so it sits inside the caller's price.
 --}}
 {{~assignVar 'rf_unit' 0~}}
+{{~assignVar 'rf_unit_roots' 0~}}
 {{~#if rf_categories.length~}}
-{{~#if (trim rf_exclude)~}}
 {{~assignVar 'rf_unit' 1~}}
 {{~#each (split rf_exclude ',') as |rfRoot|~}}
 {{~#if (trim rfRoot)~}}
+{{~assignVar 'rf_unit_roots' 1~}}
 {{~#each ../rf_categories as |rfPath|~}}
 {{~#if rfPath '===' (trim rfRoot)~}}{{~assignVar 'rf_unit' 0~}}{{~/if~}}
 {{~#startsWith (concat (trim rfRoot) '/') rfPath~}}{{~assignVar 'rf_unit' 0~}}{{~/startsWith~}}
@@ -30,5 +32,4 @@
 {{~/if~}}
 {{~/each~}}
 {{~/if~}}
-{{~/if~}}
-{{~#if (getVar 'rf_unit')}} <span class="rf-price-unit">{{lang 'reelflies.card.per_fly'}}</span>{{/if~}}
+{{~#if (getVar 'rf_unit')}}{{#if (getVar 'rf_unit_roots')}} <span class="rf-price-unit">{{lang 'reelflies.card.per_fly'}}</span>{{/if}}{{/if~}}

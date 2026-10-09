@@ -14,15 +14,17 @@ import {
     elementsHtml, findTags, outerHtml, textOf,
 } from '../../raw-html/html.mjs';
 import { unbalancedTags } from '../html-checks.mjs';
-import { renderPartial } from '../render.mjs';
+import { THEME_DIR, renderPartial } from '../render.mjs';
+import { cardImageProblems } from '../../raw-html/assertions/card-images.mjs';
 
 const { products } = JSON.parse(fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), 'card/products.json'), 'utf8'));
 const TREE_1 = 'Fly Gear,Fly Selections & Fly Boxes';
 const CALLER = 'rf-test/card-grid-caller';
 
 // The grid as a listing renders it, on a page of `pageType`, with tree 1's Gear and Assortment
-// roots unless a test sets others; `banner` sets ticket 32's rf_banner flag before the grid.
-const grid = (context = {}, { pageType = 'search', banner = false } = {}) => renderPartial(CALLER, {
+// roots unless a test sets others; `banner` sets ticket 32's rf_banner flag before the grid, and
+// `overrides` replaces partials by name.
+const grid = (context = {}, { pageType = 'search', banner = false, overrides = {} } = {}) => renderPartial(CALLER, {
     products,
     page_type: pageType,
     settings: { show_product_rating: true, hide_price_from_guests: false },
@@ -32,6 +34,7 @@ const grid = (context = {}, { pageType = 'search', banner = false } = {}) => ren
 }, {
     overrides: {
         [CALLER]: `${banner ? "{{assignVar 'rf_banner' 1}}" : ''}{{> components/products/grid products=products show_compare=show_compare theme_settings=theme_settings event="list"}}`,
+        ...overrides,
     },
 });
 const cards = html => elementsHtml(html, 'article', attrs => /(^|\s)card(\s|$)/.test(attrs.class || ''));
@@ -95,9 +98,13 @@ describe('the card (components/reelflies/card.html)', () => {
         assert.equal(findTags(html, 'button').filter(tag => /quickview/.test(tag.attrs.class)).length, 0);
     });
 
-    it('leaves an empty slot for tickets 42 and 43 inside the card body', async () => {
-        const source = fs.readFileSync(path.resolve('templates/components/reelflies/card.html'), 'utf8');
-        assert.match(source, /\{\{> components\/reelflies\/card-extras\}\}/);
+    it('renders tickets 42 and 43\'s slot, card-extras.html, inside the card body, empty until they fill it', async () => {
+        const html = await grid({}, { overrides: { 'components/reelflies/card-extras': '<i data-rf-test-slot></i>' } });
+        for (const card of cards(html)) {
+            const body = outerHtml(card, 'div', attrs => /(^|\s)card-body(\s|$)/.test(attrs.class || ''));
+            assert.equal(findTags(body, 'i').filter(tag => 'data-rf-test-slot' in tag.attrs).length, 1);
+        }
+        assert.equal(textOf(await renderPartial('components/reelflies/card-extras', {})), '');
     });
 });
 
@@ -141,6 +148,19 @@ describe('the card\'s photo (components/reelflies/card-image.html; SEO-14, O23, 
         assert.match(img.attrs.src, /ProductDefault\.png/);
         assert.equal(img.attrs.width, '600');
     });
+
+    it('gives the default image the photo\'s rules: a srcset, sizes, and its place\'s loading and priority (#68\'s review)', async () => {
+        for (const at of [0, 1, 4]) {
+            const list = products.map((product, index) => (index === at ? { ...product, image: null } : product));
+            const html = await grid({ products: list }); // eslint-disable-line no-await-in-loop
+            const img = image(cards(html)[at]);
+            assert.match(img.attrs.srcset, /default-product\.png 500w$/, `card ${at + 1}`);
+            assert.ok(img.attrs.sizes, `card ${at + 1}'s sizes`);
+            assert.equal(img.attrs.fetchpriority, at === 0 ? 'high' : undefined, `card ${at + 1}'s priority`);
+            assert.equal(img.attrs.loading, at < 3 ? undefined : 'lazy', `card ${at + 1}'s loading`);
+            assert.deepEqual(cardImageProblems(html), [], 'the card-images assertion passes it');
+        }
+    });
 });
 
 // A whole page, not just the grid: inside a page's {{#partial "page"}} block @root is empty, so a
@@ -183,7 +203,7 @@ describe('the cards outside a listing grid (related products)', () => {
 
 describe('the card grid\'s shot (card-screens.spec.mjs)', () => {
     it('shoots exactly these products, with tree 1\'s Gear and Assortment roots', () => {
-        const shot = JSON.parse(fs.readFileSync(path.resolve('scripts/qa/render/pages/card-grid/fixtures/search.json'), 'utf8'));
+        const shot = JSON.parse(fs.readFileSync(path.join(THEME_DIR, 'scripts/qa/render/pages/card-grid/fixtures/search.json'), 'utf8'));
         assert.deepEqual(shot.page_context.product_results.products, products);
         assert.equal(shot.page_context.theme_settings.rf_price_unit_exclude, TREE_1);
         assert.equal(shot.page, 'pages/search');

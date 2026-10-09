@@ -1,9 +1,10 @@
 // Ticket 53, Option A: the channel-1 variation (wave 1, lane B). Channel 1 is live reelflies.ca on
 // tree 1. Its variation, "ReelFlies CA channel 1" (decision 10's interim name), is as thin as
 // "ReelFlies CA" and "ReelFlies US": it holds only what differs on channel 1, which today is tree
-// 1's menu ids and its Gear and Assortment roots for the card's "/ fly" (ticket 31). Merging it applies nothing to channel 1: only ticket 53's guarded channel-1 target
-// takes it (wave 2, lane F: typed by Shaun at his own terminal, never an agent), and ticket 56
-// pushes it there after Shaun approves it and its ids (53:7).
+// 1's menu ids and its Gear and Assortment roots for the card's "/ fly" (ticket 31). Merging it
+// applies nothing to channel 1: only ticket 53's guarded channel-1 target takes it (wave 2, lane
+// F: typed by Shaun at his own terminal, never an agent), and ticket 56 pushes it there after
+// Shaun approves it and its ids (53:7).
 //
 // From this ticket on, channel-1 gate runs render that variation, and their baselines live in
 // scripts/qa/baselines/1-reelflies-ca-channel-1/ (build pipeline, wave 1, lane B).

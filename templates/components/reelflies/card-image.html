@@ -13,11 +13,17 @@
     - Everything else is loading="lazy": later cards, related products, and the stock lists.
     - sizes: half the width less the gutter and gap on phones, a third of the 1088px container
       from 801px.
+    - A product with no photo shows the theme's default image (default_image_product, 500px
+      square) by the same rules: its srcset is that one file, and it takes the same loading and
+      fetchpriority as a photo in its place.
 --}}
-{{~assignVar 'rf_card_eager' 0~}}
-{{~#if rf_listing~}}{{~#if position '<=' 3~}}{{~assignVar 'rf_card_eager' 1~}}{{~/if~}}{{~/if~}}
+{{~assignVar 'rf_card_load' 'lazy'~}}
+{{~#if rf_listing~}}{{~#if position '<=' 3~}}
+{{~assignVar 'rf_card_load' 'eager'~}}
+{{~#if position '==' 1~}}{{~#unless (getVar 'rf_banner')~}}{{~assignVar 'rf_card_load' 'high'~}}{{~/unless~}}{{~/if~}}
+{{~/if~}}{{~/if~}}
 {{#if image}}
-<img class="card-image rf-card-image" src="{{getImageSrcset image 1x='480w'}}" srcset="{{getImageSrcset image 160w='160w' 320w='320w' 480w='480w' 640w='640w' 960w='960w'}}" sizes="(min-width: 801px) 346px, calc(50vw - 24px)" width="600" height="400" alt="{{image.alt}}"{{#if (getVar 'rf_card_eager')}}{{#if position '==' 1}}{{#unless (getVar 'rf_banner')}} fetchpriority="high"{{/unless}}{{/if}}{{else}} loading="lazy"{{/if}} decoding="async">
+<img class="card-image rf-card-image" src="{{getImageSrcset image 1x='480w'}}" srcset="{{getImageSrcset image 160w='160w' 320w='320w' 480w='480w' 640w='640w' 960w='960w'}}" sizes="(min-width: 801px) 346px, calc(50vw - 24px)" width="600" height="400" alt="{{image.alt}}"{{#if (getVar 'rf_card_load') '==' 'high'}} fetchpriority="high"{{/if}}{{#if (getVar 'rf_card_load') '==' 'lazy'}} loading="lazy"{{/if}} decoding="async">
 {{else}}
-<img class="card-image rf-card-image" src="{{cdn theme_settings.default_image_product}}" width="600" height="400" alt="{{lang 'products.card_default_image_alt'}}"{{#unless (getVar 'rf_card_eager')}} loading="lazy"{{/unless}} decoding="async">
+<img class="card-image rf-card-image" src="{{cdn theme_settings.default_image_product}}" srcset="{{cdn theme_settings.default_image_product}} 500w" sizes="(min-width: 801px) 346px, calc(50vw - 24px)" width="600" height="400" alt="{{lang 'products.card_default_image_alt'}}"{{#if (getVar 'rf_card_load') '==' 'high'}} fetchpriority="high"{{/if}}{{#if (getVar 'rf_card_load') '==' 'lazy'}} loading="lazy"{{/if}} decoding="async">
 {{/if}}

@@ -5,13 +5,17 @@
 // product with a Placement that isn't Gear or an Assortment, and none that is. A product's
 // Placements are its `category` paths, as a card or a search row carries them; Gear and the
 // Assortments are the category roots rf_price_unit_exclude names, comma-separated, as the
-// channel's tree spells them. With the setting empty the rule can't tell, so no unit shows.
+// channel's tree spells them. With the setting empty, or naming no root, the rule can't tell, so
+// no unit shows.
 //
 //   node --test scripts/qa/render/partials/price-unit.test.mjs
 
+import fs from 'fs';
+import path from 'path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { renderPartial } from '../render.mjs';
+import { textOf } from '../../raw-html/html.mjs';
+import { THEME_DIR, renderPartial } from '../render.mjs';
 
 const CALLER = 'rf-test/price-unit-caller';
 const TREE_1 = 'Fly Gear,Fly Selections & Fly Boxes';
@@ -57,9 +61,11 @@ describe('price-unit', () => {
         assert.equal(await unit([]), NONE);
         assert.equal(await unit(undefined), NONE);
         assert.equal(await unit(['Flies/Dry Flies'], ''), NONE);
+        for (const exclude of [',', ' , ,', '  ']) assert.equal(await unit(['Fly Gear/Fly Boxes'], exclude), NONE, `"${exclude}" names no root`); // eslint-disable-line no-await-in-loop
     });
 
     it('takes its words from lang/en.json', async () => {
-        assert.match(await unit(['Flies/Dry Flies']), /\/ fly/);
+        const lang = JSON.parse(fs.readFileSync(path.join(THEME_DIR, 'lang/en.json'), 'utf8'));
+        assert.equal(textOf(await unit(['Flies/Dry Flies'])), lang.reelflies.card.per_fly);
     });
 });

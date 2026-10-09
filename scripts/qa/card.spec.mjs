@@ -4,9 +4,13 @@
 //
 // - "/ fly" on the search pin: the card shows the unit exactly when the price-unit rule says so
 //   for that product's Placements, read from the store's own ?debug=context, with the channel's
-//   rf_price_unit_exclude; the page must hold a fly, and a product of a root the rule leaves out.
+//   rf_price_unit_exclude; the page must hold a fly, and a product under each root the rule
+//   leaves out.
 // - The stock actions while quick add is off (SCOPE-3): a row under the price at both widths,
-//   and Quick view opens from it at 375 as well as 1280; the card's links go to the product.
+//   and Quick view opens from it at 375 as well as 1280.
+// - The card's links, on the search pin: the name, the photo and Choose options go to the
+//   product's own URL from ?debug=context, and Add to cart adds that product (its URL, not
+//   clicked).
 //
 // It runs only when named, like header.spec.mjs: no npm script's filter matches it.
 //
@@ -16,8 +20,7 @@ import {
     PAGES, dismissCookieBanner, expect, storefrontPage, test,
 } from './fixtures.mjs';
 import { HEADERS, QA_CHANNEL } from './storefront.mjs';
-
-const withQuery = (pagePath, query) => `${pagePath}${pagePath.includes('?') ? '&' : '?'}${query}`;
+import { withQuery } from './switches.mjs';
 
 // The price-unit rule (components/reelflies/price-unit.html) in JavaScript, for the test's
 // expectation: a Placement, and none the roots name, with roots named at all.
@@ -42,6 +45,10 @@ test('"/ fly" on the search pin\'s cards follows the price-unit rule for each pr
     const expected = Object.fromEntries(products.map(product => [String(product.id), wantsUnit(product.category, exclude)]));
     expect(Object.values(expected), 'the pin holds a fly with the unit').toContain(true);
     expect(Object.values(expected), 'the pin holds a product the rule leaves out (Gear, a hook pack, an Assortment)').toContain(false);
+    for (const root of String(exclude).split(',').map(name => name.trim()).filter(Boolean)) {
+        const under = products.some(product => (product.category || []).some(path => path === root || path.startsWith(`${root}/`)));
+        expect(under, `the pin holds a product under ${root}`).toBe(true);
+    }
 
     await storefrontPage(page, 'search');
     await dismissCookieBanner(page);
@@ -70,4 +77,32 @@ test('the stock actions are a row under the price, and Quick view opens from it 
     const modal = page.locator('#modal');
     await expect(modal).toBeVisible();
     await expect(modal.locator('.productView-title')).toHaveText(name);
+});
+
+test('the card\'s links go to its product: the name, the photo and Choose options, and Add to cart adds it', async ({ page, request }) => {
+    test.skip(!PAGES.search, `no search page is pinned for channel ${QA_CHANNEL}; try QA_CHANNEL=1`);
+    const products = (await context(request, 'search')).product_results.products || [];
+    await storefrontPage(page, 'search');
+    const cards = await page.locator('.productGrid .card').evaluateAll(list => list.map(card => ({
+        id: card.dataset.entityId,
+        title: card.querySelector('.card-title a')?.getAttribute('href') ?? null,
+        photo: card.querySelector('.card-figure__link')?.getAttribute('href') ?? null,
+        actions: [...card.querySelectorAll('.rf-card-actions a')].map(link => ({ text: link.textContent.trim(), href: link.getAttribute('href') })),
+    })));
+    expect(cards).toHaveLength(products.length);
+    let adds = 0;
+    for (const card of cards) {
+        const product = products.find(each => String(each.id) === card.id);
+        expect(product, `card ${card.id} is a product of the page`).toBeTruthy();
+        expect(card.title, `card ${card.id}'s name`).toBe(product.url);
+        expect(card.photo, `card ${card.id}'s photo`).toBe(product.url);
+        for (const action of card.actions) {
+            if (/choose options/i.test(action.text)) expect(action.href, `card ${card.id}'s Choose options`).toBe(product.url);
+            if (/add to cart/i.test(action.text)) {
+                adds += 1;
+                expect(action.href, `card ${card.id}'s Add to cart`).toMatch(new RegExp(`[?&]action=add&(amp;)?product_id=${card.id}$`));
+            }
+        }
+    }
+    expect(adds, 'the pin holds a product with no options, which adds from the card').toBeGreaterThan(0);
 });
