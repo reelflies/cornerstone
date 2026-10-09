@@ -8,14 +8,15 @@
 // - A changed region below the threshold passes, so the threshold is what decides.
 //
 // It also proves the stylesheet the template diffs apply (W0-5), on a page of its own,
-// with no baseline: see "the screenshot stylesheet" below.
+// with no baseline: see "the screenshot stylesheet" below. And that the widgets are out of the
+// layout from the first one (hideWidgetsFromLoad): see "widgets hidden from load".
 
 /* eslint-env browser */ // the page.evaluate callbacks run in the page
 
 import fs from 'fs';
 import { expect, test } from '@playwright/test';
 import { CHANNELS } from './pages.mjs';
-import { dismissCookieBanner, screenshotStylePath } from './fixtures.mjs';
+import { dismissCookieBanner, hideWidgetsFromLoad, screenshotStylePath } from './fixtures.mjs';
 
 const BASELINE = ['selftest', 'blocks.png'];
 const COLOURS = ['#7b8e7a', '#5d705c', '#f4f1ea', '#2b2b2b', '#c9a227', '#ffffff'];
@@ -144,4 +145,30 @@ test.describe('the screenshot stylesheet', () => {
             expect((await shot(page)).equals(before)).toBe(false);
         });
     }
+});
+
+// Widgets are taken out of the layout from the first one, not only when the screenshot is taken
+// (W0-5; #63's rf/skeptic): a page that lays out with a widget in it and then hides it can keep a
+// sub-pixel offset further down, which moved eight of 1895766's footer lines by 1px once its home
+// widgets went active. The page records what its widget looked like as its own parser reached it.
+test.describe('widgets hidden from load', () => {
+    const URL = 'https://selftest.invalid/widgets-from-load/';
+    const html = `<!doctype html><html lang="en"><body style="margin:0">
+        <div data-content-region="home_below_menu"><div data-widget-id="w1" style="height:690.344px;background:#7b8e7a"></div></div>
+        <script>window.seen = { display: getComputedStyle(document.querySelector('[data-widget-id]')).display };</script>
+        <footer style="height:100px;background:#2f382f">Footer</footer></body></html>`;
+
+    test('a widget is already out of the layout when the page\'s own script first reads it', async ({ page }) => {
+        await page.route(URL, route => route.fulfill({ status: 200, contentType: 'text/html', body: html }));
+        await hideWidgetsFromLoad(page);
+        await page.goto(URL);
+        expect(await page.evaluate(() => window.seen.display)).toBe('none');
+        expect(await page.evaluate(() => document.querySelector('footer').getBoundingClientRect().top)).toBe(0);
+    });
+
+    test('without it, the same page lays the widget out first (what the shots used to start from)', async ({ page }) => {
+        await page.route(URL, route => route.fulfill({ status: 200, contentType: 'text/html', body: html }));
+        await page.goto(URL);
+        expect(await page.evaluate(() => window.seen.display)).toBe('block');
+    });
 });

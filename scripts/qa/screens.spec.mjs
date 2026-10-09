@@ -30,7 +30,7 @@ import {
     BASELINE_SET, QA_CHANNEL, QA_OVERLAY, QA_VARIATION, ROOT,
 } from './storefront.mjs';
 import {
-    PAGES, dismissCookieBanner, expect, screenshotStylePath, storefrontPage, test,
+    PAGES, dismissCookieBanner, expect, hideWidgetsFromLoad, screenshotStylePath, storefrontPage, test,
 } from './fixtures.mjs';
 import { shotAnnotation, themeShot } from './review/manifest.mjs';
 
@@ -52,6 +52,7 @@ function shot(template, pagePath, state = null) {
                 + `Make it with \`${RUN} npm run qa:screens -- --update-snapshots\`, then review the PNG and commit it.`);
         }
 
+        await hideWidgetsFromLoad(page); // widgets never lay out, so they can't leave an offset (W0-5)
         await storefrontPage(page, template);
         await dismissCookieBanner(page);
         if (state) await openState(page, state);
