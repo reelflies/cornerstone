@@ -19,6 +19,7 @@ const channelFile = readFixture(path.join(DIR, 'channels', '1895766.json'));
 const render = (configuration = {}) => renderWidget('link-tiles', { ...fixture, configuration: { ...fixture.configuration, ...configuration } });
 const BASE = 'https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil';
 const WIDTHS = [160, 320, 480, 640];
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 // The reference's picks (plan/design/src/reference.src.html, MORE6), in its order, with the
 // approved tree's paths (store-data.json, menu, until refactor 06's new-tree.json) and each
 // product's default photo.
@@ -38,12 +39,11 @@ test('the shot\'s fixture is exactly what ReelFlies_CA gets', () => {
     assert.deepEqual(fixture.configuration, channelFile.configuration);
 });
 
-test('it is placed first in home_below_top_products on ReelFlies_CA, inactive until a release carries its styles', () => {
+test('it is placed first in home_below_top_products on ReelFlies_CA, active since the checkpoint-02 release carried its styles, with the uuids its first write made', () => {
     assert.deepEqual(channelFile.placement, {
-        template_file: 'pages/home', region: 'home_below_top_products', sort_order: 10, status: 'inactive',
+        template_file: 'pages/home', region: 'home_below_top_products', sort_order: 10, status: 'active',
     });
     // Recorded by --record after the first write (2026-10-08, plan c89f5701); --verify compares them with the store.
-    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
     for (const name of ['template', 'widget', 'placement']) assert.match(channelFile.uuids[name], UUID, `its ${name} is recorded`);
     assert.equal(fixture.region, channelFile.placement.region);
 });

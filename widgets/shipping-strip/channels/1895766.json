@@ -8,7 +8,7 @@
         "template_file": "pages/home",
         "region": "header_bottom--global",
         "sort_order": 0,
-        "status": "inactive"
+        "status": "active"
     },
     "uuids": {
         "template": "da696517-147b-4a4f-9cf4-db52d5f23753",

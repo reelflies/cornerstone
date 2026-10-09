@@ -28,7 +28,7 @@
         "template_file": "pages/home",
         "region": "home_below_top_products",
         "sort_order": 10,
-        "status": "inactive"
+        "status": "active"
     },
     "uuids": {
         "template": "54d04253-b34f-4211-9a7b-4482589dddb1",

@@ -28,15 +28,22 @@ const lines = html => [...html.matchAll(/<p class="([^"]+)">([\s\S]*?)<\/p>/g)].
 // Ticket 13's decision 2, as ticket 27's owner-decisions comment words it.
 const LONG = 'Free standard shipping in Canada on fly orders over $60. Fly boxes and gear not included.';
 const SHORT = 'Free standard shipping on fly orders over $60';
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 test('the shot\'s fixture is exactly what ReelFlies_CA gets', () => {
     assert.deepEqual(fixture.configuration, channelFile.configuration);
 });
 
-test('the channel file places it on 1895766 in header_bottom--global, the region every page has', () => {
+test('the channel file places it on 1895766 in header_bottom--global, the region every page has, active, with the uuids its first write made', () => {
     assert.equal(channelFile.channel_id, 1895766);
-    assert.equal(channelFile.placement.region, 'header_bottom--global');
-    assert.equal(channelFile.placement.template_file, 'pages/home', 'a global region still names a template; the widget shows on every page that has the region');
+    // A global region still names a template file. BigCommerce says the widget then shows on every
+    // page that has the region; that waits on a check on the prelaunch host (docs/widgets.md, #62).
+    // Active since the checkpoint-02 release carried 27's landmark and styles.
+    assert.deepEqual(channelFile.placement, {
+        template_file: 'pages/home', region: 'header_bottom--global', sort_order: 0, status: 'active',
+    });
+    // Recorded by --record after the first write (2026-10-08, plan 6a53f3f4).
+    for (const name of ['template', 'widget', 'placement']) assert.match(channelFile.uuids[name], UUID, `its ${name} is recorded`);
     assert.equal(fixture.region, 'header_bottom--global');
     assert.equal(fixture.chrome, true, 'its fixture page renders the theme\'s header round it');
 });

@@ -45,7 +45,7 @@
         "template_file": "pages/home",
         "region": "home_below_menu",
         "sort_order": 0,
-        "status": "inactive"
+        "status": "active"
     },
     "uuids": {
         "template": "d3450052-6ffb-4af6-b352-9d699f189749",

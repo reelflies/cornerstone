@@ -71,14 +71,14 @@ test('the hero reads as rf-home-lead, with its schema and no storefront query', 
     assert.equal(widget.dir, path.join(WIDGETS_DIR, 'home-lead'));
 });
 
-test('the hero\'s 1895766 file sets every schema field and nothing else, and records the uuids its first apply made', () => {
+test('the hero\'s 1895766 file sets every schema field and nothing else, records the uuids its first apply made, and is active', () => {
     const widget = readWidget('home-lead');
     const channelFile = readChannelFile(widget, 1895766);
     const ids = widget.schema.flatMap(tab => tab.sections.flatMap(section => section.settings.map(setting => setting.id))).sort();
     assert.deepEqual(Object.keys(channelFile.configuration).sort(), ids);
     assert.equal(channelFile.channel, 1895766);
     assert.deepEqual(channelFile.placement, {
-        template_file: 'pages/home', region: 'home_below_menu', sort_order: 0, status: 'inactive',
+        template_file: 'pages/home', region: 'home_below_menu', sort_order: 0, status: 'active',
     });
     for (const uuid of Object.values(channelFile.uuids)) assert.match(uuid, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
 });

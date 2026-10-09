@@ -20,13 +20,15 @@ const W = 'd00dfeed-1234-4abc-8def-0123456789ab';
 const P = 'e1e1e1e1-1234-4abc-8def-0123456789ab';
 const OTHER = 'f2f2f2f2-1234-4abc-8def-0123456789ab';
 
-// The hero as the repo has it, with uuids recorded or not.
+// The hero as the repo has it, with uuids recorded or not. Its placement status is pinned to
+// "inactive" unless a test asks for another, because activation, --unpublish and publishing again
+// change the channel file's status, and these tests mustn't follow it.
 const hero = (uuids = { template: null, widget: null, placement: null }, placement = {}) => {
     const [entry] = entriesFor(CH, { names: ['home-lead'] });
     return {
         ...entry,
         channelFile: {
-            ...entry.channelFile, uuids, placement: { ...entry.channelFile.placement, ...placement },
+            ...entry.channelFile, uuids, placement: { ...entry.channelFile.placement, status: 'inactive', ...placement },
         },
     };
 };
@@ -100,6 +102,15 @@ test('the first sync creates the template, the widget and the placement, each wi
     });
     assert.ok(lines.some(line => /template rf-home-lead: create/.test(line)), lines.join('\n'));
     assert.ok(lines.some(line => /placement pages\/home home_below_menu: create/.test(line)), lines.join('\n'));
+});
+
+// The created placement takes the channel file's status, whichever it is (#62's rf/skeptic).
+test('a first sync of a file recorded active creates the placement active', () => {
+    const entry = hero(undefined, { status: 'active' });
+    const { requests, problems } = planSync({ channel: CH, entries: [entry], store: empty });
+    assert.deepEqual(problems, []);
+    const placement = requests.find(request => request.path === PATHS.placements).body;
+    assert.equal(placement.status, 'active');
 });
 
 test('every request a sync makes passes the store-write helper\'s own checks (W0-11)', () => {
