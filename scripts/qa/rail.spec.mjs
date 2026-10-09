@@ -15,8 +15,7 @@
 //   bottom; a pane taller than the space scrolls inside the panel.
 // - The banner (O09; story 7): at 1280 each pane whose category has an image shows it as a strip
 //   120px tall across the pane, above its heading, with the child links within 200px of the
-//   panel's top; at 375, with the
-//   panel closed, and for a closed pane, no banner is downloaded.
+//   panel's top; at 375, with the panel closed, and for a closed pane, no banner is downloaded.
 // - The rail's foot links the hook size chart (stories 15 and 16).
 // - axe finds no serious or critical issue in the menu with each pane open at 1280.
 //
@@ -46,7 +45,7 @@ import { openWidget } from './render/widget-page.mjs';
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
 const BLOCKING = ['serious', 'critical'];
 const HOVER = 300; // menu.js's HOVER_DELAY
-const BANNER_MAX = 120; // O09: the strip's height
+const BANNER_HEIGHT = 120; // O09: the strip's height
 const KIDS_WITHIN = 200; // O09: the child links start within 200px of the panel's top
 const LAPTOP = { width: 1366, height: 657 }; // a 1366x768 laptop less the browser's chrome (UX-2)
 const MARGIN = 16; // _rail.scss: between the panel and the viewport's bottom
@@ -306,7 +305,7 @@ test(`${MAIN_PIN}: at 1280 each pane whose category has an image shows it as a 1
             const panel = await box(nav);
             const paneBox = await contentBox(pane);
             // Shaun's review-02 answer: the ticket's first option, a full-width strip above the heading.
-            expect(Math.abs(strip.height - BANNER_MAX), `${category.name}: a 120px strip`).toBeLessThanOrEqual(0.5);
+            expect(Math.abs(strip.height - BANNER_HEIGHT), `${category.name}: a 120px strip`).toBeLessThanOrEqual(0.5);
             expect(Math.abs(strip.left - paneBox.left), `${category.name}: from the pane's left edge`).toBeLessThanOrEqual(1);
             expect(Math.abs(strip.width - paneBox.width), `${category.name}: the pane's full width`).toBeLessThanOrEqual(1);
             expect(strip.bottom, `${category.name}: above the heading`).toBeLessThanOrEqual(heading.top);
@@ -447,7 +446,7 @@ fixtureTest('tree 4 on the fixture page: the Species pane at 1280, with a banner
     const strip = await box(pane.locator('[data-rf-menu-banner]'));
     const kid = await box(pane.locator('.rf-menu-kids a').first());
     const heading = await box(pane.locator('h2'));
-    expect(Math.abs(strip.height - BANNER_MAX)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(strip.height - BANNER_HEIGHT)).toBeLessThanOrEqual(0.5);
     expect(Math.abs(strip.width - (await contentBox(pane)).width), 'the pane\'s full width').toBeLessThanOrEqual(1);
     expect(strip.bottom, 'above the heading').toBeLessThanOrEqual(heading.top);
     expect(kid.top - panel.top).toBeLessThanOrEqual(KIDS_WITHIN);

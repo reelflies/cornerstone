@@ -9,8 +9,8 @@
 //   closed panel and the phone drawer (where CSS hides it) download nothing (rail.spec.mjs
 //   checks the network). Never fetchpriority, which would ask for it ahead of the page.
 // - A srcset of at least two candidates, sizes, and a width and a height, so the browser picks
-//   a small file and reserves its box.
-// - alt="": the heading beside it names the category, so the image is decorative.
+//   the file for the pane's width and reserves its box.
+// - alt="": the heading under it names the category, so the image is decorative.
 //
 // With both menu ids empty there is no grouped menu, and the page passes.
 
@@ -41,7 +41,7 @@ export function bannerProblems(html) {
         if ((attrs.srcset || '').split(',').filter(candidate => candidate.trim()).length < 2) problems.push(`${name} has no srcset of two or more candidates`);
         if (!(attrs.sizes || '').trim()) problems.push(`${name} has no sizes`);
         if (!/^\d+$/.test(attrs.width || '') || !/^\d+$/.test(attrs.height || '')) problems.push(`${name} has no width and height`);
-        if (attrs.alt !== '') problems.push(`${name} has alt "${attrs.alt ?? '(none)'}", not "": the heading beside it names the category`);
+        if (attrs.alt !== '') problems.push(`${name} has alt "${attrs.alt ?? '(none)'}", not "": the heading under it names the category`);
     });
     return problems;
 }

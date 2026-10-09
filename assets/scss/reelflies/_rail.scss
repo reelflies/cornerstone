@@ -25,7 +25,7 @@
 // -----------------------------------------------------------------------------
 
 $rf-panel-margin:   16px;   // between the panel and the viewport's bottom
-$rf-banner-h:       120px;  // the banner strip's height (O09)
+$rf-banner-height:  120px;  // the banner strip's height (O09)
 
 .rf-menu-banner {
     display: none; // phones: the drawer shows no banner, and so downloads none
@@ -48,7 +48,7 @@ $rf-banner-h:       120px;  // the banner strip's height (O09)
 
     // The pane: the banner strip across it, then its heading, then the children. The spacing is
     // what keeps the first child link 200px from the panel's top under a 120px strip (O09): 16px,
-    // the strip, 12px, the 44px heading, 8px.
+    // the strip, 12px, the 44px heading, 8px. The reference's 20px and 16px would put it at 208px.
     .rf-menu-pane {
         padding-top: 16px;
     }
@@ -61,7 +61,7 @@ $rf-banner-h:       120px;  // the banner strip's height (O09)
         background: var(--rf-tile);
         border-radius: var(--rf-radius-mid);
         display: block;
-        height: $rf-banner-h;
+        height: $rf-banner-height;
         margin-bottom: 12px;
         object-fit: cover;
         width: 100%;

@@ -142,6 +142,11 @@ export async function storefrontPage(page, template, pagePath = pinPath(template
         window.scrollTo(0, 0);
     });
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+    // Cornerstone's icon sprite (the footer's social and payment icons) arrives by script:
+    // svg-injector fetches img/icon-sprite.svg and swaps it in for base.html's placeholder,
+    // classing it injected-svg. A shot taken before then has blank icons, as #67's first takes of
+    // 1895766's home and 404 pages at 375 did.
+    await page.waitForFunction(() => !document.querySelector('svg.icons-svg-sprite:not(.injected-svg)'), null, { timeout: 10000 }).catch(() => {});
     // A lazy image with no box, such as a menu pane's banner while its pane or the panel is
     // closed (ticket 29), never loads, so it isn't waited for: the wait would run its full 10 s.
     await page.evaluate(() => Promise.race([

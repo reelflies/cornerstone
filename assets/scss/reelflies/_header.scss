@@ -165,11 +165,25 @@ body {
     height: auto;
     margin: 0;
     width: auto;
+
+    // On phones the link fills the 56px sticky bar, so a ring outside it would lose its top edge
+    // above the viewport: it goes inside instead (#67's rf/spec).
+    &:focus-visible {
+        outline-offset: -2px !important;
+
+        @include breakpoint("medium") {
+            outline-offset: 2px !important;
+        }
+    }
 }
 
+// The PNG's ground is opaque white, and on phones it fills the bar to its last pixel row, where
+// the divider is: multiply lets the divider show through it, and on the white paper changes
+// nothing else.
 .rf-header-logo-image {
     display: block;
     height: 56px;
+    mix-blend-mode: multiply;
     object-fit: contain;
     width: 78px;
 }
