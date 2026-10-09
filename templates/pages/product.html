@@ -6,8 +6,6 @@ product:
         limit: {{theme_settings.productpage_reviews_count}}
     related_products:
         limit: {{theme_settings.productpage_related_products_count}}
-    similar_by_views:
-        limit: {{theme_settings.productpage_similar_by_views_count}}
 ---
 {{inject 'productId' product.id}}
 
@@ -34,7 +32,7 @@ product:
             {{> components/products/reviews reviews=product.reviews product=product urls=urls}}
         {{/all}}
 
-        {{> components/reelflies/product-related}}{{!-- ReelFlies hook (ticket 39; CUSTOMIZATIONS.md): related patterns as a grid of cards, in place of stock's carousel tabs (components/products/tabs) --}}
+        {{> components/reelflies/product-related}}{{!-- ReelFlies hook (ticket 39; CUSTOMIZATIONS.md): related patterns as a grid of cards, in place of stock's carousel tabs (components/products/tabs); the front matter no longer asks for similar_by_views, which only those tabs showed --}}
     </div>
 
     {{> components/products/schema}}

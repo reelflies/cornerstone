@@ -11,8 +11,12 @@ import { THEME_DIR, readFixture, renderPartial } from '../../render/render.mjs';
 import productPage from './product-page.mjs';
 
 const { page_context: CONTEXT } = readFixture(path.join(THEME_DIR, 'scripts/qa/render/pages/product-page/fixtures/adams.json'));
-const page = async (product = {}) => ({
-    kind: 'product', key: 'product', path: '/', status: 200, html: await renderPartial('pages/product', { ...CONTEXT, product: { ...CONTEXT.product, ...product } }),
+const page = async (product = {}, theme = {}) => ({
+    kind: 'product',
+    key: 'product',
+    path: '/',
+    status: 200,
+    html: await renderPartial('pages/product', { ...CONTEXT, product: { ...CONTEXT.product, ...product }, theme_settings: { ...CONTEXT.theme_settings, ...theme } }),
 });
 const problems = (good, from, to) => productPage.check({ ...good, html: good.html.replace(from, to) }).join('\n');
 
@@ -21,11 +25,13 @@ test('applies to product pins, ticket 39', () => {
     assert.equal(productPage.ticket, 39);
 });
 
-test('passes the rendered product page: with and without related products, a description or a photo', async () => {
+test('passes the rendered product page: with and without related products, a description or a photo; gear; and with no threshold (ReelFlies US)', async () => {
     assert.deepEqual(productPage.check(await page()), []);
     assert.deepEqual(productPage.check(await page({ related_products: [] })), []);
     assert.deepEqual(productPage.check(await page({ description: '' })), []);
     assert.deepEqual(productPage.check(await page({ main_image: null, images: [] })), []);
+    assert.deepEqual(productPage.check(await page({ category: ['Fly Gear/Fly Boxes'] })), [], 'gear: no "Hooks and tying"');
+    assert.deepEqual(productPage.check(await page({}, { rf_ship_free_threshold: '' })), [], 'no threshold: no shipping line or section');
 });
 
 test('judges only a page with a product view, as the harness\'s fixture pages have none', async () => {
@@ -67,6 +73,14 @@ test('fails details that are missing, closed where "About this fly" belongs open
     assert.match(problems(good, 'data-rf-details="about" open', 'data-rf-details="about"'), /"About this fly" isn't open/);
     assert.match(problems(good, 'data-rf-details="shipping"', 'data-rf-details="shipping" open'), /the "shipping" section is open/);
     assert.match(problems(good, '<a href="/fly-hook-size-chart/">See the hook size chart</a>', ''), /doesn't link to \/fly-hook-size-chart\//);
+});
+
+test('fails a fly ("/ fly" by its price) without "Hooks and tying", and a shipping line without "Shipping and delivery"', async () => {
+    const good = await page();
+    assert.match(problems(good, 'data-rf-details="hooks"', 'data-rf-details="hooked"'), /no "hooks" section/);
+    assert.match(problems(good, 'data-rf-details="shipping"', 'data-rf-details="shipped"'), /no "shipping" section/);
+    const gear = await page({ category: ['Fly Gear/Fly Boxes'] });
+    assert.match(problems(gear, '<p class="rf-ship-line"', '<span class="rf-price-unit">/ fly</span><p class="rf-ship-line"'), /no "hooks" section/);
 });
 
 test('fails a weight row, and stock\'s carousel or tabs back in place of the grid', async () => {

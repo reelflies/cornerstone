@@ -33,6 +33,7 @@
     {{/or}}"
     data-product-variant="single-product-option">
 
+    {{#if (getVar 'rf_product_page')}}<div class="rf-product-alerts" data-rf-product-alerts>{{/if}}{{!-- ReelFlies hook (ticket 39; CUSTOMIZATIONS.md): the review messages in one row above the photos --}}
     {{#each product.reviews.messages}}
         {{#if error}}
             {{> components/common/alert/alert-error error}}
@@ -41,6 +42,7 @@
             {{> components/common/alert/alert-success success}}
         {{/if}}
     {{/each}}
+    {{#if (getVar 'rf_product_page')}}</div>{{/if}}{{!-- ReelFlies hook (ticket 39): the end of the review messages' row --}}
 
     <section class="productView-images" data-image-gallery>
         {{!--
@@ -89,7 +91,7 @@
             {{#each product.images}}
                 <li class="productView-thumbnail">
                     <a
-                        class="productView-thumbnail-link"
+                        class="productView-thumbnail-link{{#if (getVar 'rf_product_page')}}{{#if this.data '===' ../product.main_image.data}} is-active{{/if}}{{/if}}"{{!-- ReelFlies hook (ticket 39; CUSTOMIZATIONS.md): the shown photo's thumbnail outlined from the start --}}
                         href="{{getImageSrcset this (cdn ../theme_settings.default_image_product) 1x=../theme_settings.zoom_size}}"
                         data-image-gallery-item
                         data-image-gallery-new-image-url="{{getImageSrcset this (cdn ../theme_settings.default_image_product) 1x=../theme_settings.product_size}}"

@@ -8,7 +8,9 @@
 //   right; at 375 the photos, the buy box, then the details, in one column, left-aligned.
 // - At 1280 the buy box held at the top of the window as the page scrolls past the details, all of
 //   it in view (story 36); the test attaches the window at the top and after scrolling.
-// - The main image: the page's only fetchpriority="high", loaded from its srcset (story 70).
+// - The details 20px under the photos at 1280, even beside a buy box taller than both.
+// - The main image: the page's only fetchpriority="high", loaded from its srcset (story 70), and
+//   its thumbnail outlined from the start.
 // - The thumbnails of a product with more than five photos (/realistic-hopper-assortment/, 15):
 //   the row keeps its height when stock's carousel starts, so nothing below moves.
 // - The details: "About this fly" open; the other two open and close with Enter and Space (story
@@ -22,7 +24,7 @@
 //   their photos lazy with no fetchpriority (story 48; O23).
 // - Quick view, opened from a related card, keeps stock's product view.
 // - Nothing scrolls sideways at 320, and axe finds no serious or critical issue with every section
-//   open (stories 68 and 71).
+//   open, on each pin (stories 68 and 71).
 //
 // It runs only when named:
 //
@@ -40,6 +42,7 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-prac
 const FAT_ALBERT = '/fat-albert/';
 const MANY_PHOTOS = '/realistic-hopper-assortment/'; // 15 photos (the 2026-09-07 export)
 const STICKY_TOP = 24; // _product.scss's $rf-product-sticky-top
+const DETAILS_GAP = 20; // _product.scss: .productView-description's margin-top from 801px
 const FREE_LINE = 'Free standard shipping in Canada on fly orders over $60. Fly boxes and gear not included.';
 const phone = testInfo => testInfo.project.name === 'phone-375';
 
@@ -85,6 +88,28 @@ test.describe('the product page layout (ticket 39)', () => {
         });
     }
 
+    test('keeps the details 20px under the photos at 1280, however tall the buy box beside them is', async ({ page }, testInfo) => {
+        test.skip(phone(testInfo), 'the buy box is a column of its own from 801px');
+        const gap = async () => {
+            const at = await boxes(page, [GALLERY, DETAILS]);
+            return Math.round(at[DETAILS].top - at[GALLERY].bottom);
+        };
+        for (const pin of [null, FAT_ALBERT]) {
+            await open(page, pin ?? undefined); // eslint-disable-line no-await-in-loop
+            expect(await gap(), `${pin || 'the product pin'}`).toBe(DETAILS_GAP); // eslint-disable-line no-await-in-loop
+            // A product with no description and a buy box taller than the photos and the details
+            // together (a second row of pills, ticket 42's "In your cart" line): the extra height
+            // goes under the details, not between them and the photos.
+            await page.evaluate(buy => { // eslint-disable-line no-await-in-loop
+                document.querySelector('[data-rf-details="about"]')?.remove();
+                const taller = document.createElement('div');
+                taller.style.height = '600px';
+                document.querySelector(buy).append(taller);
+            }, BUY);
+            expect(await gap(), `${pin || 'the product pin'}, with no description and a taller buy box`).toBe(DETAILS_GAP); // eslint-disable-line no-await-in-loop
+        }
+    });
+
     test('holds the buy box in view at 1280 as the page scrolls past the details (story 36)', async ({ page }, testInfo) => {
         test.skip(phone(testInfo), 'the buy box is a column of its own from 801px');
         await open(page);
@@ -111,6 +136,8 @@ test.describe('the product page layout (ticket 39)', () => {
         const loaded = await main.evaluate(img => ({ complete: img.complete, current: img.currentSrc, width: img.naturalWidth }));
         expect(loaded.complete && loaded.width > 0).toBe(true);
         expect(loaded.current).toMatch(/\/images\/stencil\/\d+w\/products\/6178\//);
+        // The shown photo's thumbnail is outlined from the start, as the reference draws it.
+        await expect(page.locator('.productView-thumbnail-link.is-active')).toHaveCount(1);
     });
 
     test('keeps the thumbnail row\'s height when stock\'s carousel starts, so nothing below moves (story 70)', async ({ page }, testInfo) => {
@@ -226,16 +253,18 @@ test.describe('the product page layout (ticket 39)', () => {
         await expect(modal.locator('img[data-main-image]')).not.toHaveAttribute('fetchpriority', 'high');
     });
 
-    test('scrolls nothing sideways at 320, and axe finds no serious or critical issue with every section open (stories 68 and 71)', async ({ page }) => {
+    test('scrolls nothing sideways at 320, and axe finds no serious or critical issue with every section open, on each pin (stories 68 and 71)', async ({ page }, testInfo) => {
+        test.skip(!phone(testInfo), 'both projects set the window to 320: once is enough');
         for (const pin of [null, FAT_ALBERT]) {
+            const name = pin || 'the product pin';
             await page.setViewportSize({ width: 320, height: 640 }); // eslint-disable-line no-await-in-loop
             await open(page, pin ?? undefined); // eslint-disable-line no-await-in-loop
             await page.locator(`${DETAILS} details`).evaluateAll(all => all.forEach(section => section.setAttribute('open', ''))); // eslint-disable-line no-await-in-loop
             const width = await page.evaluate(() => document.scrollingElement.scrollWidth); // eslint-disable-line no-await-in-loop
-            expect(width, `${pin || 'the product pin'} at 320`).toBeLessThanOrEqual(320);
+            expect(width, `${name} at 320`).toBeLessThanOrEqual(320);
+            const results = await new AxeBuilder({ page }).include('.productView').include('[data-rf-related]').withTags(TAGS).analyze(); // eslint-disable-line no-await-in-loop
+            const serious = results.violations.filter(violation => ['serious', 'critical'].includes(violation.impact));
+            expect(serious.map(violation => `${violation.id}: ${violation.nodes.map(node => node.target.join(' ')).join(', ')}`), name).toEqual([]);
         }
-        const results = await new AxeBuilder({ page }).include('.productView').include('[data-rf-related]').withTags(TAGS).analyze();
-        const serious = results.violations.filter(violation => ['serious', 'critical'].includes(violation.impact));
-        expect(serious.map(violation => `${violation.id}: ${violation.nodes.map(node => node.target.join(' ')).join(', ')}`)).toEqual([]);
     });
 });

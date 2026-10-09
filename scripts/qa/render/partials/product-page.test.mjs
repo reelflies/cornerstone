@@ -33,6 +33,7 @@ const productPage = ({
     settings: { ...CONTEXT.settings, ...settings },
     theme_settings: { ...CONTEXT.theme_settings, ...theme },
 });
+const WITH_LISTS = { id: 1, wishlists: [{ name: 'Spring', add_url: '/wishlist.php?action=add&wishlistid=7', num_items: '2' }] };
 const quickView = ({ product = {} } = {}) => renderPartial('components/products/quick-view', {
     ...CONTEXT,
     product: { ...CONTEXT.product, ...product },
@@ -62,6 +63,12 @@ describe('the product page\'s settings (config.json)', () => {
 
     it('keeps ticket 24\'s quick payment buttons setting as it was: this ticket only checks the page', () => {
         assert.equal(config.settings.show_quick_payment_buttons, true);
+    });
+
+    it('asks the store for no "Customers Also Viewed" list, which the page no longer shows (pages/product.html\'s front matter)', () => {
+        const [, front] = fs.readFileSync(path.join(THEME_DIR, 'templates/pages/product.html'), 'utf8').split(/^---$/m);
+        assert.match(front, /related_products:/);
+        assert.doesNotMatch(front, /similar_by_views/);
     });
 });
 
@@ -97,6 +104,17 @@ describe('the layout (product-view.html\'s hooks, on the product page)', () => {
         assert.ok(wallet, 'stock\'s wallet box');
         assert.equal(findTags(wallet.replace(/^<div[^>]*>/, '')).length, 0);
     });
+
+    it('stacks the review messages (stock\'s alerts) in one box above the photos, so two never share a cell', async () => {
+        const messages = [{ error: 'Please enter a title.' }, { error: 'Please choose a rating.' }];
+        const view = productView(await productPage({ product: { reviews: { ...CONTEXT.product.reviews, messages } } }));
+        const alerts = outerHtml(view, 'div', attrs => 'data-rf-product-alerts' in attrs);
+        assert.ok(alerts, 'one box for the messages');
+        assert.equal(elementsHtml(alerts, 'div', hasClass('alertBox')).length, 2);
+        for (const { error } of messages) assert.equal(view.split(error).length, 2, `"${error}" once, in the box`);
+        inOrder(view, ['data-rf-product-alerts', 'class="productView-images"']);
+        assert.ok(!(await quickView()).includes('data-rf-product-alerts'), 'Quick view keeps stock\'s');
+    });
 });
 
 describe('the main image (components/reelflies/product-image.html)', () => {
@@ -123,6 +141,13 @@ describe('the main image (components/reelflies/product-image.html)', () => {
         const thumbs = findTags(outerHtml(html, 'ul', hasClass('productView-thumbnails')), 'img');
         assert.equal(thumbs.length, 2);
         for (const thumb of thumbs) assert.match(thumb.attrs.class, /(^|\s)lazyload(\s|$)/);
+    });
+
+    it('outlines the shown photo\'s thumbnail as the page loads, as the reference does; Quick view keeps stock\'s', async () => {
+        const active = html => findTags(outerHtml(html, 'ul', hasClass('productView-thumbnails')), 'a').map(link => hasClass('is-active')(link.attrs));
+        assert.deepEqual(active(await productPage()), [true, false]);
+        assert.deepEqual(active(await productPage({ product: { main_image: CONTEXT.product.images[1] } })), [false, true], 'the main image\'s, wherever it is in the row');
+        assert.deepEqual(active(await quickView()), [false, false]);
     });
 
     it('takes its alt from the product\'s name when the photo has none', async () => {
@@ -225,14 +250,30 @@ describe('the end of the buy box (components/reelflies/buy-box-end.html)', () =>
         assert.ok(!findTags(html, 'a').some(link => link.attrs['data-dropdown'] === 'wishlist-dropdown'));
     });
 
-    it('keeps stock\'s dropdown for a customer with wish lists, who chooses one, and shows nothing with wish lists off', async () => {
-        const customer = { id: 1, wishlists: [{ name: 'Spring', add_url: '/wishlist.php?action=add&wishlistid=7', num_items: '2' }] };
-        const html = await productPage({ context: { customer } });
-        const box = buyBox(html);
-        assert.ok(findTags(box, 'a').some(link => link.attrs['data-dropdown'] === 'wishlist-dropdown'));
-        assert.ok(findTags(box, 'input').some(input => input.attrs.value === 'Spring'));
-        assert.ok(box.includes('data-rf-wishlist'));
+    it('gives a customer with wish lists stock\'s dropdown, to choose one, under the same "Save to wish list" (story 49)', async () => {
+        const wish = outerHtml(buyBox(await productPage({ context: { customer: WITH_LISTS } })), 'div', attrs => 'data-rf-wishlist' in attrs);
+        const trigger = outerHtml(wish, 'a', attrs => attrs['data-dropdown'] === 'wishlist-dropdown');
+        assert.ok(trigger, 'the dropdown\'s trigger');
+        assert.equal(textOf(trigger), 'Save to wish list');
+        assert.ok(findTags(wish, 'input').some(input => input.attrs.value === 'Spring'), 'the customer\'s list');
+        assert.doesNotMatch(textOf(wish), /Add to Wish List/);
+        assert.equal(findTags(wish, 'form').length, 1);
+    });
+
+    it('holds the dropdown\'s copy (components/reelflies/wishlist-dropdown.html) to stock\'s, but for its label', async () => {
+        const shape = html => findTags(html).map(tag => `${tag.name} ${JSON.stringify(tag.attrs)}`);
+        for (const customer of [WITH_LISTS, { id: 1, wishlists: [] }]) {
+            const context = { ...CONTEXT, customer };
+            const ours = await renderPartial('components/reelflies/wishlist-dropdown', context); // eslint-disable-line no-await-in-loop
+            const stock = await renderPartial('components/common/wishlist-dropdown', context); // eslint-disable-line no-await-in-loop
+            assert.deepEqual(shape(ours), shape(stock));
+            assert.equal(textOf(ours), textOf(stock).replace('Add to Wish List', 'Save to wish list'));
+        }
+    });
+
+    it('shows nothing with wish lists off', async () => {
         assert.ok(!buyBox(await productPage({ settings: { show_wishlist: false } })).includes('data-rf-wishlist'));
+        assert.ok(!buyBox(await productPage({ settings: { show_wishlist: false }, context: { customer: WITH_LISTS } })).includes('data-rf-wishlist'));
     });
 });
 
@@ -254,8 +295,13 @@ describe('the details under the photos (components/reelflies/product-details.htm
         const html = await productPage();
         assert.match(textOf(section(html, 'shipping')), /Free standard shipping in Canada on fly orders over \$60 \(fly boxes and gear not included\)\. Standard Canada Post/);
         assert.deepEqual(findTags(section(html, 'hooks'), 'a').map(link => link.attrs.href), ['/fly-hook-size-chart/']);
-        const noThreshold = await productPage({ theme: { rf_ship_free_threshold: '' } });
-        assert.doesNotMatch(textOf(section(noThreshold, 'shipping')), /over \$/);
+    });
+
+    it('leaves "Shipping and delivery" out without a threshold (ReelFlies US: its words are Canada\'s), as the shipping line', async () => {
+        const html = await productPage({ theme: { rf_ship_free_threshold: ' ' } });
+        assert.equal(section(html, 'shipping'), undefined);
+        assert.ok(!html.includes('data-rf-ship-line'));
+        assert.deepEqual(sections(html).map(each => findTags(each, 'details')[0].attrs['data-rf-details']), ['about', 'hooks']);
     });
 
     it('leaves "About this fly" out of a product with no description, and adds the warranty when there is one', async () => {
@@ -263,6 +309,24 @@ describe('the details under the photos (components/reelflies/product-details.htm
         assert.deepEqual(sections(bare).map(each => findTags(each, 'details')[0].attrs['data-rf-details']), ['shipping', 'hooks']);
         const warranty = await productPage({ product: { warranty: '<p>Replaced if a hook fails.</p>' } });
         assert.ok(section(warranty, 'warranty').includes('Replaced if a hook fails.'));
+    });
+
+    it('words the details for a fly by ticket 31\'s rule, as "/ fly": gear, an Assortment, or a product the rule can\'t place gets "Description" and no "Hooks and tying"', async () => {
+        const names = html => sections(html).map(each => findTags(each, 'details')[0].attrs['data-rf-details']);
+        const title = html => textOf(outerHtml(section(html, 'about'), 'summary') || '');
+        for (const [why, product, theme] of [
+            ['a fly box', { category: ['Fly Gear', 'Fly Gear/Fly Boxes'] }, {}],
+            ['an Assortment', { category: ['Fly Selections & Fly Boxes/Bulk Fly Selections'] }, {}],
+            ['no Placement', { category: [] }, {}],
+            ['no roots named', {}, { rf_price_unit_exclude: '' }],
+        ]) {
+            const html = await productPage({ product, theme }); // eslint-disable-line no-await-in-loop
+            assert.deepEqual(names(html), ['about', 'shipping'], why);
+            assert.equal(title(html), 'Description', why);
+        }
+        const hidden = await productPage({ settings: { hide_price_from_guests: true } });
+        assert.deepEqual(names(hidden), ['about', 'shipping', 'hooks'], 'a fly, its price hidden from guests');
+        assert.equal(title(hidden), 'About this fly');
     });
 
     it('keeps the custom fields, when Theme Styles puts them in a tab, as a section of their own', async () => {

@@ -12,12 +12,16 @@
 // - A grid: on phones the photos, the buy box and the details in one column; from 801px the photos
 //   with the details under them on the left (7fr) and the buy box on the right (5fr), held in view
 //   as the page scrolls (sticky), on a window at least $rf-product-sticky-min tall: on a shorter
-//   one a tall buy box would hide its own end. Stock's floats, nested-row margins and spacing are
-//   undone. Review messages (stock's alerts at the top of the view) take a row above.
+//   one a tall buy box would hide its own end. A buy box taller than the photos and the details
+//   grows the details' row, so the details stay under the photos. Stock's floats, nested-row
+//   margins and spacing are undone. Review messages (stock's alerts at the top of the view, in one
+//   box) take a row above.
 // - The main image's 3:2 box comes from product_size (760x507) through stock's
 //   .productView-img-container; stock's 366px minimum height from 801px is undone, or the box
 //   would stand taller than its photo in a narrow column.
-// - The thumbnails: 3:2 tiles in one row (88px, 64px on phones), the chosen one outlined in ink.
+// - The thumbnails: 3:2 tiles in one row (88px, 64px on phones), the shown one outlined in ink
+//   (the main image's from the start, a hook in product-view.html; stock's image-gallery.js moves
+//   it on a click).
 //   With more than five, stock's slick carousel shows five at a time once it runs; until then the
 //   list keeps one row's height, never wrapping and then collapsing (CLS, story 70). The tile's
 //   height is fixed, so it is the same in the row and in the carousel's narrower slides.
@@ -56,6 +60,9 @@ $rf-thumb-h-phone: 43px;
             "gallery buy"
             "details buy";
         grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+        // A buy box taller than the photos and the details together grows the details' row, not
+        // the photos': the details stay 20px under the photos
+        grid-template-rows: auto auto 1fr;
         padding-top: 20px;
     }
 
@@ -64,8 +71,10 @@ $rf-thumb-h-phone: 43px;
         display: none; // stock's clearfix would take the grid's first and last cells
     }
 
-    > .alertBox {
+    // One box for every review message (a hook round stock's loop), so two never share a cell
+    > .rf-product-alerts {
         grid-area: alerts;
+        min-width: 0;
     }
 
     > .productView-images,

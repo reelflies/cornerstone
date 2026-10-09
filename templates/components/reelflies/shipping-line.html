@@ -14,7 +14,9 @@
       is the free-shipping sentence alone, with no figure in its place.
     - expedited: the tracked Expedited "from" price, a sentence after either, when set.
 
-    The words are UX-12's: "fly orders (fly boxes and gear not included)".
+    The words are UX-12's: "fly orders (fly boxes and gear not included)". The details' "Shipping
+    and delivery" (product-details.html) says the free-shipping sentence again in a paragraph's
+    words (reelflies.product.shipping_free beside ship_free): a change to one changes the other.
 --}}
 {{#if (trim threshold)}}
 <p class="rf-ship-line" data-rf-ship-line>{{> components/reelflies/icon name='truck' class='rf-ship-line-icon'}}<span>{{#if (trim rate)}}{{lang 'reelflies.product.ship_rate' rate=(trim rate) threshold=(trim threshold)}}{{else}}{{lang 'reelflies.product.ship_free' threshold=(trim threshold)}}{{/if}}{{#if (trim expedited)}} {{lang 'reelflies.product.ship_expedited' amount=(trim expedited)}}{{/if}}</span></p>

@@ -8,9 +8,11 @@
 // - One buy box (data-rf-product-buy) holds the page's <h1>, the price, the shipping line
 //   (data-rf-ship-line, which says no figure it wasn't given: no "{", "undefined" or "X.XX"), the
 //   buy form and, after Add to cart, the promise line (data-rf-promise).
-// - The details (data-rf-product-details) come after the buy box: "About this fly" open when the
-//   product has a description, then "Shipping and delivery" and "Hooks and tying", closed, each
-//   with one <summary>; "Hooks and tying" links to the hook size chart.
+// - The details (data-rf-product-details) come after the buy box, each section with one
+//   <summary>: "About this fly" open when the product has a description; "Shipping and delivery",
+//   closed, wherever the buy box has the shipping line (both follow the channel's threshold); and
+//   "Hooks and tying", closed and linking to the hook size chart, wherever the price says "/ fly"
+//   (both follow ticket 31's rule, so gear has neither).
 // - No weight row (data-product-weight; show_product_weight is off).
 // - Related patterns, when the product has any: a grid of cards (data-rf-related), not stock's
 //   carousel or tabs, whose photos are loading="lazy" with no fetchpriority (O23).
@@ -74,10 +76,15 @@ function detailsProblems(markup) {
     }
     const about = named('about');
     if (about && !('open' in about.tag.attrs)) problems.push('"About this fly" isn\'t open');
-    for (const name of ['shipping', 'hooks']) {
+    const box = outerHtml(markup, 'div', has('data-rf-product-buy')) || '';
+    const expected = {
+        shipping: findTags(box, 'p').some(tag => 'data-rf-ship-line' in tag.attrs) && 'the buy box has the shipping line',
+        hooks: findTags(box, 'span').some(tag => classed('rf-price-unit')(tag.attrs)) && 'the price says "/ fly"',
+    };
+    for (const [name, why] of Object.entries(expected)) {
         const section = named(name);
-        if (!section) problems.push(`no "${name}" section`);
-        else if ('open' in section.tag.attrs) problems.push(`the "${name}" section is open`);
+        if (!section && why) problems.push(`no "${name}" section, though ${why}`);
+        else if (section && 'open' in section.tag.attrs) problems.push(`the "${name}" section is open`);
     }
     const hooks = named('hooks');
     if (hooks && !findTags(hooks.section, 'a').some(link => link.attrs.href === CHART_PATH)) problems.push(`"Hooks and tying" doesn't link to ${CHART_PATH}`);
@@ -114,7 +121,7 @@ export function productPageProblems(html) {
 export default {
     id: 'product-page',
     ticket: 39,
-    description: 'the main image first (fetchpriority high, srcset, sizes, dimensions, no lazysizes) and the page\'s only fetchpriority; one buy box with the H1, the shipping line with no placeholder and the promise under Add to cart; the details after it, "About this fly" open and the hook chart linked; no weight row; related patterns a lazy grid, not a carousel',
+    description: 'the main image first (fetchpriority high, srcset, sizes, dimensions, no lazysizes) and the page\'s only fetchpriority; one buy box with the H1, the shipping line with no placeholder and the promise under Add to cart; the details after it, "About this fly" open, "Shipping and delivery" with the shipping line and "Hooks and tying" (the hook chart linked) with "/ fly"; no weight row; related patterns a lazy grid, not a carousel',
     pages: ['product'],
     check(page) {
         return productPageProblems(page.html);

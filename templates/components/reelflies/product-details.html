@@ -5,34 +5,46 @@
     context. The layout puts them under the photos from 801px, and after the buy box on phones
     (_product.scss).
 
-    - Three <details> sections, each opened and closed by its <summary> with Enter or Space:
+    - <details> sections, each opened and closed by its <summary> with Enter or Space:
       - "About this fly", open, with the whole description (when the product has one)
       - "Shipping and delivery", from lang strings and the channel's free-shipping threshold
-        (rf_ship_free_threshold; with none, the threshold's sentence is left out)
+        (rf_ship_free_threshold), only where the threshold is set, as the shipping line
+        (shipping-line.html): its words are Canada's, so ReelFlies US (.com) has neither
       - "Hooks and tying", from lang strings, linking to the hook size chart
       The wording is the reference's draft, for Shaun's approval (the ticket's HITL).
-    - What stock's tabs held besides the description stays, as a closed section after the three:
-      the warranty, when the product has one, and the custom fields while Theme Styles puts them
-      in a tab (show_custom_fields_tabs; otherwise stock lists them in the buy box).
+    - A fly's words only on a fly, by ticket 31's rule (fly-rule.html), the rule "/ fly" follows,
+      whether or not the price shows: Gear, an Assortment, or a product the rule can't place (no
+      Placement, or the channel names no roots) gets stock's "Description" for the first title and
+      no "Hooks and tying".
+    - The shipping section's first sentence (reelflies.product.shipping_free) is the shipping
+      line's (ship_free) in a paragraph's words, "(fly boxes and gear not included)": both are
+      UX-12's wording, so a change to one changes the other.
+    - What stock's tabs held besides the description stays, as a closed section after these: the
+      warranty, when the product has one, and the custom fields while Theme Styles puts them in a
+      tab (show_custom_fields_tabs; otherwise stock lists them in the buy box).
     - Then ticket 40's reviews slot (product-reviews.html; build pipeline 6.9), empty until ticket
       40 fills it. Stock showed the reviews in a tab, which went with the tabs.
 --}}
+{{> components/reelflies/fly-rule rf_categories=product.category rf_exclude=theme_settings.rf_price_unit_exclude}}
 <div class="rf-details" data-rf-product-details>
     {{#if product.description}}
     <details class="rf-details-section" data-rf-details="about" open>
-        <summary class="rf-details-summary">{{lang 'reelflies.product.about'}}{{> components/reelflies/icon name='chevron-down' class='rf-details-icon'}}</summary>
+        <summary class="rf-details-summary">{{#if (getVar 'rf_fly')}}{{lang 'reelflies.product.about'}}{{else}}{{lang 'products.description'}}{{/if}}{{> components/reelflies/icon name='chevron-down' class='rf-details-icon'}}</summary>
         <div class="rf-details-body rf-details-description">
             {{{product.description}}}
         </div>
     </details>
     {{/if}}
+    {{#if (trim theme_settings.rf_ship_free_threshold)}}
     <details class="rf-details-section" data-rf-details="shipping">
         <summary class="rf-details-summary">{{lang 'reelflies.product.shipping'}}{{> components/reelflies/icon name='chevron-down' class='rf-details-icon'}}</summary>
         <div class="rf-details-body">
-            <p>{{#if (trim theme_settings.rf_ship_free_threshold)}}{{lang 'reelflies.product.shipping_free' threshold=(trim theme_settings.rf_ship_free_threshold)}} {{/if}}{{lang 'reelflies.product.shipping_standard'}}</p>
+            <p>{{lang 'reelflies.product.shipping_free' threshold=(trim theme_settings.rf_ship_free_threshold)}} {{lang 'reelflies.product.shipping_standard'}}</p>
             <p>{{lang 'reelflies.product.shipping_expedited'}}</p>
         </div>
     </details>
+    {{/if}}
+    {{#if (getVar 'rf_fly')}}
     <details class="rf-details-section" data-rf-details="hooks">
         <summary class="rf-details-summary">{{lang 'reelflies.product.hooks'}}{{> components/reelflies/icon name='chevron-down' class='rf-details-icon'}}</summary>
         <div class="rf-details-body">
@@ -40,6 +52,7 @@
             <p>{{lang 'reelflies.product.hooks_chart'}} <a href="/fly-hook-size-chart/">{{lang 'reelflies.product.hooks_chart_link'}}</a></p>
         </div>
     </details>
+    {{/if}}
     {{#if product.warranty}}
     <details class="rf-details-section" data-rf-details="warranty">
         <summary class="rf-details-summary">{{lang 'products.warranty'}}{{> components/reelflies/icon name='chevron-down' class='rf-details-icon'}}</summary>

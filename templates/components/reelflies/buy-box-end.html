@@ -9,14 +9,15 @@
       wish-list form (its action, the product's add_to_wishlist_url, and data-wishlist-add, which
       product-details-base.js reads), as one text button. A guest who uses it is sent to sign in by
       the store, as wishlist.php does for every guest; a signed-in customer's goes to their wish
-      list. A customer who already has wish lists keeps stock's dropdown, to choose one, restyled
-      as the same text button (_product.scss).
+      list. A customer who already has wish lists gets stock's dropdown, to choose one, as a copy
+      (wishlist-dropdown.html) whose trigger says the same "Save to wish list", styled as the same
+      text button (_product.scss).
 --}}
 <p class="rf-promise" data-rf-promise>{{> components/reelflies/icon name='check' class='rf-promise-icon'}}{{lang 'reelflies.product.promise'}}</p>
 {{#if settings.show_wishlist}}
 <div class="rf-wishlist" data-rf-wishlist>
     {{#if customer.wishlists}}
-    {{> components/common/wishlist-dropdown}}
+    {{> components/reelflies/wishlist-dropdown}}
     {{else}}
     <form action="{{product.add_to_wishlist_url}}" class="form form-wishlist rf-wishlist-form" data-wishlist-add method="post">
         <button type="submit" class="rf-wishlist-button">{{lang 'reelflies.product.wishlist'}}</button>
