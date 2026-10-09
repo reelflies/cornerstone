@@ -118,6 +118,15 @@ for (const key of PINS) {
         await open(page, key);
         const header = page.locator('[data-rf-header]');
         expect((await box(header)).height).toBe(PHONE_BAR);
+        // Decision 17 as written (Shaun, review-02): the 133x95 PNG 78px wide on phones too, so
+        // 56px tall, within the bar.
+        const logo = await page.locator('[data-rf-logo] img').evaluate(element => {
+            const rect = element.getBoundingClientRect();
+            return { width: Math.round(rect.width), top: rect.top, bottom: rect.bottom };
+        });
+        expect(logo.width, 'the logo is 78px wide on phones (decision 17)').toBe(78);
+        expect(logo.top, 'the logo sits inside the bar').toBeGreaterThanOrEqual(0);
+        expect(logo.bottom, 'the logo sits inside the bar').toBeLessThanOrEqual(PHONE_BAR);
         await page.evaluate(() => window.scrollTo(0, 400));
         expect((await box(header)).top, 'the bar stays at the top as the page scrolls').toBe(0);
         await page.evaluate(() => window.scrollTo(0, 0));

@@ -141,10 +141,9 @@ body {
 
 
 // The logo: a link in a <div>, centred on phones and first on desktop. The 133x95 PNG is 78px
-// wide on desktop until ticket 14's master file (decision 17). On phones it is 40px tall, as on
-// the reference page: a deviation from decision 17, which keeps the 40px phone height for the
-// master, because at 78px wide the PNG is 56px tall and fills the bar. The master's horizontal
-// lockup replaces it there.
+// wide, so 56px tall, until ticket 14's master file (decision 17), on phones too: Shaun chose
+// decision 17 as written over the reference page's 40px phone logo (review-02), so on phones it
+// fills the 56px bar's height. The master's horizontal lockup replaces it there.
 // -----------------------------------------------------------------------------
 
 .header-logo.rf-header-logo {
@@ -170,14 +169,9 @@ body {
 
 .rf-header-logo-image {
     display: block;
-    height: 40px;
+    height: 56px;
     object-fit: contain;
-    width: auto;
-
-    @include breakpoint("medium") {
-        height: 56px;
-        width: 78px;
-    }
+    width: 78px;
 }
 
 .rf-header-logo .rf-header-logo-text {

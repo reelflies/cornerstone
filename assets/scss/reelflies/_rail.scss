@@ -14,16 +14,18 @@
 //   (the desktop header isn't sticky), so the panel never runs past the viewport.
 // - The rail's right edge is the card's background, attached to its content (local), so it runs
 //   the whole scrolled height; a ::before would stop at the card's first screen.
-// - The banner strip (O09; menu-banner.html): the category's image a third of the pane wide
-//   beside its heading, at 16:7, no taller than 120px, so the child links start within 200px of
-//   the panel's top. Below 801px it isn't shown, so the drawer downloads nothing (it is lazy).
+// - The banner strip (O09; menu-banner.html): the category's image across the pane, 120px tall,
+//   above its heading, as the reference's .detail .banner (the ticket's first option, Shaun's
+//   review-02 answer). The store's 1600x700 images show as a centred 7:1 slice. The child links
+//   still start within 200px of the panel's top. Below 801px it isn't shown, so the drawer
+//   downloads nothing (it is lazy).
 // - Short screens: under 760px tall the rail items are 38px, not 42px, and the groups closer,
 //   so tree 4's rail (six Fly Types, Flies by Species and three More) fits 1366x657 whole.
 //
 // -----------------------------------------------------------------------------
 
 $rf-panel-margin:   16px;   // between the panel and the viewport's bottom
-$rf-banner-max:     120px;  // the banner's height at most (O09)
+$rf-banner-h:       120px;  // the banner strip's height (O09)
 
 .rf-menu-banner {
     display: none; // phones: the drawer shows no banner, and so downloads none
@@ -44,37 +46,25 @@ $rf-banner-max:     120px;  // the banner's height at most (O09)
         overscroll-behavior: contain;
     }
 
-    // The pane: its heading and the banner side by side, then the children across both
+    // The pane: the banner strip across it, then its heading, then the children. The spacing is
+    // what keeps the first child link 200px from the panel's top under a 120px strip (O09): 16px,
+    // the strip, 12px, the 44px heading, 8px.
     .rf-menu-pane {
-        align-content: start;
-        column-gap: 24px;
-        display: grid;
-        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-        row-gap: 12px;
+        padding-top: 16px;
     }
 
     .rf-menu-heading {
-        align-self: start;
-        grid-column: 1;
-        grid-row: 1;
-        margin: 0;
+        margin: 0 0 8px;
     }
 
     .rf-menu-banner {
-        aspect-ratio: 16 / 7;
         background: var(--rf-tile);
         border-radius: var(--rf-radius-mid);
         display: block;
-        grid-column: 2;
-        grid-row: 1;
-        height: auto;
-        max-height: $rf-banner-max;
+        height: $rf-banner-h;
+        margin-bottom: 12px;
         object-fit: cover;
         width: 100%;
-    }
-
-    .rf-menu-kids {
-        grid-column: 1 / -1;
     }
 }
 

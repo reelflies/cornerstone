@@ -5,14 +5,15 @@
 
         {{> components/reelflies/menu-banner rf_image=rf_cat.image}}
 
-    - The category's own stone image, a third of the pane wide beside its heading, at the image's
-      16:7 (the store's category images are 1600x700), so it shows whole and no taller than
-      120px, and the child links start within 200px of the panel's top (UX-2). A full-width strip
-      120px tall would show a 7:1 slice of it.
+    - The category's own stone image as a strip across the pane, 120px tall, above its heading,
+      as the reference's (Shaun's review-02 answer; the ticket's first option). The store's
+      1600x700 images show as a centred 7:1 slice. The child links start within 200px of the
+      panel's top (UX-2).
     - Desktop only: CSS hides it below 801px (_rail.scss). loading="lazy", so the closed panel, a
-      hidden pane and the phone drawer download nothing; srcset and sizes pick about 270 CSS px
-      (sizes follows _rail.scss's grid: a third of the pane, 268px from 1240px wide); width and
-      height reserve its box.
-    - alt="": the heading beside it names the category.
+      hidden pane and the phone drawer download nothing; srcset and sizes pick the pane's width
+      (827px from 1240px wide, where the card stops at 1176px; below that the viewport less the
+      gutters, the 301px rail and the pane's 48px of padding, about 390px); width and height are
+      the file's 16:7, and _rail.scss sets the box.
+    - alt="": the heading under it names the category.
 --}}
-<img class="rf-menu-banner" src="{{getImageSrcset rf_image 1x='320w'}}" srcset="{{getImageSrcset rf_image 160w='160w' 320w='320w' 480w='480w' 640w='640w'}}" sizes="(min-width: 1240px) 268px, calc((100vw - 420px) / 3)" width="400" height="175" alt="" loading="lazy" decoding="async" data-rf-menu-banner>
+<img class="rf-menu-banner" src="{{getImageSrcset rf_image 1x='960w'}}" srcset="{{getImageSrcset rf_image 480w='480w' 640w='640w' 960w='960w' 1280w='1280w' 1600w='1600w'}}" sizes="(min-width: 1240px) 827px, calc(100vw - 390px)" width="1600" height="700" alt="" loading="lazy" decoding="async" data-rf-menu-banner>

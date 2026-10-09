@@ -28,6 +28,10 @@ $rf-card-scrim:         rgb(nth($rf-scrim, 1), nth($rf-scrim, 2), nth($rf-scrim,
 $rf-card-scrim-strong:  0.8;        // its opacity behind the text
 $rf-card-fade:          48px;       // the scrim's fade to clear, above the text
 $rf-card-fade-phone:    32px;       // the same below 801px
+$rf-card-scrim-phone:   0.78;       // phones: its opacity behind the label, the name and a count
+$rf-card-scrim-cta:     0.45;       // phones: behind the call to action, whose white pill needs none
+$rf-card-cta-zone:      56px;       // phones: the scrim is lighter up to here from the card's bottom,
+$rf-card-cta-ease:      22px;       // and reaches $rf-card-scrim-phone this much higher
 $rf-cards-gap:          clamp(14px, 1.8vw, 24px);
 
 
@@ -140,11 +144,16 @@ $rf-cards-gap:          clamp(14px, 1.8vw, 24px);
 // text-only zoom), where CD-6's fixed 42% of the card would leave the label over the bare photo
 // on a square crop, whose text block is nearly half its height. The fade is shorter on phones,
 // where the text block is most of a 16:10 card, so the card keeps its shape at 320px.
+//
+// On phones it is lighter (Shaun, review-02: the 0.8 band covered about 65% of the card, which
+// read darker than the reference): 0.78 behind the label, the name and a count, and 0.45 behind
+// the call to action, whose white pill carries its own contrast, easing between the two over
+// 22px. home-widgets-screens.spec.mjs still holds every line to 4.5:1 on its lightest pixel.
 .rf-type-card__copy {
     --rf-card-fade: #{$rf-card-fade-phone};
     align-items: flex-start;
     align-self: end;
-    background: linear-gradient(to top, rgba($rf-card-scrim, $rf-card-scrim-strong) 0, rgba($rf-card-scrim, $rf-card-scrim-strong) calc(100% - var(--rf-card-fade)), rgba($rf-card-scrim, 0) 100%);
+    background: linear-gradient(to top, rgba($rf-card-scrim, $rf-card-scrim-cta) 0, rgba($rf-card-scrim, $rf-card-scrim-cta) $rf-card-cta-zone, rgba($rf-card-scrim, $rf-card-scrim-phone) ($rf-card-cta-zone + $rf-card-cta-ease), rgba($rf-card-scrim, $rf-card-scrim-phone) calc(100% - var(--rf-card-fade)), rgba($rf-card-scrim, 0) 100%);
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -154,6 +163,7 @@ $rf-cards-gap:          clamp(14px, 1.8vw, 24px);
 
     @include breakpoint("medium") {
         --rf-card-fade: #{$rf-card-fade};
+        background: linear-gradient(to top, rgba($rf-card-scrim, $rf-card-scrim-strong) 0, rgba($rf-card-scrim, $rf-card-scrim-strong) calc(100% - var(--rf-card-fade)), rgba($rf-card-scrim, 0) 100%);
         padding: var(--rf-card-fade) clamp(18px, 2.2vw, 28px) clamp(18px, 2.2vw, 28px);
     }
 }

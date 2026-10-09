@@ -13,8 +13,9 @@
 //   closes the panel with focus on "Shop flies", and tabbing out of the panel either way closes it.
 // - Height (UX-2): at 1366x657 the whole rail shows and the panel ends above the viewport's
 //   bottom; a pane taller than the space scrolls inside the panel.
-// - The banner (O09; story 7): at 1280 each pane whose category has an image shows it, no
-//   taller than 120px, with the child links within 200px of the panel's top; at 375, with the
+// - The banner (O09; story 7): at 1280 each pane whose category has an image shows it as a strip
+//   120px tall across the pane, above its heading, with the child links within 200px of the
+//   panel's top; at 375, with the
 //   panel closed, and for a closed pane, no banner is downloaded.
 // - The rail's foot links the hook size chart (stories 15 and 16).
 // - axe finds no serious or critical issue in the menu with each pane open at 1280.
@@ -45,7 +46,7 @@ import { openWidget } from './render/widget-page.mjs';
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
 const BLOCKING = ['serious', 'critical'];
 const HOVER = 300; // menu.js's HOVER_DELAY
-const BANNER_MAX = 120; // O09
+const BANNER_MAX = 120; // O09: the strip's height
 const KIDS_WITHIN = 200; // O09: the child links start within 200px of the panel's top
 const LAPTOP = { width: 1366, height: 657 }; // a 1366x768 laptop less the browser's chrome (UX-2)
 const MARGIN = 16; // _rail.scss: between the panel and the viewport's bottom
@@ -62,6 +63,13 @@ const box = locator => locator.evaluate(element => {
     return {
         top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right, width: rect.width, height: rect.height,
     };
+});
+// The element's content box, inside its padding: where a full-width child sits.
+const contentBox = locator => locator.evaluate(element => {
+    const rect = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    const left = rect.left + parseFloat(style.paddingLeft);
+    return { left, width: rect.right - parseFloat(style.paddingRight) - left };
 });
 const centre = rect => ({ x: rect.left + (rect.width / 2), y: rect.top + (rect.height / 2) });
 const menuAxe = page => new AxeBuilder({ page }).include('#menu').withTags(TAGS).analyze();
@@ -271,7 +279,7 @@ test(`${MAIN_PIN}: a pane taller than the space scrolls inside the panel, which 
     await expect(nav).toBeVisible();
 });
 
-test(`${MAIN_PIN}: at 1280 each pane whose category has an image shows it, no taller than 120px, with the child links within 200px of the panel's top (O09; story 7)${label}`, async ({ page, request }, testInfo) => {
+test(`${MAIN_PIN}: at 1280 each pane whose category has an image shows it as a 120px strip across the pane, above its heading, with the child links within 200px of the panel's top (O09; story 7)${label}`, async ({ page, request }, testInfo) => {
     test.skip(!desktop(testInfo), 'the banner is desktop only');
     const categories = await storeCategories(request);
     await open(page);
@@ -296,9 +304,12 @@ test(`${MAIN_PIN}: at 1280 each pane whose category has an image shows it, no ta
             const heading = await box(pane.locator('h2'));
             const kid = await box(pane.locator('.rf-menu-kids a').first());
             const panel = await box(nav);
-            expect(strip.height, `${category.name}: no taller than 120px`).toBeLessThanOrEqual(BANNER_MAX + 0.5);
-            expect(strip.left, `${category.name}: beside the heading`).toBeGreaterThanOrEqual(heading.left);
-            expect(Math.abs(strip.top - heading.top), `${category.name}: level with the heading`).toBeLessThanOrEqual(1);
+            const paneBox = await contentBox(pane);
+            // Shaun's review-02 answer: the ticket's first option, a full-width strip above the heading.
+            expect(Math.abs(strip.height - BANNER_MAX), `${category.name}: a 120px strip`).toBeLessThanOrEqual(0.5);
+            expect(Math.abs(strip.left - paneBox.left), `${category.name}: from the pane's left edge`).toBeLessThanOrEqual(1);
+            expect(Math.abs(strip.width - paneBox.width), `${category.name}: the pane's full width`).toBeLessThanOrEqual(1);
+            expect(strip.bottom, `${category.name}: above the heading`).toBeLessThanOrEqual(heading.top);
             expect(kid.top - panel.top, `${category.name}: the child links within 200px of the panel's top`).toBeLessThanOrEqual(KIDS_WITHIN);
             shown.push(`${category.name} ${Math.round(strip.width)}x${Math.round(strip.height)}, children at ${Math.round(kid.top - panel.top)}px`);
         }
@@ -426,7 +437,7 @@ fixtureTest('tree 4 on the fixture page: at 1366x657 the whole rail (six Fly Typ
     testInfo.annotations.push({ type: 'rail', description: `tree 4's rail ends ${Math.round(foot.bottom - card.top)}px below the panel's top: ${Math.round(needed)}px of 657 with the store's header` });
 });
 
-fixtureTest('tree 4 on the fixture page: the Species pane at 1280, with a banner beside its heading and its names within 200px of the top, and no axe issue', async ({ page }, testInfo) => {
+fixtureTest('tree 4 on the fixture page: the Species pane at 1280, with a banner strip above its heading and its names within 200px of the top, and no axe issue', async ({ page }, testInfo) => {
     fixtureTest.skip(Boolean(QA_OVERLAY), 'the fixture page renders no overlay');
     fixtureTest.skip(!desktop(testInfo), 'the panes beside the rail are the desktop layout');
     await openWidget(page, TREE_4_CASE, { variation: QA_VARIATION });
@@ -435,8 +446,10 @@ fixtureTest('tree 4 on the fixture page: the Species pane at 1280, with a banner
     const panel = await box(page.locator('[data-rf-menu]'));
     const strip = await box(pane.locator('[data-rf-menu-banner]'));
     const kid = await box(pane.locator('.rf-menu-kids a').first());
-    expect(strip.height).toBeGreaterThan(0);
-    expect(strip.height).toBeLessThanOrEqual(BANNER_MAX + 0.5);
+    const heading = await box(pane.locator('h2'));
+    expect(Math.abs(strip.height - BANNER_MAX)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(strip.width - (await contentBox(pane)).width), 'the pane\'s full width').toBeLessThanOrEqual(1);
+    expect(strip.bottom, 'above the heading').toBeLessThanOrEqual(heading.top);
     expect(kid.top - panel.top).toBeLessThanOrEqual(KIDS_WITHIN);
     await expect(pane.locator('.rf-menu-kids a')).toHaveCount(11);
     expect(axeProblems((await new AxeBuilder({ page }).include('#menu').withTags(TAGS).analyze()).violations)).toEqual([]);
