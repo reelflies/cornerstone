@@ -9,15 +9,22 @@
 // - The Fly Sizes facet's values as pills (components/reelflies/facet-sizes.html), in a grid of
 //   at least 52px columns, each 44px tall: the size alone, bordered like the chips; the selected
 //   one outlined in ink on the tile, as the product page's size pills (UX-21). No hook drawings.
-// - The row above the grid (listing-top.html): the count, then Filter and stock's sort bar. On
-//   phones the tools take a row of their own under the count.
+// - Under the pills, stock's "Show more" link at least 24px tall, clear of the last row.
+// - Stock's "Clear" beside every facet's heading, on every listing: at least 24px tall (WCAG
+//   2.5.8) and centred on the heading.
+// - The row above the grid (listing-top.html): the count, then Filter and stock's sort bar, which
+//   takes the reference's look: "Sort by" in dun beside a pill select. On phones the tools take a
+//   row of their own under the count, with the label read but not shown.
 // - Filter is the phone layout's: it opens the facets through stock's toggle (size-filter.js),
-//   which hides here once script runs. Without script stock's toggle stays, though stock's own
-//   collapsible needs script too.
+//   which hides here once script runs. Both rules key on the category page's rf-listing-page,
+//   so they hold with or without the header. Without script stock's toggle stays, though
+//   stock's own collapsible needs script too.
+// - Stock's "Refine by" block shows only once a filter is applied, as the reference's sidebar
+//   starts with the sizes.
 //
 // -----------------------------------------------------------------------------
 
-$rf-phone: "not all and (min-width: #{$screen-medium})"; // below 801px, with no 800-801 gap
+$rf-facets-phone: "not all and (min-width: #{$screen-medium})"; // below 801px, with no 800-801 gap
 
 
 // The size pills
@@ -30,10 +37,6 @@ $rf-phone: "not all and (min-width: #{$screen-medium})"; // below 801px, with no
     list-style: none;
     margin: 0;
     padding: 0;
-
-    .navList-item {
-        margin: 0;
-    }
 
     // Citadel's clearfix on .navList would be the grid's first cell.
     &::before,
@@ -71,11 +74,22 @@ $rf-phone: "not all and (min-width: #{$screen-medium})"; // below 801px, with no
     }
 }
 
-// Stock's "Clear" beside a facet's heading, at least 24px tall (WCAG 2.5.8)
+// Stock's "Show more" under the pills
+.rf-size-facet .accordion-content > .toggleLink {
+    align-items: center;
+    display: inline-flex;
+    margin-top: 8px;
+    min-height: var(--rf-target-min);
+}
+
+// Stock's "Clear" beside a facet's heading, at least 24px tall (WCAG 2.5.8). Stock pins it 3px
+// from the heading's top from medium up, which the taller box would leave low.
 .facetedSearch-clearLink {
     align-items: center;
     display: inline-flex;
     min-height: var(--rf-target-min);
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 .rf-size-help {
@@ -101,16 +115,17 @@ $rf-phone: "not all and (min-width: #{$screen-medium})"; // below 801px, with no
     justify-content: space-between;
     margin: 0 0 16px;
 
-    @media #{$rf-phone} {
+    @media #{$rf-facets-phone} {
         margin-bottom: 14px;
         margin-top: 12px;
     }
 
-    // Stock's sort bar sits in the row, with no margins of its own: ticket 32's rule for the bar
-    // on its own (_category.scss) is more specific, so this matches it.
+    // Stock's sort bar sits in the row, with no margins of its own, and stays on the right when
+    // Filter isn't there, as the reference's empty span keeps it. Ticket 32's rule for the bar on
+    // its own (_category.scss) is more specific, so this matches it.
     .rf-listing-header ~ .page & .actionBar,
     .actionBar {
-        margin: 0;
+        margin: 0 0 0 auto;
     }
 }
 
@@ -125,9 +140,63 @@ $rf-phone: "not all and (min-width: #{$screen-medium})"; // below 801px, with no
     display: flex;
     gap: 10px;
 
-    @media #{$rf-phone} {
+    @media #{$rf-facets-phone} {
         justify-content: space-between;
         width: 100%;
+    }
+}
+
+// Stock's sort bar as the reference's: no box round the field, "Sort by" in dun, and the select
+// a 44px pill with stock's arrow. It may narrow beside Filter at 320 (a fieldset is otherwise
+// never narrower than its content).
+.rf-list-tools .actionBar {
+    min-width: 0;
+}
+
+.rf-list-tools .actionBar-section {
+    min-width: 0;
+
+    .form-field {
+        align-items: center;
+        background: none;
+        border: 0;
+        display: flex;
+        gap: 8px;
+        min-width: 0;
+
+        // A clearfix pseudo would be a flex item, with a gap before it.
+        &::before,
+        &::after {
+            display: none;
+        }
+    }
+
+    .form-label {
+        color: var(--rf-dun);
+        font-size: 15px;
+        line-height: inherit;
+        padding: 0;
+
+        @media #{$rf-facets-phone} {
+            @include rf-visually-hidden;
+        }
+    }
+
+    .form-select {
+        background-color: var(--rf-paper);
+        background-position: right 14px center;
+        border: 1px solid var(--rf-edge);
+        border-radius: var(--rf-radius-pill);
+        color: var(--rf-ink);
+        font-size: 15px;
+        height: var(--rf-target-buy);
+        max-width: 100%;
+        min-width: 0;
+        padding: 0 38px 0 16px;
+
+        &:hover {
+            border-color: var(--rf-ink);
+        }
     }
 }
 
@@ -141,7 +210,7 @@ $rf-phone: "not all and (min-width: #{$screen-medium})"; // below 801px, with no
     display: none;
     font: inherit;
     font-size: 15px;
-    font-weight: 500;
+    font-weight: 600;
     gap: 8px;
     min-height: var(--rf-target-buy);
     padding: 0 16px;
@@ -160,18 +229,23 @@ $rf-phone: "not all and (min-width: #{$screen-medium})"; // below 801px, with no
         width: 18px;
     }
 
-    @media #{$rf-phone} {
-        .js & {
+    @media #{$rf-facets-phone} {
+        .js .rf-listing-page & {
             display: inline-flex;
         }
     }
 }
 
 // Filter takes the place of stock's "Browse by … / Show Filters" toggle on phones.
-@media #{$rf-phone} {
-    .js .rf-listing-header ~ .page .facetedSearch-toggle {
+@media #{$rf-facets-phone} {
+    .js .rf-listing-page .facetedSearch-toggle {
         display: none;
     }
+}
+
+// Stock's "Refine by" block, from medium up, only once a filter is applied
+.rf-listing-page .facetedSearch-refineFilters:not(:has(.facetLabel)) {
+    display: none;
 }
 
 

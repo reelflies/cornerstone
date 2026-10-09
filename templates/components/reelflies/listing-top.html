@@ -4,16 +4,23 @@
     components/category/product-listing.html's hook includes it with the page's own context, so
     faceted search renders it again with every refresh.
 
-    - The count: "312 flies" where the listing has the Fly Sizes facet, else "312 products", from
-      category.total_products, which counts the filtered listing (the live context has no
-      paginator total). When applied filters match
-      nothing (listing-empty.html), "No flies match these filters" (O20). size-filter.js
-      announces it after each refresh, and focuses it when the control the shopper used is gone.
+    - The count: "312 flies" on a fly listing, else "312 products", from category.total_products,
+      which counts the filtered listing (the live context has no paginator total; the filtered
+      count is checked again at prelaunch). When applied filters match nothing
+      (listing-empty.html), "No flies match these filters", or "No products …" (O20).
+      size-filter.js announces it after each refresh, and focuses it when the control the shopper
+      used is gone.
+    - A fly listing is one with the Fly Sizes facet (size-facet-name.html), or with a size among
+      its applied filters, in case BigCommerce drops the facet when nothing matches.
     - Filter, on phones: it opens the facets above through stock's own toggle (size-filter.js),
       which _facets.scss hides there. It shows only when a facet is visible.
-    - Stock's sort bar (components/products/filter), when there are products.
+    - Stock's sort bar (components/products/filter), when there are products, with rf_sort, the
+      listing's sort. The hash arguments let ticket 36's brand listing include this with
+      category=brand and its own sort.
 --}}
-{{#each category.facets}}{{#if facet '===' 'Fly Sizes'}}{{assignVar 'rf_fly_listing' 1}}{{/if}}{{/each}}
+{{> components/reelflies/size-facet-name}}
+{{#each category.facets}}{{#if facet '===' (getVar 'rf_size_facet')}}{{assignVar 'rf_fly_listing' 1}}{{/if}}{{/each}}
+{{#each category.selected.items}}{{#if facet '===' (getVar 'rf_size_facet')}}{{assignVar 'rf_fly_listing' 1}}{{/if}}{{/each}}
 <div class="rf-list-top">
     <p class="rf-list-count" data-rf-list-count tabindex="-1">
         {{~#if category.products~}}
@@ -32,7 +39,7 @@
             {{/any}}
         {{/if}}
         {{#if category.products}}
-            {{> components/products/filter sort=pagination.category.sort}}
+            {{> components/products/filter sort=rf_sort}}
         {{/if}}
     </div>
 </div>

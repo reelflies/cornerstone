@@ -16,9 +16,20 @@
 // - The first row of products: its photos whole at 1366x768, and starting within the first
 //   screen at 375x667 (stories 20 and 21).
 // - axe finds no serious or critical issue in the page's body.
+// - Ticket 33's Fly size filter, on the same pages and two more fixtures, `filtered` (size 14
+//   picked) and `empty` (filters that match nothing); the Species page has fifteen sizes and
+//   "Show more":
+//   - the pills in hook order, from the API's order, and again after a refresh, with the count
+//     announced and focus back on the size used
+//   - the empty state's message and Clear filters, with focus left alone (its fold check skips)
+//   - Filter beside Sort by on phones, in place of stock's toggle, with the header or without it
+//   - Sort by on the row's right as the reference's, a 44px pill with its label beside it
+//   - "Show more" under the pills, 24px tall or more; stock's "Clear" centred on its heading;
+//     stock's "Refine by" only once a filter is applied
 //
 // The fixture page loads no theme bundle, so the spec runs the real category-chips.js in the
 // page: it has no imports, so its source goes in as a classic script, its exports dropped.
+// size-filter.js has imports, so it goes in through render/theme-script.mjs.
 //
 // Its name ends in "screens", so `npm run qa:screens` (and so qa:prepush and release.sh) runs it:
 //
@@ -228,5 +239,48 @@ test.describe('the Fly size filter (ticket 33)', () => {
         const [filter, sort] = await Promise.all([page.locator('[data-rf-filter-button]').boundingBox(), page.locator('.rf-list-tools .actionBar').boundingBox()]);
         expect(Math.abs(filter.y + filter.height / 2 - (sort.y + sort.height / 2)), 'one row').toBeLessThanOrEqual(2);
         expect(filter.height).toBeGreaterThanOrEqual(44);
+        // With Theme Styles' hide_category_page_heading on there is no header; the rules key on
+        // the page, so Filter still stands in for stock's toggle.
+        await page.evaluate(() => document.querySelector('.rf-listing-header').remove());
+        await expect(page.locator('[data-rf-filter-button]')).toBeVisible();
+        await expect(page.locator('.facetedSearch-toggle')).toBeHidden();
+    });
+
+    test('puts Sort by on the row\'s right, as the reference\'s: a 44px pill, its label beside it from 801px', async ({ page }, testInfo) => {
+        await open(page, byName('fly-type'));
+        // Without Filter, as on every listing with no visible facet, it stays right too.
+        await page.evaluate(() => document.querySelector('[data-rf-filter-button]').remove());
+        const [row, select] = await Promise.all([page.locator('.rf-list-top').boundingBox(), page.locator('.rf-list-tools select').boundingBox()]);
+        expect(Math.abs(row.x + row.width - (select.x + select.width)), 'flush with the row\'s right').toBeLessThanOrEqual(1);
+        expect(select.height).toBeGreaterThanOrEqual(44);
+        const label = page.locator('.rf-list-tools .form-label');
+        if (phone(testInfo)) {
+            expect(await label.evaluate(element => element.getBoundingClientRect().width), 'read, not shown').toBeLessThanOrEqual(1);
+            return;
+        }
+        const box = await label.boundingBox();
+        expect(box.x + box.width, 'beside the select').toBeLessThanOrEqual(select.x);
+        expect(Math.abs(box.y + box.height / 2 - (select.y + select.height / 2))).toBeLessThanOrEqual(2);
+    });
+
+    test('shows "Show more" under the pills, 24px tall or more and clear of the last row', async ({ page }, testInfo) => {
+        test.skip(phone(testInfo), 'the facets are closed on phones until Filter opens them');
+        await open(page, byName('species'));
+        const more = page.locator('.rf-size-facet .accordion-content > .toggleLink');
+        await expect(more).toBeVisible();
+        const [link, last] = await Promise.all([more.boundingBox(), page.locator('.rf-size-pill').last().boundingBox()]);
+        expect(link.height).toBeGreaterThanOrEqual(24);
+        expect(link.y - (last.y + last.height)).toBeGreaterThanOrEqual(8);
+    });
+
+    test('shows stock\'s "Refine by" only once a filter is applied, and centres "Clear" on its heading', async ({ page }, testInfo) => {
+        test.skip(phone(testInfo), 'stock hides "Refine by" on phones, and the facets are closed there');
+        await open(page, byName('fly-type'));
+        await expect(page.locator('.facetedSearch-refineFilters')).toBeHidden();
+        await open(page, byName('filtered'));
+        await expect(page.locator('.facetedSearch-refineFilters')).toBeVisible();
+        const [clear, title] = await Promise.all([page.locator('.rf-size-facet .facetedSearch-clearLink').boundingBox(), page.locator('.rf-size-facet .accordion-title').boundingBox()]);
+        expect(Math.abs(clear.y + clear.height / 2 - (title.y + title.height / 2))).toBeLessThanOrEqual(2);
+        expect(clear.height).toBeGreaterThanOrEqual(24);
     });
 });

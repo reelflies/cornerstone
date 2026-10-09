@@ -57,9 +57,9 @@ function writeBuild(chunks, imports = Object.values(chunks).map(({ id }) => [id]
 
 const levelOf = (results, file) => results.find(result => result.file === file)?.level;
 const MENU = 'theme-bundle.chunk.rf-menu.js';
+const SIZE_FILTER = 'theme-bundle.chunk.rf-size-filter.js';
 const QUICK_ADD = 'theme-bundle.chunk.rf-quick-add.js';
 const REGION = 'theme-bundle.chunk.rf-region-prompt.js';
-const SIZE_FILTER = 'theme-bundle.chunk.rf-size-filter.js';
 
 describe('the main.js limit', () => {
     it('is 300 KiB raw', () => {

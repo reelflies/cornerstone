@@ -11,8 +11,12 @@
 
 import { sortByHookOrder } from './hook-order';
 
+// The Fly size facet's name, as templates/components/reelflies/size-facet-name.html has it
+// (render/partials/size-filter.test.mjs holds the two together).
+export const FLY_SIZE_FACET = 'Fly Sizes';
+
 // The sidebar's Fly Sizes list: stock multi.html puts the facet's name in data-facet.
-export const FLY_SIZES_LISTS = '[data-facet="Fly Sizes"]';
+export const FLY_SIZES_LISTS = `[data-facet="${FLY_SIZE_FACET}"]`;
 
 // "(12)": the product count stock shows after each value.
 const COUNT = /\(\s*[\d,]+\s*\)/g;

@@ -1,8 +1,9 @@
 // The Fly size filter's behaviour (ticket 33; size-filter.js): hook order on load, after a refresh
-// and in the "Show more" modal; the count announced and focus put back after a refresh; Filter
-// opening the facets through stock's toggle. Stock faceted-search.js and collapsible.js aren't
-// loaded: the page stands in for what they render, and a refresh is what category.js's callback
-// does, the listing's children and then the sidebar's replaced in one task.
+// and in the "Show more" modal; focus put back and the count announced after a refresh, a size
+// picked in "Show more" included; Filter opening the facets through stock's toggle. Stock
+// faceted-search.js and collapsible.js aren't loaded: the page stands in for what they render,
+// and a refresh is what category.js's callback does, the listing's children and then the
+// sidebar's replaced in one task. The modal closes as Foundation's reveal leaves it: display: none.
 
 const SHUFFLED = ['14', '1', '2/0', '24', '6', '1/0', '10'];
 const HOOK_ORDER = ['2/0', '1/0', '1', '6', '10', '14', '24'];
@@ -17,7 +18,7 @@ const sidebar = ({ sizes = SHUFFLED, selected = [], open = false } = {}) => `
                 <h2 class="accordion-heading"><button type="button" class="accordion-navigation toggleLink" data-collapsible="#facetedSearch-content--fly-sizes">Fly Sizes</button></h2>
                 <div id="facetedSearch-content--fly-sizes" class="accordion-content">
                     <ul id="facetedSearch-navList--fly-sizes" data-facet="Fly Sizes" class="navList rf-size-pills">
-                        ${sizes.map(size => `<li class="navList-item"><a href="${href(size, selected)}" class="navList-action rf-size-pill${selected.includes(size) ? ' is-selected' : ''}" rel="nofollow" aria-label="Size ${size}" data-faceted-search-facet>${size}</a></li>`).join('')}
+                        ${sizes.map(size => `<li class="rf-size-pills-item"><a href="${href(size, selected)}" class="navList-action rf-size-pill${selected.includes(size) ? ' is-selected' : ''}" rel="nofollow" aria-label="Size ${size}" data-faceted-search-facet>${size}</a></li>`).join('')}
                     </ul>
                     <p class="rf-size-help"><a href="/fly-hook-size-chart/">What do sizes mean?</a></p>
                 </div>
@@ -45,6 +46,19 @@ const PAGE = `<div class="page">
 const sizes = root => [...root.querySelectorAll('[data-facet="Fly Sizes"] li')].map(item => item.textContent.replace(/\(\d+\)/, '').trim());
 const anchorsBySize = root => Object.fromEntries([...root.querySelectorAll('[data-facet="Fly Sizes"] a')].map(anchor => [anchor.textContent.trim(), anchor.getAttribute('href')]));
 const settle = () => new Promise(resolve => { setTimeout(resolve, 0); });
+const pill = size => Array.from(document.querySelectorAll('.rf-size-pill')).find(anchor => anchor.textContent === size);
+// A click on a facet link, as the shopper's: stock's hook cancels the navigation, as this does.
+const click = element => {
+    element.addEventListener('click', event => event.preventDefault(), { once: true });
+    element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+};
+// "Show more"'s list in the modal, as stock show-more-facets.html and its hook render it.
+const fillModal = () => {
+    document.querySelector('#modal .modal-content').innerHTML = `<ul class="navList facetedSearch-optionColumns" data-facet="Fly Sizes">
+        ${SHUFFLED.map(size => `<li class="navList-item"><a href="${href(size)}" class="navList-action" rel="nofollow" data-faceted-search-facet>${size} <span>(3)</span></a></li>`).join('')}
+    </ul>`;
+};
+const modalLink = size => Array.from(document.querySelectorAll('#modal a')).find(anchor => anchor.firstChild.textContent.trim() === size);
 const refresh = ({ listingOptions, sidebarOptions }) => {
     document.getElementById('product-listing-container').innerHTML = listing(listingOptions);
     document.getElementById('faceted-search-container').innerHTML = sidebar(sidebarOptions);
@@ -69,7 +83,7 @@ describe('hook order (R2; story 23)', () => {
         expect(anchorsBySize(document)).toEqual(hrefs);
     });
 
-    it('writes no facet attribute: nothing but the pills\' order changes in the sidebar', async () => {
+    it('writes no facet attribute: nothing but the pills\' order changes in the sidebar', () => {
         const observer = new MutationObserver(() => {});
         observer.observe(document.getElementById('faceted-search-container'), { subtree: true, attributes: true, characterData: true });
         sizeFilter.load({}, document);
@@ -85,32 +99,23 @@ describe('hook order (R2; story 23)', () => {
 
     it('puts the "Show more" list in hook order when the modal fills', async () => {
         sizeFilter.load({}, document);
-        document.querySelector('#modal .modal-content').innerHTML = `<ul class="navList facetedSearch-optionColumns" data-facet="Fly Sizes">
-            ${SHUFFLED.map(size => `<li class="navList-item"><a href="${href(size)}" class="navList-action" rel="nofollow" data-faceted-search-facet>${size} <span>(3)</span></a></li>`).join('')}
-        </ul>`;
+        fillModal();
         await settle();
         expect(sizes(document.getElementById('modal'))).toEqual(HOOK_ORDER);
     });
 });
 
 describe('after a refresh (story 68)', () => {
-    it('announces the listing\'s count once', async () => {
+    it('puts focus back on the size the shopper used, in its new place, and announces the listing\'s count once', async () => {
         sizeFilter.load({}, document);
-        refresh({ listingOptions: { count: '12 flies' }, sidebarOptions: { selected: ['14'] } });
-        await settle();
-        expect(announce).toHaveBeenCalledTimes(1);
-        expect(announce).toHaveBeenCalledWith('12 flies', document);
-    });
-
-    it('puts focus back on the size the shopper used, in its new place', async () => {
-        sizeFilter.load({}, document);
-        const pill = [...document.querySelectorAll('.rf-size-pill')].find(anchor => anchor.textContent === '14');
-        pill.focus();
-        pill.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        pill('14').focus();
+        click(pill('14'));
         refresh({ listingOptions: { count: '12 flies' }, sidebarOptions: { selected: ['14'] } });
         await settle();
         expect(document.activeElement.textContent).toBe('14');
         expect(document.activeElement.closest('[data-facet="Fly Sizes"]')).not.toBeNull();
+        expect(announce).toHaveBeenCalledTimes(1);
+        expect(announce).toHaveBeenCalledWith('12 flies', document);
     });
 
     it('puts focus back on the sort box after a sort', async () => {
@@ -121,15 +126,25 @@ describe('after a refresh (story 68)', () => {
         expect(document.activeElement).toBe(document.querySelector('[data-sort-by] select'));
     });
 
-    it('puts focus on the count when the control used is gone, such as Clear filters, and announces the empty state', async () => {
+    it('announces the empty state when the size used is still there', async () => {
+        sizeFilter.load({}, document);
+        click(pill('14'));
+        refresh({ listingOptions: { count: 'No flies match these filters', empty: true }, sidebarOptions: { selected: ['14'] } });
+        await settle();
+        expect(document.activeElement).toBe(pill('14'));
+        expect(announce).toHaveBeenCalledWith('No flies match these filters', document);
+    });
+
+    it('puts focus on the count when the control used is gone, such as Clear filters, and doesn\'t announce what the count says itself', async () => {
         sizeFilter.load({}, document);
         refresh({ listingOptions: { count: 'No flies match these filters', empty: true }, sidebarOptions: { selected: ['14'] } });
         await settle();
-        expect(announce).toHaveBeenLastCalledWith('No flies match these filters', document);
-        document.querySelector('.rf-listing-empty a').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        announce.mockClear();
+        click(document.querySelector('.rf-listing-empty a'));
         refresh({});
         await settle();
         expect(document.activeElement).toBe(document.querySelector('[data-rf-list-count]'));
+        expect(announce).not.toHaveBeenCalled();
     });
 
     it('leaves focus alone when it is still somewhere on the page', async () => {
@@ -139,6 +154,58 @@ describe('after a refresh (story 68)', () => {
         refresh({});
         await settle();
         expect(document.activeElement).toBe(document.getElementById('search'));
+    });
+
+    it('takes an element only added to the listing for no refresh', async () => {
+        sizeFilter.load({}, document);
+        document.getElementById('product-listing-container').insertAdjacentHTML('beforeend', '<div class="rf-later">Added</div>');
+        await settle();
+        expect(announce).not.toHaveBeenCalled();
+        expect(document.activeElement).toBe(document.body);
+    });
+});
+
+describe('a size picked in "Show more" (story 68)', () => {
+    it('puts focus on that size in the sidebar when the modal had closed before the refresh', async () => {
+        sizeFilter.load({}, document);
+        fillModal();
+        await settle();
+        click(modalLink('14'));
+        document.getElementById('modal').style.display = 'none';
+        refresh({ listingOptions: { count: '12 flies' }, sidebarOptions: { selected: ['14'] } });
+        await settle();
+        expect(document.activeElement).toBe(pill('14'));
+        expect(announce).toHaveBeenCalledWith('12 flies', document);
+    });
+
+    it('waits for the modal to close when the refresh comes first, so its focus trap doesn\'t take focus back', async () => {
+        sizeFilter.load({}, document);
+        const modal = document.getElementById('modal');
+        modal.style.display = 'block';
+        fillModal();
+        await settle();
+        modalLink('14').focus();
+        click(modalLink('14'));
+        refresh({ listingOptions: { count: '12 flies' }, sidebarOptions: { selected: ['14'] } });
+        await settle();
+        expect(modal.contains(document.activeElement)).toBe(true);
+        expect(announce).not.toHaveBeenCalled();
+        modal.style.display = 'none';
+        await settle();
+        expect(document.activeElement).toBe(pill('14'));
+        expect(announce).toHaveBeenCalledTimes(1);
+    });
+
+    it('puts focus on the count when that size isn\'t among the sidebar\'s', async () => {
+        sizeFilter.load({}, document);
+        fillModal();
+        await settle();
+        click(modalLink('24'));
+        document.getElementById('modal').style.display = 'none';
+        refresh({ listingOptions: { count: '3 flies' }, sidebarOptions: { sizes: ['14', '16'] } });
+        await settle();
+        expect(document.activeElement).toBe(document.querySelector('[data-rf-list-count]'));
+        expect(announce).not.toHaveBeenCalled();
     });
 });
 
@@ -177,8 +244,10 @@ describe('Filter, on phones', () => {
         await settle();
         expect(document.querySelector('[data-rf-filter-button]').getAttribute('aria-expanded')).toBe('true');
     });
+});
 
-    it('does nothing on a page without the module\'s listing', () => {
+describe('a page without the listing', () => {
+    it('does nothing', () => {
         document.body.innerHTML = '<p>No listing here</p>';
         expect(() => sizeFilter.load({}, document)).not.toThrow();
     });

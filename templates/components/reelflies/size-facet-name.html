@@ -1,0 +1,11 @@
+{{!--
+    The Fly size facet's name (ticket 33), in one place for the templates: the product option that
+    ticket 18's catalogue job and ticket 21's Product Filtering settings set up, as BigCommerce
+    sends it in each facet's `facet` and each selected item's `facet`. Stock facets/multi.html's
+    hook and listing-top.html include this, then compare with rf_size_facet.
+
+    facet-order.js (FLY_SIZE_FACET) and the size-filter assertion (SIZE_FACET) name it too, and
+    render/partials/size-filter.test.mjs fails when the three differ. If the option is renamed in
+    the catalogue, the pills fall back to stock's list, so change all three with it.
+--}}
+{{~assignVar 'rf_size_facet' 'Fly Sizes'~}}

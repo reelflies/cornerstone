@@ -944,8 +944,7 @@
                 "current": 1,
                 "next": "?page=2",
                 "start": 1,
-                "end": 24,
-                "total": 48
+                "end": 24
             }
         },
         "theme_settings": {

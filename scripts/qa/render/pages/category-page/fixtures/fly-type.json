@@ -1,5 +1,5 @@
 {
-    "description": "A Fly Type page: the banner, the intro, eight chips (six with thumbnails), the grid and the rest of the description (ticket 32), on tree 4's shape: render/partials/category/pages.json's \"fly-type\" page with tree 4's categories and menu ids (render/partials/menu/tree-4.json) and ticket 31's six cards, with the facet sidebar the live category pages have (faceted search on, no facets to list until ticket 33). The widget itself is empty: category-screens.spec.mjs shoots the page's body.",
+    "description": "A Fly Type page: the banner, the intro, eight chips (six with thumbnails), the grid and the rest of the description (ticket 32), on tree 4's shape: render/partials/category/pages.json's \"fly-type\" page with tree 4's categories and menu ids (render/partials/menu/tree-4.json) and ticket 31's six cards, with the facet sidebar: the Fly Sizes facet in the API's order, which size-filter.js puts in hook order (ticket 33). The widget itself is empty: category-screens.spec.mjs shoots the page's body.",
     "page": "pages/category",
     "region": "category_below_content",
     "chrome": true,
@@ -919,8 +919,7 @@
                 "current": 1,
                 "next": "?page=2",
                 "start": 1,
-                "end": 24,
-                "total": 48
+                "end": 24
             }
         },
         "theme_settings": {

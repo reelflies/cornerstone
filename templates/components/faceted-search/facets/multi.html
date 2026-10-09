@@ -1,5 +1,6 @@
 {{!-- ReelFlies hook (ticket 33; CUSTOMIZATIONS.md): the Fly Sizes facet renders as size pills (components/reelflies/facet-sizes.html), with its anchors untouched; every other facet stays stock --}}
-{{#if facet '===' 'Fly Sizes'}}
+{{> components/reelflies/size-facet-name}}
+{{#if facet '===' (getVar 'rf_size_facet')}}
 {{> components/reelflies/facet-sizes}}
 {{else}}
 {{#if items}}
