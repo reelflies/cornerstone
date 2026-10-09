@@ -10,6 +10,9 @@ import path from 'path';
 import { pathToFileURL } from 'url';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import {
+    STENCIL_SLOTS, acquireLock, portLockName, slotName,
+} from '../../lib/lock.mjs';
 import ManifestReporter from './manifest-reporter.mjs';
 import { readManifest, shotAnnotation } from './manifest.mjs';
 
@@ -103,12 +106,34 @@ describe('the manifest reporter', () => {
 });
 
 describe('the gates\' Playwright config', () => {
-    it('runs the manifest reporter beside the list and HTML reporters', () => {
+    // The config's reporters, read in a child with the shell's QA_* and RF_QA_* settings
+    // stripped. RF_QA_PORTS_CHECKED is set as a Playwright worker has it: without it, importing
+    // the config claims port 3300's lock and waits for a stencil start slot, which held up the
+    // release's port while three gate runs held the slots.
+    const readReporters = env => {
         const config = pathToFileURL(path.resolve('scripts/qa/playwright.config.mjs')).href;
         const clean = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith('QA_') && !name.startsWith('RF_QA_')));
-        const { status, stdout, stderr } = spawnSync(process.execPath, [
+        return spawnSync(process.execPath, [
             '--input-type=module', '-e', `const { default: c } = await import(${JSON.stringify(config)}); console.log(JSON.stringify(c.reporter));`,
-        ], { encoding: 'utf8', env: clean });
+        ], { encoding: 'utf8', env: { ...clean, RF_QA_PORTS_CHECKED: '1', ...env }, timeout: 30_000 });
+    };
+
+    it('reads the config without a port lock or a stencil start slot, even with every slot taken', () => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rf-reporter-locks-'));
+        const slots = Array.from({ length: STENCIL_SLOTS }, (_, i) => acquireLock(slotName(i + 1), 'a gate run that holds its server', { root }));
+        try {
+            const { status, stderr, error } = readReporters({ RF_LOCK_ROOT: root });
+            assert.equal(error, undefined, `the child didn't finish: ${error?.message}`);
+            assert.equal(status, 0, stderr);
+            assert.equal(fs.existsSync(path.join(root, portLockName(3300))), false, 'it took port 3300\'s lock');
+        } finally {
+            slots.forEach(slot => slot.release());
+            fs.rmSync(root, { recursive: true, force: true });
+        }
+    });
+
+    it('runs the manifest reporter beside the list and HTML reporters', () => {
+        const { status, stdout, stderr } = readReporters();
         assert.equal(status, 0, stderr);
         const reporters = JSON.parse(stdout.trim().split('\n').pop()).map(([name]) => name);
         assert.deepEqual(reporters.slice(0, 2), ['list', 'html']);
