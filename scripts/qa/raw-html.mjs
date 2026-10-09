@@ -44,8 +44,8 @@ export async function loadAssertions(dir = ASSERTIONS_DIR) {
     const files = fs.readdirSync(dir).filter(file => file.endsWith('.mjs') && !file.endsWith('.test.mjs')).sort();
     return Promise.all(files.map(async file => {
         const { default: assertion } = await import(pathToFileURL(path.join(dir, file)).href);
-        if (!assertion?.id || !assertion.description || typeof assertion.check !== 'function') {
-            throw new Error(`${file} must export default { id, description, check }`);
+        if (!assertion?.id || !assertion.description || ![assertion.check, assertion.checkAll].some(fn => typeof fn === 'function')) {
+            throw new Error(`${file} must export default { id, description, check } (or checkAll, or both)`);
         }
         return assertion;
     }));
@@ -74,9 +74,31 @@ export function checkPage(page, assertions) {
         ];
     }
     return assertions.map(assertion => {
-        if (!appliesTo(assertion, key, page.kind)) return result(assertion, 'skip');
+        if (typeof assertion.check !== 'function' || !appliesTo(assertion, key, page.kind)) return result(assertion, 'skip');
         const problems = assertion.check(page);
         return result(assertion, problems.length ? 'fail' : 'pass', problems);
+    });
+}
+
+// Runs, once, each assertion's checkAll on every fetched page it applies to that rendered as its
+// template (a page that didn't is page-renders' failure), for what only the pages together show,
+// such as the shipping strip on every page or none (strip-every-page). Skipped with no such page.
+export function checkPages(pages, assertions) {
+    return assertions.filter(assertion => typeof assertion.checkAll === 'function').map(assertion => {
+        const { id, ticket, description } = assertion;
+        const rendered = pages.filter(page => {
+            const key = page.key ?? page.kind;
+            return page.status === expectedStatus(key) && appliesTo(assertion, key, page.kind);
+        });
+        if (!rendered.length) {
+            return {
+                id, ticket, description, status: 'skip', problems: [],
+            };
+        }
+        const problems = assertion.checkAll(rendered);
+        return {
+            id, ticket, description, status: problems.length ? 'fail' : 'pass', problems,
+        };
     });
 }
 
@@ -152,12 +174,17 @@ async function main() {
         missing.forEach(kind => fail(`no ${kind} page is pinned for channel ${QA_CHANNEL}: pin one in scripts/qa/pages.mjs, or say why not yet in its notPinnedYet`));
         failures += missing.length;
 
+        const fetched = [];
         for (const entry of pages) {
             const page = await fetchPage(storefront.baseUrl, entry); // eslint-disable-line no-await-in-loop
             const results = checkPage(page, assertions);
             report(page, results);
             failures += results.filter(({ status }) => status === 'fail').length;
+            fetched.push(page);
         }
+        const together = checkPages(fetched, assertions);
+        if (together.length) report({ key: 'every page', path: 'together', status: 'checked' }, together);
+        failures += together.filter(({ status }) => status === 'fail').length;
     } catch (error) {
         console.error(`Couldn't fetch from ${storefront.baseUrl}: ${error.message}`);
         await storefront.stop();

@@ -48,7 +48,7 @@ export function homeCases({ channel = 1895766, fixtures = {}, root = WIDGETS_DIR
         const file = path.join(root, widget, 'channels', `${channel}.json`);
         if (!fs.existsSync(file)) return [];
         const { placement } = readFixture(file);
-        if (placement.template_file !== HOME_TEMPLATE) return [];
+        if (!(placement.template_files || [placement.template_file]).includes(HOME_TEMPLATE)) return [];
         const name = fixtures[widget] || 'default';
         const widgetCase = all.find(item => item.widget === widget && item.name === name);
         if (!widgetCase) throw new Error(`widgets/${widget} has no fixture "${name}"`);

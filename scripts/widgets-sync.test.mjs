@@ -181,6 +181,25 @@ test('--record writes the uuids the apply made into the channel file', async () 
     assert.match(text, /recorded .*home-lead\/channels\/1895766\.json/);
 });
 
+// Ticket 27's follow-up: a widget placed on several template files records one uuid per file.
+test('--record writes one placement uuid per template file, and says which are still missing', async () => {
+    const widgetsRoot = copyHero();
+    const widget = readWidget('home-lead', { root: widgetsRoot });
+    const channelFile = readChannelFile(widget, CH);
+    const file = JSON.parse(fs.readFileSync(channelFile.file, 'utf8'));
+    const placement = {
+        template_files: ['pages/home', 'pages/cart'], region: 'header_bottom--global', sort_order: 0, status: 'active',
+    };
+    fs.writeFileSync(channelFile.file, JSON.stringify({ ...file, placement, uuids: { template: null, widget: null, placements: {} } }));
+    const store = FIXTURES.placed(widget, channelFile.configuration, {
+        template_file: 'pages/home', region: 'header_bottom--global', sort_order: 0, status: 'active',
+    });
+    const { code, text } = await run(['--channel', '1895766', '--record'], { routes: routesFor(store), widgetsRoot });
+    assert.equal(code, 0, text);
+    assert.deepEqual(readChannelFile(widget, CH).uuids, { template: T, widget: W, placements: { 'pages/home': P, 'pages/cart': null } });
+    assert.match(text, /placements 1 of 2 recorded \(none yet on pages\/cart\)/);
+});
+
 test('--unpublish sets the placement inactive in the channel file and plans only that', async () => {
     const widgetsRoot = copyHero();
     const widget = readWidget('home-lead', { root: widgetsRoot });

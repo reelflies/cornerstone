@@ -107,6 +107,15 @@ export function parseArgs(argv) {
     return options;
 }
 
+// The placement uuid, or for a widget on several template files how many are recorded and which
+// template files have none yet.
+function placementsLine(uuids) {
+    if (!uuids.placements) return `placement ${uuids.placement}`;
+    const entries = Object.entries(uuids.placements);
+    const missing = entries.filter(([, uuid]) => !uuid).map(([file]) => file);
+    return `placements ${entries.length - missing.length} of ${entries.length} recorded${missing.length ? ` (none yet on ${missing.join(', ')})` : ''}`;
+}
+
 // The channel's widget templates, widgets and placements, every page of each, with GETs only.
 export async function readChannel(client, channel) {
     const spec = object => readSpec({
@@ -178,7 +187,7 @@ export async function main(argv, {
             if (problems.length) throw new Stopped([...new Set(problems)].join('\n'));
             for (const { entry, uuids, changed } of results) {
                 if (changed) writeUuids(entry.channelFile, uuids);
-                print(`${changed ? 'recorded' : 'already '} ${entry.channelFile.where}: template ${uuids.template}, widget ${uuids.widget}, placement ${uuids.placement}`);
+                print(`${changed ? 'recorded' : 'already '} ${entry.channelFile.where}: template ${uuids.template}, widget ${uuids.widget}, ${placementsLine(uuids)}`);
             }
             if (results.some(result => result.changed)) print('Commit the channel files: they are the record of what the store holds.');
             return 0;

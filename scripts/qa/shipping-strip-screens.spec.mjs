@@ -62,11 +62,11 @@ test.describe('the shipping strip (widgets/shipping-strip)', () => {
         if (desktop(testInfo)) {
             await expect(long).toBeVisible();
             await expect(short).toBeHidden();
-            await expect(long).toHaveText('Free standard shipping in Canada on fly orders over $60. Fly boxes and gear not included.');
+            await expect(long).toHaveText(STRIP.fixture.configuration.long_text);
         } else {
             await expect(short).toBeVisible();
             await expect(long).toBeHidden();
-            await expect(short).toHaveText('Free standard shipping on fly orders over $60');
+            await expect(short).toHaveText(STRIP.fixture.configuration.short_text);
         }
         const landmark = page.getByRole('region', { name: 'Shipping and prices' });
         await expect(landmark.getByRole('link')).toHaveCount(0);
