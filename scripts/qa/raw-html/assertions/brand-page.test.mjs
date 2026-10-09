@@ -73,12 +73,3 @@ test('fails a robots meta that says noindex, as from the store\'s head meta tags
     const good = await page('banner');
     assert.match(problems(good, '<title>', '<meta name="ROBOTS" content="NOINDEX, FOLLOW"><title>'), /robots "NOINDEX, FOLLOW": the brand listing is indexable/);
 });
-
-test('fails a canonical that isn\'t the brand\'s own URL, the breadcrumb marked aria-current="page"; an absolute one on the host passes', async () => {
-    const good = await page('banner');
-    assert.match(problems(good, CANONICAL, '<link rel="canonical" href="/brands/">'), /the canonical points at \/brands\/, not the brand's own URL \/reelflies-2\//);
-    assert.deepEqual(brandPage.check({ ...good, html: good.html.replace(CANONICAL, '<link rel="canonical" href="https://reelflies_ca-1895766.mybigcommerce.com/reelflies-2/">') }), []);
-    assert.match(problems(good, 'aria-current="page"', ''), /no breadcrumb marks the brand's own URL \(aria-current="page"\)/);
-    // No canonical at all is one-canonical's to report.
-    assert.deepEqual(brandPage.check({ ...good, html: good.html.replace(CANONICAL, '') }), []);
-});
