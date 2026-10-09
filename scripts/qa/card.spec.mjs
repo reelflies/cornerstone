@@ -9,8 +9,8 @@
 // - The stock actions while quick add is off (SCOPE-3): a row under the price at both widths,
 //   and Quick view opens from it at 375 as well as 1280.
 // - The card's links, on the search pin: the name, the photo and Choose options go to the
-//   product's own URL from ?debug=context, and Add to cart adds that product (its URL, not
-//   clicked).
+//   product's own URL from ?debug=context (by path: stencil start serves the store's links as
+//   paths), and Add to cart adds that product (its URL, not clicked).
 //
 // It runs only when named, like header.spec.mjs: no npm script's filter matches it.
 //
@@ -83,21 +83,23 @@ test('the card\'s links go to its product: the name, the photo and Choose option
     test.skip(!PAGES.search, `no search page is pinned for channel ${QA_CHANNEL}; try QA_CHANNEL=1`);
     const products = (await context(request, 'search')).product_results.products || [];
     await storefrontPage(page, 'search');
+    // stencil start serves the store's absolute links as paths, so links are compared by path.
     const cards = await page.locator('.productGrid .card').evaluateAll(list => list.map(card => ({
         id: card.dataset.entityId,
-        title: card.querySelector('.card-title a')?.getAttribute('href') ?? null,
-        photo: card.querySelector('.card-figure__link')?.getAttribute('href') ?? null,
-        actions: [...card.querySelectorAll('.rf-card-actions a')].map(link => ({ text: link.textContent.trim(), href: link.getAttribute('href') })),
+        title: card.querySelector('.card-title a')?.pathname ?? null,
+        photo: card.querySelector('.card-figure__link')?.pathname ?? null,
+        actions: [...card.querySelectorAll('.rf-card-actions a')].map(link => ({ text: link.textContent.trim(), path: link.pathname, href: link.getAttribute('href') })),
     })));
     expect(cards).toHaveLength(products.length);
     let adds = 0;
     for (const card of cards) {
         const product = products.find(each => String(each.id) === card.id);
         expect(product, `card ${card.id} is a product of the page`).toBeTruthy();
-        expect(card.title, `card ${card.id}'s name`).toBe(product.url);
-        expect(card.photo, `card ${card.id}'s photo`).toBe(product.url);
+        const productPath = new URL(product.url).pathname;
+        expect(card.title, `card ${card.id}'s name`).toBe(productPath);
+        expect(card.photo, `card ${card.id}'s photo`).toBe(productPath);
         for (const action of card.actions) {
-            if (/choose options/i.test(action.text)) expect(action.href, `card ${card.id}'s Choose options`).toBe(product.url);
+            if (/choose options/i.test(action.text)) expect(action.path, `card ${card.id}'s Choose options`).toBe(productPath);
             if (/add to cart/i.test(action.text)) {
                 adds += 1;
                 expect(action.href, `card ${card.id}'s Add to cart`).toMatch(new RegExp(`[?&]action=add&(amp;)?product_id=${card.id}$`));
