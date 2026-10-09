@@ -486,7 +486,7 @@ It also checks, on a page of its own, that a widget is already out of the layout
 
 - **Page baselines:** the check reads the name as `<set>/<kind>[@pin][~state][+overlay]-<project>-<platform>.png`, which is the shape `baselineName` gives W0-8's pins, UI states and overlays (`pages.test.mjs` checks each against the check's parser). A UI state's baseline is covered by its page kind, and an overlay's only by `overlay <name>`.
 - **Widget shots** (W0-9): the check reads `widgets/<variation>/<widget>-<case>-<project>-<platform>.png`, the name `widget-screens.spec.mjs` gives each fixture's shot (`check-baseline-scope.test.mjs` checks every shot the spec would take, and every committed one). `widget <name>` covers that widget's shots in every case, variation and width. Name several as separate items: `widget home-lead, widget best-sellers`. No page kind or overlay covers a widget shot. Because widget and case names both hold hyphens, a shot that two widgets could own (`rf-hero` and `rf-hero-banner`) needs both declared, so don't name a widget as another's name plus a hyphen.
-- **Anything else:** a PNG in any other shape, or a widget shot that no folder in `widgets/` or `render/selftest/widgets/` owns, is covered only by a re-baseline epoch (`Baselines: epoch <cause>`), and an epoch PR changes nothing but baselines.
+- **Anything else:** a PNG in any other shape, or a widget shot that no folder in `widgets/`, `render/selftest/widgets/` or `render/pages/` owns, is covered only by a re-baseline epoch (`Baselines: epoch <cause>`), and an epoch PR changes nothing but baselines.
 
 [docs/guardrails.md](../../docs/guardrails.md), "Declaring changed baselines", has the rules.
 
@@ -791,6 +791,8 @@ Page baselines hide widget regions ("What the screenshots hide" above), because 
 - a fixture file that isn't there fails the shot
 
 A theme change that restyles buttons or headings changes the self-test's baselines too: update them in the same commit and name `widget rf-selftest` on the `Baselines:` line.
+
+**Fixture pages** (`render/pages/<name>/`, from ticket 31) are widget folders whose fixture renders a real page template round an empty widget (`"page"`, with the page's context in `"page_context"`), so a spec can shoot what that page shows from fixed data, where the live page is masked or the store has no such page yet. `widget-page.mjs` exports the folder as `PAGE_FIXTURES`, and nothing syncs it. `widget-screens.spec.mjs` doesn't shoot them: each has its own `<name>-screens.spec.mjs`, which shoots every case, and its baselines take the widget shots' names and rules, declared as `widget <name>`. `widget-baselines.test.mjs` and the baseline-scope check count every case.
 
 ### Widget layout specs
 

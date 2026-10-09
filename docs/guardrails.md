@@ -113,7 +113,7 @@ Baselines: epoch 18's apply renamed the aught sizes
 - A **page kind** (`home`, `product`, `species-hub` …) covers that kind's plain pin on every channel and at every width, including its UI states (W0-8).
 - **`kind@pin`** covers that pin only (W0-8's several pins per kind).
 - **`overlay <name>`** covers every baseline rendered under that overlay.
-- **`widget <name>`** covers that widget's element shots (W0-9) in every fixture case, variation and width. Name each widget as its own item: `widget home-lead, widget best-sellers`. The name is the widget's folder, in `widgets/` or, for the self-test, `scripts/qa/render/selftest/widgets/`.
+- **`widget <name>`** covers that widget's element shots (W0-9) in every fixture case, variation and width. Name each widget as its own item: `widget home-lead, widget best-sellers`. The name is the widget's folder, in `widgets/`, or for the self-test `scripts/qa/render/selftest/widgets/`, or for a fixture page (ticket 31's `card-grid`) `scripts/qa/render/pages/`.
 - **`epoch <cause>`** covers every baseline, and only in a PR that changes nothing but files under `scripts/qa/baselines/`: the orchestrator's re-baseline epoch PRs. A PR that also changes anything else and declares an epoch fails.
 - **`none`** covers nothing.
 - One line per body. It may be bold or a list item, and must start the line.
@@ -123,7 +123,7 @@ The check reads each page baseline's name as `scripts/qa/baselines/<set>/<kind>[
 **Widget shots in detail:**
 
 - A page kind, pin or overlay never covers a widget shot, and `widget <name>` never covers a page baseline. `widgets/` holds widget shots only.
-- Widget and fixture case names may both hold hyphens, so a shot's name alone can't say where the widget's name ends. The check reads it against the widgets that exist: the folders in `widgets/` and the self-test folder in the checkout it runs from, plus any widget folder the PR's own files name (one it adds or deletes).
+- Widget and fixture case names may both hold hyphens, so a shot's name alone can't say where the widget's name ends. The check reads it against the widgets that exist: the folders in `widgets/`, the self-test folder and the fixture pages folder in the checkout it runs from, plus any widget folder the PR's own files name (one it adds or deletes).
 - If two widgets could own a shot, as when `rf-hero` and `rf-hero-banner` both exist and `rf-hero-banner-default-…png` changes, the check needs both declared. So `widget rf-hero` alone never covers `rf-hero-banner`'s shots. Avoid widget names that start with another widget's name plus a hyphen.
 - A shot that no widget owns (its widget's folder is gone, or its name is in another case) is covered only by an epoch.
 

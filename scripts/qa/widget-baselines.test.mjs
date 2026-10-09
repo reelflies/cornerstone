@@ -19,7 +19,7 @@ import assert from 'node:assert/strict';
 import { CHANNELS, defaultVariation } from './pages.mjs';
 import { ROOT, slug } from './storefront.mjs';
 import { WIDGETS_DIR, widgetCases } from './render/render.mjs';
-import { SELFTEST_WIDGETS } from './render/widget-page.mjs';
+import { PAGE_FIXTURES, SELFTEST_WIDGETS } from './render/widget-page.mjs';
 
 const BASELINES = path.join(ROOT, 'scripts/qa/baselines');
 // playwright.config.mjs's projects, and the platform the baselines are made on (HANDOFF).
@@ -36,7 +36,9 @@ describe('widget shot baselines', () => {
     });
 
     it('exist for every shot fixture, in every gated variation, at both widths', () => {
-        const cases = widgetCases([WIDGETS_DIR, SELFTEST_WIDGETS]).filter(({ shot }) => shot);
+        // A fixture page's own spec shoots every case it has (card-screens.spec.mjs), so each one
+        // counts, shot or not.
+        const cases = [...widgetCases([WIDGETS_DIR, SELFTEST_WIDGETS]).filter(({ shot }) => shot), ...widgetCases([PAGE_FIXTURES])];
         assert.ok(cases.some(({ widget }) => widget === 'home-lead'), 'the hero has a shot fixture');
         const missing = gatedVariations().flatMap(variation => cases.flatMap(({ widget, name }) => PROJECTS
             .map(project => path.join(BASELINES, 'widgets', slug(variation), `${widget}-${name}-${project}-${PLATFORM}.png`))
