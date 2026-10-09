@@ -4,22 +4,29 @@
 //
 // The pin today is channel 1's stand-in, `species-hub`: tree 1's Saltwater, Warmwater & Salmon
 // (/flies/saltwater-warmwater-salmon/, category 272) rendered with the hub template, which
-// custom-layouts.json maps to it. Wave R1 pins /species/ on 1895766. On every species-hub pin,
-// against the store's own data (?debug=context):
+// custom-layouts.json maps to it. Wave R2 pins /species/ on 1895766, once refactor 14 has placed
+// the products: in wave R1 tree 4 holds none, so the tiles would show no counts and the hub no
+// grid. On every species-hub pin, against the store's own data (?debug=context):
 //
 // - one tile per subcategory, in the store's order, with its name, its link, its photo (the
 //   page's own image, or the default image) and its count, when above 0 (stories 13 and 14)
 // - under each tile, its Fly Type links: the subcategory's children in the categories data. On
 //   the stand-in there are none: 272's children are on tree 1's third level, and the Menu Display
-//   Depth of 3 leaves their children out of the data (research/07-prelaunch-probes.md, probe 2)
+//   Depth of 3 leaves their children out of the data (research/07-prelaunch-probes.md, probe 2).
+//   On any other pin, data with none fails: tree 4 gives five Species their Species × Fly Type
+//   pages, so none means a Menu Display Depth below 3.
 // - the grid after the tiles, with a page of cards (24) and a numbered pager when the root lists
-//   more, and no "no products" message (probe 8)
+//   more, and no "no products" message (probe 8, which passed on tree 1. Its rerun on tree 4, in
+//   wave R2, counts only on a root whose Species pages have products: an empty root lists nothing
+//   whether it rolls up or not)
 // - two columns on phones and three from 801px, the eager photos all in the first row, and
 //   nothing scrolling sideways at 320 (stories 70 and 71)
 //
-// It runs only when named, like category.spec.mjs: no npm script's filter matches it.
+// It runs only when named, like category.spec.mjs: no npm script's filter matches it. Wave R2 runs
+// it on 1895766 once /species/ is pinned there.
 //
 //   QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs species-hub.spec
+//   QA_CHANNEL=1895766 npx playwright test --config scripts/qa/playwright.config.mjs species-hub.spec
 
 /* eslint-env browser */ // the page.evaluate callbacks run in the page
 
@@ -27,6 +34,7 @@ import {
     PAGES, dismissCookieBanner, expect, storefrontPage, test,
 } from './fixtures.mjs';
 import { pageKind } from './pages.mjs';
+import { isStandIn } from './raw-html/assertions/species-hub.mjs';
 import { HEADERS, QA_CHANNEL } from './storefront.mjs';
 import { withQuery } from './switches.mjs';
 
@@ -92,7 +100,9 @@ for (const key of HUB_PINS) {
         const lists = await page.locator('[data-rf-hub-tiles] > .rf-hub-tile').evaluateAll(items => items.map(tile => [...tile.querySelectorAll('.rf-hub-tile__types a')].map(anchor => anchor.pathname)));
         const expected = data.category.subcategories.map(sub => typesOf(data.categories, sub.id).map(type => pathOf(type.url)));
         expect(lists).toEqual(expected);
-        if (!expected.flat().length) test.info().annotations.push({ type: 'no Fly Type links', description: `the categories data holds no children of ${key}'s Species pages (Menu Display Depth 3 stops above them on this tree)` });
+        if (expected.flat().length) return;
+        expect(isStandIn(PAGES[key]), `no Species × Fly Type pages in ${key}'s categories data: Menu Display Depth below 3?`).toBe(true);
+        test.info().annotations.push({ type: 'no Fly Type links', description: `the categories data holds no children of ${key}'s Species pages (Menu Display Depth 3 stops above them on tree 1)` });
     });
 
     test(`${key}: the grid follows the tiles, a page of cards with the numbered pager, and no "no products" message (probe 8)`, async ({ page, request }) => {

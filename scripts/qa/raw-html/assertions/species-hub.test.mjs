@@ -9,13 +9,27 @@ import path from 'path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { THEME_DIR, renderPartial } from '../../render/render.mjs';
-import speciesHub, { EAGER } from './species-hub.mjs';
+import speciesHub, { EAGER, STAND_IN } from './species-hub.mjs';
 
-const CONTEXT = JSON.parse(fs.readFileSync(path.join(THEME_DIR, 'scripts/qa/render/pages/species-hub/fixtures/tree-4.json'), 'utf8')).page_context;
+const FIXTURE = JSON.parse(fs.readFileSync(path.join(THEME_DIR, 'scripts/qa/render/pages/species-hub/fixtures/tree-4.json'), 'utf8')).page_context;
+// The hub as /species/ will be once its pin is checked on 1895766 (wave R2): every Species page's
+// copy carries its <!--more--> marker (refactor 10) and has products placed (refactor 14). The
+// fixture page leaves Barracuda's description unmarked, to show a tile with no intro.
+const CONTEXT = {
+    ...FIXTURE,
+    category: {
+        ...FIXTURE.category,
+        subcategories: FIXTURE.category.subcategories.map(sub => (sub.description.includes('<!--more-->') ? sub : { ...sub, description: `${sub.description}<!--more-->` })),
+    },
+};
+// The categories data cut to its first `levels` levels, as a Menu Display Depth of `levels` gives it.
+const toDepth = (nodes, levels) => nodes.map(node => ({ ...node, children: levels > 1 ? toDepth(node.children || [], levels - 1) : [] }));
 const CANONICAL = '<link rel="canonical" href="https://reelflies.ca/species/">';
 
 // The hub as the harness fetches it from /species/: the store puts the canonical in head.meta_tags.
-const page = async ({ category = {}, head = CANONICAL, pagePath = '/species/' } = {}) => ({
+const page = async ({
+    category = {}, categories = CONTEXT.categories, head = CANONICAL, pagePath = '/species/',
+} = {}) => ({
     kind: 'species-hub',
     key: 'species-hub',
     path: pagePath,
@@ -23,6 +37,7 @@ const page = async ({ category = {}, head = CANONICAL, pagePath = '/species/' } 
     status: 200,
     html: await renderPartial('pages/custom/category/species-hub', {
         ...CONTEXT,
+        categories,
         category: { ...CONTEXT.category, ...category },
         head: { meta_tags: head },
         settings: {},
@@ -107,4 +122,21 @@ test('fails a grid before the tiles, more than 24 cards, an eager or high-priori
     const moved = good.html.replace(gridHtml, '').replace('<ul class="rf-hub-tiles"', `${gridHtml}<ul class="rf-hub-tiles"`);
     assert.ok(tilesStart > 0);
     assert.match(speciesHub.check({ ...good, html: moved }).join('\n'), /the grid comes before the tiles/);
+});
+
+test('fails a hub on any pin but channel 1\'s stand-in with no root intro, a tile with no count or no intro, or no Fly Type links on any tile (criteria 1 and 2 on prelaunch)', async () => {
+    assert.match(speciesHub.check(await page({ category: { description: '' } })).join('\n'), /the root has no intro under the H1 \(\.rf-listing-intro\): its description is empty/);
+    const uncounted = CONTEXT.category.subcategories.map((sub, index) => (index === 0 ? { ...sub, product_count: 0 } : sub));
+    assert.match(speciesHub.check(await page({ category: { subcategories: uncounted } })).join('\n'), /tile 1 \(Trout Flies\) has no count: its Species page lists no products of its own/);
+    assert.match(speciesHub.check(await page({ category: { subcategories: FIXTURE.category.subcategories } })).join('\n'), /tile 11 \(Barracuda Flies\) has no intro: its Species page's description has no <!--more--> marker/);
+    assert.match(speciesHub.check(await page({ categories: toDepth(CONTEXT.categories, 2) })).join('\n'), /no tile lists its Species × Fly Type pages: the categories data stops at the Species pages \(Menu Display Depth below 3\?\)/);
+});
+
+test('passes channel 1\'s stand-in without them: tree 1\'s copy has no marker, and its Fly Type pages sit past Menu Display Depth 3', async () => {
+    assert.equal(STAND_IN, '/flies/saltwater-warmwater-salmon/');
+    const subcategories = FIXTURE.category.subcategories.map(sub => ({ ...sub, description: '', product_count: 0 }));
+    const standIn = await page({
+        category: { description: '', subcategories }, categories: toDepth(CONTEXT.categories, 2), head: `<link rel="canonical" href="https://reelflies.ca${STAND_IN}">`, pagePath: STAND_IN,
+    });
+    assert.deepEqual(speciesHub.check(standIn), []);
 });

@@ -1,6 +1,6 @@
 // The Species hub in the server HTML (ticket 34; spec module 10; R8, SEO-2; stories 13, 14, 70
 // and 72): pages/custom/category/species-hub.html, on every species-hub pin (channel 1's stand-in
-// until wave R1 pins /species/ on 1895766).
+// until wave R2 pins /species/ on 1895766, once refactor 14 has placed its products).
 //
 // - The H1 "Fly Fishing Flies by Species" (lang/en.json, reelflies.hub.heading) and the tiles
 //   inside the page's <main> (one-main counts it; max-one-h1 the H1s).
@@ -17,12 +17,16 @@
 // - The grid, when there is one (data-rf-hub-products): after the tiles, at most a page of cards
 //   (config.json's categorypage_products_per_page), every card photo lazy with no fetchpriority,
 //   and a numbered pager when its count runs past the cards listed.
+// - On every pin but channel 1's stand-in (STAND_IN), what criteria 1 and 2 wait for on prelaunch:
+//   the root's intro under the H1, each tile's count and intro, and Fly Type links on some tile
+//   (a Menu Display Depth below 3 leaves none).
 
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import {
     decodeHtml, elementsHtml, findTags, markupOnly, outerHtml, textOf,
 } from '../html.mjs';
+import { CHANNELS } from '../../pages.mjs';
 
 const THEME = new URL('../../../../', import.meta.url);
 const HEADING = JSON.parse(fs.readFileSync(fileURLToPath(new URL('lang/en.json', THEME)), 'utf8')).reelflies.hub.heading;
@@ -35,6 +39,11 @@ export const EAGER = 2;
 const hasClass = name => attrs => new RegExp(`(^|\\s)${name}(\\s|$)`).test(attrs.class || '');
 const isLazysizes = attrs => hasClass('lazyload')(attrs) || 'data-srcset' in attrs || 'data-sizes' in attrs;
 const pathOf = href => new URL(decodeHtml(href), 'http://species-hub.invalid').pathname;
+
+// Channel 1's stand-in pin (pages.mjs): tree 1's Saltwater, Warmwater & Salmon, rendered with the
+// hub template through custom-layouts.json.
+export const STAND_IN = CHANNELS[1].pages['species-hub'];
+export const isStandIn = pagePath => Boolean(pagePath) && pathOf(pagePath) === pathOf(STAND_IN);
 
 function tileProblems(tile, index) {
     const problems = [];
@@ -86,6 +95,25 @@ function gridProblems(grid) {
     return problems;
 }
 
+// What the hub waits for on prelaunch (criteria 1 and 2), on every pin but channel 1's stand-in:
+// the root's intro (refactor 10's copy), each tile's count (refactor 14's products) and intro (its
+// copy's <!--more--> marker), and Fly Type links on some tile (tree 4 at a Menu Display Depth of
+// 3 or more). Tree 1's copy has no marker and its Fly Type pages sit past depth 3, so the stand-in
+// shows none of the last three.
+function prelaunchProblems(html, tileHtml) {
+    const problems = [];
+    const header = outerHtml(html, 'div', hasClass('rf-listing-header')) || '';
+    if (!findTags(header, 'div').some(tag => hasClass('rf-listing-intro')(tag.attrs))) problems.push('the root has no intro under the H1 (.rf-listing-intro): its description is empty (refactor 10 writes it)');
+    tileHtml.forEach((tile, index) => {
+        const label = `tile ${index + 1} (${textOf(outerHtml(tile, 'h2') || '')})`;
+        const tags = findTags(tile);
+        if (!tags.some(tag => 'data-rf-hub-count' in tag.attrs)) problems.push(`${label} has no count: its Species page lists no products of its own (refactor 14 places every fly on it)`);
+        if (!tags.some(tag => tag.name === 'div' && hasClass('rf-listing-intro')(tag.attrs))) problems.push(`${label} has no intro: its Species page's description has no <!--more--> marker (refactor 10's copy)`);
+    });
+    if (!tileHtml.some(tile => elementsHtml(tile, 'ul', hasClass('rf-hub-tile__types')).length)) problems.push('no tile lists its Species × Fly Type pages: the categories data stops at the Species pages (Menu Display Depth below 3?)');
+    return problems;
+}
+
 export function speciesHubProblems(html, pagePath) {
     const problems = [];
     const tiles = outerHtml(html, 'ul', attrs => 'data-rf-hub-tiles' in attrs);
@@ -94,7 +122,9 @@ export function speciesHubProblems(html, pagePath) {
     const h1 = outerHtml(html, 'h1');
     if (!h1 || textOf(h1) !== HEADING) problems.push(`the H1 reads "${h1 ? textOf(h1) : '(none)'}", not "${HEADING}"`);
     if (!main.includes('data-rf-hub-tiles') || !findTags(main, 'h1').length) problems.push('the H1 and the tiles aren\'t inside <main>');
-    elementsHtml(tiles, 'li', hasClass('rf-hub-tile')).forEach((tile, index) => problems.push(...tileProblems(tile, index)));
+    const tileHtml = elementsHtml(tiles, 'li', hasClass('rf-hub-tile'));
+    tileHtml.forEach((tile, index) => problems.push(...tileProblems(tile, index)));
+    if (!isStandIn(pagePath)) problems.push(...prelaunchProblems(html, tileHtml));
     const firstPhoto = findTags(tiles, 'img')[0];
     const high = findTags(markupOnly(html), 'img').filter(img => img.attrs.fetchpriority === 'high');
     if (high.length > 1) problems.push(`${high.length} images have fetchpriority="high": only the first tile's photo`);
@@ -116,7 +146,7 @@ export function speciesHubProblems(html, pagePath) {
 export default {
     id: 'species-hub',
     ticket: 34,
-    description: 'the Species hub: its H1, a tile per Species with a photo (the first two eager, the first the page\'s one high priority) and its Fly Type links, the grid after them with a pager, no "no products" message, indexed with a self canonical',
+    description: 'the Species hub: its H1, a tile per Species with a photo (the first two eager, the first the page\'s one high priority) and its Fly Type links, the grid after them with a pager, no "no products" message, indexed with a self canonical; and, on any pin but channel 1\'s stand-in, the root\'s intro, each tile\'s count and intro, and Fly Type links on some tile',
     pages: ['species-hub'],
     check(page) {
         return speciesHubProblems(page.html, page.path);

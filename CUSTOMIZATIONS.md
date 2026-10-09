@@ -98,7 +98,7 @@ The Species root, "Flies by Species" at `/species/`, renders with the custom cat
 
 - **Switching the root to it** is a template association, as for the noindex template: on 1895766 through the store-write helper (snapshot, diff, log row), and only once a release has put the template in the active theme. Reverting it needs no push.
 - **The Fly Type links need Menu Display Depth 3 or more** on the channel (the root, the Species pages and their Species × Fly Type pages in the `categories` data). Refactor 07 owns that setting; with less, the tiles show no links.
-- **Locally,** `scripts/qa/custom-layouts.json` maps it to channel 1's `species-hub` pin (Saltwater, Warmwater & Salmon, a stand-in until wave R1), and the `species-hub` raw-HTML assertion holds the page. The shipping strip lists it in its `template_files` ([widgets](docs/widgets.md)).
+- **Locally,** `scripts/qa/custom-layouts.json` maps it to channel 1's `species-hub` pin (Saltwater, Warmwater & Salmon, a stand-in until wave R2 pins `/species/` on 1895766, once refactor 14 has placed the products), and the `species-hub` raw-HTML assertion holds the page. The shipping strip lists it in its `template_files` ([widgets](docs/widgets.md)).
 
 ## Upstream files changed
 

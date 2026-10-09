@@ -6,7 +6,8 @@
 // per Species page (components/reelflies/category-tile.html), then the grid. From the reference's
 // .hub, .hub-intro, .hub-grid and .hub-tile (plan/design/src/reference.src.html:690-698, :888).
 //
-// - The intro runs wider than a category page's (44em, the reference's .hub-intro).
+// - The intro runs wider than a category page's (44em, the reference's .hub-intro), and its
+//   paragraphs, the root's and a tile's, sit 8px apart.
 // - The tiles: two columns on phones (12px apart) and three from 801px (20px), never a sideways
 //   scroll. A tile is a white card with the home tiles' 1px #DDE2DC border and a 12px radius:
 //   the photo in a 3:2 box, cropped to fill it, then the name, the count, the intro and the Fly
@@ -26,6 +27,13 @@ $rf-hub-gap:         20px;
 
     .rf-listing-intro {
         max-width: 44em;
+    }
+
+    // An intro of more than one paragraph, the root's or a tile's, keeps a gap between them:
+    // ticket 32's .rf-listing-intro sets every paragraph's margin to 0. The root's unmarked
+    // description is its whole intro, so the hub's is the likeliest to run to two.
+    .rf-listing-intro p + p {
+        margin-top: 8px;
     }
 }
 

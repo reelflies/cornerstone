@@ -86,9 +86,9 @@ export const CHANNELS = {
             // rule and the listing's eager and lazy photos are checked on a real search page
             // (2026-10-09).
             search: '/search.php?search_query=streamer&section=product',
-            // Ticket 34: the Species hub's stand-in until wave R1 pins /species/ on 1895766: tree
-            // 1's Saltwater, Warmwater & Salmon (272), which custom-layouts.json renders with the
-            // hub template. Its nine subcategories are the tiles, each with its image and count;
+            // Ticket 34: the Species hub's stand-in until wave R2 pins /species/ on 1895766 (once
+            // refactor 14 has placed the products): tree 1's Saltwater, Warmwater & Salmon (272),
+            // which custom-layouts.json renders with the hub template. Its nine subcategories are the tiles, each with its image and count;
             // tree 1 puts their children past Menu Display Depth 3, so no tile has Fly Type links.
             'species-hub': '/flies/saltwater-warmwater-salmon/',
         },

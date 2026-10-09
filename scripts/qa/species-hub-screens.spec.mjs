@@ -13,6 +13,7 @@
 // - The first row: every eager photo starts in the first screen and sits in the first row, which
 //   on a phone is all eager; the first tile's photo is the page's one fetchpriority="high".
 // - The Fly Type links: at least 24px tall (WCAG 2.5.8), inside their tile at 320.
+// - An intro's paragraphs, the root's and a tile's, 8px apart.
 // - The grid after the tiles, its photos lazy, then the pager.
 // - axe finds no serious or critical issue in the page's body.
 //
@@ -138,6 +139,20 @@ test.describe('the Species hub (ticket 34)', () => {
             expect(link.inside, `${link.name} stays inside its tile`).toBe(true);
         }
         expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+    });
+
+    test('spaces an intro\'s paragraphs 8px apart, the root\'s and a tile\'s', async ({ page }) => {
+        await open(page);
+        // The fixture's intros are one paragraph each. The root's unmarked description is its
+        // whole intro, so the hub's is the likeliest to run to two: give each a second one.
+        const gaps = await page.evaluate(() => ['.rf-listing-header .rf-listing-intro', '.rf-hub-tile .rf-listing-intro'].map(selector => {
+            const intro = document.querySelector(selector);
+            const first = intro.querySelector('p');
+            const second = intro.appendChild(document.createElement('p'));
+            second.textContent = 'A second paragraph.';
+            return Math.round(second.getBoundingClientRect().top - first.getBoundingClientRect().bottom);
+        }));
+        expect(gaps).toEqual([8, 8]);
     });
 
     test('puts the grid after the tiles, then the numbered pager, then the description\'s rest', async ({ page }) => {
