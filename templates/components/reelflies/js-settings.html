@@ -23,6 +23,12 @@
 
 {{!-- 42 cart state: rf_cart_state --}}
 
-{{!-- 43 quick add: rf_quick_add --}}
+{{!-- 43 quick add: rf_quick_add, and the words of its panel's failure state, which quick-add.js needs before a product has loaded --}}
+{{~inject 'rfQuickAdd' theme_settings.rf_quick_add}}
+{{~#if theme_settings.rf_quick_add}}
+{{~inject 'rfQuickAddClose' (lang 'reelflies.quick_add.close')}}
+{{~inject 'rfQuickAddFailed' (lang 'reelflies.quick_add.load_failed')}}
+{{~inject 'rfQuickAddPage' (lang 'reelflies.quick_add.product_page')}}
+{{~/if}}
 
 {{!-- 52 outside-Canada prompt: rf_region_prompt --}}

@@ -80,8 +80,8 @@ describe('the card (components/reelflies/card.html)', () => {
         assert.equal(textOf(badged[4]), 'Sold out');
     });
 
-    it('keeps the stock actions, outside the photo, with no compare: Quick view, Choose options, Add to cart (story 35)', async () => {
-        const list = cards(await grid());
+    it('keeps the stock actions with quick add off, outside the photo, with no compare: Quick view, Choose options, Add to cart (story 35; quick-add.test.mjs has it on)', async () => {
+        const list = cards(await grid({ theme_settings: { rf_quick_add: false } }));
         const actions = card => outerHtml(card, 'div', attrs => /(^|\s)rf-card-actions(\s|$)/.test(attrs.class || ''));
         for (const card of list) {
             assert.ok(actions(card), 'an actions row');

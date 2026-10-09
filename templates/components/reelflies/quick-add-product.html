@@ -1,0 +1,59 @@
+{{!--
+    One product for quick add's panel (ticket 43; spec module 14; UX-21, BUILD-1; stories 30, 32,
+    34 and 68). quick-add.js asks for it on a tap of "+ Add", through stencil-utils getById with
+    this template (render_with "reelflies/quick-add-product"), so its context is the product
+    page's: product, urls, settings and theme_settings.
+
+    - The product's options as the product page shows them, through stock's option partials:
+      the size option is ticket 37's pills (set-rectangle.html's hook, size-pills.html). It sets
+      rf_product_id first, as product-view.html's hook does, so a fresh view preselects no size
+      and the group's label id names this product, never the page's (story 68).
+    - data-rf-qa-options holds product.options as JSON, for quick-add-route.js: Fly Sizes alone
+      opens the panel or adds its one size, any other shape goes to the product page.
+    - The heading: the name, a link to the product page, and the price with "/ fly" by ticket
+      31's rule (price-unit.html), then Close.
+    - The footer: the cart's count, which quick-add.js reads from the Cart API by the brand rule
+      (cart-count.js), and View cart.
+    - The words quick-add.js says ride on data attributes, each with # or {name} where a value
+      goes: the add's confirmation and error are ticket 38's (reelflies.add_flow), so a quick add
+      reads as the product page's does: "Added 1 × size 14. 15 flies in your cart."
+    - The form is never submitted: quick-add.js reads it for stock's option change (the stock
+      left in each size) and builds the add itself. It has no quantity field, which stock's
+      validator looks for across the page (ticket 38), and isn't stock's options container
+      (data-product-option-change), which stock's product scripts look for.
+
+    Rows are read-only in this ticket: choosing a size names it, and ticket 44 adds "Add 1" and
+    the steppers.
+--}}
+{{assignVar 'rf_product_id' product.id}}
+<div class="rf-qa-content"
+     data-rf-qa-content
+     data-rf-qa-product="{{product.id}}"
+     data-rf-qa-options="{{json product.options}}"
+     data-rf-added="{{lang 'reelflies.add_flow.added' qty='{qty}' choice='{choice}'}}"
+     data-rf-size="{{lang 'reelflies.add_flow.size' size='{size}'}}"
+     data-rf-cart-fly="{{lang 'reelflies.add_flow.cart_fly'}}"
+     data-rf-cart-flies="{{lang 'reelflies.add_flow.cart_flies'}}"
+     data-rf-cart-item="{{lang 'reelflies.add_flow.cart_item'}}"
+     data-rf-cart-items="{{lang 'reelflies.add_flow.cart_items'}}"
+     data-rf-cart-empty="{{lang 'reelflies.quick_add.cart_empty'}}"
+     data-rf-view-cart="{{lang 'reelflies.add_flow.view_cart'}}"
+     data-rf-error="{{lang 'reelflies.add_flow.error'}}">
+    <div class="rf-qa-head">
+        <div class="rf-qa-heading">
+            <p class="rf-qa-title" id="rf-qa-title-{{product.id}}"><a class="rf-qa-name" href="{{product.url}}">{{product.title}}</a></p>
+            <div class="rf-qa-price">{{> components/products/price price=product.price}}{{> components/reelflies/price-unit rf_categories=product.category rf_exclude=theme_settings.rf_price_unit_exclude}}</div>
+        </div>
+        <button type="button" class="rf-qa-close" data-rf-qa-close>
+            {{> components/reelflies/icon name='close'}}
+            <span class="is-srOnly">{{lang 'reelflies.quick_add.close'}}</span>
+        </button>
+    </div>
+    <form class="rf-qa-form" data-rf-qa-form action="{{product.cart_url}}" novalidate>
+        <input type="hidden" name="product_id" value="{{product.id}}">
+        {{#each product.options}}
+            {{{dynamicComponent 'components/products/options'}}}
+        {{/each}}
+    </form>
+    <p class="rf-qa-foot"><span data-rf-qa-count></span> <a href="{{urls.cart}}">{{lang 'reelflies.add_flow.view_cart'}}</a></p>
+</div>

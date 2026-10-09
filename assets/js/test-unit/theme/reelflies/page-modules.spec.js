@@ -142,3 +142,25 @@ describe('the product page\'s add-flow slot (ticket 38)', () => {
         expect(document.getElementById('form-action-addToCart').value).toBe('Add to Cart');
     });
 });
+
+describe('the listings\' quick-add slot (ticket 43)', () => {
+    const slot = () => TEMPLATES['pages/category'].find(load => String(load).includes('quick-add'));
+
+    afterEach(() => {
+        document.body.innerHTML = '';
+    });
+
+    it('loads nothing on a listing with no "+ Add", as with rf_quick_add off, so its chunk never loads', async () => {
+        document.body.innerHTML = '<div id="product-listing-container"><article class="card"><a href="/x/">Choose Options</a></article></div>';
+        await expect(Promise.resolve().then(slot())).resolves.toBeNull();
+    });
+
+    it('loads quick add where a card has "+ Add", on every listing template', async () => {
+        document.body.innerHTML = '<article class="card"><a href="/x/" data-rf-quick-add="1">Add</a></article>';
+        const module = await slot()();
+        expect(typeof module.default.load).toBe('function');
+        ['pages/search', 'pages/brand', 'pages/custom/category/rf-noindex', 'pages/custom/category/species-hub']
+            .forEach(template => expect(TEMPLATES[template]).toContain(slot()));
+        ['pages/product', 'pages/cart', 'pages/page'].forEach(template => expect(TEMPLATES[template]).not.toContain(slot()));
+    });
+});

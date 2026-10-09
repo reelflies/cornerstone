@@ -525,7 +525,8 @@
       "settings": {
         "rf_menu_type_ids": "298,251,255,272,438",
         "rf_menu_species_root_id": "",
-        "rf_price_unit_exclude": "Fly Gear,Fly Selections & Fly Boxes"
+        "rf_price_unit_exclude": "Fly Gear,Fly Selections & Fly Boxes",
+        "rf_quick_add": false
       }
     }
   ]

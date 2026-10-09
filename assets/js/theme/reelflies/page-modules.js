@@ -39,7 +39,8 @@ const listing = [
 
     // 42 cart state: the card half
 
-    // 43 quick add
+    // 43 quick add: its chunk only where a card has "+ Add", which rf_quick_add renders
+    () => (document.querySelector('[data-rf-quick-add]') ? import(/* webpackChunkName: "rf-quick-add" */ './quick-add') : null),
 ];
 
 const cart = [

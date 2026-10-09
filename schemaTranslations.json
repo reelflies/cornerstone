@@ -6181,6 +6181,9 @@
   "i18n.RfQuickAdd": {
     "default": "Quick add"
   },
+  "i18n.RfQuickAddSwitch": {
+    "default": "\"+ Add\" on listing cards, with the size panel"
+  },
 
   "i18n.RfRegionPrompt": {
     "default": "Outside-Canada prompt"

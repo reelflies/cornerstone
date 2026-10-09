@@ -4,10 +4,12 @@
 //
 //   node --test scripts/qa/switch-matrix.test.mjs
 
+import fs from 'fs';
 import path from 'path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { OVERLAY_PORT_OFFSET } from './overlays.mjs';
+import { OVERLAY_PORT_OFFSET, listOverlays, readOverlay } from './overlays.mjs';
+import { moduleSwitches, templatesReading } from './switches.mjs';
 import {
     MATRIX_SPECS, RAW_HTML_GATE, gateResults, matrixEnvProblem, matrixLines, matrixPlan, playwrightArgs, runMatrix,
 } from './switch-matrix.mjs';
@@ -22,6 +24,7 @@ const OVERLAYS = [
     { name: 'menu-ids-empty', settings: { rf_menu_type_ids: '' } },
     { name: 'rf_rise-off', settings: { rf_rise: false } },
     { name: 'rf_quick_add-off', settings: { rf_quick_add: false } },
+    { name: 'rf_quick_add-on', settings: { rf_quick_add: true } },
     { name: 'rf_region_prompt-on', settings: { rf_region_prompt: true } },
 ];
 
@@ -70,15 +73,40 @@ describe('the matrix plan', () => {
         assert.match(plan.waiting[0].reason, /no template reads theme_settings\.rf_cart_state yet, so ticket 42's module hasn't landed/);
     });
 
-    it('flips the variation\'s value, and fails a landed switch with no overlay to flip it', () => {
+    it('flips the variation\'s value: quick add, off on channel 1 (ticket 43), is rendered on there by rf_quick_add-on', () => {
         const plan = matrixPlan({
-            config: CONFIG, variation: 'ReelFlies CA channel 1', overlays: OVERLAYS, reading: new Set(['rf_quick_add', 'rf_cart_state']),
+            config: CONFIG, variation: 'ReelFlies CA channel 1', overlays: OVERLAYS, reading: new Set(['rf_quick_add']),
+        });
+        assert.deepEqual(plan.rows.map(({ name, overlay }) => [name, overlay]), [['plain', null], ['rf_quick_add on', 'rf_quick_add-on']]);
+        assert.equal(plan.rows[0].values.rf_quick_add, false);
+        assert.equal(plan.rows[1].values.rf_quick_add, true);
+        assert.deepEqual(plan.problems, []);
+    });
+
+    it('fails a landed switch with no overlay to flip it', () => {
+        const plan = matrixPlan({
+            config: CONFIG, variation: 'ReelFlies CA channel 1', overlays: OVERLAYS.filter(({ name }) => name !== 'rf_quick_add-on'), reading: new Set(['rf_quick_add', 'rf_cart_state']),
         });
         assert.deepEqual(plan.rows.map(({ name }) => name), ['plain']);
         assert.deepEqual(plan.problems, [
             'no overlay renders rf_cart_state off: add scripts/qa/overlays/rf_cart_state-off.json, setting "rf_cart_state" to false and nothing else (ticket 42)',
             'no overlay renders rf_quick_add on: add scripts/qa/overlays/rf_quick_add-on.json, setting "rf_quick_add" to true and nothing else (ticket 43)',
         ]);
+    });
+
+    it('renders this repo\'s quick add both ways on both gated variations: off by rf_quick_add-off on ReelFlies CA, on by rf_quick_add-on on channel 1 (ticket 43)', () => {
+        const config = JSON.parse(fs.readFileSync(path.resolve('config.json'), 'utf8'));
+        const overlays = listOverlays().map(name => readOverlay(name));
+        const reading = templatesReading(moduleSwitches(config));
+        assert.ok(reading.has('rf_quick_add'), 'a template reads theme_settings.rf_quick_add');
+        for (const [variation, overlay, name] of [['ReelFlies CA', 'rf_quick_add-off', 'rf_quick_add off'], ['ReelFlies CA channel 1', 'rf_quick_add-on', 'rf_quick_add on']]) {
+            const plan = matrixPlan({
+                config, variation, overlays, reading,
+            });
+            assert.ok(plan.rows.some(row => row.name === name && row.overlay === overlay), `${variation}: ${plan.rows.map(row => row.name).join(', ')}`);
+            assert.ok(!plan.waiting.some(({ key }) => key === 'rf_quick_add'), variation);
+            assert.deepEqual(plan.problems.filter(problem => /rf_quick_add/.test(problem)), [], variation);
+        }
     });
 
     it('fails a boolean rf_* setting the registry doesn\'t know', () => {
