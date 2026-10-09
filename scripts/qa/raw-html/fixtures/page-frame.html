@@ -33,6 +33,48 @@
             <div class="container">
                 <h1>Hand-tied flies</h1>
             </div>
+            <!-- Ticket 40: the home page's store schema (components/reelflies/store-schema.html); this footer has no social row, so no sameAs -->
+            <script type="application/ld+json" data-rf-store-schema="website">
+            {
+                "@context": "https://schema.org",
+                "@type": "WebSite",
+                "@id": "https://reelflies.ca/#website",
+                "name": "ReelFlies.ca",
+                "url": "https://reelflies.ca/",
+                "publisher": { "@id": "https://reelflies.ca/#store" }
+            }
+            </script>
+            <script type="application/ld+json" data-rf-store-schema="store" data-rf-ship-free-threshold="60">
+            {
+                "@context": "https://schema.org",
+                "@type": "OnlineStore",
+                "@id": "https://reelflies.ca/#store",
+                "name": "ReelFlies.ca",
+                "url": "https://reelflies.ca/",
+                "legalName": "Digital Barn Ltd.",
+                "telephone": "+1-866-250-4071",
+                "address": {
+                    "@type": "PostalAddress",
+                    "streetAddress": "93 Broadway St",
+                    "addressLocality": "Tillsonburg",
+                    "addressRegion": "ON",
+                    "postalCode": "N4G 3P5",
+                    "addressCountry": "CA"
+                },
+                "hasShippingService": {
+                    "@type": "ShippingService",
+                    "name": "Free standard shipping in Canada",
+                    "description": "Free standard shipping in Canada on fly orders over $60. Fly boxes and gear not included.",
+                    "fulfillmentType": "FulfillmentTypeDelivery",
+                    "shippingConditions": {
+                        "@type": "ShippingConditions",
+                        "shippingDestination": { "@type": "DefinedRegion", "addressCountry": "CA" },
+                        "orderValue": { "@type": "MonetaryAmount", "minValue": 60, "currency": "CAD" },
+                        "shippingRate": { "@type": "MonetaryAmount", "value": 0, "currency": "CAD" }
+                    }
+                }
+            }
+            </script>
         </main>
         <footer class="footer rf-footer rf-on-dark" role="contentinfo" data-rf-footer>
             <article class="rf-footer__col rf-footer__col--shop" data-section-type="footer-categories">

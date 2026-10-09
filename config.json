@@ -418,6 +418,15 @@
     "rf_ship_expedited_from": "",
 
     "rf_store_same_as": "",
+    "rf_store_name": "ReelFlies.ca",
+    "rf_store_url": "https://reelflies.ca/",
+    "rf_store_legal_name": "Digital Barn Ltd.",
+    "rf_store_phone": "+1-866-250-4071",
+    "rf_store_street": "93 Broadway St",
+    "rf_store_locality": "Tillsonburg",
+    "rf_store_region": "ON",
+    "rf_store_postal_code": "N4G 3P5",
+    "rf_store_country": "CA",
 
     "rf_fly_brands": "ReelFlies",
 
@@ -490,7 +499,10 @@
         "rf_menu_type_ids": "450,458,489,505,535",
         "rf_menu_species_root_id": "",
 
-        "rf_ship_free_threshold": ""
+        "rf_ship_free_threshold": "",
+
+        "rf_store_name": "ReelFlies.com",
+        "rf_store_url": "https://reelflies.com/"
       }
     },
     {

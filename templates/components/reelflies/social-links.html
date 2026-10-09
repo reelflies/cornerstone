@@ -1,0 +1,55 @@
+{{!--
+    The footer's social row (ticket 50) with ReelFlies' social set applied (ticket 40): stock
+    components/common/social-links.html's markup, for the store's links that social-keep.html
+    keeps, so the row and the home page's sameAs (store-schema.html) are one set.
+
+        {{> components/reelflies/social-links rf_filter=theme_settings.rf_store_same_as}}
+
+    With rf_filter empty it renders exactly what the stock partial renders, every link the store
+    sets; render/partials/social-set.test.mjs renders both and fails when they differ, so port an
+    upstream change to the stock markup here. With every link filtered out it renders nothing,
+    as stock does with no links.
+--}}
+{{~assignVar 'rf_social_any' 0~}}
+{{~#each social_media~}}
+{{> components/reelflies/social-keep rf_network=display_name rf_filter=../rf_filter~}}
+{{~#if (getVar 'rf_social_keep')~}}{{~assignVar 'rf_social_any' 1~}}{{~/if~}}
+{{~/each~}}
+{{#if (getVar 'rf_social_any')}}
+    <ul class="socialLinks socialLinks--alt">
+        {{#each social_media}}
+            {{> components/reelflies/social-keep rf_network=display_name rf_filter=../rf_filter~}}
+            {{#if (getVar 'rf_social_keep')}}
+            {{#if display_name '===' 'twitter'}}
+                <li class="socialLinks-item">
+                    <a class="icon icon--x"
+                    href="{{url}}"
+                    target="_blank"
+                    rel="noopener"
+                    title="X"
+                    >
+                        <span class="aria-description--hidden">X</span>
+                        <svg>
+                            <use href="#icon-x"/>
+                        </svg>
+                    </a>
+                </li>
+            {{else}}
+                <li class="socialLinks-item">
+                    <a class="icon icon--{{display_name}}"
+                    href="{{url}}"
+                    target="_blank"
+                    rel="noopener"
+                    title="{{{capitalize display_name}}}"
+                    >
+                        <span class="aria-description--hidden">{{{capitalize display_name}}}</span>
+                        <svg>
+                            <use href="#icon-{{display_name}}"/>
+                        </svg>
+                    </a>
+                </li>
+            {{/if}}
+            {{/if}}
+        {{/each}}
+    </ul>
+{{/if}}

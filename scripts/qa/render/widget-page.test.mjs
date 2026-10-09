@@ -26,6 +26,9 @@ const WIDGETS = path.join(HERE, 'fixtures/widgets');
 const SELFTEST = path.join(HERE, 'selftest/widgets');
 const band = () => widgetCases([WIDGETS]).find(({ name }) => name === 'two-in-stock');
 const inRegion = (widgetCase, region) => ({ ...widgetCase, fixture: { ...widgetCase.fixture, region } });
+// The scripts a browser would run: a JSON-LD block (the home page's store schema, ticket 40) is
+// data, which the browser never executes.
+const runnable = html => findTags(html, 'script').filter(tag => (tag.attrs.type || '').trim().toLowerCase() !== 'application/ld+json');
 const tempDirs = [];
 after(() => tempDirs.forEach(dir => fs.rmSync(dir, { recursive: true, force: true })));
 // Each needle must appear after the one before it.
@@ -100,7 +103,7 @@ describe('the fixture page around a widget', () => {
     it('with "chrome": true, renders the theme\'s header and footer round the page, so a widget can sit in a header region', async () => {
         const html = await renderWidgetPage({ ...band(), fixture: { ...band().fixture, region: 'header_bottom--global', chrome: true } });
         assertInOrder(html, ['<header class="header rf-header"', '</header>', 'data-content-region="header_bottom--global"', `data-widget-id="${WIDGET_ID}"`, 'id="main-content"', '<footer class="footer rf-footer']);
-        assert.deepEqual(findTags(html, 'script'), []);
+        assert.deepEqual(runnable(html), []);
     });
 
     it('without "chrome", renders no header and no footer', async () => {
@@ -114,7 +117,7 @@ describe('the fixture page around a widget', () => {
         assert.ok(links.some(link => link.attrs.rel === 'stylesheet' && link.attrs.href === THEME_CSS_PATH), 'the theme CSS');
         // Onest comes from theme assets through the CSS (ticket 25), so no theme font asks Google.
         assert.ok(!links.some(link => /fonts\.googleapis\.com/.test(link.attrs.href)), 'no Google Fonts link: the theme settings name no Google font');
-        assert.deepEqual(findTags(html, 'script'), []);
+        assert.deepEqual(runnable(html), []);
         assert.match(html, /<html class="js" lang="en-CA">/);
     });
 

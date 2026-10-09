@@ -1,0 +1,6 @@
+{{!--
+    A string as a JSON string literal, for JSON-LD (ticket 40's store-schema.html): JSONstringify's
+    quoting and escapes, with each "<" written as the escape \u003c, so a value holding "</script>"
+    can't close the script element it sits in. rf_value must be a string: pass (trim ...) or (lang ...).
+--}}
+{{~{strReplace (JSONstringify rf_value) '<' '\u003c'}~}}
