@@ -574,10 +574,8 @@ export default {
 | `card-images` | 31 | on category, search and brand pages, the cards in the listing's `.productGrid` (in `#product-listing-container`): every product a card, each photo (or the default image) with a real `srcset` (no lazysizes stand-in), `sizes`, a width and a height, never through lazysizes; the first three eager and every later one `loading="lazy"`; one image on the page with `fetchpriority="high"`: the banner's when the page has one (`img.rf-listing-banner`, ticket 32), else the first card's, and no other. A category pin must have a grid; a search or brand page with none passes |
 | `category-page` | 32 | on category pins: one listing header holding the page's one H1; its banner, where it has one, eager with `fetchpriority="high"`, a `srcset` of two or more candidates, `sizes`, a width and a height and `alt=""`; every chip a link with an href and the "more" chip hidden in the HTML; the description's rest (`data-rf-description`) after the product grid, and no `<!--more-->` marker in the page |
 | `category-robots` | 32 | on category pins: exactly one robots meta, "noindex, follow", on `category@noindex` (the noindex template), and none that says noindex on the others |
-
-**Still to come:**
-
-- facet links with `_bc_fsnf=1` and `rel="nofollow"` (33)
+| `facet-links` | 33 | on every page: each element with `data-faceted-search-facet` a link with a URL, and each one whose URL carries a filter (any query parameter but `_bc_fsnf`, paging, sorting and the search query) with `_bc_fsnf=1` in it and `nofollow` in its rel (SEO-12, SEO-6). The pager's links and the clear links carry no filter and aren't checked. Through `stencil start` BigCommerce sends no facets, so it bites on the prelaunch host's category pins |
+| `size-filter` | 33 | on category pins: the Fly Sizes facet as pills (`facet-sizes.html`), not stock's list, with one "What do sizes mean?" link to `/fly-hook-size-chart/` in its block; and no stock no-products alert (`data-no-products-notification`), which `category.js` focuses on load |
 - the structured data's contents (40). The home page is already fetched wherever it is pinned.
 - the prompt's copy (52)
 
@@ -732,6 +730,35 @@ Ticket 32's category page (`components/reelflies/category-page.html`, which `pag
 npx playwright test --config scripts/qa/playwright.config.mjs category-screens
 QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs category.spec
 ```
+
+### The Fly size filter (ticket 33)
+
+The Fly Sizes facet as pills (`components/reelflies/facet-sizes.html`, through stock `facets/multi.html`'s hook), the row above the grid (`listing-top.html`: the count, Filter on phones and stock's sort bar) and the empty states (`listing-empty.html`), on the same fixture page. Its fixtures carry the facet as BigCommerce shapes it, in the API's order: Dry Flies, Nymphs and Trout Flies, and two more, `filtered` (size 14 picked) and `empty` (filters that match nothing).
+
+- **The templates** are rendered by `render/partials/size-filter.test.mjs`:
+  - the pills' anchors untouched: the context's URL with `_bc_fsnf=1`, `rel="nofollow"` and the marker
+  - each pill named "Size 14", the selected one current, and no count
+  - stock's ids, which `faceted-search.js` finds the list by
+  - "What do sizes mean?" linking to the chart
+  - every other facet stock
+  - the "Show more" list's `data-facet`
+  - the count in flies or products
+  - Filter only with a visible facet
+  - the empty states taking no focus
+  - the whole category page
+- **`size-filter.js`** is Jest's (`size-filter.spec.js`):
+  - hook order on load, after a refresh and in the "Show more" modal, with no attribute written
+  - the count announced once after a refresh
+  - focus back on the size used, on the sort box, or else on the count, and left alone when it is still on the page
+  - Filter opening the facets through stock's toggle, opening Fly Sizes, and moving focus to the first pill
+  - `hook-order.js` and `facet-order.js` keep their own specs.
+- **`category-screens.spec.mjs`** runs the real module in the page (`render/theme-script.mjs`):
+  - the pills in hook order
+  - a refresh with focus and the announcement
+  - the empty state
+  - Filter at 375
+  - with the chips' and the fold checks as before
+- **The `size-filter` and `facet-links` assertions** check the server HTML.
 
 ## The hook size chart page (`hook-chart-screens.spec.mjs`)
 

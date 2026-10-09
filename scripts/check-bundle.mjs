@@ -14,6 +14,7 @@
 //     import(/* webpackChunkName: "rf-menu" */ './reelflies/menu')
 //   - rf-menu           the grouped menu and phone drawer (ticket 28)        8,000 B
 //   - rf-quick-add      quick add on cards (ticket 43, measured in 45)      15,000 B
+//   - rf-size-filter    the Fly size filter (ticket 33)                      3,000 B
 //   - rf-region-prompt  the outside-Canada prompt (ticket 52)                1,000 B
 //   KB is read conservatively as 1,000 B, like CONFIG_LIMIT. gzip is zlib's default level.
 //   The limit covers everything the import loads: the named file plus the shared chunks
@@ -45,6 +46,7 @@ export const MAIN_JS_LIMIT = 300 * 1024;
 export const CHUNK_GZIP_LIMITS = {
     'theme-bundle.chunk.rf-menu.js': 8000,
     'theme-bundle.chunk.rf-quick-add.js': 15000,
+    'theme-bundle.chunk.rf-size-filter.js': 3000,
     'theme-bundle.chunk.rf-region-prompt.js': 1000,
 };
 export const CSS_LAYER_ESTIMATE = 12000;

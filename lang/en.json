@@ -1065,7 +1065,15 @@
         },
 
         "facets": {
-            "_slot": ""
+            "_slot": "",
+            "size": "Size {size}",
+            "sizes_help": "What do sizes mean?",
+            "count_flies": "{count, plural, one {# fly} other {# flies}}",
+            "count_products": "{count, plural, one {# product} other {# products}}",
+            "none_flies": "No flies match these filters",
+            "none_products": "No products match these filters",
+            "clear": "Clear filters",
+            "filter": "Filter"
         },
 
         "hub": {

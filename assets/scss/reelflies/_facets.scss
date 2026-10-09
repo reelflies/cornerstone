@@ -1,0 +1,190 @@
+// =============================================================================
+// FLY SIZE FILTER (ticket 33; spec modules 9 and 24; R2, O11, O20, UX-21; stories 23 to 25, 68)
+// =============================================================================
+//
+// The Fly size filter on the category pages and the row above their grid, from the reference's
+// .facets, .fs, .facet-help and .list-top rules (plan/design/src/reference.src.html:346-355,
+// :667-675, :823-828).
+//
+// - The Fly Sizes facet's values as pills (components/reelflies/facet-sizes.html), in a grid of
+//   at least 52px columns, each 44px tall: the size alone, bordered like the chips; the selected
+//   one outlined in ink on the tile, as the product page's size pills (UX-21). No hook drawings.
+// - The row above the grid (listing-top.html): the count, then Filter and stock's sort bar. On
+//   phones the tools take a row of their own under the count.
+// - Filter is the phone layout's: it opens the facets through stock's toggle (size-filter.js),
+//   which hides here once script runs. Without script stock's toggle stays, though stock's own
+//   collapsible needs script too.
+//
+// -----------------------------------------------------------------------------
+
+$rf-phone: "not all and (min-width: #{$screen-medium})"; // below 801px, with no 800-801 gap
+
+
+// The size pills
+// -----------------------------------------------------------------------------
+
+.rf-size-pills {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    .navList-item {
+        margin: 0;
+    }
+
+    // Citadel's clearfix on .navList would be the grid's first cell.
+    &::before,
+    &::after {
+        display: none;
+    }
+}
+
+.rf-size-pill {
+    align-items: center;
+    background: var(--rf-paper);
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-pill);
+    color: var(--rf-ink);
+    display: flex;
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    justify-content: center;
+    min-height: var(--rf-target-buy);
+    padding: 0 6px;
+    text-decoration: none;
+
+    &:hover {
+        border-color: var(--rf-ink);
+        color: var(--rf-ink);
+    }
+
+    // The selected size: a 2px ink outline on the tile, its inner box the same size
+    &.is-selected,
+    &[aria-current="true"] {
+        background: var(--rf-tile);
+        border-color: var(--rf-ink);
+        box-shadow: inset 0 0 0 1px var(--rf-ink);
+    }
+}
+
+// Stock's "Clear" beside a facet's heading, at least 24px tall (WCAG 2.5.8)
+.facetedSearch-clearLink {
+    align-items: center;
+    display: inline-flex;
+    min-height: var(--rf-target-min);
+}
+
+.rf-size-help {
+    font-size: 14px;
+    margin: 12px 0 0;
+
+    a {
+        color: var(--rf-ink);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+}
+
+
+// The row above the grid
+// -----------------------------------------------------------------------------
+
+.rf-list-top {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: space-between;
+    margin: 0 0 16px;
+
+    @media #{$rf-phone} {
+        margin-bottom: 14px;
+        margin-top: 12px;
+    }
+
+    // Stock's sort bar sits in the row, with no margins of its own: ticket 32's rule for the bar
+    // on its own (_category.scss) is more specific, so this matches it.
+    .rf-listing-header ~ .page & .actionBar,
+    .actionBar {
+        margin: 0;
+    }
+}
+
+.rf-list-count {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    margin: 0;
+}
+
+.rf-list-tools {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+
+    @media #{$rf-phone} {
+        justify-content: space-between;
+        width: 100%;
+    }
+}
+
+.rf-filter-button {
+    align-items: center;
+    background: var(--rf-paper);
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-pill);
+    color: var(--rf-ink);
+    cursor: pointer;
+    display: none;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    gap: 8px;
+    min-height: var(--rf-target-buy);
+    padding: 0 16px;
+
+    &:hover,
+    &[aria-expanded="true"] {
+        border-color: var(--rf-ink);
+    }
+
+    &[aria-expanded="true"] {
+        background: var(--rf-tile);
+    }
+
+    .rf-icon {
+        height: 18px;
+        width: 18px;
+    }
+
+    @media #{$rf-phone} {
+        .js & {
+            display: inline-flex;
+        }
+    }
+}
+
+// Filter takes the place of stock's "Browse by … / Show Filters" toggle on phones.
+@media #{$rf-phone} {
+    .js .rf-listing-header ~ .page .facetedSearch-toggle {
+        display: none;
+    }
+}
+
+
+// The empty listing (listing-empty.html)
+// -----------------------------------------------------------------------------
+
+.rf-listing-empty {
+    margin: 0 0 var(--rf-section);
+
+    a {
+        color: var(--rf-ink);
+        font-weight: 600;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+}

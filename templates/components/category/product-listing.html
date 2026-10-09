@@ -1,7 +1,8 @@
 {{inject 'noCompareMessage' (lang 'compare.no_compare')}}
 
 {{#if category.products}}
-    {{> components/products/filter sort=pagination.category.sort}}
+    {{!-- ReelFlies hook (ticket 33; CUSTOMIZATIONS.md): the count, the phone Filter button and stock's sort bar in one row (components/reelflies/listing-top.html) --}}
+    {{> components/reelflies/listing-top}}
 
     <div data-list-name="Category: {{category.name}}" role="region" aria-label="{{lang 'category.product_label'}}">
         {{#if theme_settings.product_list_display_mode '===' 'grid'}}
@@ -16,12 +17,7 @@
     {{#if category.search_error}}
         <p>{{lang 'search.errorMessage'}}</p>
     {{else}}
-        <p data-no-products-notification
-           role="alert"
-           aria-live="assertive"
-           tabindex="-1"
-        >
-            {{lang 'categories.no_products'}}
-        </p>
+        {{!-- ReelFlies hook (ticket 33; CUSTOMIZATIONS.md): "No flies match these filters" with Clear filters, or stock's plain message, neither taking focus (components/reelflies/listing-empty.html) --}}
+        {{> components/reelflies/listing-empty}}
     {{/if}}
 {{/if}}

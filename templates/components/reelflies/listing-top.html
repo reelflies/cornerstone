@@ -1,0 +1,38 @@
+{{!--
+    The row above a category's product grid (ticket 33; spec modules 9 and 24; O20; stories 21,
+    25 and 68), as the reference's list-top: the count, then Filter and Sort by. Stock
+    components/category/product-listing.html's hook includes it with the page's own context, so
+    faceted search renders it again with every refresh.
+
+    - The count: "312 flies" where the listing has the Fly Sizes facet, else "312 products", from
+      category.total_products, which counts the filtered listing (the live context has no
+      paginator total). When applied filters match
+      nothing (listing-empty.html), "No flies match these filters" (O20). size-filter.js
+      announces it after each refresh, and focuses it when the control the shopper used is gone.
+    - Filter, on phones: it opens the facets above through stock's own toggle (size-filter.js),
+      which _facets.scss hides there. It shows only when a facet is visible.
+    - Stock's sort bar (components/products/filter), when there are products.
+--}}
+{{#each category.facets}}{{#if facet '===' 'Fly Sizes'}}{{assignVar 'rf_fly_listing' 1}}{{/if}}{{/each}}
+<div class="rf-list-top">
+    <p class="rf-list-count" data-rf-list-count tabindex="-1">
+        {{~#if category.products~}}
+            {{~#if (getVar 'rf_fly_listing')}}{{lang 'reelflies.facets.count_flies' count=category.total_products}}{{else}}{{lang 'reelflies.facets.count_products' count=category.total_products}}{{/if~}}
+        {{~else~}}
+            {{~#if (getVar 'rf_fly_listing')}}{{lang 'reelflies.facets.none_flies'}}{{else}}{{lang 'reelflies.facets.none_products'}}{{/if~}}
+        {{~/if~}}
+    </p>
+    <div class="rf-list-tools">
+        {{#if category.faceted_search_enabled}}
+            {{#any category.facets visible=true}}
+                <button type="button" class="rf-filter-button" aria-controls="facetedSearch-navList" aria-expanded="false" data-rf-filter-button>
+                    {{> components/reelflies/icon name='sliders'}}
+                    {{lang 'reelflies.facets.filter'}}
+                </button>
+            {{/any}}
+        {{/if}}
+        {{#if category.products}}
+            {{> components/products/filter sort=pagination.category.sort}}
+        {{/if}}
+    </div>
+</div>
