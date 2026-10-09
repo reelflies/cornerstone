@@ -571,6 +571,7 @@ export default {
 | `home-photo-once` | 47 | no photo twice on the home page: a file is named by its path after the size segment, a `<picture>` and its `<img>` are one photo, and lazy `data-src` counts. An element with `data-rf-photo-repeat` (ticket 49's crop of the Dry banner) isn't counted, nor are ticket 29's menu pane banners (every `data-rf-menu-banner` inside a `div[data-rf-menu-pane]`, with its `<picture>` if it has one), the categories' images in the closed menu, the cards' banners among them; a marked banner anywhere else counts |
 | `home-no-stock-strips` | 47 | no stock featured, most popular or new products strip on the home page (`config.json` sets the three `homepage_*_count` to 0) |
 | `home-nothing-between` | 47 | when the page has both the Fly Type cards (`.rf-type-cards`) and the tiles (`.rf-home-tiles`): nothing between them but end tags and empty `<div>` wrappers (and `<script>`, `<style>` or `<template>`). A widget there (any `data-widget-id` but the tiles' own wrapper), any other element, or any text fails it: a Page Builder widget in `home_below_carousel` or `home_below_featured_products`, one before the tiles in `home_below_top_products` or after the hero in `home_below_menu`, or a store shipping message. The tiles before the cards fail too. A page without both passes |
+| `card-images` | 31 | on category, search and brand pages, the cards in `.productGrid`: each photo with a real `srcset` (no lazysizes stand-in), `sizes`, a width and a height, never through lazysizes; the first three eager and every later one `loading="lazy"`; one image on the page with `fetchpriority="high"`, the banner's (ticket 32) or else the first card's, and no later card with it. A page with no grid passes |
 
 **Still to come:**
 
@@ -674,7 +675,13 @@ QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs rail.
 
 ## Quick search (`quick-search.spec.mjs`)
 
-Ticket 30's checks in a browser (spec modules 4 and 5; stories 1, 2, 3 and 68), on the pins of `QA_CHANNEL`, at 375 and 1280. The dropdown's logic (the category matcher, the 400 ms debounce, the stale-answer guard, dropping a search the shopper has left or submitted, showing the held results again on focus or on an edit back to their words, asking again after a failure, treating an answer that isn't the results template, such as a 429, a 5xx or a challenge page, as a failure that leaves nothing on the page (a search that matches nothing still opens, saying so), the category rows' arrow tile, the open state, and the Escape order with the phone header's row) is Jest's (`assets/js/test-unit/theme/reelflies/quick-search.spec.js`); its templates are rendered by `render/partials/quick-search.test.mjs`; the server HTML is the `rf-search-forms` assertion.
+Ticket 30's checks in a browser (spec modules 4 and 5; stories 1, 2, 3 and 68), on the pins of `QA_CHANNEL`, at 375 and 1280. Its templates are rendered by `render/partials/quick-search.test.mjs` (with ticket 31's "/ fly" after a row's price); the server HTML is the `rf-search-forms` assertion. The dropdown's logic is Jest's (`assets/js/test-unit/theme/reelflies/quick-search.spec.js`):
+
+- the category matcher, the 400 ms debounce and the stale-answer guard
+- the submit rule: a submit drops the search waiting to be sent and closes the results of other words, and a search the shopper has left is dropped too
+- showing the held results again on focus, or on an edit back to their words
+- asking again after a failure; an answer that isn't the results template, such as a 429, a 5xx or a challenge page, is a failure that leaves nothing on the page, while a search that matches nothing still opens, saying so
+- the category rows' arrow tile, the open state, and the Escape order with the phone header's row
 
 - **The dropdown,** on the category pin (home where the channel has none): typing "caddis" into the visible field (the phone row at 375, the header's at 1280) sends one search request, for the whole word, and shows the count heading from the real total, up to 2 categories named "…, category", each with its arrow tile, at most 6 product rows at 375 and 8 at 1280 each with a price, and "See all N results" with the heading's N, in that order. ReelFlies_CA has no products until refactor 14, so the rows and the categories are required on channel 1 only; on 1895766 the heading says nothing matched.
 - **The announcement and the open state:** the heading's words go to the shared live region once; `<html data-rf-open>` holds `search` while the dropdown is open; Escape closes it, leaves focus and the text in the field, and clears the token; focus back in the field shows the last results again; focus leaving the form closes it.
@@ -690,6 +697,19 @@ QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs quick
 ```
 
 Like the header's, it isn't in `qa:prepush`. A ticket that changes the header or the search forms runs it.
+
+## The product card (`card.spec.mjs`, `card-screens.spec.mjs`)
+
+Ticket 31's card (`components/reelflies/card.html`, through stock `card.html`'s one-line hook) on every listing. Its markup is rendered by `render/partials/card.test.mjs`, including on a whole search page, where `@root` is empty inside the page's `{{#partial "page"}}` block, so the card takes its settings from its own context; the "/ fly" rule by `render/partials/price-unit.test.mjs`; the photos' loading by the `card-images` assertion.
+
+- **`card-screens.spec.mjs`:** the grid's look, at 375 and 1280, on the fixture page: the real search page rendered round the six products of `render/partials/card/products.json` (channel 1's search results for "streamer": flies with and without sizes, a hook pack, a selection, a sold-out fly, a long name), with their own photos from `render/pages/card-grid/fixtures/files/`. The pinned category and search pages mask their live grids, so this is where the card's look is checked. Its baselines are widget baselines (`widgets/<variation>/card-grid-search-…`), declared as `widget card-grid`.
+- **`card.spec.mjs`:** on the pins of `QA_CHANNEL` (channel 1's category and search pins; ReelFlies_CA has no products until refactor 14):
+  - "/ fly" on the search pin's cards follows the price-unit rule for each product, read from the store's `?debug=context` with the channel's `rf_price_unit_exclude`; the pin must hold a fly and a product of a root the rule leaves out.
+  - The stock actions (quick add off, SCOPE-3) are a row under the price at both widths, and Quick view opens from it at 375 as well as 1280; the photo and the name link to the product.
+
+```sh
+QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs card.spec
+```
 
 ## Fixture renders (`render/`)
 
@@ -1053,6 +1073,7 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - `widget-screens.spec.mjs` runs with `qa:screens`, because the script's `screens` filter matches its name.
 - `home-lead-screens.spec.mjs` and `shipping-strip-screens.spec.mjs` run with `qa:screens` too, for the same reason.
 - `home-widgets-screens.spec.mjs` runs with `qa:screens` too, for the same reason.
+- `card-screens.spec.mjs` (ticket 31) runs with `qa:screens` too, for the same reason; `card.spec.mjs` runs only when named, like the specs below.
 - `header.spec.mjs` (ticket 27), `menu.spec.mjs` (ticket 28), `rail.spec.mjs` (ticket 29) and `quick-search.spec.mjs` (ticket 30) run only when named, like `skin.spec.mjs`: no npm script's filter matches them. The first three wait for their scripts with `chunkLoaded` from `states.mjs`; `quick-search.spec.mjs` waits until quick-search.js has added each search form's dropdown.
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
 - `storefront.test.mjs` also covers `QA_PORT`, the start log's name, the locks a gate holds (and the ports checked again after a slot wait), trusting only the server a gate started, and stopping that server when the gate is stopped by a signal. `playwright-config.test.mjs` covers that the config reads `QA_PORT` and holds the locks only in the runner, `prepush.test.mjs` what `qa:prepush` checks before its first gate, `serve.test.mjs` the locks around a `stencil start` by hand, and `scripts/lib/lock.test.mjs` the locks themselves: the stale rules, waiting, the three slots across processes, the signals, `RF_LOCK_ROOT`, and the command line `release.sh` uses.

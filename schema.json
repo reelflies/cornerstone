@@ -3026,6 +3026,12 @@
         "type": "heading",
         "content": "i18n.RfProductCards"
       },
+      {
+        "type": "text",
+        "label": "i18n.RfPriceUnitExclude",
+        "force_reload": true,
+        "id": "rf_price_unit_exclude"
+      },
 
       {
         "type": "heading",

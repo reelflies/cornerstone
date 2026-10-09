@@ -1,0 +1,23 @@
+{{!--
+    The card's photo (ticket 31; SEO-14, O23, IMG-1; story 70), inside the card's 3:2 box
+    (productgallery_size 600x400). Photos are white as shot, with no tile or frame.
+
+    - Never through lazysizes (stock loads every card with an LQIP stand-in, even the first row):
+      a real src, srcset and sizes, width 600 and height 400.
+    - In a listing the first three cards are eager: the server can't know the viewport, so three
+      is the first row on desktop and the first row and one more on phones. A listing is the stock
+      grid (components/products/grid.html), whose hook passes rf_listing to each card with its
+      position: category, search and brand pages, and an account's recently viewed products. The
+      first also takes fetchpriority="high", unless the page has a banner, which holds it: ticket
+      32's listing header sets rf_banner (build pipeline 6.9).
+    - Everything else is loading="lazy": later cards, related products, and the stock lists.
+    - sizes: half the width less the gutter and gap on phones, a third of the 1088px container
+      from 801px.
+--}}
+{{~assignVar 'rf_card_eager' 0~}}
+{{~#if rf_listing~}}{{~#if position '<=' 3~}}{{~assignVar 'rf_card_eager' 1~}}{{~/if~}}{{~/if~}}
+{{#if image}}
+<img class="card-image rf-card-image" src="{{getImageSrcset image 1x='480w'}}" srcset="{{getImageSrcset image 160w='160w' 320w='320w' 480w='480w' 640w='640w' 960w='960w'}}" sizes="(min-width: 801px) 346px, calc(50vw - 24px)" width="600" height="400" alt="{{image.alt}}"{{#if (getVar 'rf_card_eager')}}{{#if position '==' 1}}{{#unless (getVar 'rf_banner')}} fetchpriority="high"{{/unless}}{{/if}}{{else}} loading="lazy"{{/if}} decoding="async">
+{{else}}
+<img class="card-image rf-card-image" src="{{cdn theme_settings.default_image_product}}" width="600" height="400" alt="{{lang 'products.card_default_image_alt'}}"{{#unless (getVar 'rf_card_eager')}} loading="lazy"{{/unless}} decoding="async">
+{{/if}}

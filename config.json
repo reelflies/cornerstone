@@ -116,7 +116,7 @@
     "logo_fontSize": 28,
     "brand_size": "190x250",
     "gallery_size": "300x300",
-    "productgallery_size": "500x659",
+    "productgallery_size": "600x400",
     "product_size": "500x659",
     "productview_thumb_size": "50x50",
     "productthumb_size": "100x100",
@@ -330,7 +330,7 @@
     "color_badge_product_sale_badges": "#212721",
     "color_text_product_sale_badges": "#ffffff",
     "color_hover_product_sale_badges": "#2f382f",
-    "product_sold_out_badges": "none",
+    "product_sold_out_badges": "topleft",
     "color_badge_product_sold_out_badges": "#5a645a",
     "color_text_product_sold_out_badges": "#ffffff",
     "color_hover_product_sold_out_badges": "#212721",
@@ -346,7 +346,7 @@
     "price_ranges": true,
     "pdp-price-label": "",
     "pdp_sale_badge_label": "",
-    "pdp_sold_out_label": "",
+    "pdp_sold_out_label": "Sold out",
     "pdp-sale-price-label": "",
     "pdp-non-sale-price-label": "",
     "pdp-retail-price-label": "",
@@ -510,7 +510,8 @@
       },
       "settings": {
         "rf_menu_type_ids": "298,251,255,272,438",
-        "rf_menu_species_root_id": ""
+        "rf_menu_species_root_id": "",
+        "rf_price_unit_exclude": "Fly Gear,Fly Selections & Fly Boxes"
       }
     }
   ]

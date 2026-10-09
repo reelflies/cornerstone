@@ -1053,7 +1053,8 @@
         },
 
         "card": {
-            "_slot": ""
+            "_slot": "",
+            "per_fly": "/ fly"
         },
 
         "category": {

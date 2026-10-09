@@ -1,0 +1,199 @@
+// =============================================================================
+// PRODUCT CARD AND GRID (ticket 31; spec module 13; O12, IMG-1, SEO-9; stories 28, 35 and 70)
+// =============================================================================
+//
+// The card every listing shares (components/reelflies/card.html, through stock card.html's
+// hook) and the grid it sits in (stock components/products/grid.html), from the reference's .card
+// and .grid rules (plan/design/src/reference.src.html:254-256, :285-297), first tried on ticket
+// 26's spike.
+//
+// - The grid: two columns on phones and three from 801px, as a CSS grid. Stock lays it out as
+//   inline-block columns with padded gutters and font-size 0 (layouts/products/_productGrid.scss);
+//   its widths, its clearfix pseudo-elements (which would take the first and last cells) and its
+//   sidebar rule are undone here.
+// - The photo on white, as shot, in the 3:2 box productgallery_size (600x400) gives
+//   .card-img-container through stock lazy-loaded-padding: no tile, no frame, no corner over the
+//   logo the photos carry bottom-left (IMG-1).
+// - The sold-out badge top-left (product_sold_out_badges "topleft"), a pill in ticket 25's badge
+//   colours (#5a645a on white) instead of stock's half-pill.
+// - The name in two lines at most, the price with "/ fly" on one baseline, in tabular figures.
+// - The stock actions as a row of small pills under the price, at every width (stock showed them
+//   over the photo on hover from 801px, and not at all on phones): Quick view, Choose options or
+//   Add to cart, what a shopper has while quick add is off (SCOPE-3).
+//
+// -----------------------------------------------------------------------------
+
+.productGrid {
+    display: grid;
+    font-size: inherit;
+    gap: clamp(24px, 2.6vw, 36px) clamp(14px, 1.8vw, 24px);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0 0 spacing("double");
+
+    @include breakpoint("medium") {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    &::before,
+    &::after {
+        display: none;
+    }
+
+    &#{&} .product,
+    .page-sidebar + .page-content & .product {
+        display: block;
+        margin: 0;
+        padding: 0;
+        width: auto;
+    }
+}
+
+.card.rf-card {
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    min-width: 0;
+}
+
+.rf-card {
+    .card-figure {
+        background: var(--rf-paper);
+        margin: 0;
+        overflow: visible;
+        padding: 0;
+    }
+
+    .card-img-container {
+        max-width: none;
+    }
+
+    .card-image {
+        background: var(--rf-paper);
+        object-fit: contain;
+    }
+
+    .sold-out-flag-side,
+    .sale-flag-side {
+        border-radius: var(--rf-radius-pill);
+        font-size: 13px;
+        font-weight: 600;
+        height: auto;
+        left: 10px;
+        line-height: 1;
+        padding: 6px 10px;
+        top: 10px;
+    }
+
+    .card-body {
+        padding: 12px 0 0;
+        text-align: left;
+    }
+
+    .card-title {
+        font-size: 16px;
+        font-weight: 500;
+        letter-spacing: 0;
+        line-height: 1.35;
+        margin: 0;
+
+        > a {
+            -webkit-box-orient: vertical;
+            color: var(--rf-ink);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            overflow: hidden;
+            text-decoration: none;
+
+            &:hover {
+                color: var(--rf-ink);
+                text-decoration: underline;
+                text-underline-offset: 3px;
+            }
+        }
+    }
+
+    .card-text {
+        margin: 0;
+    }
+
+    // The actions, under the price: a row of small pills, never over the photo. Citadel's card
+    // (node_modules/@bigcommerce/citadel, components/bigcommerce/cards) lays the figcaption over
+    // the whole card, transparent until hover, with its body halfway down: all undone here.
+    .card-figcaption.rf-card-actions {
+        background: none;
+        color: inherit;
+        display: block;
+        height: auto;
+        inset: auto;
+        margin: 10px 0 0;
+        opacity: 1;
+        pointer-events: auto;
+        position: static;
+        text-align: left;
+    }
+
+    .card-figcaption-body {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 0;
+        pointer-events: auto;
+        position: static;
+        top: auto;
+        transform: none;
+    }
+
+    .card-figcaption-button,
+    .card-figcaption-button + .card-figcaption-button {
+        align-items: center;
+        background: var(--rf-paper);
+        border: 1px solid var(--rf-edge);
+        border-radius: var(--rf-radius-pill);
+        color: var(--rf-ink);
+        display: inline-flex;
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0;
+        line-height: 1.2;
+        margin: 0;
+        min-height: 36px;
+        padding: 0 12px;
+        text-transform: none;
+        width: auto;
+
+        &:hover,
+        &:active {
+            background: var(--rf-tile);
+            border-color: var(--rf-edge);
+            color: var(--rf-ink);
+        }
+    }
+}
+
+// The price and its unit on one baseline
+.rf-card-price {
+    align-items: baseline;
+    display: flex;
+    flex-wrap: wrap;
+    font-variant-numeric: tabular-nums;
+    gap: 0 4px;
+    margin: 4px 0 0;
+
+    .price-section {
+        color: var(--rf-ink);
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .price-label:empty,
+    .price-now-label:empty {
+        display: none;
+    }
+}
+
+.rf-price-unit {
+    color: var(--rf-dun);
+    font-size: 14px;
+    font-weight: 400;
+}

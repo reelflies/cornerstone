@@ -68,11 +68,17 @@ export const CHANNELS = {
             // has none yet (ticket 22's sources sync later). One paragraph of terms that read the
             // same on 2026-10-07 as the coupon wording on reelflies.ca has for years.
             page: '/coupon-codes/',
+            // Ticket 31: search results for "streamer", whose first 12 hold flies with and without
+            // sizes, three Mustad hook packs (Fly Gear) and a bulk selection, so the cards' "/ fly"
+            // rule and the listing's eager and lazy photos are checked on a real search page
+            // (2026-10-09).
+            search: '/search.php?search_query=streamer&section=product',
         },
         // The live catalogue decides which products these pages list, so the lists can't
         // be pinned here. Pin a listing that holds still before unmasking one.
         mask: {
             category: ['.productGrid'],
+            search: ['.productGrid'],
         },
         // The related products' cards (Related Products, and Customers Also Viewed when the
         // store shows it), whose titles wrap to two or three lines, so the live list sets

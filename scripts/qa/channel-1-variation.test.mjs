@@ -1,7 +1,7 @@
 // Ticket 53, Option A: the channel-1 variation (wave 1, lane B). Channel 1 is live reelflies.ca on
 // tree 1. Its variation, "ReelFlies CA channel 1" (decision 10's interim name), is as thin as
 // "ReelFlies CA" and "ReelFlies US": it holds only what differs on channel 1, which today is tree
-// 1's menu ids. Merging it applies nothing to channel 1: only ticket 53's guarded channel-1 target
+// 1's menu ids and its Gear and Assortment roots for the card's "/ fly" (ticket 31). Merging it applies nothing to channel 1: only ticket 53's guarded channel-1 target
 // takes it (wave 2, lane F: typed by Shaun at his own terminal, never an agent), and ticket 56
 // pushes it there after Shaun approves it and its ids (53:7).
 //
@@ -56,10 +56,11 @@ describe('config.json: the channel-1 variation', () => {
         }
     });
 
-    it('holds only what differs on channel 1: tree 1\'s menu ids', () => {
+    it('holds only what differs on channel 1: tree 1\'s menu ids, and its Gear and Assortment roots (ticket 31)', () => {
         assert.deepEqual(variation.settings, {
             rf_menu_type_ids: TYPE_IDS,
             rf_menu_species_root_id: '',
+            rf_price_unit_exclude: 'Fly Gear,Fly Selections & Fly Boxes',
         });
     });
 
