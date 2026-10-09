@@ -18,7 +18,8 @@
       listing with its numbered pager, and the Page Builder regions: category_below_header under
       the header while hide_category_page_heading is off, as stock, and category_below_content.
       With the sidebar it sets rf_listing_sidebar, so ticket 31's cards size their photos for the
-      narrower column (card-image.html).
+      narrower column (card-image.html). The page carries rf-listing-page, which ticket 33's phone
+      rules (_facets.scss) key on, with the header or without it.
 
     Inside a page's {{#partial "page"}} block @root is empty: this reads the page's own context,
     and passes what each partial needs as hash arguments.
@@ -34,7 +35,7 @@
     {{{region name="category_below_header"}}}
 {{/unless}}
 {{> components/reelflies/category-chips rf_category=category}}
-<div class="page">
+<div class="page rf-listing-page">
     {{#or category.faceted_search_enabled theme_settings.shop_by_price_visibility}}
         {{assignVar 'rf_listing_sidebar' 1}}
         <aside class="page-sidebar" id="faceted-search-container">

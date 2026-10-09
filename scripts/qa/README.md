@@ -574,10 +574,11 @@ export default {
 | `card-images` | 31 | on category, search and brand pages, the cards in the listing's `.productGrid` (in `#product-listing-container`): every product a card, each photo (or the default image) with a real `srcset` (no lazysizes stand-in), `sizes`, a width and a height, never through lazysizes; the first three eager and every later one `loading="lazy"`; one image on the page with `fetchpriority="high"`: the banner's when the page has one (`img.rf-listing-banner`, ticket 32), else the first card's, and no other. A category pin must have a grid; a search or brand page with none passes |
 | `category-page` | 32 | on category pins: one listing header holding the page's one H1; its banner, where it has one, eager with `fetchpriority="high"`, a `srcset` of two or more candidates, `sizes`, a width and a height and `alt=""`; every chip a link with an href and the "more" chip hidden in the HTML; the description's rest (`data-rf-description`) after the product grid, and no `<!--more-->` marker in the page |
 | `category-robots` | 32 | on category pins: exactly one robots meta, "noindex, follow", on `category@noindex` (the noindex template), and none that says noindex on the others |
+| `facet-links` | 33 | on every page: each element with `data-faceted-search-facet` a link with a URL, and each one whose URL carries a filter (any query parameter but `_bc_fsnf`, paging, sorting and the search query) with `_bc_fsnf=1` in it and `nofollow` in its rel (SEO-12, SEO-6). The pager's links and the clear links carry no filter and aren't checked. Through `stencil start` BigCommerce sends no facets, so it bites on the prelaunch host's category pins |
+| `size-filter` | 33 | on category pins: the Fly Sizes facet as pills (`facet-sizes.html`), not stock's list, with one "What do sizes mean?" link to `/fly-hook-size-chart/` in its block; on the fly pins (`category`, `category@noindex`), Fly Sizes among the facets whenever any facet is listed, so a renamed option fails rather than leaving stock's list (`size-facet-name.html`); and no stock no-products alert (`data-no-products-notification`), which `category.js` focuses on load. Through `stencil start` BigCommerce sends no facets, so the first two bite on the prelaunch host's category pins |
 
 **Still to come:**
 
-- facet links with `_bc_fsnf=1` and `rel="nofollow"` (33)
 - the structured data's contents (40). The home page is already fetched wherever it is pinned.
 - the prompt's copy (52)
 
@@ -720,7 +721,7 @@ QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs card.
 
 Ticket 32's category page (`components/reelflies/category-page.html`, which `pages/category.html` and the noindex template `pages/custom/category/rf-noindex.html` both render). Its markup is rendered by `render/partials/category.test.mjs` on tree-4-shaped pages (`render/partials/category/pages.json`, with tree 4's categories and menu ids): the banner rule, the description split at `<!--more-->`, the chips, 24 a page and the pager, and the noindex template matching the stock one but for its robots meta. The chips' layout is Jest's (`category-chips.spec.js`). The server HTML is the `category-page` and `category-robots` assertions'.
 
-- **`category-screens.spec.mjs`:** on the fixture page, the real category page round tree-4-shaped data (`render/pages/category-page/`: two Fly Type pages, Dry Flies and Nymphs, whose ten sub-types overflow two rows, and a Species page, with channel 1's own category images), at 375 and 1280, because ReelFlies_CA has no tree-4 categories until refactor 13 and the live grids are masked. Its baselines are widget baselines (`widgets/<variation>/category-page-<case>-…`), declared as `widget category-page`. It runs the real `category-chips.js` in the page.
+- **`category-screens.spec.mjs`:** on the fixture page, the real category page round tree-4-shaped data (`render/pages/category-page/`: two Fly Type pages, Dry Flies and Nymphs, whose ten sub-types overflow two rows, and a Species page, with channel 1's own category images), at 375 and 1280, because ReelFlies_CA has no tree-4 categories until refactor 13 and the live grids are masked. Its baselines are widget baselines (`widgets/<variation>/category-page-<case>-…`), declared as `widget category-page`. It runs the real `category-chips.js` and ticket 33's `size-filter.js` in the page (`render/theme-script.mjs`), and ticket 33 adds its own fixtures and checks (below).
   - each page matches its baseline
   - the banner: eager, `fetchpriority="high"`, 220px tall from 801px with the H1 and the intro on it (each line 4.5:1 or better over its lightest pixel), the photo first on phones
   - the chips: two rows at most, every link in the page, "+N more" at 1280 and "Show all N" at 375, which shows them all and puts focus on the first it showed; thumbnails only where a subcategory has an image
@@ -732,6 +733,43 @@ Ticket 32's category page (`components/reelflies/category-page.html`, which `pag
 npx playwright test --config scripts/qa/playwright.config.mjs category-screens
 QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs category.spec
 ```
+
+### The Fly size filter (ticket 33)
+
+The Fly Sizes facet as pills (`components/reelflies/facet-sizes.html`, through stock `facets/multi.html`'s hook), the row above the grid (`listing-top.html`: the count, Filter on phones and stock's sort bar in the reference's look) and the empty states (`listing-empty.html`), on the same fixture page. Its fixtures carry the facet as BigCommerce shapes it, in the API's order: Dry Flies, Nymphs and Trout Flies (fifteen sizes, then "Show more", as ticket 21 sets the facet), and two more, `filtered` (size 14 picked) and `empty` (filters that match nothing). The facet's name is in one place for the templates (`size-facet-name.html`).
+
+- **The templates** are rendered by `render/partials/size-filter.test.mjs`:
+  - the pills' anchors untouched: the context's URL with `_bc_fsnf=1`, `rel="nofollow"` and the marker
+  - each pill named "Size 14", the selected one current, and no count
+  - stock's ids, which `faceted-search.js` finds the list by
+  - "What do sizes mean?" linking to the chart
+  - every other facet stock
+  - the pills' items without stock's `navList-item`, which stock's "Show more" search hides
+  - the facet's name the same in the templates, `facet-order.js`, `quick-add-route.js` and the assertion, and a facet under another name left stock
+  - the "Show more" list's `data-facet`
+  - the count in flies or products, a size among the filters counting as flies when the facet is gone
+  - Filter only with a visible facet
+  - the listing's sort chosen, and the row and the empty state for another listing's context, as ticket 36's brand listing will include them
+  - the empty states taking no focus
+  - the whole category page
+- **`size-filter.js`** is Jest's (`size-filter.spec.js`):
+  - hook order on load, after a refresh and in the "Show more" modal, with no attribute written
+  - focus back on the size used, on the sort box, or else on the count, and left alone when it is still on the page
+  - the count announced once after a refresh, and not when focus goes to the count, which says it
+  - a size picked in "Show more": focus on it in the sidebar, after the modal has closed
+  - an element only added to the listing, or added and removed in one task, taken for no refresh
+  - Filter opening the facets through stock's toggle, opening Fly Sizes, and moving focus to the first pill
+  - `hook-order.js` and `facet-order.js` keep their own specs.
+- **`size-filter-stock.spec.js`** (Jest) runs the same module with stock's own `category.js`, `faceted-search.js` and `collapsible.js`, on the sidebar and listing that `renderPartial` renders from the `fly-type` and `filtered` fixtures (in a child `node` process, since Jest can't load `render.mjs`), with phone CSS and a stubbed `api.getPage`: Filter opening the panel and Fly Sizes with either script loaded first; both staying open through stock's whole refresh after a pill, both toggles saying so, focus on the size and the count spoken once; a sort refresh keeping a closed panel closed.
+- **`category-screens.spec.mjs`** runs the real module in the page (`render/theme-script.mjs`):
+  - the pills in hook order
+  - a refresh with focus and the announcement
+  - the empty state
+  - Filter at 375, and Sort by on the row's right; at 320 the sort box on its own line with its longest option whole, in 16px text
+  - "Show more" under the pills, at least 24px tall
+  - the listing in its column beside a sidebar that shows nothing (no facet visible, no filter applied), at 1280
+  - with the chips' and the fold checks as before
+- **The `size-filter` and `facet-links` assertions** check the server HTML.
 
 ## The hook size chart page (`hook-chart-screens.spec.mjs`)
 
@@ -783,10 +821,10 @@ The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixtu
 
 | File | What |
 |---|---|
-| `render/render.mjs` | `renderPartial` and `renderWidget`, `readFixture`, `widgetCases`, `themeConfig` |
+| `render/render.mjs` | `renderPartial` and `renderWidget`, `readFixture`, `widgetCases`, `themeConfig`. A Jest spec can use it through a child `node` process (ticket 33's `size-filter-stock.spec.js`) |
 | `render/html-checks.mjs` | `unbalancedTags(html)`: elements closed in the wrong place, closed with nothing open, or never closed |
 | `render/widget-page.mjs` | the fixture page a widget shot is taken on |
-| `render/theme-script.mjs` | `themeScript(names, run)`: listed theme modules as one browser script for a fixture page, which loads no bundle (ticket 41's `cart-screens.spec.mjs`), built with the bundle's Babel options from `webpack.common.js` (`bundleBabelOptions()`), loose mode and its assumptions included, so a module that breaks only in the bundle's build breaks there too. Its test also holds `babel.config.js` and those options to spreading a NodeList, a Set and a Map whole |
+| `render/theme-script.mjs` | `themeScript(names, run)`: listed theme modules as one browser script for a fixture page, which loads no bundle (ticket 41's `cart-screens.spec.mjs`, and `size-filter.js` in ticket 33's `category-screens.spec.mjs`), built with the Babel options babel-loader resolves (`bundleBabelOptions()`: `webpack.common.js`'s merged with `babel.config.js`), through `fixtureBabelOptions()`, loose mode and its assumptions included, so a module that breaks only in the bundle's build breaks there too. Its test also holds those options and `babel.config.js` to spreading a NodeList, a Set and a Map whole |
 | `render/home-page.mjs` | the whole home page with every widget a channel places on `pages/home`, each from a fixture, in its region and placement order: `homeCases`, `renderHomePage` and `openHomePage` (ticket 47; `home-widgets-screens.spec.mjs`, below) |
 | `render/photo-contrast.mjs` | `worstContrastOverPhoto(page, selector)`: a line of text against the lightest pixel behind it, for text on a scrim over a photo, which axe can't judge (the hero's and the cards', tickets 46 and 47) |
 | `widget-screens.spec.mjs` | the widget element shots |

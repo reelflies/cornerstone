@@ -86,10 +86,11 @@ export const CHANNELS = {
         // be pinned here. Pin a listing that holds still before unmasking one.
         // The search pin's result counts (its heading and both tabs) change with the catalogue
         // too. The tabs by role: stock search.js swaps the active tab's navBar-action class.
+        // The listing's count (ticket 33's row) changes with the catalogue too.
         mask: {
-            category: ['.productGrid'],
-            'category@more': ['.productGrid'],
-            'category@noindex': ['.productGrid'],
+            category: ['.productGrid', '[data-rf-list-count]'],
+            'category@more': ['.productGrid', '[data-rf-list-count]'],
+            'category@noindex': ['.productGrid', '[data-rf-list-count]'],
             search: ['.productGrid', '.page-heading', '[data-search-page-tabs] [role="tab"]'],
         },
         // The related products' cards (Related Products, and Customers Also Viewed when the

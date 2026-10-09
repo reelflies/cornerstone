@@ -57,6 +57,7 @@ function writeBuild(chunks, imports = Object.values(chunks).map(({ id }) => [id]
 
 const levelOf = (results, file) => results.find(result => result.file === file)?.level;
 const MENU = 'theme-bundle.chunk.rf-menu.js';
+const SIZE_FILTER = 'theme-bundle.chunk.rf-size-filter.js';
 const QUICK_ADD = 'theme-bundle.chunk.rf-quick-add.js';
 const REGION = 'theme-bundle.chunk.rf-region-prompt.js';
 
@@ -81,24 +82,28 @@ describe('the main.js limit', () => {
 });
 
 describe('the per-chunk gzip limits', () => {
-    it('limit the menu to 8,000 B, quick add to 15,000 B and the region prompt to 1,000 B', () => {
-        assert.deepEqual(CHUNK_GZIP_LIMITS, { [MENU]: 8000, [QUICK_ADD]: 15000, [REGION]: 1000 });
+    it('limit the menu to 8,000 B, the size filter to 3,000 B, quick add to 15,000 B and the region prompt to 1,000 B', () => {
+        assert.deepEqual(CHUNK_GZIP_LIMITS, {
+            [MENU]: 8000, [SIZE_FILTER]: 3000, [QUICK_ADD]: 15000, [REGION]: 1000,
+        });
     });
 
     it('fail each chunk over its gzip limit', () => {
         const results = checkChunks(writeBuild({
-            [MENU]: { id: 101, size: 8200 }, [QUICK_ADD]: { id: 102, size: 15200 }, [REGION]: { id: 103, size: 1100 },
+            [MENU]: { id: 101, size: 8200 }, [SIZE_FILTER]: { id: 104, size: 3100 }, [QUICK_ADD]: { id: 102, size: 15200 }, [REGION]: { id: 103, size: 1100 },
         }));
         assert.equal(levelOf(results, MENU), 'fail');
+        assert.equal(levelOf(results, SIZE_FILTER), 'fail');
         assert.equal(levelOf(results, QUICK_ADD), 'fail');
         assert.equal(levelOf(results, REGION), 'fail');
     });
 
     it('pass each chunk under its gzip limit', () => {
         const results = checkChunks(writeBuild({
-            [MENU]: { id: 101, size: 7000 }, [QUICK_ADD]: { id: 102, size: 14000 }, [REGION]: { id: 103, size: 800 },
+            [MENU]: { id: 101, size: 7000 }, [SIZE_FILTER]: { id: 104, size: 2500 }, [QUICK_ADD]: { id: 102, size: 14000 }, [REGION]: { id: 103, size: 800 },
         }));
         assert.equal(levelOf(results, MENU), 'ok');
+        assert.equal(levelOf(results, SIZE_FILTER), 'ok');
         assert.equal(levelOf(results, QUICK_ADD), 'ok');
         assert.equal(levelOf(results, REGION), 'ok');
     });
