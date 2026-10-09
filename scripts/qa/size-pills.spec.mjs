@@ -87,8 +87,8 @@ test.describe('the size pills (ticket 37)', () => {
         const pill = group.locator('.rf-pill[data-product-attribute-value]:not(.unavailable)').first();
         await pill.click();
         await expect(pill.locator('.rf-pill-check')).toBeVisible();
-        // Stock's .form-option eases its border over 0.15s, so the look is read once it settles. The
-        // 2px outline is a 1px ink border and a 1px ink inset, as the size filter's pills.
+        // Stock's .form-option eases its border over 0.15s, so the look is read once it settles.
+        // The 2px outline is a 1px ink border and a 1px ink inset, as the size filter's pills.
         const look = () => pill.evaluate(element => {
             const style = getComputedStyle(element);
             return `${style.borderTopWidth} ${style.borderTopColor} ${style.boxShadow} ${style.backgroundColor}`;
@@ -109,12 +109,13 @@ test.describe('the size pills (ticket 37)', () => {
         expect(ring).toBe('solid');
     });
 
-    test('on 5663, changing the Colour keeps the sold-out marks, aria-disabled and the line in step (story 39)', async ({ page }) => {
+    test('on 5663, changing the Colour keeps the sold-out marks, aria-disabled and the line in step (story 39)', async ({ page }, testInfo) => {
         await open(page, FAT_ALBERT);
         // Fat Albert's Colour is stock swatches (set-swatch.html), not pills.
         const choices = page.locator('[data-product-attribute="swatch"] .form-option');
         const sizes = page.locator(SIZE_GROUP).first();
         expect(await choices.count(), 'Fat Albert\'s Colour swatches').toBeGreaterThan(1);
+        let marked = 0;
         for (let index = 0; index < Math.min(await choices.count(), 3); index += 1) { // eslint-disable-line no-await-in-loop
             const answer = page.waitForResponse(response => /\/remote\/v1\/product-attributes\//.test(response.url()));
             await choices.nth(index).click(); // eslint-disable-line no-await-in-loop
@@ -123,7 +124,11 @@ test.describe('the size pills (ticket 37)', () => {
                 const state = await soldOut(sizes);
                 return state.disabled.join() === state.marked.join() && state.marked.every(size => state.line.includes(size));
             }).toBe(true);
+            marked += (await soldOut(sizes)).marked.length; // eslint-disable-line no-await-in-loop
         }
+        // The live stock decides whether any colour leaves a size sold out; the run says so when none
+        // did, so a pass that checked no mark is visible.
+        if (!marked) testInfo.annotations.push({ type: 'no marks', description: 'none of the colours tried left a size sold out today, so only the empty line was checked' });
     });
 
     test('links "Hook size guide" to the chart, and at 320 wraps the pills and scrolls nothing sideways (stories 15 and 71)', async ({ page }) => {

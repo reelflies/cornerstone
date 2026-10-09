@@ -121,6 +121,19 @@ describe('watching a group', () => {
         expect(announce).toHaveBeenCalledTimes(1);
     });
 
+    it('says each answer to quick choices, as arrowing through colours makes them, the last one last', () => {
+        watchPills(field());
+        const colour = document.getElementById('colour');
+        colour.dispatchEvent(new Event('change', { bubbles: true }));
+        colour.dispatchEvent(new Event('change', { bubbles: true }));
+        label('102').classList.add('unavailable');
+        applied();
+        label('102').classList.remove('unavailable');
+        label('103').classList.add('unavailable');
+        applied();
+        expect(announce.mock.calls.map(([text]) => text)).toEqual(['Size 14 is sold out.', 'Size 16 is sold out.']);
+    });
+
     it('leaves a group it already watches alone, and stops when told', async () => {
         const unwatch = watchPills(field());
         expect(field().hasAttribute('data-rf-pills-watched')).toBe(true);

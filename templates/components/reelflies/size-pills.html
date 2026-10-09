@@ -18,12 +18,16 @@
     - No preselection on a fresh product view: a size is checked only when it is the option's
       only value, never the catalogue's "default size" (stock's `selected`). Another option keeps
       stock's choice, and so does every option in the cart's Change dialog, where `selected` is
-      the line's own value: its pill is checked and its value named.
+      the line's own value: its pill is checked and its value named. A fresh view is one whose
+      template set rf_product_id first, as product-view.html's hook does; ticket 43's panel, if
+      it renders options outside product-view.html, sets it too, or the catalogue's default size
+      comes back.
     - The pill: the value, and a check that shows when chosen (_size-pills.scss). size-pills.js
       marks a sold-out value, as stock's scripts mark it unavailable: struck, aria-disabled,
-      "(sold out)" in its name (its hidden span shown), and named in the line under the pills,
-      whose words ride on the line's data attributes. The line keeps one line's height, so
-      nothing moves.
+      "(sold out)" in its name (its hidden span shown), and, for the size option, named in the line
+      under the pills ("Sizes 14 and 16 are sold out."), whose words ride on the line's data
+      attributes. The line keeps one line's height, so nothing moves. Another rectangle option
+      has no line: its words are about sizes.
     - For the size option: "Fly Sizes: choose one" until a size is chosen, and "Hook size guide",
       a link to the hook size chart (ticket 35; R9). Stock's "(Required)" stays for screen readers
       and for stock's setProductVariant, which reads it; "choose one" says it on screen.
@@ -82,9 +86,11 @@
         {{/each}}
     </div>
 
+    {{#if (getVar 'rf_pills_size')}}
     <p class="rf-pills-note"
        data-rf-sold-out-line
        data-rf-one="{{lang 'reelflies.size_pills.sold_out_one' sizes='#'}}"
        data-rf-many="{{lang 'reelflies.size_pills.sold_out_many' sizes='#'}}"
        data-rf-and="{{lang 'reelflies.size_pills.and'}}"></p>
+    {{/if}}
 </div>

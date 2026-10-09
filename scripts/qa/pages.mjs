@@ -96,12 +96,14 @@ export const CHANNELS = {
             'category@more': ['.productGrid', '[data-rf-list-count]'],
             'category@noindex': ['.productGrid', '[data-rf-list-count]'],
             search: ['.productGrid', '.page-heading', '[data-search-page-tabs] [role="tab"]'],
-            // Fat Albert's sizes the live stock marks sold out, and the line naming them. A UI
-            // state marks the size group (data-rf-qa-state) and sets its own marks, so it isn't
-            // masked (states.mjs).
+            // Fat Albert's option rows, whose sold-out marks follow the live stock (its sizes, and
+            // its colours once a size is chosen), whole, so a mark that moves to another value
+            // doesn't move the mask; and the line naming the sizes. A UI state marks the options
+            // (data-rf-qa-state) and sets its own marks, so they aren't masked (states.mjs).
             'product@sizes': [
-                '[data-rf-pills="size"]:not([data-rf-qa-state]) .rf-pill.unavailable',
-                '[data-rf-pills="size"]:not([data-rf-qa-state]) [data-rf-sold-out-line]',
+                '[data-product-option-change]:not([data-rf-qa-state]) .rf-pills',
+                '[data-product-option-change]:not([data-rf-qa-state]) [data-product-attribute="swatch"] .form-option-wrapper',
+                '[data-product-option-change]:not([data-rf-qa-state]) [data-rf-sold-out-line]',
             ],
         },
         // The related products' cards (Related Products, and Customers Also Viewed when the

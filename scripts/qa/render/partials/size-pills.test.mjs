@@ -88,6 +88,12 @@ describe('the pills (components/reelflies/size-pills.html)', () => {
         assert.equal(line.attrs['data-rf-many'], 'Sizes # are sold out.');
         assert.equal(findTags(html, 'svg').filter(tag => !/rf-pill-check/.test(tag.attrs.class || '')).length, 0);
     });
+
+    it('gives another rectangle option no sold-out line, whose words are about sizes, but still "(sold out)" per pill', async () => {
+        const html = await option(COLOUR);
+        assert.equal(findTags(html, 'p').filter(tag => 'data-rf-sold-out-line' in tag.attrs).length, 0);
+        assert.equal(findTags(html, 'span').filter(tag => 'data-rf-sold-out-tag' in tag.attrs).length, 2);
+    });
 });
 
 describe('which option is the size', () => {

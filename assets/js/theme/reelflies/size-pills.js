@@ -88,8 +88,10 @@ export function watchPills(field) {
     field.setAttribute(WATCHED, '');
     const doc = field.ownerDocument;
     const scope = field.closest('form') || field;
-    // A choice of the shopper's: the next change to the line is its answer, and is said.
-    let chosen = false;
+    // The shopper's choices still waiting for stock's answer: a change to the line that comes while
+    // any is pending answers one, and is said. Counted, so quick choices (arrowing through swatches)
+    // each get their answer said, the last one last.
+    let pending = 0;
     let observer = null;
     const update = () => {
         if (!field.isConnected) {
@@ -97,16 +99,16 @@ export function watchPills(field) {
             return;
         }
         const line = updatePills(field);
-        if (line && chosen) announce(line, doc);
+        if (line && pending) announce(line, doc);
     };
     const onChoice = () => {
-        chosen = true;
+        pending += 1;
         update();
     };
     // Stock's own event after each option change it has applied (product-details.js).
     const onApplied = () => {
         update();
-        chosen = false;
+        pending = Math.max(0, pending - 1);
     };
     function unwatch() {
         scope.removeEventListener('change', onChoice);

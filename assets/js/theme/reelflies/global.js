@@ -13,6 +13,9 @@
 // - One module failing, or its chunk failing to load, is reported in the console; the others
 //   still start.
 // - Before them, ticket 25's reduced-motion setting for jQuery's animations (reduced-motion.js).
+// - Ticket 37's slot calls pills-in-modal.js, imported above it here: a small watcher that loads
+//   the size pills' own chunk only once pills appear in #modal, so the import is the one line
+//   outside its slot.
 
 import $ from 'jquery';
 import followReducedMotion from './reduced-motion';
