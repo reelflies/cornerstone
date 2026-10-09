@@ -25,7 +25,7 @@
 //
 // -----------------------------------------------------------------------------
 
-$rf-cart-row-one: 360px; // the narrowest width a size row fits on one line
+$rf-cart-row-one: 400px; // the narrowest width a size row fits on one line, its total whole
 $rf-cart-bar-h: 4.5rem; // the phone bar's height (72px at 16px text); the scroll padding matches it
 
 .page-content[data-cart] {
@@ -198,11 +198,12 @@ $rf-cart-bar-h: 4.5rem; // the phone bar's height (72px at 16px text); the scrol
     row-gap: 6px;
 
     // The size column is at least a two-digit size's tag wide, so the steppers line up; the total
-    // takes what is left, so the row never runs past its group (story 71).
+    // is never narrower than its text, so it never runs into Remove. Below $rf-cart-row-one (a
+    // 375 or 390 phone) the row takes two lines, where the total has the width (story 71).
     @media (min-width: $rf-cart-row-one) {
         column-gap: 8px;
         grid-template-areas: "size stepper total remove";
-        grid-template-columns: minmax(76px, auto) auto minmax(0, 1fr) 44px;
+        grid-template-columns: minmax(76px, auto) auto minmax(max-content, 1fr) 44px;
     }
 }
 

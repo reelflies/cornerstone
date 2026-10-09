@@ -25,7 +25,7 @@ export function rowOrder(sizes) {
 
 export function sortCartRows(root = document) {
     root.querySelectorAll(GROUP).forEach(group => {
-        const rows = [...group.querySelectorAll(ROW)];
+        const rows = Array.from(group.querySelectorAll(ROW));
         const order = rowOrder(rows.map(row => row.getAttribute('data-rf-size') || ''));
         if (order.some((index, position) => index !== position)) {
             // Moving a row takes focus off whatever in it had focus, so give it back.

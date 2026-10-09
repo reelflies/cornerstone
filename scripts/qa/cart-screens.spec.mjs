@@ -126,7 +126,7 @@ test.describe('the cart (ticket 41)', () => {
         expect(totals.reduce((sum, total) => sum + cents(total), 0)).toBe(cents(subtotal));
     });
 
-    for (const width of [320, 375, 1280]) {
+    for (const width of [320, 360, 375, 414, 1280]) {
         test(`keeps each group's 64px photo, linked to the product, at ${width} (story 56)`, async ({ page }) => {
             await page.setViewportSize({ width, height: 900 });
             await open(page);
@@ -147,6 +147,10 @@ test.describe('the cart (ticket 41)', () => {
                 return [row, ...row.children].some(element => element.getBoundingClientRect().right > group.right + 0.5);
             }).map(row => row.dataset.rfSize));
             expect(past, 'rows whose controls run past their group').toEqual([]);
+            // A total's text can outgrow its box while the box stays inside the group.
+            const cramped = await page.locator('.rf-cart-total').evaluateAll(totals => totals.filter(total => total.scrollWidth > total.clientWidth + 0.5)
+                .map(total => total.textContent.trim()));
+            expect(cramped, 'line totals wider than their column').toEqual([]);
         });
     }
 
