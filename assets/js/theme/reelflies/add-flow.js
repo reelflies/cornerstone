@@ -32,7 +32,8 @@
 //   page's scroll padding matches.
 //
 // Every message goes to ticket 25's live region after the visible line renders; the line has no
-// role, and focus stays on the button that was used.
+// role, and focus stays on the button that was used. Stock's quantity limit, whose alert has no
+// role either, goes there too when it appears.
 
 import $ from 'jquery';
 import utils from '@bigcommerce/stencil-utils';
@@ -398,6 +399,17 @@ export function createAddFlow(root, context = {}, {
     // its sold-out pass, its quantity limit): the bar follows each change.
     if (sticky && button && doc.defaultView.MutationObserver) {
         new doc.defaultView.MutationObserver(mirror).observe(button, { attributes: true, attributeFilter: ['value', 'disabled', 'aria-disabled'] });
+    }
+    // Stock's quantity limit shows in its alert over the buy row (product-details-base.js's
+    // showQtyLimitMessage), which has no role: said in the live region when it appears, not again
+    // for each keystroke still over the limit.
+    const limitBox = form.querySelector('.productAttributes-message');
+    if (limitBox && doc.defaultView.MutationObserver) {
+        new doc.defaultView.MutationObserver(records => {
+            const text = (limitBox.querySelector('.alertBox-message') || limitBox).textContent.trim();
+            const appeared = records.some(record => record.oldValue !== 'true');
+            if (appeared && limitBox.getAttribute('data-qty-limit') === 'true' && text) announce(text, doc);
+        }).observe(limitBox, { attributes: true, attributeFilter: ['data-qty-limit'], attributeOldValue: true });
     }
     form.addEventListener('change', sync);
     form.addEventListener('click', onClick, true);

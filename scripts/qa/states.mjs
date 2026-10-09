@@ -180,6 +180,28 @@ export const UI_STATES = {
         },
     },
 
+    // The buy row with stock's alert showing (ticket 38): the stepper and the button keep their
+    // row and the alert takes the next, as stock's quantity limit or a variant's message shows it
+    // (product-details-base.js). The words are stock's limit, set here, not the day's stock.
+    'buy-row-alert': {
+        description: 'the buy row with stock\'s alert showing: "The maximum purchasable quantity is 2" under the stepper and the button',
+        ticket: '38',
+        projects: ['phone-375', 'desktop-1280'],
+        pages: ['product@sizes'],
+        async open(page) {
+            await chunkLoaded(page, 'rf-add-flow');
+            await chunkLoaded(page, 'rf-size-pills');
+            await setSizeMarks(page, []);
+            await page.evaluate(() => {
+                const box = document.querySelector('#add-to-cart-wrapper .productAttributes-message');
+                box.querySelector('.alertBox-message').textContent = 'The maximum purchasable quantity is 2';
+                box.style.display = 'block';
+            });
+            await page.locator('.rf-add').scrollIntoViewIfNeeded();
+            await page.mouse.move(0, 0);
+        },
+    },
+
     // The phone's sticky add bar (ticket 38), at rest and after an add from it, on Fat Albert
     // (product@sizes): its first Colour and its first size chosen, each answered by stock, then the
     // live sold-out marks cleared (setSizeMarks, as ticket 37's states). The add is answered here

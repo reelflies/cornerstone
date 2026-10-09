@@ -37,6 +37,23 @@ $rf-add-error-tint: #fdecea; // the reference's .status.err; the error colour on
         margin: 0;
     }
 
+    // The stepper and the button hold row 1. Stock's alert (a variant's message, the quantity
+    // limit) comes between them in the markup, and auto placement would put the button on a row
+    // of its own under it. With no quantity box, the button takes the row.
+    > .rf-add-qty {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .form-action {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    &:not(:has(> .rf-add-qty)) .form-action {
+        grid-column: 1 / -1;
+    }
+
     > .alertBox,
     > .rf-add-status {
         grid-column: 1 / -1;
@@ -57,9 +74,8 @@ $rf-add-error-tint: #fdecea; // the reference's .status.err; the error colour on
 }
 
 // "Quantity" over the stepper: the reference's .lab, 8px above it.
-.rf-add .rf-add-qty-label.form-label {
+.rf-add-qty-label.form-label {
     color: var(--rf-ink);
-    display: block;
     font-size: 15px;
     font-weight: 600;
     margin: 0 0 8px;
@@ -120,6 +136,9 @@ $rf-add-error-tint: #fdecea; // the reference's .status.err; the error colour on
     font-weight: 600;
     margin: 0;
     min-height: $rf-add-height;
+    // The grid sets its width; stock's 36px sides would clip "Add 1 to cart" at 320.
+    padding-left: 12px;
+    padding-right: 12px;
     width: 100%;
 
     &:hover,

@@ -440,7 +440,7 @@ This is ticket 54's "every link in the home widgets returns 200 with no redirect
   | `rf-menu` | grouped menu and phone drawer, and the desktop rail's hover intent, keys and focus | 28 and 29 (1,308 B in 29) | 8,000 B |
   | `rf-size-filter` | the Fly size filter on listings | 33 (1,892 B) | 3,000 B |
   | `rf-size-pills` | the product page's size pills, and Quick view's and the Change dialog's through `pills-in-modal.js` | 37 (1,302 B) | 3,000 B |
-  | `rf-add-flow` | the product page's add flow and sticky bar | 38 (6,817 B) | 7,000 B |
+  | `rf-add-flow` | the product page's add flow and sticky bar | 38 (6,817 B; 6,914 B after #80) | 7,000 B |
   | `rf-quick-add` | quick add on cards | 43 (measured in 45) | 15,000 B |
   | `rf-region-prompt` | outside-Canada prompt | 52 | 1,000 B |
 
@@ -863,7 +863,7 @@ Ticket 38's buy row (`components/reelflies/add-to-cart.html`, through stock `add
   - stock's ids and attributes, as stock's kept block gives them
   - "Choose a size" or "Add N to cart" on the product page, the size option found by the Fly size facet's name; stock's "Add to Cart" in Quick view and stock's "Pre-Order Now"; the stepper's buttons `type="button"`
   - the product's name for the confirmation, and every word's placeholders whole
-  - the stepper's start
+  - the stepper's start, under a visible "Quantity"
   - the status line with no role, its alert and check icons, and its text box
   - the sticky bar on the product page only
   - Quick view's reworded heading
@@ -880,7 +880,8 @@ Ticket 38's buy row (`components/reelflies/add-to-cart.html`, through stock `add
     - the header told from the cart's read, or from stock's cart summary when that fails, then `rf:cart-changed` after it
     - the confirmation: the choice as it was sent, a swatch named by its title, a product with no options named
     - the status line: a new choice clearing the last message, a pre-order label kept, the text in the template's box, and a failed option change said in its own form
-    - the bar: its place after a jump; its double tap and a blocked tap forgotten; its added look and its return after 4 s; a failed add, a stopped tap and stock's quantity limit said in the bar with focus on its button; its label and held look following the main button; focus handed to the main button when it hides
+    - stock's quantity limit said in the live region when its alert appears, and not again for each keystroke still over it
+    - the bar: its place after a jump; its double tap and a blocked tap forgotten; its added look and its return after 4 s; a failed add, a stopped tap and stock's quantity limit said in the bar (the limit in the live region too) with focus on its button; its label and held look following the main button; focus handed to the main button when it hides
 - **`add-flow.spec.mjs`** runs on channel 1's Fat Albert (`product@sizes`, several sizes and a required Colour), and on the `product` pin for its one-size case. The add and the cart's read are answered by the cart route fixtures (`fixtures/cart/routes.mjs`, which tickets 42, 43 and 44 share: `answerCartAdds`, `answerCartRead`, `cartLines`), fulfilled or aborted and never passed on, so no cart is made. `answerCartRead` answers only GET; any other method on the Cart API falls back, so the network guard fails a write a test hasn't answered. It checks:
   - "Choose a size" and focus
   - "Add 3 to cart"
@@ -891,7 +892,7 @@ Ticket 38's buy row (`components/reelflies/add-to-cart.html`, through stock `add
   - the sticky bar, `--sticky-h` and tabbing at 375, and a dropped add from the bar said in it
   - axe on the product view with the confirmation showing (the bar at rest is `qa:prepush`'s axe on `product@sizes`)
 
-  It runs only when named. The bar's looks are the `sticky-bar` and `sticky-bar-added` states.
+  It runs only when named. The bar's looks are the `sticky-bar` and `sticky-bar-added` states, and the buy row with stock's alert showing (the stepper and the button keep their row) is `buy-row-alert`.
 
 ```sh
 QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs add-flow.spec
