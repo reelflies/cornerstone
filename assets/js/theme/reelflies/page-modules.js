@@ -40,7 +40,7 @@ const listing = [
 ];
 
 const cart = [
-    // 41 cart
+    () => import(/* webpackChunkName: "rf-cart" */ './cart-page'), // 41 cart
 ];
 
 const page = [

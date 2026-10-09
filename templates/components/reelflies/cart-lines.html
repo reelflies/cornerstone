@@ -1,0 +1,84 @@
+{{!--
+    The cart's lines, grouped by pattern on the server (ticket 41; spec module 18; O17, UX-13;
+    stories 50, 56 and 68), from stock components/cart/content.html's hook, which leaves the stock
+    table in place but unrendered. cart.js renders this again after every change (its
+    'cart/content' template), so the groups are whole on first paint and after each change.
+
+    - One group per product, in the order each was first added: a product's first line opens its
+      group (the same first-line test cart-counts.html counts patterns by), and later lines of
+      that product render nowhere else. Each gift certificate is its own group.
+    - The group's head: the 64px 3:2 photo and the name, both linked to the product, and the unit
+      price. Then one row per line (cart-row.html), in the store's order. cart-groups.js puts the
+      rows in hook order; until it has, a group with more than one row keeps its rows out of view
+      (_cart.scss), at the height they take, so sorting them moves nothing.
+    - data-rf-prices-vary marks a group whose lines are priced differently: each row then shows
+      its own unit price, and the head doesn't (_cart.scss).
+    - The list carries data-cart-quantity, which cart.js reads after a change.
+    - The inner loops compare with the outer line's id and price kept in variables, not ../: on the
+      outer line itself Handlebars adds no depth, so ../ would skip it and read the page.
+    - The list carries data-rf-cart-error-words, the words cart-feedback.js shows when a call fails
+      with none of the store's own.
+--}}
+{{~assignVar 'rf_cart_prices' 0~}}
+{{~#or customer (unless settings.hide_price_from_guests)~}}{{~assignVar 'rf_cart_prices' 1~}}{{~/or~}}
+{{~assignVar 'rf_cart_backorder' 0~}}
+{{~#if cart.inventory_settings.show_backorder_message~}}{{~assignVar 'rf_cart_backorder' 1~}}{{~/if~}}
+<ul class="rf-cart-lines" data-rf-cart-lines data-cart-quantity="{{cart.quantity}}" data-rf-cart-error-words="{{lang 'reelflies.cart.error'}}">
+    {{#each cart.items}}
+    {{~assignVar 'rf_cart_at' @index~}}
+    {{~assignVar 'rf_cart_pid' product_id~}}
+    {{~assignVar 'rf_cart_price' price.value~}}
+    {{~assignVar 'rf_cart_first' 1~}}
+    {{~assignVar 'rf_cart_rows' 1~}}
+    {{~assignVar 'rf_cart_vary' 0~}}
+    {{~#if type '!=' 'GiftCertificate'~}}
+    {{~#each ../cart.items~}}{{~#if type '!=' 'GiftCertificate'~}}{{~#if product_id '==' (getVar 'rf_cart_pid')~}}
+    {{~#if @index '<' (getVar 'rf_cart_at')~}}{{~assignVar 'rf_cart_first' 0~}}{{~/if~}}
+    {{~#if @index '>' (getVar 'rf_cart_at')~}}{{~assignVar 'rf_cart_rows' (add (getVar 'rf_cart_rows') 1)~}}{{~/if~}}
+    {{~#if price.value '!=' (getVar 'rf_cart_price')~}}{{~assignVar 'rf_cart_vary' 1~}}{{~/if~}}
+    {{~/if~}}{{~/if~}}{{~/each~}}
+    {{~/if~}}
+    {{#if (getVar 'rf_cart_first')}}
+    <li class="rf-cart-group"
+        data-rf-cart-group
+        {{#if (getVar 'rf_cart_rows') '>' 1}}data-rf-cart-multi{{/if}}
+        {{#if (getVar 'rf_cart_vary')}}data-rf-prices-vary{{/if}}>
+        <a class="rf-cart-photo" href="{{#if type '==' 'GiftCertificate'}}{{edit_url}}{{else}}{{url}}{{/if}}" tabindex="-1" aria-hidden="true">
+            {{#if type '==' 'GiftCertificate'}}
+            <img src="{{cdn ../theme_settings.default_image_gift_certificate}}" alt="" width="64" height="43" loading="lazy">
+            {{else if image}}
+            <img src="{{getImageSrcset image 1x='160w'}}"
+                 srcset="{{getImageSrcset image 80w='80w' 160w='160w' 240w='240w'}}"
+                 sizes="64px"
+                 alt=""
+                 width="64"
+                 height="43"
+                 loading="lazy"
+                 decoding="async">
+            {{else}}
+            <img src="{{cdn ../theme_settings.default_image_product}}" alt="" width="64" height="43" loading="lazy">
+            {{/if}}
+        </a>
+        <div class="rf-cart-title">
+            <h2 class="rf-cart-name"><a href="{{#if type '==' 'GiftCertificate'}}{{edit_url}}{{else}}{{url}}{{/if}}">{{name}}</a></h2>
+            <p class="rf-cart-unit">
+                {{#or (getVar 'rf_cart_prices') (if type '==' 'GiftCertificate')}}
+                    {{> components/reelflies/cart-price}}
+                {{else}}
+                    {{> components/common/login-for-pricing}}
+                {{/or}}
+            </p>
+        </div>
+        <ul class="rf-cart-rows">
+            {{#if type '==' 'GiftCertificate'}}
+            {{> components/reelflies/cart-row}}
+            {{else}}
+            {{#each ../cart.items}}{{#if type '!=' 'GiftCertificate'}}{{#if product_id '==' (getVar 'rf_cart_pid')}}
+            {{> components/reelflies/cart-row}}
+            {{/if}}{{/if}}{{/each}}
+            {{/if}}
+        </ul>
+    </li>
+    {{/if}}
+    {{/each}}
+</ul>

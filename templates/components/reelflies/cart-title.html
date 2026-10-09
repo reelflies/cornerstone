@@ -1,0 +1,15 @@
+{{!--
+    The cart's heading and its count (ticket 41; story 51), from stock cart/page-title.html's hook.
+    cart.js replaces the data-cart-page-title element with this template after every change, so
+    the heading and the count share that one element.
+
+    "Your cart", then what it holds by Shaun's brand rule (cart-counts.html): "38 flies, 12
+    patterns" when every line is a fly brand, else "38 items, 12 products".
+--}}
+{{> components/reelflies/cart-counts}}
+<div class="rf-cart-heading" data-cart-page-title>
+    <h1 class="page-heading">{{lang 'reelflies.cart.heading'}}</h1>
+    {{#if cart.items.length}}
+    <p class="rf-cart-count" data-rf-cart-count>{{#if (getVar 'rf_cart_flies')}}{{lang 'reelflies.cart.count_flies' units=cart.quantity products=(getVar 'rf_cart_products')}}{{else}}{{lang 'reelflies.cart.count_items' units=cart.quantity products=(getVar 'rf_cart_products')}}{{/if}}</p>
+    {{/if}}
+</div>

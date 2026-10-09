@@ -3053,6 +3053,17 @@
 
       {
         "type": "heading",
+        "content": "i18n.RfCart"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfFlyBrands",
+        "force_reload": true,
+        "id": "rf_fly_brands"
+      },
+
+      {
+        "type": "heading",
         "content": "i18n.RfCartState"
       },
 

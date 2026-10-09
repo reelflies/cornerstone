@@ -1,0 +1,771 @@
+{
+    "description": "A 12-pattern cart (ticket 41; story 50) on the real cart page, for cart-screens.spec.mjs: products from the reference page's data (plan/design/src/store-data.json) with their own photos; patterns added in three sizes out of hook order, one whose two sizes are priced differently, two with no size, and one pattern's line added between another's. Every line is the ReelFlies brand, so the heading counts flies. The widget itself is empty.",
+    "page": "pages/cart",
+    "region": "cart_below_totals",
+    "chrome": true,
+    "configuration": {},
+    "page_context": {
+        "page_type": "cart",
+        "breadcrumbs": [],
+        "theme_settings": {
+            "rf_fly_brands": "ReelFlies"
+        },
+        "settings": {
+            "hide_price_from_guests": false
+        },
+        "urls": {
+            "checkout": {
+                "single_address": "/checkout"
+            },
+            "cart": "/cart.php",
+            "home": "/",
+            "auth": {
+                "login": "/login.php"
+            }
+        },
+        "cart": {
+            "items": [
+                {
+                    "id": "line-01",
+                    "product_id": 5663,
+                    "name": "Fat Albert",
+                    "url": "https://reelflies.ca/fat-albert/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 3,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/5663/1/5663-fat-albert.jpg",
+                        "alt": "Fat Albert"
+                    },
+                    "price": {
+                        "value": 1.75,
+                        "formatted": "$1.75"
+                    },
+                    "total": {
+                        "value": 5.25,
+                        "formatted": "$5.25"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "10"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-21",
+                    "product_id": 5558,
+                    "name": "Goddard Caddis",
+                    "url": "https://reelflies.ca/goddard-caddis/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 4,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/5558/1/5558-goddard-caddis.jpg",
+                        "alt": "Goddard Caddis"
+                    },
+                    "price": {
+                        "value": 0.95,
+                        "formatted": "$0.95"
+                    },
+                    "total": {
+                        "value": 3.8,
+                        "formatted": "$3.80"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "8"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-02",
+                    "product_id": 5663,
+                    "name": "Fat Albert",
+                    "url": "https://reelflies.ca/fat-albert/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 6,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/5663/1/5663-fat-albert.jpg",
+                        "alt": "Fat Albert"
+                    },
+                    "price": {
+                        "value": 1.75,
+                        "formatted": "$1.75"
+                    },
+                    "total": {
+                        "value": 10.5,
+                        "formatted": "$10.50"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "14"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-03",
+                    "product_id": 5663,
+                    "name": "Fat Albert",
+                    "url": "https://reelflies.ca/fat-albert/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 3,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/5663/1/5663-fat-albert.jpg",
+                        "alt": "Fat Albert"
+                    },
+                    "price": {
+                        "value": 1.75,
+                        "formatted": "$1.75"
+                    },
+                    "total": {
+                        "value": 5.25,
+                        "formatted": "$5.25"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "4"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-04",
+                    "product_id": 3899,
+                    "name": "ReelFlies - Psycho Caddis",
+                    "url": "https://reelflies.ca/reelflies-psycho-caddis/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 3,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/3899/1/3899-reelflies-psycho-caddis.jpg",
+                        "alt": "ReelFlies - Psycho Caddis"
+                    },
+                    "price": {
+                        "value": 1.45,
+                        "formatted": "$1.45"
+                    },
+                    "total": {
+                        "value": 4.35,
+                        "formatted": "$4.35"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "12"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-05",
+                    "product_id": 3899,
+                    "name": "ReelFlies - Psycho Caddis",
+                    "url": "https://reelflies.ca/reelflies-psycho-caddis/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 6,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/3899/1/3899-reelflies-psycho-caddis.jpg",
+                        "alt": "ReelFlies - Psycho Caddis"
+                    },
+                    "price": {
+                        "value": 1.45,
+                        "formatted": "$1.45"
+                    },
+                    "total": {
+                        "value": 8.7,
+                        "formatted": "$8.70"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "18"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-06",
+                    "product_id": 3899,
+                    "name": "ReelFlies - Psycho Caddis",
+                    "url": "https://reelflies.ca/reelflies-psycho-caddis/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 3,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/3899/1/3899-reelflies-psycho-caddis.jpg",
+                        "alt": "ReelFlies - Psycho Caddis"
+                    },
+                    "price": {
+                        "value": 1.45,
+                        "formatted": "$1.45"
+                    },
+                    "total": {
+                        "value": 4.35,
+                        "formatted": "$4.35"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "6"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-07",
+                    "product_id": 5835,
+                    "name": "Elk Hair Caddis Tan",
+                    "url": "https://reelflies.ca/elk-hair-caddis-tan/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 3,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/5835/1/5835-elk-hair-caddis-tan.jpg",
+                        "alt": "Elk Hair Caddis Tan"
+                    },
+                    "price": {
+                        "value": 0.95,
+                        "formatted": "$0.95"
+                    },
+                    "total": {
+                        "value": 2.85,
+                        "formatted": "$2.85"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "16"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-08",
+                    "product_id": 5835,
+                    "name": "Elk Hair Caddis Tan",
+                    "url": "https://reelflies.ca/elk-hair-caddis-tan/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 6,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/5835/1/5835-elk-hair-caddis-tan.jpg",
+                        "alt": "Elk Hair Caddis Tan"
+                    },
+                    "price": {
+                        "value": 0.95,
+                        "formatted": "$0.95"
+                    },
+                    "total": {
+                        "value": 5.7,
+                        "formatted": "$5.70"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "20"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-09",
+                    "product_id": 5835,
+                    "name": "Elk Hair Caddis Tan",
+                    "url": "https://reelflies.ca/elk-hair-caddis-tan/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 3,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/5835/1/5835-elk-hair-caddis-tan.jpg",
+                        "alt": "Elk Hair Caddis Tan"
+                    },
+                    "price": {
+                        "value": 0.95,
+                        "formatted": "$0.95"
+                    },
+                    "total": {
+                        "value": 2.85,
+                        "formatted": "$2.85"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "10"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-10",
+                    "product_id": 4675,
+                    "name": "Adams Dry Fly",
+                    "url": "https://reelflies.ca/adams-dry-fly/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 3,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/4675/1/4675-adams-dry-fly.jpg",
+                        "alt": "Adams Dry Fly"
+                    },
+                    "price": {
+                        "value": 0.95,
+                        "formatted": "$0.95"
+                    },
+                    "total": {
+                        "value": 2.85,
+                        "formatted": "$2.85"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "16"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-11",
+                    "product_id": 4675,
+                    "name": "Adams Dry Fly",
+                    "url": "https://reelflies.ca/adams-dry-fly/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 6,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/4675/1/4675-adams-dry-fly.jpg",
+                        "alt": "Adams Dry Fly"
+                    },
+                    "price": {
+                        "value": 0.95,
+                        "formatted": "$0.95"
+                    },
+                    "total": {
+                        "value": 5.7,
+                        "formatted": "$5.70"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "20"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-12",
+                    "product_id": 4675,
+                    "name": "Adams Dry Fly",
+                    "url": "https://reelflies.ca/adams-dry-fly/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 3,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/4675/1/4675-adams-dry-fly.jpg",
+                        "alt": "Adams Dry Fly"
+                    },
+                    "price": {
+                        "value": 0.95,
+                        "formatted": "$0.95"
+                    },
+                    "total": {
+                        "value": 2.85,
+                        "formatted": "$2.85"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "10"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-13",
+                    "product_id": 4368,
+                    "name": "Adams Irresistible",
+                    "url": "https://reelflies.ca/adams-irresistible/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 3,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/4368/1/4368-adams-irresistible.jpg",
+                        "alt": "Adams Irresistible"
+                    },
+                    "price": {
+                        "value": 0.95,
+                        "formatted": "$0.95"
+                    },
+                    "total": {
+                        "value": 2.85,
+                        "formatted": "$2.85"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "16"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-14",
+                    "product_id": 4368,
+                    "name": "Adams Irresistible",
+                    "url": "https://reelflies.ca/adams-irresistible/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 6,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/4368/1/4368-adams-irresistible.jpg",
+                        "alt": "Adams Irresistible"
+                    },
+                    "price": {
+                        "value": 0.95,
+                        "formatted": "$0.95"
+                    },
+                    "total": {
+                        "value": 5.7,
+                        "formatted": "$5.70"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "20"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-15",
+                    "product_id": 4368,
+                    "name": "Adams Irresistible",
+                    "url": "https://reelflies.ca/adams-irresistible/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 3,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/4368/1/4368-adams-irresistible.jpg",
+                        "alt": "Adams Irresistible"
+                    },
+                    "price": {
+                        "value": 0.95,
+                        "formatted": "$0.95"
+                    },
+                    "total": {
+                        "value": 2.85,
+                        "formatted": "$2.85"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "10"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-16",
+                    "product_id": 4979,
+                    "name": "Royal Wulff Dry Fly",
+                    "url": "https://reelflies.ca/royal-wulff-dry-fly/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 2,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/4979/1/4979-royal-wulff-dry-fly.jpg",
+                        "alt": "Royal Wulff Dry Fly"
+                    },
+                    "price": {
+                        "value": 0.95,
+                        "formatted": "$0.95"
+                    },
+                    "total": {
+                        "value": 1.9,
+                        "formatted": "$1.90"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "6"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-17",
+                    "product_id": 4979,
+                    "name": "Royal Wulff Dry Fly",
+                    "url": "https://reelflies.ca/royal-wulff-dry-fly/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 2,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/4979/1/4979-royal-wulff-dry-fly.jpg",
+                        "alt": "Royal Wulff Dry Fly"
+                    },
+                    "price": {
+                        "value": 1.25,
+                        "formatted": "$1.25"
+                    },
+                    "total": {
+                        "value": 2.5,
+                        "formatted": "$2.50"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "4"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-18",
+                    "product_id": 4001,
+                    "name": "Mosquito",
+                    "url": "https://reelflies.ca/mosquito/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 4,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/4001/1/4001-mosquito.jpg",
+                        "alt": "Mosquito"
+                    },
+                    "price": {
+                        "value": 0.95,
+                        "formatted": "$0.95"
+                    },
+                    "total": {
+                        "value": 3.8,
+                        "formatted": "$3.80"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "10"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-19",
+                    "product_id": 4333,
+                    "name": "Blue Wing Olive Parachute Dry",
+                    "url": "https://reelflies.ca/blue-wing-olive-parachute-dry/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 4,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/4333/1/4333-blue-wing-olive-parachute-dry.jpg",
+                        "alt": "Blue Wing Olive Parachute Dry"
+                    },
+                    "price": {
+                        "value": 0.95,
+                        "formatted": "$0.95"
+                    },
+                    "total": {
+                        "value": 3.8,
+                        "formatted": "$3.80"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "12"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-20",
+                    "product_id": 4289,
+                    "name": "Purple Haze Parachute",
+                    "url": "https://reelflies.ca/purple-haze-parachute/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 4,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/4289/1/4289-purple-haze-parachute.jpg",
+                        "alt": "Purple Haze Parachute"
+                    },
+                    "price": {
+                        "value": 1.25,
+                        "formatted": "$1.25"
+                    },
+                    "total": {
+                        "value": 5.0,
+                        "formatted": "$5.00"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "10"
+                        }
+                    ]
+                },
+                {
+                    "id": "line-22",
+                    "product_id": 3886,
+                    "name": "42 Mayfly Assortment",
+                    "url": "https://reelflies.ca/42-mayfly-assortment/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 1,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/3886/1/3886-42-mayfly-assortment.jpg",
+                        "alt": "42 Mayfly Assortment"
+                    },
+                    "price": {
+                        "value": 34.95,
+                        "formatted": "$34.95"
+                    },
+                    "total": {
+                        "value": 34.95,
+                        "formatted": "$34.95"
+                    },
+                    "options": []
+                },
+                {
+                    "id": "line-23",
+                    "product_id": 5445,
+                    "name": "30 Nymphs & Sub Surface Fly Selection",
+                    "url": "https://reelflies.ca/30-nymphs-sub-surface-fly-selection/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 1,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/5445/1/5445-30-nymphs-sub-surface-fly-selection.jpg",
+                        "alt": "30 Nymphs & Sub Surface Fly Selection"
+                    },
+                    "price": {
+                        "value": 26.95,
+                        "formatted": "$26.95"
+                    },
+                    "total": {
+                        "value": 26.95,
+                        "formatted": "$26.95"
+                    },
+                    "options": []
+                }
+            ],
+            "quantity": 82,
+            "sub_total": {
+                "formatted": "$155.30"
+            },
+            "grand_total": {
+                "formatted": "$155.30"
+            },
+            "show_primary_checkout_button": true,
+            "taxes": [],
+            "status_messages": [
+                {
+                    "message": "Your fly order qualifies for free standard shipping in Canada."
+                }
+            ]
+        }
+    }
+}

@@ -1100,7 +1100,24 @@
         },
 
         "cart": {
-            "_slot": ""
+            "_slot": "",
+            "heading": "Your cart",
+            "count_flies": "{units, plural, one {# fly} other {# flies}}, {products, plural, one {# pattern} other {# patterns}}",
+            "count_items": "{units, plural, one {# item} other {# items}}, {products, plural, one {# product} other {# products}}",
+            "size": "Size {size}",
+            "each": "{price} each",
+            "remove": "Remove {name}, size {size}",
+            "remove_line": "Remove {name}",
+            "quantity": "Quantity of {name}, size {size}",
+            "quantity_line": "Quantity of {name}",
+            "decrease": "Decrease the quantity of {name}, size {size}",
+            "increase": "Increase the quantity of {name}, size {size}",
+            "coupon_link": "Have a coupon code?",
+            "promise": "We stand behind every fly we sell.",
+            "summary": "Order summary",
+            "bar_flies": "for {units, plural, one {# fly} other {# flies}}",
+            "bar_items": "for {units, plural, one {# item} other {# items}}",
+            "error": "Something went wrong. Try again."
         },
 
         "cart_state": {

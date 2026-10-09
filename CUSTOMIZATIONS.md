@@ -43,7 +43,7 @@ Ticket 25's scaffold gives each module its own lines in every shared file (`plan
 | `assets/scss/reelflies/_index.scss` | One commented-out import per module, in ticket order, with its ticket number | Uncomment your line and add your partial beside it |
 | `assets/js/theme/reelflies/page-modules.js` | One commented slot per module in each template's array (product, listing, cart, page); custom templates map to their base kind's array | Replace your slot line with your loader, `() => import(/* webpackChunkName: "rf-…" */ './…')` |
 | `assets/js/theme/reelflies/global.js` | One slot each for 27, 28, 30 and 52 | Replace your slot line with a function of the page context |
-| `templates/components/reelflies/js-settings.html` | One slot per switch ticket (27, 31, 39, 40, 42, 43, 52) | Replace your slot line with your `{{~inject 'rf…' theme_settings.rf_…}}` lines |
+| `templates/components/reelflies/js-settings.html` | One slot per switch ticket (27, 31, 39, 40, 41, 42, 43, 52) | Replace your slot line with your `{{~inject 'rf…' theme_settings.rf_…}}` lines |
 | `templates/components/reelflies/icons.html` | The icon sheet's include list, alphabetical | Add `icons/<name>.html` and one line in alphabetical order; draw it with `{{> components/reelflies/icon name='<name>'}}` |
 
 The settings groups and their documented defaults (section 6.3). A pre-declared switch with no module behind it does nothing; the release guard lists it once as a new switch at the first push after the scaffold.
@@ -55,6 +55,7 @@ The settings groups and their documented defaults (section 6.3). A pre-declared 
 | 31 | `rf_price_unit_exclude` (empty): the channel's Gear and Assortment category roots, comma-separated, for the card's "/ fly" rule (`components/reelflies/price-unit.html`); empty, the unit never shows. "ReelFlies CA channel 1" sets tree 1's (`Fly Gear,Fly Selections & Fly Boxes`); ReelFlies CA gets tree 4's in wave R1, set live in Theme Styles first (below) |
 | 39 | `rf_ship_free_threshold` ("60" in base for Canada, decision 2; `""` in ReelFlies US, because .com stays on its flat rate with no threshold, 39's owner decision), `rf_ship_standard_rate` and `rf_ship_expedited_from` (empty until Shaun gives the rates, decision 12) |
 | 40 | `rf_store_same_as` (empty); 40 adds its other `rf_store_*` keys after it |
+| 41 | `rf_fly_brands` ("ReelFlies"): the channel's fly brands, comma-separated. The cart's heading and phone bar (`components/reelflies/cart-counts.html`) and `cart-count.js` count in flies and patterns only when every line's brand is one of them (Shaun's brand rule, review-02), else in items and products. Added by ticket 41, with its Theme Styles heading, Cart, and its JavaScript slot (`context.rfFlyBrands`) |
 | 42 | `rf_cart_state` (true) |
 | 43 | `rf_quick_add` (true) |
 | 52 | `rf_region_prompt` (false) |
@@ -141,6 +142,14 @@ The only approved way is the custom category template `templates/pages/custom/ca
 | `templates/components/category/sidebar.html` | Lines 2-13, the stock subcategory list (`.sidebarBlock` with its `navList`), become one Handlebars comment | The chips above the listing replace it (UX-5): on phones it pushed the first card about 1,100px down (ticket 26's spike). The facets and shop by price stay. Faceted search re-renders this file, so the list stays gone after a filter | 32 |
 | `config.json` | `settings` values only: `categorypage_products_per_page` and `brandpage_products_per_page` 24 (stock 12) | 24 products a page on category and brand pages, with the stock numbered pager (UX-7). The front matter of both category templates reads the setting | 32 |
 | `schema.json` | One option, 24, added at the end of `categorypage_products_per_page`'s and `brandpage_products_per_page`'s lists (stock 6 to 20) | So Theme Styles can show and keep the value 24 | 32 |
+| `templates/components/cart/content.html` | A Handlebars comment and an include of `components/reelflies/cart-lines` before the stock table, which is wrapped in `{{#if false}}` and kept, unrendered | The cart's lines (spec module 18; story 50), grouped by pattern on the server: one group per product in the order each was first added, its head (the photo, the name, the unit price), then a row per line (`cart-row.html`) with the stock attributes `cart.js` drives; `cart-groups.js` puts each group's rows in hook order. Port an upstream change to the stock table into `cart-row.html` and `cart-lines.html`; `render/partials/cart.test.mjs` holds the attributes `cart.js` reads | 41 |
+| `templates/components/cart/page-title.html` | The stock heading replaced by an include of `components/reelflies/cart-title` | "Your cart" and its count by the brand rule (`rf_fly_brands`; story 51), in one `data-cart-page-title` element, which `cart.js` replaces after each change | 41 |
+| `templates/components/cart/status-messages.html` | The stock alert boxes replaced by an include of `components/reelflies/cart-messages` | The store's status messages, the free-shipping promotion's among them, as plain lines (BUILD-1; story 52) | 41 |
+| `templates/components/cart/totals.html` | An "Order summary" heading before the list; the classic coupon row skipped (`{{else if false}}`); an include of `components/reelflies/cart-summary` after the list | The panel's heading, as the reference's; Check out, the promise line, "Have a coupon code?" with stock's own toggle and form, and the phone bar, re-rendered with the totals after each change (UX-11, UX-22; stories 45, 54, 55). `cart-summary.html` copies stock `cart.html`'s Check out block and `cart/coupon-input.html`'s toggle and form: port an upstream change to either into it; `render/partials/cart.test.mjs` holds the classes and attributes `cart.js` binds | 41 |
+| `templates/pages/cart.html` | Stock's Check out and sign-in blocks skipped (`{{#if false}}`, `{{else if false}}`); the extra checkout buttons stay | Check out is in the summary (`cart-summary.html`), so it renders once | 41 |
+| `assets/js/theme/cart.js` | Two imports; one line at the start of each storefront API callback (`cartFailed`, ten calls: the quantity change twice, remove, configure, its form post, the option change, content, coupon, gift certificate and gift wrapping), the cart calls with their own success word, and the options form post checking only its error (its callback now takes it; the answer is the cart page's HTML); one event at the end of `refreshContent` (`rf:cart-rendered`, from `cart-events.js`) | Each call's error, refusal or unreadable answer first (a 4xx or 5xx page arrives with no error), shown inline and in the live region with the line's last good quantity kept, never a TypeError or a stuck overlay (story 68); the event lets `cart-page.js` sort the rows and put focus back | 41 |
+| `assets/js/theme/cart/shipping-estimator.js` | One import; one `cartFailed` line at the start of the quote call's callback | The same guard for the shipping estimator's quotes (story 68) | 41 |
+| `config.json` | `settings`: `rf_fly_brands` "ReelFlies" (a new key, ticket 41's group) | The cart's brand rule | 41 |
 
 New ReelFlies files in upstream folders: `templates/pages/custom/category/rf-noindex.html` (ticket 32: the noindex category template, below), `templates/pages/custom/page/hook-size-chart.html` (ticket 35: the hook size chart Web Page's custom template, chosen by a template association on the page once a release has put the template in the active theme; the page's rows are rewritten after that with no theme push), `.github/workflows/reelflies-checks.yml`, `.github/workflows/reelflies-baseline-scope.yml` (W0-13), `.gitleaksignore`, `.gitleaks.toml` (gitleaks' default rules, with one `generic-api-key` allowlist for whole uuids in widget channel files; ticket 27's follow-up, #65), `.gitattributes` at the repo root (W0-11: `RELEASES.md` merges as a union, so parallel log branches keep both sides' rows; upstream has no `.gitattributes`), and `RELEASES.md` at the repo root (the release log, written by `scripts/release.sh`, the Switch toggles log, the host batch's Host runs, and the My Themes log of each theme the prune deletes; tickets 05, 15 and 16, W0-3). `stencil bundle` zips only `README.md` and `CHANGELOG.md` from the root's Markdown files, so `RELEASES.md` never ships.
 
@@ -152,14 +161,13 @@ From the review's upgrade-safe layering plan and the design session ([ADR 0001](
 
 - `templates/components/products/options/set-rectangle.html` (37)
 - `templates/components/products/product-view.html` and `templates/components/common/responsive-img.html`
-- `assets/js/theme/common/product-details.js` and `assets/js/theme/cart.js`
+- `assets/js/theme/common/product-details.js` (38)
 - `templates/pages/errors/404.html`
 
 Added by the design session (spec, "Hook count"), with the ticket that adds each:
 
 - `faceted-search/facets/multi.html` (33)
 - `templates/components/products/description-tabs.html` and `tabs.html` (39)
-- `templates/pages/cart.html`, `templates/components/cart/totals.html` and `cart/status-messages.html` (41)
 - `templates/components/products/schema.html` (40)
 
 Not needed after all, so not counted toward the ADR's 25–30:

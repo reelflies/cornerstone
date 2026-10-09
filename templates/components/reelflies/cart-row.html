@@ -1,0 +1,78 @@
+{{!--
+    One cart line as a row of its pattern's group (ticket 41; spec module 18; stories 50 and 68),
+    with the line as its context; cart-lines.html sets rf_cart_prices and rf_cart_backorder.
+
+    - The size, from the option whose name holds "Size" (the Fly Sizes option), as a tag; any other
+      option beside it; the line's own unit price, which shows only when the pattern's sizes are
+      priced differently (_cart.scss).
+    - The stepper, the quantity field and Remove, with the stock attributes cart.js drives
+      (data-item-row, data-cart-update, data-cart-itemid, data-action, #qty-<id>,
+      .cart-remove), each named by the pattern and the size. data-rf-size is what cart-groups.js
+      sorts by ('' with no size).
+    - Stock's "Change" (the options modal) only on a line with an option other than its size, such
+      as a colour: a different size is a different line, removed or added.
+--}}
+{{~assignVar 'rf_cart_size' ''~}}
+{{~#each options}}{{#contains name 'Size'}}{{assignVar 'rf_cart_size' value}}{{/contains}}{{/each~}}
+<li class="rf-cart-row" data-item-row data-rf-cart-row data-rf-size="{{getVar 'rf_cart_size'}}">
+    <p class="rf-cart-size">
+        {{#if (getVar 'rf_cart_size')}}<span class="rf-cart-sizetag">{{lang 'reelflies.cart.size' size=(getVar 'rf_cart_size')}}</span>{{/if}}
+        {{#each options}}{{#contains name 'Size'}}{{else}}<span class="rf-cart-option">{{name}}: {{value}}</span>{{/contains}}{{/each}}
+        {{#if (getVar 'rf_cart_prices')}}<span class="rf-cart-row-unit">{{> components/reelflies/cart-price}}</span>{{/if}}
+    </p>
+    {{#if type '!=' 'GiftCertificate'}}
+    <div class="rf-cart-stepper form-increment">
+        {{#if can_modify}}
+        <button class="rf-cart-step" type="button" data-cart-update data-cart-itemid="{{id}}" data-action="dec">
+            {{> components/reelflies/icon name='minus'}}
+            <span class="is-srOnly">{{#if (getVar 'rf_cart_size')}}{{lang 'reelflies.cart.decrease' name=name size=(getVar 'rf_cart_size')}}{{else}}{{lang 'products.quantity_decrease' name=name}}{{/if}}</span>
+        </button>
+        {{/if}}
+        <input class="rf-cart-qty form-input form-input--incrementTotal cart-item-qty-input"
+               id="qty-{{id}}"
+               name="qty-{{id}}"
+               type="tel"
+               value="{{quantity}}"
+               data-quantity-min="{{min_purchase_quantity}}"
+               data-quantity-max="{{max_purchase_quantity}}"
+               data-quantity-min-error="{{lang 'products.quantity_min' quantity=min_purchase_quantity}}"
+               data-quantity-max-error="{{lang 'products.quantity_max' quantity=max_purchase_quantity}}"
+               min="1"
+               pattern="[0-9]*"
+               data-cart-itemid="{{id}}"
+               data-action="manualQtyChange"
+               aria-label="{{#if (getVar 'rf_cart_size')}}{{lang 'reelflies.cart.quantity' name=name size=(getVar 'rf_cart_size')}}{{else}}{{lang 'reelflies.cart.quantity_line' name=name}}{{/if}}"
+               {{#unless can_modify}}disabled{{/unless}}>
+        {{#if can_modify}}
+        <button class="rf-cart-step" type="button" data-cart-update data-cart-itemid="{{id}}" data-action="inc">
+            {{> components/reelflies/icon name='plus'}}
+            <span class="is-srOnly">{{#if (getVar 'rf_cart_size')}}{{lang 'reelflies.cart.increase' name=name size=(getVar 'rf_cart_size')}}{{else}}{{lang 'products.quantity_increase' name=name}}{{/if}}</span>
+        </button>
+        {{/if}}
+    </div>
+    {{/if}}
+    <p class="rf-cart-total">
+        {{#or (getVar 'rf_cart_prices') (if type '==' 'GiftCertificate')}}
+        <strong class="cart-item-value{{#if total_discounted}} price--discounted{{/if}}">{{total.formatted}}</strong>
+        {{#if total_discounted}}<strong class="cart-item-value">{{total_discounted.formatted}}</strong>{{/if}}
+        {{else}}--{{/or}}
+    </p>
+    {{#or can_modify (if type '==' 'GiftCertificate')}}
+    <button class="rf-cart-remove cart-remove"
+            type="button"
+            data-cart-itemid="{{id}}"
+            data-confirm-delete="{{lang 'cart.confirm_delete'}}"
+            aria-label="{{#if (getVar 'rf_cart_size')}}{{lang 'reelflies.cart.remove' name=name size=(getVar 'rf_cart_size')}}{{else}}{{lang 'reelflies.cart.remove_line' name=name}}{{/if}}">
+        {{> components/reelflies/icon name='close'}}
+    </button>
+    {{/or}}
+    {{~assignVar 'rf_cart_other' 0~}}
+    {{~#each options}}{{#contains name 'Size'}}{{else}}{{assignVar 'rf_cart_other' 1}}{{/contains}}{{/each~}}
+    {{#if (getVar 'rf_cart_other')}}{{#if can_modify}}
+    <a class="rf-cart-edit" href="#" data-item-edit="{{id}}" data-product-id="{{product_id}}" aria-label="{{lang 'products.change_product_options' name=name}}">{{lang 'common.change'}}</a>
+    {{/if}}{{/if}}
+    {{#if stock_position.backorder_message}}{{#if (getVar 'rf_cart_backorder')}}
+    <p class="rf-cart-note cart-item-backorder-message">{{stock_position.backorder_message}}</p>
+    {{/if}}{{/if}}
+    {{> components/cart/item-giftwrap this}}
+</li>

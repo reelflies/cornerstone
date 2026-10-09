@@ -599,7 +599,7 @@ It exits 1 on a failed check, and 2 when the storefront can't be reached or, wit
 
 Ticket 25's checks in a browser (spec seam 1; stories 67 to 71), on every page pinned for `QA_CHANNEL`, at 375 and 1280:
 
-- **Focus ring:** one Tab, then focus on the first visible link and the first visible button; each shows the ReelFlies ring (2px solid #23272B, 2px offset, `!important` over the stock #0f7fff, on `:focus-visible` only), or the gold bead #F2C14E when it sits on a forest ground (`.rf-on-dark`), as the footer's do (ticket 50). A mouse press on each focuses it with no ring. Stock `.button` eases `all` over 0.15s, so the check waits for the ring to settle.
+- **Focus ring:** one Tab, then focus on the first visible link and the first visible button; each shows the ReelFlies ring (2px solid #23272B, 2px offset, `!important` over the stock #0f7fff, on `:focus-visible` only), or the gold bead #F2C14E when it sits on a forest ground (`.rf-on-dark`), as the footer's do (ticket 50). The phone logo's ring is inset (-2px offset): its link fills the 56px sticky bar, so a ring outside would lose its top edge (#67). A mouse press on each focuses it with no ring. Stock `.button` eases `all` over 0.15s, so the check waits for the ring to settle.
 - **Skip link:** the first Tab lands on `.skip-to-main-link`.
 - **Landmarks:** axe's `landmark-one-main` and `landmark-no-duplicate-main`, which are moderate, so the axe gate doesn't fail on them.
 - **Onest:** `onest-latin-var.woff2` is requested once, nothing goes to Google Fonts for the theme's fonts (the create-account page's reCAPTCHA loads its own Roboto, which is the store's widget), one Onest face is loaded, the body's stack starts `Onest, "Onest Fallback"`, and the root font size is 16px.
@@ -758,6 +758,24 @@ QA_VARIATION="ReelFlies CA" npx playwright test --config scripts/qa/playwright.c
 node --test scripts/qa/render/partials/hook-chart-page.test.mjs
 ```
 
+## The cart (`cart-screens.spec.mjs`)
+
+Ticket 41's cart (spec module 18) on the fixture page: the real cart page rendered round a 12-pattern cart (`render/pages/cart-page/fixtures/twelve.json`, products from the reference page's data with their own photos). A cart on channel 1 would be a live write (W0-6), and ReelFlies_CA has no products until refactor 14. The server groups the lines by pattern; the fixture page loads no theme bundle, so the spec runs the real `cart-groups.js`, which sorts each group's sizes, in it through `render/theme-script.mjs`, which turns listed theme modules into one browser script with Babel.
+
+- **The look,** at 375 and 1280: the page without the fixed phone bar, and the bar on its own at 375 (widget baselines, `widget cart-page`).
+- **Grouping:** one group per pattern, sizes in hook order once sorted; until then a group of several sizes keeps them out of view, and sorting moves no group and not the summary (CLS); a pattern with sizes priced differently shows each size's unit price; the lines add up to the subtotal.
+- **Photos and reflow:** each group's 64px photo, linked to the product, at 320, 375 and 1280, and nothing scrolls sideways.
+- **The phone bar:** the total for the flies and Check out; tabbing from the top to the summary's Check out never leaves the focused element under it, and a second test shows that check fails with the page's scroll padding taken away.
+- **axe** in the cart.
+
+Its templates are rendered by `render/partials/cart.test.mjs` (the groups, the rows and their stock attributes, the count by the brand rule, the messages, the summary and the stock markup it copies, and the whole cart page); its scripts by Jest (`cart-groups.spec.js`, `cart-guards.spec.js` for the error, refusal, unreadable-answer and network-failure paths, `cart-count.spec.js`, `cart-page.spec.js`, and `cart-coupon.spec.js` for stock `cart.js` opening the coupon field).
+
+```sh
+QA_VARIATION="ReelFlies CA" npx playwright test --config scripts/qa/playwright.config.mjs cart-screens
+node --test scripts/qa/render/partials/cart.test.mjs scripts/qa/render/theme-script.test.mjs
+npx jest assets/js/test-unit/theme/reelflies/cart
+```
+
 ## Fixture renders (`render/`)
 
 The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixture JSON instead of store data. So a template can be tested before the store has its data: ReelFlies_CA has no tree-4 categories until refactor 13, but the Species pages, the hub, the chips, the description split and the hook chart rows can be tested now. And a widget is checked from its source, not from what the store shows. Tickets 32, 34, 35, 36 and 46–49 use it.
@@ -767,10 +785,11 @@ The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixtu
 | `render/render.mjs` | `renderPartial` and `renderWidget`, `readFixture`, `widgetCases`, `themeConfig` |
 | `render/html-checks.mjs` | `unbalancedTags(html)`: elements closed in the wrong place, closed with nothing open, or never closed |
 | `render/widget-page.mjs` | the fixture page a widget shot is taken on |
+| `render/theme-script.mjs` | `themeScript(names, run)`: listed theme modules as one browser script, through Babel, for a fixture page, which loads no bundle (ticket 41's `cart-screens.spec.mjs`) |
 | `render/home-page.mjs` | the whole home page with every widget a channel places on `pages/home`, each from a fixture, in its region and placement order: `homeCases`, `renderHomePage` and `openHomePage` (ticket 47; `home-widgets-screens.spec.mjs`, below) |
 | `render/photo-contrast.mjs` | `worstContrastOverPhoto(page, selector)`: a line of text against the lightest pixel behind it, for text on a scrim over a photo, which axe can't judge (the hero's and the cards', tickets 46 and 47) |
 | `widget-screens.spec.mjs` | the widget element shots |
-| `render/pages/<name>/` | fixture pages: a real page template rendered round an empty widget from fixed data, each shot by its own `*-screens.spec.mjs` (ticket 31's `card-grid`, by `card-screens.spec.mjs`; ticket 32's `category-page`, by `category-screens.spec.mjs`; ticket 35's `hook-chart-page`, by `hook-chart-screens.spec.mjs`; "Fixture pages" below) |
+| `render/pages/<name>/` | fixture pages: a real page template rendered round an empty widget from fixed data, each shot by its own `*-screens.spec.mjs` (ticket 31's `card-grid`, by `card-screens.spec.mjs`; ticket 32's `category-page`, by `category-screens.spec.mjs`; ticket 35's `hook-chart-page`, by `hook-chart-screens.spec.mjs`; ticket 41's `cart-page`, by `cart-screens.spec.mjs`; "Fixture pages" below) |
 | `render/example/` | the worked example below |
 
 ### Partials
@@ -828,7 +847,7 @@ The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixtu
 - `_.id` is a fixed id, so a shot is the same on every run.
 - `page` and `region` say where the widget sits. A fixture for render tests only sets `"shot": false` instead.
 - `page_context` (optional) is the page's own store data, shaped as `?debug=context` shows it, for a region inside a condition. `cart.html` renders `cart_below_totals` only when the cart has items, so a widget there needs `"page_context": { "cart": { "quantity": 1, "items": [ … ] } }`. The page's `template` is always `page`, as on the store.
-- `"chrome": true` (optional) renders the theme's header and footer round the page, as `layout/base.html` does, for a widget in a header or footer region such as `header_bottom--global` (ticket 27's shipping strip), or for a fixture page whose spec measures the page as a shopper sees it (ticket 31's card grid, ticket 32's category page: the first row of products under the header). The phone header is sticky, so in an element shot lower down it can lie over the widget: such a spec sets `[data-rf-header]` static before the shot (`card-screens.spec.mjs`, `category-screens.spec.mjs`).
+- `"chrome": true` (optional) renders the theme's header and footer round the page, as `layout/base.html` does, for a widget in a header or footer region such as `header_bottom--global` (ticket 27's shipping strip), or for a fixture page whose spec measures the page as a shopper sees it (ticket 31's card grid, ticket 32's category page: the first row of products under the header; ticket 41's cart page: the phone bar against the page). The phone header is sticky, so in an element shot lower down it can lie over the widget: such a spec sets `[data-rf-header]` static before the shot (`card-screens.spec.mjs`, `category-screens.spec.mjs`, `cart-screens.spec.mjs`).
 
 `renderWidget(name, fixture, { root })` resolves to the template's output, for render tests under `node --test` (Jest ignores `scripts/`). It renders with the store's engine for widget templates, Handlebars 3 (`scripts/widgets/engine.mjs`: the store saves them as `handlebars_v3`, and the Widgets API takes no engine), not `config.json`'s v4, so `../` inside `{{#if}}` renders here as on the store, and a Handlebars 4 form such as `{{#*inline}}` fails here as it would there. `_shared` partials are registered as partials, as in the files; the widget sync's tests render the pasted store copy beside them. For example, ticket 48's "a changed price in the fixture changes the rendered price" is a `renderWidget` call with the price changed (`render.test.mjs` has the same test on a test widget). Put a widget's render tests in `scripts/qa/render/widgets/<name>.test.mjs`.
 
@@ -860,7 +879,7 @@ Page baselines hide widget regions ("What the screenshots hide" above), because 
 
 A theme change that restyles buttons or headings changes the self-test's baselines too: update them in the same commit and name `widget rf-selftest` on the `Baselines:` line.
 
-**Fixture pages** (`render/pages/<name>/`, from ticket 31) are widget folders whose fixture renders a real page template round an empty widget (`"page"`, with the page's context in `"page_context"`), so a spec can shoot what that page shows from fixed data, where the live page is masked or the store has no such page yet. `widget-page.mjs` exports the folder as `PAGE_FIXTURES`, and nothing syncs it. `widget-screens.spec.mjs` doesn't shoot them: each has its own `*-screens.spec.mjs` (`card-grid`'s is `card-screens.spec.mjs`, `category-page`'s `category-screens.spec.mjs`, `hook-chart-page`'s `hook-chart-screens.spec.mjs`), which shoots its cases, and its baselines take the widget shots' names and rules, declared as `widget <name>`. The baseline-scope check reads each folder's name as an owner, and `widget-baselines.test.mjs` and `check-baseline-scope.test.mjs` count every case, so a fixture page's cases are all shot cases.
+**Fixture pages** (`render/pages/<name>/`, from ticket 31) are widget folders whose fixture renders a real page template round an empty widget (`"page"`, with the page's context in `"page_context"`), so a spec can shoot what that page shows from fixed data, where the live page is masked or the store has no such page yet. `widget-page.mjs` exports the folder as `PAGE_FIXTURES`, and nothing syncs it. `widget-screens.spec.mjs` doesn't shoot them: each has its own `*-screens.spec.mjs` (`card-grid`'s is `card-screens.spec.mjs`, `category-page`'s `category-screens.spec.mjs`, `hook-chart-page`'s `hook-chart-screens.spec.mjs`, `cart-page`'s `cart-screens.spec.mjs`), which shoots its cases, and its baselines take the widget shots' names and rules, declared as `widget <name>`. The baseline-scope check reads each folder's name as an owner, and `widget-baselines.test.mjs` and `check-baseline-scope.test.mjs` count every case, so a fixture page's cases are all shot cases.
 
 ### Widget layout specs
 
@@ -1124,6 +1143,7 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - `card-screens.spec.mjs` (ticket 31) runs with `qa:screens` too, for the same reason; `card.spec.mjs` runs only when named, like the specs below.
 - `category-screens.spec.mjs` (ticket 32) runs with `qa:screens` too; `category.spec.mjs` runs only when named.
 - `hook-chart-screens.spec.mjs` (ticket 35) runs with `qa:screens` too.
+- `cart-screens.spec.mjs` (ticket 41) runs with `qa:screens` too, for the same reason.
 - `header.spec.mjs` (ticket 27), `menu.spec.mjs` (ticket 28), `rail.spec.mjs` (ticket 29) and `quick-search.spec.mjs` (ticket 30) run only when named, like `skin.spec.mjs`: no npm script's filter matches them. The first three wait for their scripts with `chunkLoaded` from `states.mjs`; `quick-search.spec.mjs` waits until quick-search.js has added each search form's dropdown.
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
 - `storefront.test.mjs` also covers `QA_PORT`, the start log's name, the locks a gate holds (and the ports checked again after a slot wait), trusting only the server a gate started, and stopping that server when the gate is stopped by a signal. `playwright-config.test.mjs` covers that the config reads `QA_PORT` and holds the locks only in the runner, `prepush.test.mjs` what `qa:prepush` checks before its first gate, `serve.test.mjs` the locks around a `stencil start` by hand, and `scripts/lib/lock.test.mjs` the locks themselves: the stale rules, waiting, the three slots across processes, the signals, `RF_LOCK_ROOT`, and the command line `release.sh` uses.
