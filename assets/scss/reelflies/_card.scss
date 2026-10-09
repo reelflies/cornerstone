@@ -201,6 +201,6 @@
 // In stock's product carousel (related products, until ticket 39's grid replaces it), room under
 // the actions for the carousel's 15px dots, which need a 24px circle clear of other targets (axe
 // target-size); without it the pills ended 3px above them.
-.productCarousel .rf-card-actions {
+.productCarousel .rf-card .card-figcaption.rf-card-actions {
     margin-bottom: 16px;
 }
