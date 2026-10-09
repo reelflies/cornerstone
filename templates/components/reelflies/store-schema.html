@@ -20,11 +20,12 @@
       which the raw-HTML assertion store-schema checks the rule against.
     - Not here until Shaun has them: logo (ticket 14's master, at least 112x112; decision 17)
       and hasMerchantReturnPolicy (decision 10). store-schema fails a page that has either.
+    - The blocks are data a browser never runs, so they carry no nonce (stock schema.html's don't).
     - Each string goes through json-string.html. Inside a page's {{#partial "page"}} block @root
       is empty, but theme_settings, social_media and currency_selector are the page's own context.
 --}}
 {{~#all (trim theme_settings.rf_store_name) (trim theme_settings.rf_store_url)~}}
-<script type="application/ld+json" nonce="{{nonce}}" data-rf-store-schema="website">
+<script type="application/ld+json" data-rf-store-schema="website">
 {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -34,7 +35,7 @@
     "publisher": { "@id": {{> components/reelflies/json-string rf_value=(add (trim theme_settings.rf_store_url) '#store')}} }
 }
 </script>
-<script type="application/ld+json" nonce="{{nonce}}" data-rf-store-schema="store" data-rf-ship-free-threshold="{{trim theme_settings.rf_ship_free_threshold}}">
+<script type="application/ld+json" data-rf-store-schema="store" data-rf-ship-free-threshold="{{trim theme_settings.rf_ship_free_threshold}}">
 {
     "@context": "https://schema.org",
     "@type": "OnlineStore",

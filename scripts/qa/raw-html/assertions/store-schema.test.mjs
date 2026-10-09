@@ -85,6 +85,14 @@ describe('store-schema', () => {
         ]);
     });
 
+    it('fails a store telephone that isn\'t the number the footer dials (the store profile\'s), however each is typed', async () => {
+        assert.deepEqual(await problems(home({ rf_store_phone: '+1-866-250-4000' })), [
+            'the OnlineStore\'s telephone +1-866-250-4000 isn\'t the number the footer dials, tel:+18662504071: rf_store_phone and the store profile\'s phone number must be one number',
+        ]);
+        assert.deepEqual(await problems(home({ rf_store_phone: '+1 (866) 250.4071' })), []);
+        assert.deepEqual(await problems(page(await schema({ rf_store_phone: '+1-866-250-4000' }))), [], 'no footer phone, nothing to compare');
+    });
+
     it('fails a WebSite and an OnlineStore that disagree on the URL, or a publisher that isn\'t the store', async () => {
         const html = await edited((which, data) => (which === 'website'
             ? { ...data, url: 'https://reelflies.com/', publisher: { '@id': 'https://reelflies.com/#store' } }

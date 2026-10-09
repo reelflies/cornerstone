@@ -2,7 +2,9 @@
 // R10, SEO-9), as components/reelflies/store-schema.html renders it:
 // - On the home page, exactly one WebSite block and one OnlineStore block, naming the same URL,
 //   the WebSite published by the store. On every other page, neither: they're the home page's.
-// - The OnlineStore with its telephone and every address line (stories 65 and 75).
+// - The OnlineStore with its telephone and every address line (stories 65 and 75). Its telephone
+//   (rf_store_phone) is the number the footer dials (the store profile's), digit for digit,
+//   whenever the footer shows one: the markup names the phone a shopper sees.
 // - sameAs exactly the footer's social row, in order, whenever the footer shows one: both come
 //   from ReelFlies' social set (social-keep.html and rf_store_same_as; ticket 50's note).
 // - The free-shipping rule exactly when the store block declares a threshold
@@ -58,13 +60,24 @@ const hasKey = (value, key) => {
     return Object.keys(value).some(name => name === key || hasKey(value[name], key));
 };
 
+const footerOf = html => elementsHtml(html, 'footer', attrs => 'data-rf-footer' in attrs)[0];
+
 // The footer's social row: each link's href, in order, or null when the footer shows no row.
 function footerSocial(html) {
-    const footer = elementsHtml(html, 'footer', attrs => 'data-rf-footer' in attrs)[0];
+    const footer = footerOf(html);
     const row = footer && elementsHtml(footer, 'ul', attrs => (attrs.class || '').split(/\s+/).includes('socialLinks'))[0];
     if (!row) return null;
     return findTags(row, 'a').map(tag => decodeHtml(tag.attrs.href || '').trim()).filter(Boolean);
 }
+
+// The number the footer's Contact column dials (the store profile's, settings.phone_number), as
+// its tel: href, or null when the footer shows no phone.
+function footerPhone(html) {
+    const footer = footerOf(html);
+    const link = footer && findTags(footer, 'a').find(tag => /^tel:/i.test(decodeHtml(tag.attrs.href || '').trim()));
+    return link ? decodeHtml(link.attrs.href).trim() : null;
+}
+const digits = value => String(value).replace(/\D/g, '');
 
 // A condition of the rule: free (rate 0) to `country`, on orders from `amount`, in one currency.
 const freeFrom = (condition, country, amount) => {
@@ -93,7 +106,12 @@ function shippingProblems(store, attrs) {
 function storeProblems(store, attrs, html) {
     const problems = [];
     if (!text(store.name)) problems.push('the OnlineStore block has no name (rf_store_name)');
-    if (!text(store.telephone)) problems.push('the OnlineStore block has no telephone (rf_store_phone)');
+    const dialled = footerPhone(html);
+    if (!text(store.telephone)) {
+        problems.push('the OnlineStore block has no telephone (rf_store_phone)');
+    } else if (dialled && digits(store.telephone) !== digits(dialled)) {
+        problems.push(`the OnlineStore's telephone ${text(store.telephone)} isn't the number the footer dials, ${dialled}: rf_store_phone and the store profile's phone number must be one number`);
+    }
     if (!isType(store.address || {}, 'PostalAddress')) {
         problems.push('the OnlineStore block has no PostalAddress (rf_store_street and the other address lines)');
     } else {
@@ -113,7 +131,7 @@ function storeProblems(store, attrs, html) {
 export default {
     id: 'store-schema',
     ticket: 40,
-    description: 'the home page has one WebSite and one OnlineStore block (address, phone, sameAs as the footer\'s social row, the free-shipping rule), and no page has them but home; no logo or return policy yet',
+    description: 'the home page has one WebSite and one OnlineStore block (address, phone as the footer dials it, sameAs as the footer\'s social row, the free-shipping rule), and no page has them but home; no logo or return policy yet',
     check(page) {
         const parsed = blocks(page.html);
         const problems = parsed.some(block => hasKey(block.data, 'hasMerchantReturnPolicy'))

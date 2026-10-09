@@ -34,6 +34,13 @@ const store = async (...args) => byType(await render(...args), 'OnlineStore')[0]
 const homePage = html => ({
     kind: 'home', key: 'home', path: '/', url: 'http://localhost:3801/', status: 200, html,
 });
+// What stencil-cli 9.1.0 does to every page `stencil start` serves (server/plugins/renderer/
+// responses/pencil-response.js:65-72): it removes the channel's base_url and secure_base_url
+// wherever they appear. Channel 1's is https://reelflies.ca, rf_store_url's host, and from the
+// Flip 1895766's is too.
+const escapeRegex = text => text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+const stencilServes = (html, host) => [`http://${host}`, `https://${host}`]
+    .reduce((served, url) => served.replace(new RegExp(escapeRegex(url), 'g'), ''), html);
 
 const SHIPPING = {
     '@type': 'ShippingService',
@@ -87,6 +94,17 @@ describe('the store schema on ReelFlies CA (1895766)', () => {
             sameAs: LINKS,
             hasShippingService: SHIPPING,
         });
+    });
+
+    it('keeps every URL when stencil start strips the channel\'s own URL from the page, so a local run reads what the live page says', async () => {
+        const cases = [['ReelFlies CA', 'reelflies.ca'], ['ReelFlies CA channel 1', 'reelflies.ca'], ['ReelFlies US', 'reelflies.com']];
+        await Promise.all(cases.map(async ([variation, host]) => {
+            const html = await render({}, {}, variation);
+            const served = stencilServes(html, host);
+            assert.deepEqual(blocks(served), blocks(html), variation);
+            assert.equal(byType(served, 'WebSite')[0].url, `https://${host}/`, variation);
+            assert.deepEqual(storeSchema.check(homePage(served)), [], variation);
+        }));
     });
 
     it('declares the threshold it was given on the store block, for the raw-HTML assertion', async () => {
