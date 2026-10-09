@@ -102,12 +102,12 @@ export const CHANNELS = {
         // letting its cards into a shot. The search pin's result counts (its heading and both
         // tabs) change with the catalogue too. The tabs by role: stock search.js swaps the
         // active tab's navBar-action class. The listing's count (ticket 33's row) changes with
-        // the catalogue too.
+        // the catalogue too. The brand pin's row names the page ("Page 1": a brand's context has
+        // no total, ticket 36), which holds still, so it stays in the shot.
         mask: {
             category: ['[data-rf-list-count]'],
             'category@more': ['[data-rf-list-count]'],
             'category@noindex': ['[data-rf-list-count]'],
-            brand: ['[data-rf-list-count]'],
             search: ['.page-heading', '[data-search-page-tabs] [role="tab"]'],
             // The tiles' counts and the grid's (ticket 34) follow the catalogue.
             'species-hub': ['[data-rf-hub-count]'],

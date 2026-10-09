@@ -11,12 +11,13 @@
 //   no pager.
 // - On both: one H1, the brand's name; a full page of brandpage_products_per_page (24) cards when
 //   the brand has a next page, and the stock numbered pager of <a href> links, which leads to page
-//   2 (story 26); nothing scrolling sideways at 320; the first row of products within the first
-//   screen at 1366x768.
+//   2 (story 26), with focus then on the row, which names the page (story 68); nothing scrolling
+//   sideways at 320; the first row of products within the first screen at 1366x768.
 // - Browsing as a regular Chrome, since BigCommerce sends a bot no facet items: the Fly Sizes pills
 //   in hook order with BigCommerce's own anchors, and, at 1280, a size picked refreshing the
-//   listing in place through stock brand.js and ticket 36's listing (story 23). Where the brand's
-//   facet has no items (1895766, with no products) they skip; the fixture page checks the pills.
+//   listing in place through stock brand.js and ticket 36's listing, and the row's page announced
+//   (stories 23 and 68). Where the brand's facet has no items (1895766, with no products) they
+//   skip; the fixture page checks the pills.
 //
 // It runs only when named, like category.spec.mjs: no npm script's filter matches it.
 //
@@ -79,7 +80,7 @@ test('one H1, the brand\'s name, in the listing header: the banner when the bran
     expect((await worstContrastOverPhoto(page, '.rf-listing-title')).ratio, 'the H1 over the banner').toBeGreaterThanOrEqual(4.5);
 });
 
-test('a full page of 24 cards and the stock numbered pager of <a href> links, which leads to page 2 (UX-7; story 26)', async ({ page, request }) => {
+test('a full page of 24 cards and the stock numbered pager of <a href> links, which leads to page 2, with focus on the row (UX-7; stories 26 and 68)', async ({ page, request }) => {
     const data = await context(request);
     const { brand, pagination } = data;
     await open(page);
@@ -109,6 +110,10 @@ test('a full page of 24 cards and the stock numbered pager of <a href> links, wh
     await expect(page.locator('.rf-listing-header h1')).toHaveText(brand.name);
     await expect(page.locator('#product-listing-container nav.pagination .pagination-item--current')).toHaveText(/2/);
     expect(await page.locator('#product-listing-container .productGrid .card').count()).toBeGreaterThan(0);
+    // The link used is gone with the refresh, so size-filter.js puts focus on the row, which a
+    // brand's names by its page, having no total (story 68).
+    await expect(page.locator('[data-rf-list-count]')).toHaveText('Page 2');
+    await expect.poll(() => page.evaluate(() => document.activeElement?.matches('[data-rf-list-count]')), 'focus on the row').toBe(true);
 });
 
 // BigCommerce sends no facet items to a client it takes for a bot: curl, and headless Chromium,
@@ -135,7 +140,7 @@ test.describe('the Fly Sizes pills, as a regular browser sees them (story 23)', 
         await expect(page.locator('.rf-size-help a')).toHaveAttribute('href', '/fly-hook-size-chart/');
     });
 
-    test('a size picked refreshes the listing in place: that pill current, the pills still in hook order, cards and the row, focus on the size', async ({ page, request, userAgent }, testInfo) => {
+    test('a size picked refreshes the listing in place: that pill current, the pills still in hook order, cards and the row, focus on the size, and the row\'s page announced', async ({ page, request, userAgent }, testInfo) => {
         test.skip(phone(testInfo), 'the facets are behind Filter on phones; the fixture page checks Filter');
         const { brand } = await context(request, userAgent);
         const sizes = (brand.facets || []).find(facet => facet.facet === SIZE_FACET);
@@ -152,6 +157,7 @@ test.describe('the Fly Sizes pills, as a regular browser sees them (story 23)', 
         expect([...labels].sort((a, b) => hookRank(a) - hookRank(b)), `${labels.join(', ')} in hook order after the refresh`).toEqual(labels);
         await expect(page.locator('.rf-listing-header h1')).toHaveText(brand.name);
         await expect(page.locator('#product-listing-container .rf-list-top')).toHaveCount(1);
+        await expect(page.locator('[data-rf-live-region]')).toHaveText('Page 1');
         const cards = await page.locator('#product-listing-container .productGrid .card').count();
         expect(cards).toBeGreaterThan(0);
         expect(cards).toBeLessThanOrEqual(24);

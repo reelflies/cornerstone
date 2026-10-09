@@ -184,6 +184,11 @@ describe('the screenshot stylesheet (W0-5)', () => {
         assert.ok(masksFor('1', 'search').includes('[data-search-page-tabs] [role="tab"]'));
     });
 
+    it('masks the category pins\' count, which the catalogue sets, and not the brand pin\'s row, which names the page (ticket 36)', () => {
+        for (const pin of ['category', 'category@more', 'category@noindex']) assert.ok(masksFor('1', pin).includes('[data-rf-list-count]'), pin);
+        assert.ok(!masksFor('1', 'brand').includes('[data-rf-list-count]'));
+    });
+
     it('holds channel 1\'s search page\'s "Did you mean" panel, whose categories the catalogue sets (ticket 31)', () => {
         const css = rules(screenshotStyle('1', 'search'));
         assert.equal(css.get('.page-content > .panel')?.height, '360px !important');

@@ -22,6 +22,15 @@ const FIXTURES = path.join(THEME_DIR, 'scripts/qa/render/pages/brand-page/fixtur
 const fixture = name => JSON.parse(fs.readFileSync(path.join(FIXTURES, `${name}.json`), 'utf8')).page_context;
 const BANNER = fixture('banner');
 const EMPTY = fixture('empty');
+// The banner case on page `n` of its pagination window, as the store sends a later page.
+const onPage = n => ({
+    ...BANNER,
+    pagination: {
+        brand: {
+            ...BANNER.pagination.brand, current: n, previous: `/brands/ReelFlies.html?page=${n - 1}`, next: `/brands/ReelFlies.html?page=${n + 1}`,
+        },
+    },
+});
 
 // The brand page: `brand` lays fields over the banner case's brand.
 const page = (brand = {}, { context = BANNER, regions } = {}) => renderPartial('pages/brand', {
@@ -79,8 +88,16 @@ describe('the page (components/reelflies/brand-page.html)', () => {
         const html = await page({}, { regions: { brand_below_header: '<p data-rf-test-intro>Intro</p>', brand_below_content: '<p data-rf-test-below>Below</p>' } });
         const after = html.slice(html.indexOf(header(html)) + header(html).length);
         assert.match(after, /^\s*<div data-content-region="brand_below_header"><p data-rf-test-intro>Intro<\/p><\/div>\s*<div class="page rf-listing-page rf-brand-listing">/);
-        const main = outerHtml(html, 'main', () => true);
-        assert.ok(main.indexOf('data-rf-test-below') > main.indexOf('productGrid'), 'below the grid, inside <main>');
+    });
+
+    it('keeps brand_below_content out of <main>, which stock brand.js empties on every filter, sort or page refresh, in a .page-region after it, as the category page does', async () => {
+        for (const [name, html] of [['with products', await page({}, { regions: { brand_below_content: '<p data-rf-test-below>Below</p>' } })], ['with stock\'s search error', await page({ search_error: true }, { regions: { brand_below_content: '<p data-rf-test-below>Below</p>' } })]]) {
+            const main = outerHtml(html, 'main', () => true);
+            assert.doesNotMatch(main, /brand_below_content|data-rf-test-below/, `${name}: not inside <main>`);
+            const pageDiv = outerHtml(html, 'div', attrs => attrs.class === 'page rf-listing-page rf-brand-listing');
+            const after = pageDiv.slice(pageDiv.indexOf(main) + main.length);
+            assert.match(after, /^\s*<div class="page-region">\s*<div data-content-region="brand_below_content"><p data-rf-test-below>Below<\/p><\/div>\s*<\/div>\s*<\/div>$/, `${name}: right after </main>, in the page`);
+        }
     });
 
     it('keeps stock\'s one <main>, the listing\'s, beside the facet sidebar, in the page ticket 33\'s phone rules key on', async () => {
@@ -145,10 +162,30 @@ describe('the listing (components/reelflies/brand-listing.html)', () => {
         });
     }
 
-    it('prints no count while there are products: BigCommerce gives a brand page no total, and a count of one page would be wrong', async () => {
+    it('names the page in the row while there are products, on the page and in the refresh: BigCommerce gives a brand page no total, and a count of one page would be wrong', async () => {
         assert.equal(BANNER.brand.total_products, undefined, 'the fixture has no total, as channel 1\'s brand context');
-        assert.equal(count(await page()), '');
-        assert.equal(count(await refresh()), '');
+        assert.equal(count(await page()), 'Page 1');
+        assert.equal(count(await refresh()), 'Page 1');
+        assert.equal(count(await page({}, { context: onPage(2) })), 'Page 2');
+        assert.equal(count(await refresh({}, onPage(2))), 'Page 2');
+    });
+
+    // size-filter.js focuses the count when the control the shopper used is gone (a page link,
+    // Clear filters, an applied filter removed), and announces it after every other refresh, so
+    // an empty count would be focused with nothing to read, and announce nothing (story 68).
+    it('never leaves the count empty while there are products: on any page, with a size applied, after a sort, with filtering off', async () => {
+        const sized = { selected: { items: [{ facet: 'Fly Sizes', title: '14', url: 'https://reelflies.ca/reelflies-2/?_bc_fsnf=1' }], remove_all_url: 'https://reelflies.ca/reelflies-2/?_bc_fsnf=1' } };
+        const cases = [
+            ['page 1', BANNER, {}], ['page 3', onPage(3), {}], ['a size applied', BANNER, sized], ['a size applied, page 2', onPage(2), sized],
+            ['sorted by price', { ...BANNER, pagination: { brand: { ...BANNER.pagination.brand, sort: 'priceasc' } } }, {}],
+            ['filtering off', BANNER, { faceted_search_enabled: false, facets: [] }], ['no image', BANNER, { image: null }],
+        ];
+        for (const [name, context, brand] of cases) {
+            for (const [where, html] of [['the page', await page(brand, { context })], ['the refresh', await refresh(brand, context)]]) { // eslint-disable-line no-await-in-loop
+                assert.ok(cardImages(html).length > 0, `${name}, ${where}: has products`);
+                assert.match(count(html), /\S/, `${name}, ${where}: the count says something`);
+            }
+        }
     });
 
     it('prints the count if the context ever has a total, as a category\'s does', async () => {

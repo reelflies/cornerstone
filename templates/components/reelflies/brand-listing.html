@@ -6,10 +6,12 @@
     numbered pager, lines 3-13 of 6.22.0's file) with ticket 33's row and empty states, as the
     category listing has them:
 
-    - Ticket 33's row (listing-top.html) above the grid: Filter on phones and the brand's own sort.
-      A brand's context has no total (BigCommerce gives brand pages none: channel 1's brand
-      context, 2026-10-09), so the row prints no count while there are products; a count of one
-      page's cards would be wrong.
+    - Ticket 33's row (listing-top.html) above the grid: the page, Filter on phones and the
+      brand's own sort. A brand's context has no total (BigCommerce gives brand pages none:
+      channel 1's brand context, 2026-10-09), and a count of one page's cards would be wrong, so
+      the row names the page instead ("Page 2", from the pagination's current page, which the
+      store sends with one page too). size-filter.js focuses or announces that text after a
+      refresh (story 68).
     - The grid and stock's numbered pager of <a href> links, 24 a page
       (brandpage_products_per_page, which pages/brand.html's front matter reads).
     - With no products: stock's search error, or ticket 33's empty states (listing-empty.html),
@@ -24,7 +26,7 @@
 --}}
 {{assignVar 'rf_listing_sidebar' 1}}
 {{#if brand.products}}
-    {{> components/reelflies/listing-top category=brand rf_sort=pagination.brand.sort}}
+    {{> components/reelflies/listing-top category=brand rf_sort=pagination.brand.sort rf_count=(lang 'reelflies.brand.page' page=pagination.brand.current)}}
 
     <div data-list-name="Brand: {{brand.name}}">
         {{#if theme_settings.product_list_display_mode '===' 'grid'}}

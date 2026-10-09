@@ -13,6 +13,10 @@
 //   the plain header, and the first card holds the page's one fetchpriority="high".
 // - Ticket 33's pills in hook order once size-filter.js has run, from the API's order; Filter on
 //   phones; the empty state's message and Clear filters, with focus left alone.
+// - After a refresh in place, as stock brand.js makes one (story 68): a page link's sends focus to
+//   the row, which names the new page ("Page 2") in a box that shows, and a size picked at 1280
+//   sends it back to the pill and announces the row's page. A brand's context has no total, and
+//   an empty row would take focus with nothing to read.
 // - The first row of products starts within the first screen at 375x667 and shows whole at
 //   1366x768; nothing scrolls sideways at 320; axe finds no serious or critical issue.
 //
@@ -27,7 +31,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { QA_OVERLAY, QA_VARIATION, slug } from './storefront.mjs';
-import { widgetCases } from './render/render.mjs';
+import { renderPartial, widgetCases } from './render/render.mjs';
 import { PAGE_FIXTURES, openWidget } from './render/widget-page.mjs';
 import { worstContrastOverPhoto } from './render/photo-contrast.mjs';
 import { themeScript } from './render/theme-script.mjs';
@@ -143,6 +147,59 @@ test('puts the Fly Sizes pills in hook order, from the API\'s order, with Filter
     } else {
         await expect(page.locator('[data-rf-filter-button]')).toBeHidden();
     }
+});
+
+// A refresh in place, as stock brand.js:52 makes one after a facet, sort or page link: the
+// listing's contents replaced with the store's render of brand/product-listing (here the theme's,
+// on the fixture's context at `pagination`), then the sidebar's, in one task. size-filter.js then
+// focuses the row's count when the control used is gone, or announces it.
+async function refreshInPlace(page, fixture, pagination) {
+    const context = fixture.fixture.page_context;
+    const listing = await renderPartial('components/brand/product-listing', {
+        brand: context.brand, pagination: { brand: pagination }, theme_settings: context.theme_settings,
+    }, { variation: QA_VARIATION });
+    await page.evaluate(html => {
+        document.getElementById('product-listing-container').innerHTML = html;
+        const sidebar = document.getElementById('faceted-search-container');
+        sidebar.innerHTML = sidebar.innerHTML; // eslint-disable-line no-self-assign
+    }, listing);
+}
+// A facet or page link clicked as the shopper's: stock's hook cancels the navigation, as this does.
+async function clickInPlace(link) {
+    await link.evaluate(element => element.addEventListener('click', event => event.preventDefault(), { once: true }));
+    await link.click();
+}
+const focusedText = page => page.evaluate(() => {
+    const element = document.activeElement;
+    const box = element.getBoundingClientRect();
+    return {
+        count: element.matches('[data-rf-list-count]'), text: element.textContent.trim(), width: box.width, height: box.height,
+    };
+});
+
+test('after a page link refreshes the listing in place, focus goes to the row, which names the new page in a box that shows (story 68)', async ({ page }) => {
+    const fixture = byName('banner');
+    await open(page, fixture);
+    await expect(page.locator('[data-rf-list-count]')).toHaveText('Page 1');
+    const { brand } = fixture.fixture.page_context.pagination;
+    await clickInPlace(page.locator('nav.pagination .pagination-item:not(.pagination-item--next) a', { hasText: /^\s*2\s*$/ }));
+    await refreshInPlace(page, fixture, {
+        ...brand, current: 2, previous: brand.links[0].url, next: brand.links[2].url,
+    });
+    await expect.poll(() => focusedText(page)).toMatchObject({ count: true, text: 'Page 2' });
+    const { width, height } = await focusedText(page);
+    expect(width * height, 'the focus ring has a box to go round').toBeGreaterThan(0);
+});
+
+test('after a size is picked, focus goes back to its pill and the row\'s page is announced, never an empty message (story 68)', async ({ page }, testInfo) => {
+    test.skip(phone(testInfo), 'the pills are behind Filter on phones; the page link\'s check covers the count there');
+    const fixture = byName('banner');
+    await open(page, fixture);
+    const pill = page.locator('#facetedSearch .rf-size-pill', { hasText: /^\s*14\s*$/ });
+    await clickInPlace(pill);
+    await refreshInPlace(page, fixture, fixture.fixture.page_context.pagination.brand);
+    await expect.poll(() => focusedText(page)).toMatchObject({ count: false, text: '14' });
+    await expect(page.locator('[data-rf-live-region]')).toHaveText('Page 1');
 });
 
 test('when filters match nothing: the message, Clear filters, and the pills still there, with focus left alone (story 25)', async ({ page }, testInfo) => {

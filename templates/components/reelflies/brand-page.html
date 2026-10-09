@@ -17,7 +17,9 @@
       components/reelflies/brand-listing.html): ticket 33's row, the card grid, the numbered pager
       and the empty states. The page carries rf-listing-page, which ticket 33's phone rules
       (_facets.scss) key on, and rf-brand-listing, for its one rule of its own (_brand.scss).
-    - Stock's search error in place of the listing, and the brand_below_content region after it.
+    - Stock's search error in place of the listing, and the brand_below_content region after
+      <main>, in a .page-region as on the category page: stock brand.js replaces <main>'s contents
+      on every filter, sort or page refresh, which would take a widget there with it.
 
     Inside a page's {{#partial "page"}} block @root is empty: this reads the page's own context,
     and passes what each partial needs as hash arguments.
@@ -35,7 +37,10 @@
             <p>{{lang 'search.errorMessage'}}</p>
         {{else}}
             {{> components/brand/product-listing}}
-            {{{region name="brand_below_content"}}}
         {{/if}}
     </main>
+
+    <div class="page-region">
+        {{{region name="brand_below_content"}}}
+    </div>
 </div>

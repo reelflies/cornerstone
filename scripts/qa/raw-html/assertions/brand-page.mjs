@@ -11,8 +11,11 @@
 // The canonical is the store's (its head meta tags), not the theme's: one-canonical checks there is
 // exactly one. On 2026-10-09 it was /reelflies-2/, brand 411's own URL, on both channels, though
 // 1895766's breadcrumb names the /brands/ReelFlies.html alias the pin asks for, so the theme can't
-// tell the brand's own URL from the page. card-images checks the cards' photos and the page's one fetchpriority; size-filter the pills'
-// help link and the empty states; facet-links the facets' anchors.
+// tell the brand's own URL from the page.
+//
+// The other assertions check the rest of the page: card-images the cards' photos and the page's
+// one fetchpriority, size-filter the pills' help link and the empty states, and facet-links the
+// facets' anchors.
 
 import { findTags, markupOnly } from '../html.mjs';
 import { hasClass, listingHeader, listingHeaderProblems } from './category-page.mjs';
