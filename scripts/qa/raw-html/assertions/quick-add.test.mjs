@@ -49,3 +49,12 @@ test('fails a card Quick view beside "+ Add", "+ Add" on a sold-out card or a pr
     assert.match(problems(`${good}<dialog data-rf-qa-panel></dialog>`), /panel is in the server HTML/);
     assert.match(problems(`${good}<a href="/x/" data-rf-quick-add="1">Add</a>`), /1 "\+ Add" outside a card/);
 });
+
+test('fails stock\'s Add to Cart on a card beside "+ Add": a card with no options links to its page while quick add is on (criterion 4)', async () => {
+    const good = await grid(true);
+    const add = '<a href="https://reelflies.ca/cart.php?action=add&amp;product_id=5879" data-event-type="product-click" data-button-type="add-cart" class="button button--small card-figcaption-button">Add to Cart</a>';
+    const row = good.match(/<a href="https:\/\/reelflies\.ca\/42-ch-bow-river-streamers\/"[^>]*class="button button--small card-figcaption-button"[^>]*>[\s\S]*?<\/a>/);
+    assert.ok(row, 'the card with no options links to its page');
+    assert.match(problems(good.replace(row[0], add)), /card 5879 has stock's Add to Cart beside "\+ Add"/);
+    assert.deepEqual(quickAdd.check(page(await grid(false))), [], 'with quick add off it is stock\'s');
+});

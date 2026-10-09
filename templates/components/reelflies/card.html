@@ -18,7 +18,9 @@
     - Quick add (ticket 43): quick-add-gate.html decides first whether the card gets "+ Add"
       (rf_qa_card); a card that does has no stock actions row, and with rf_quick_add on no card
       has a Quick view button, so Quick view's chunk never loads from a card (build pipeline 6.4,
-      the Quick view guard; ticket 45 measures it).
+      the Quick view guard; ticket 45 measures it). A listing card with no options links to its
+      product page ("View", rf_qa_page_link) where stock's Add to Cart would add and open the
+      cart (criterion 4).
 
     Port an upstream change to the stock card here: stock card.html is the reference.
 --}}
@@ -140,8 +142,12 @@
                     <a href="{{pre_order_add_to_cart_url}}" data-event-type="product-click" class="button button--small card-figcaption-button">{{lang 'products.pre_order'}}</a>
                 {{/if}}
                 {{#if add_to_cart_url }}
+                    {{#if (getVar 'rf_qa_page_link')}}
+                    <a href="{{url}}" data-event-type="product-click" class="button button--small card-figcaption-button" data-product-id="{{id}}">{{lang 'reelflies.quick_add.view'}}<span class="is-srOnly"> {{name}}</span></a>
+                    {{else}}
                     <a href="{{add_to_cart_url}}" data-event-type="product-click" data-button-type="add-cart" class="button button--small card-figcaption-button">{{lang 'products.add_to_cart'}}</a>
                     <span class="product-status-message aria-description--hidden">{{lang 'category.add_cart_announcement'}}</span>
+                    {{/if}}
                 {{/if}}
                 {{#if out_of_stock_message }}
                     <a href="{{url}}" data-event-type="product-click" class="button button--small card-figcaption-button" data-product-id="{{id}}">{{out_of_stock_message}}</a>

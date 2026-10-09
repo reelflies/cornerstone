@@ -9,6 +9,7 @@
 // - "+ Add": 40px tall, a 1px ink border and ink text, a pill; the full width of its card in the
 //   two-column phone grid, and as wide as its words, left-aligned, from 801px. Hover, and while
 //   its panel is open, it fills with ink. While its product loads it fades and its plus turns.
+//   Its focus ring is inside it, as the grid cell clips the card.
 // - The confirmation or error of a one-size add, under the button: 14px text, View cart a link.
 // - From 801px the panel is a 320px popover under the button, over the cards below it, with the
 //   floating shadow and no backdrop; it opens to the button's right edge when it would run off
@@ -64,6 +65,18 @@ $rf-qa-scrim: rgba(35, 39, 43, 0.45); // the reference's .qa-scrim
     &[aria-expanded="true"] {
         background: var(--rf-ink);
         color: var(--rf-paper);
+    }
+
+    // The focus ring inside the button: stock's grid cell (.productGrid .product) clips its card,
+    // and "+ Add" meets the cell's edges, so the skin's ring outside it would be cut off. On the
+    // ink fill (hover, or back on it from its open panel) the ring is paper.
+    &:focus-visible {
+        outline-offset: -4px !important;
+    }
+
+    &:hover:focus-visible,
+    &[aria-expanded="true"]:focus-visible {
+        outline-color: var(--rf-paper) !important;
     }
 
     &.is-busy {
@@ -230,10 +243,13 @@ $rf-qa-scrim: rgba(35, 39, 43, 0.45); // the reference's .qa-scrim
 .rf-qa-form {
     margin: 0;
 
-    // The sizes scroll inside the sheet when there are many
+    // The sizes scroll inside the sheet when there are many. The 4px of padding, taken back by
+    // the margin, is room for a pill's focus ring, which the scrolling box would cut off.
     .rf-qa-panel:modal & {
+        margin: -4px;
         max-height: 46vh;
         overflow: auto;
+        padding: 4px;
     }
 
     .rf-pills-field {

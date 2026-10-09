@@ -1,8 +1,9 @@
 {{!--
     Whether this card gets quick add's "+ Add" (ticket 43; spec module 14; stories 29, 32 and 35),
-    as the variable rf_qa_card, 1 or 0. components/reelflies/card.html includes it first, so the
-    button (quick-add-button.html, from card-extras.html) and the card's stock actions row read
-    the same answer.
+    as the variable rf_qa_card, 1 or 0, and whether a card with no options links to its product
+    page in place of stock's Add to Cart, as rf_qa_page_link, 1 or 0.
+    components/reelflies/card.html includes it first, so the button (quick-add-button.html, from
+    card-extras.html) and the card's stock actions row read the same answer.
 
     "+ Add" shows only when every one of these holds; otherwise the card keeps its stock actions:
     - rf_quick_add is on (Theme Styles, Quick add);
@@ -12,8 +13,11 @@
     - it isn't the product page: pages/product.html sets rf_product_page (ticket 38) before its
       related products, which ticket 39 may render through the grid;
     - the store shows cart actions for it (show_cart_action);
-    - it has options (has_options): a product with none, such as most Gear and an Assortment
-      with no size option, keeps the stock card's link (the ticket's open question, as drafted);
+    - it has options (has_options). A product with none, such as most Gear and an Assortment
+      with no size option, gets no "+ Add" and keeps a link to its product page: rf_qa_page_link
+      is 1 for it, and components/reelflies/card.html puts that link where stock's Add to Cart
+      (add_to_cart_url, which adds and opens the cart) would be (the ticket's open question, as
+      drafted; criterion 4);
     - it isn't sold out in every size: stock_level 0 shows ticket 31's sold-out badge instead
       (ticket 13's decision 1);
     - it isn't a pre-order, which keeps stock's "Pre-Order Now".
@@ -21,6 +25,7 @@
     (quick-add-route.js).
 --}}
 {{~assignVar 'rf_qa_card' 0~}}
+{{~assignVar 'rf_qa_page_link' 0~}}
 {{~#if theme_settings.rf_quick_add~}}
 {{~#if rf_listing~}}
 {{~#unless (getVar 'rf_product_page')~}}
@@ -29,6 +34,8 @@
 {{~#unless pre_order~}}
 {{~#if stock_level '!==' 0~}}{{~assignVar 'rf_qa_card' 1~}}{{~/if~}}
 {{~/unless~}}
+{{~else~}}
+{{~assignVar 'rf_qa_page_link' 1~}}
 {{~/if~}}
 {{~/if~}}
 {{~/unless~}}

@@ -4,8 +4,9 @@
 // - On (QA_CHANNEL=1 QA_OVERLAY=rf_quick_add-on, since channel 1's variation has it off; 1895766
 //   has it on, and no listing with products until refactor 14, so its tests skip there):
 //   - "+ Add" on exactly the cards quick-add-gate.html gives it, by the store's own
-//     ?debug=context (options, not sold out in every size, not a pre-order, a cart action), and
-//     no Quick view on any card; the card's full width at 375, its words' at 1280 (story 29).
+//     ?debug=context (options, not sold out in every size, not a pre-order, a cart action), no
+//     Quick view on any card, and no stock Add to Cart (a card with no options links to its page);
+//     the card's full width at 375, its words' at 1280 (story 29).
 //   - Royal Coachman Streamer (4831, several Fly Sizes, on the search pin): the panel with every
 //     size in the store's order and the sizes stock's answer leaves out marked sold out in words
 //     (story 30); the sheet modal at 375 (Tab kept in, Escape back on "+ Add"), the popover at
@@ -15,10 +16,14 @@
 //     cart." under the button and once in the live region, the header's count, rf:cart-changed
 //     (stories 32 and 34).
 //   - Fat Albert (5663, Colour and Fly Sizes): the product page.
-//   - After the listing is rendered again, and on page 2, "+ Add" still works.
+//   - After the listing is rendered again, and on page 2 (a card with several Fly Sizes), "+ Add"
+//     still opens the panel.
 //   - With scripts off, "+ Add" is a link to the product page (SCOPE-3).
-//   - The chunk loads on the category, noindex-category and search pins, and never on the home
-//     page, a product page or the cart (story 70).
+//   - The chunk loads on every listing pin (category, noindex-category, More from ReelFlies,
+//     search, and the brand listing and the Species hub once tickets 36 and 34 pin them), and never
+//     on the home page, a product page or the cart (story 70).
+//   - The listings checked card by card are the category, search, brand and Species-hub pins,
+//     each once its channel pins it.
 // - Off (channel 1's plain run): the stock card, with Quick view, no "+ Add" anywhere, and no
 //   rf-quick-add chunk (story 35).
 //
@@ -33,6 +38,7 @@ import AxeBuilder from '@axe-core/playwright';
 import {
     PAGES, SWITCH_VALUES, dismissCookieBanner, expect, storefrontPage, test,
 } from './fixtures.mjs';
+import { pageKind } from './pages.mjs';
 import { HEADERS, QA_CHANNEL, QA_OVERLAY } from './storefront.mjs';
 import { chunkLoaded } from './states.mjs';
 import { chunkRequested, withQuery } from './switches.mjs';
@@ -43,7 +49,12 @@ const ON = SWITCH_VALUES.rf_quick_add === true;
 const OVERLAY = QA_OVERLAY || null;
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
 const BUTTON = '[data-rf-quick-add]';
-const LISTINGS = ['category', 'search'].filter(key => PAGES[key]);
+// The listing pins whose cards these tests check: a Fly Type page (category), search results,
+// the ReelFlies brand listing (ticket 36's brand pin) and the Species hub (ticket 34's), each
+// once its channel pins it.
+const LISTINGS = ['category', 'search', 'brand', 'species-hub'].filter(key => PAGES[key]);
+// Every pin of a listing template, where the chunk loads with the switch on (page-modules.js).
+const LISTING_KINDS = new Set(['category', 'search', 'brand', 'species-hub', 'fly-type', 'species']);
 const SEVERAL = 4831; // Royal Coachman Streamer, on the search pin: several Fly Sizes
 const ONE = 5142; // Monster Streamer Rainbow Pike Fly, on the search pin: one Fly Size, 2/0
 const phone = testInfo => testInfo.project.name === 'phone-375';
@@ -56,7 +67,13 @@ async function context(request, pagePath) {
 
 // The cards quick-add-gate.html gives "+ Add", by the store's own data for the page.
 const gets = product => Boolean(product.has_options && product.show_cart_action && !product.pre_order && product.stock_level !== 0);
-const listed = data => (data.category && data.category.products) || (data.product_results && data.product_results.products) || [];
+// A listing's cards in its ?debug=context: category.products on a category template's page (a Fly
+// Type or Species page, and the Species hub, a custom category template), brand.products on the
+// brand listing, product_results.products on search results.
+const listed = data => (data.category && data.category.products) || (data.brand && data.brand.products) || (data.product_results && data.product_results.products) || [];
+// One option, Fly Sizes (ignoring case and spacing, as quick-add-route.js reads it), with several
+// values: the shape whose tap opens the panel.
+const severalSizes = options => options.length === 1 && options[0].display_name.toLowerCase().replace(/\s+/g, '') === 'flysizes' && options[0].values.length > 1;
 
 // Every request for an rf-quick-add chunk the page makes, from now on.
 function chunkRequests(page) {
@@ -112,6 +129,8 @@ test.describe('with rf_quick_add on', () => {
             const shown = (await page.locator(`.productGrid ${BUTTON}`).evaluateAll(list => list.map(link => link.getAttribute('data-rf-quick-add')))).sort(); // eslint-disable-line no-await-in-loop
             expect(shown, key).toEqual(expected);
             await expect(page.locator('.productGrid .quickview')).toHaveCount(0); // eslint-disable-line no-await-in-loop
+            // A card with no options links to its product page, never stock's Add to Cart (criterion 4).
+            await expect(page.locator('.productGrid .card [data-button-type="add-cart"]')).toHaveCount(0); // eslint-disable-line no-await-in-loop
             const sizes = await page.locator(`.productGrid ${BUTTON}`).evaluateAll(list => list.map(link => { // eslint-disable-line no-await-in-loop
                 const own = link.getBoundingClientRect();
                 const body = link.closest('.card-body').getBoundingClientRect();
@@ -203,7 +222,9 @@ test.describe('with rf_quick_add on', () => {
         await Promise.all([page.waitForURL(/\/fat-albert\/$/), button.click()]);
     });
 
-    test('after the listing renders again, and on page 2, "+ Add" still works (delegated)', async ({ page }) => {
+    test('after the listing renders again, and on page 2, "+ Add" still opens the panel (delegated)', async ({ page, request }) => {
+        // Two listings opened in full, and the store's data for page 2's cards: past the default 90 s.
+        test.setTimeout(240000);
         await openListing(page);
         // Stock's refresh replaces the listing's markup; the same here, from the page's own HTML.
         await page.evaluate(async () => {
@@ -215,29 +236,35 @@ test.describe('with rf_quick_add on', () => {
         await tap(page, SEVERAL);
         await expect(page.locator('[data-rf-qa-panel]')).toHaveJSProperty('open', true);
 
-        // Page 2 of whichever listing pin has one with "+ Add" on it.
-        let found = false;
+        // Page 2 of a listing pin, on a card whose product has several Fly Sizes and nothing else
+        // (its product page's ?debug=context), so the tap opens the panel.
+        let target = null;
         for (const key of LISTINGS) {
-            await storefrontPage(page, key, withQuery(PAGES[key], 'page=2')); // eslint-disable-line no-await-in-loop
-            if (await page.locator(BUTTON).count()) { // eslint-disable-line no-await-in-loop
-                found = true;
-                break;
+            const pagePath = withQuery(PAGES[key], 'page=2');
+            const candidates = listed(await context(request, pagePath)).filter(gets).slice(0, 8); // eslint-disable-line no-await-in-loop
+            for (const product of candidates) {
+                const { product: full } = await context(request, new URL(product.url, 'https://reelflies.ca').pathname); // eslint-disable-line no-await-in-loop
+                if (severalSizes(full.options || [])) {
+                    target = { key, pagePath, id: product.id };
+                    break;
+                }
             }
+            if (target) break;
         }
-        expect(found, 'a listing pin has a page 2 with "+ Add" on it').toBe(true);
+        expect(target, 'a listing pin has a page 2 with a card of several Fly Sizes on it').not.toBeNull();
+        await storefrontPage(page, target.key, target.pagePath);
         await dismissCookieBanner(page);
         await chunkLoaded(page, 'rf-quick-add');
-        const first = page.locator(BUTTON).first();
-        const id = await first.getAttribute('data-rf-quick-add');
-        const loaded = page.waitForRequest(request => request.url().includes(`/products.php?productId=${id}`));
-        await first.focus();
-        await page.keyboard.press('Enter');
-        await loaded;
+        const { button } = await tap(page, target.id);
+        await expect(page.locator('[data-rf-qa-panel]')).toHaveJSProperty('open', true);
+        await expect(button).toHaveAttribute('aria-expanded', 'true');
     });
 
-    test('the quick-add chunk loads on the listing pins only: never on the home page, a product page or the cart (story 70)', async ({ page }) => {
+    test('the quick-add chunk loads on every listing pin, with "+ Add" in its first render or not, and never on the home page, a product page or the cart (story 70)', async ({ page }) => {
+        // Every listing pin and three more pages, each opened in full: past the default 90 s.
+        test.setTimeout(240000);
         const requests = chunkRequests(page);
-        for (const key of ['category', 'category@noindex', 'search'].filter(name => PAGES[name])) {
+        for (const key of Object.keys(PAGES).filter(name => LISTING_KINDS.has(pageKind(name)))) {
             requests.length = 0;
             await storefrontPage(page, key); // eslint-disable-line no-await-in-loop
             await chunkLoaded(page, 'rf-quick-add'); // eslint-disable-line no-await-in-loop

@@ -106,6 +106,10 @@ test('"+ Add" is the card\'s full width at 375 and as wide as its words, left-al
     if (testInfo.project.name === 'phone-375') expect(Math.abs(buttonBox.width - bodyBox.width)).toBeLessThan(1);
     else expect(buttonBox.width).toBeLessThan(bodyBox.width / 2);
     expect(await button.evaluate(element => getComputedStyle(element).borderTopColor)).toBe('rgb(33, 39, 33)');
+    // Its focus ring is inside it: the grid cell clips the card, and "+ Add" meets its edges.
+    await page.keyboard.press('Tab');
+    await button.focus();
+    expect(await button.evaluate(element => [element.matches(':focus-visible'), getComputedStyle(element).outlineOffset])).toEqual([true, '-4px']);
 });
 
 test('the sheet (375) is modal: Tab stays inside it, Escape closes it, focus goes back to "+ Add" (story 67)', async ({ page }, testInfo) => {
@@ -113,6 +117,9 @@ test('the sheet (375) is modal: Tab stays inside it, Escape closes it, focus goe
     const button = await openPage(page);
     const dialog = await openPanel(page, button);
     const controls = await dialog.evaluate(element => element.querySelectorAll('a[href], button, input:not([type="hidden"])').length);
+    // The sizes scroll in the sheet: room for the first pill's ring, which the box would cut off.
+    expect(await dialog.evaluate(element => element.querySelector('[data-rf-pills="size"] label').getBoundingClientRect().left
+        - element.querySelector('.rf-qa-form').getBoundingClientRect().left)).toBeGreaterThanOrEqual(4);
     for (let step = 0; step < controls * 2 + 2; step += 1) {
         await page.keyboard.press(step % 3 === 2 ? 'Shift+Tab' : 'Tab'); // eslint-disable-line no-await-in-loop
         expect(await dialog.evaluate(element => element.contains(document.activeElement)), `focus inside the sheet after ${step + 1} presses`).toBe(true); // eslint-disable-line no-await-in-loop
@@ -125,7 +132,7 @@ test('the sheet (375) is modal: Tab stays inside it, Escape closes it, focus goe
     expect(await page.evaluate(() => document.documentElement.hasAttribute('data-rf-open'))).toBe(false);
 });
 
-test('the popover (1280) closes when Tab leaves it, with focus on the next control, never back on "+ Add"; Escape closes it onto "+ Add" (stories 67 and 68)', async ({ page }, testInfo) => {
+test('the popover (1280) closes when Tab leaves it, with focus on the next control, never back on "+ Add", and when Shift+Tab goes on past "+ Add"; Escape closes it onto "+ Add" (stories 67 and 68)', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-1280', 'the popover is the desktop\'s');
     const button = await openPage(page);
     let dialog = await openPanel(page, button);
@@ -147,6 +154,16 @@ test('the popover (1280) closes when Tab leaves it, with focus on the next contr
     await page.keyboard.press('Escape');
     await expect(page.locator('[data-rf-qa-panel]')).toHaveCount(0);
     await expect(button).toBeFocused();
+    // Shift+Tab back onto "+ Add" keeps it open; on past it, onto the card's title, closes it.
+    dialog = await openPanel(page, button);
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Shift+Tab');
+    await expect(button).toBeFocused();
+    await expect(page.locator('[data-rf-qa-panel]')).toHaveCount(1);
+    await page.keyboard.press('Shift+Tab');
+    await expect(page.locator('[data-rf-qa-panel]')).toHaveCount(0);
+    await expect(button).toHaveAttribute('aria-expanded', 'false');
+    expect(await page.evaluate(() => [document.activeElement.closest('.card-title') !== null, document.documentElement.hasAttribute('data-rf-open')])).toEqual([true, false]);
 });
 
 // In the panel and the cards' "+ Add": the fixture page's header has no store data (its logo

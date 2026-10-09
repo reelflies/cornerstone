@@ -60,7 +60,7 @@ function renderAll() {
 
 // Royal Coachman (4831) has several Fly Sizes and Red Devil (4804) is shown in the grid with
 // options; the products file gives 4831 four sizes, and the tests point Red Devil's button at the
-// others (one size, 6178; Colour and Fly Sizes, 5663; another option, 5879).
+// others (one size, 6178; Colour and Fly Sizes, 5663; another option, the synthetic 9101).
 const SIZES = 4831;
 const CONTEXT = {
     rfQuickAdd: true, rfQuickAddClose: 'Close', rfQuickAddFailed: 'We couldn\'t load the sizes.', rfQuickAddPage: 'Go to the product page', rfFlyBrands: 'ReelFlies', urls: { cart: '/cart.php' },
@@ -185,7 +185,8 @@ describe('a pattern with several sizes (story 30)', () => {
         const dialog = panel();
         expect(dialog.open).toBe(true);
         expect(link.closest('article').contains(dialog)).toBe(true);
-        expect(dialog.getAttribute('aria-labelledby')).toBe('rf-qa-title-4831');
+        expect(dialog.getAttribute('aria-label')).toBe('Choose sizes of Royal Coachman Streamer');
+        expect(dialog.hasAttribute('aria-labelledby')).toBe(false);
         const pills = Array.from(dialog.querySelectorAll('[data-rf-pills="size"] input[type="radio"]'));
         expect(pills.map(radio => radio.value)).toEqual(['301', '302', '303', '304']);
         expect(pills.map(radio => radio.getAttribute('aria-disabled'))).toEqual([null, 'true', null, null]);
@@ -275,6 +276,32 @@ describe('the desktop popover (801px and up)', () => {
         const link = buttonFor(SIZES);
         await tap(link);
         panel().querySelector('[data-rf-qa-close]').dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: link }));
+        expect(panel()).not.toBeNull();
+    });
+
+    it('closes when focus goes on back past its "+ Add", onto the card\'s title, leaving focus there', async () => {
+        start();
+        const link = buttonFor(SIZES);
+        await tap(link);
+        panel().querySelector('[data-rf-qa-close]').dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: link }));
+        link.focus();
+        expect(panel()).not.toBeNull();
+        const title = link.closest('article').querySelector('.card-title a');
+        link.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: title }));
+        title.focus();
+        expect(panel()).toBeNull();
+        expect(document.activeElement).toBe(title);
+        expect(link.getAttribute('aria-expanded')).toBe('false');
+        expect(document.documentElement.hasAttribute('data-rf-open')).toBe(false);
+        expect(link.closest('.product').classList.contains(HOST)).toBe(false);
+    });
+
+    it('stays open while focus moves from its "+ Add" into it', async () => {
+        start();
+        const link = buttonFor(SIZES);
+        await tap(link);
+        const close = panel().querySelector('[data-rf-qa-close]');
+        link.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: close }));
         expect(panel()).not.toBeNull();
     });
 
@@ -428,7 +455,7 @@ describe('a pattern with one size (stories 32 and 34)', () => {
 describe('any other shape of options', () => {
     it('goes to the product page: Colour and Fly Sizes (5663), and an option that isn\'t Fly Sizes', async () => {
         start();
-        for (const id of [5663, 5879]) {
+        for (const id of [5663, 9101]) {
             const link = cardFor(id);
             await tap(link); // eslint-disable-line no-await-in-loop
             expect(deps.navigate).toHaveBeenLastCalledWith(link.href);
@@ -445,6 +472,7 @@ describe('a product that fails to load', () => {
         await tap(link);
         const dialog = panel();
         expect(dialog.querySelector('.rf-qa-title').textContent).toBe('Product 1234');
+        expect(dialog.getAttribute('aria-labelledby')).toBe('rf-qa-title-1234');
         expect(dialog.querySelector('.rf-qa-failed').textContent).toBe('We couldn\'t load the sizes. Go to the product page');
         expect(dialog.querySelector('.rf-qa-failed a').getAttribute('href')).toBe(link.getAttribute('href'));
         expect(dialog.querySelector('[data-rf-qa-close] .is-srOnly').textContent).toBe('Close');

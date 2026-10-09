@@ -1,5 +1,5 @@
 {
-    "description": "Product contexts as getById renders quick-add-product.html with them (the product page's context, its `product`, trimmed to the keys the templates read), for ticket 43's render tests, its Jest spec and its fixture page. Fly Sizes values are channel 1's own for these patterns; the ids are made up.",
+    "description": "Product contexts as getById renders quick-add-product.html with them (the product page's context, its `product`, trimmed to the keys the templates read), for ticket 43's render tests, its Jest spec and its fixture page. Fly Sizes values are channel 1's own for these patterns; the option and value ids are made up. other-option is synthetic as a whole (product 9101, one option that isn't Fly Sizes): the live bulk selection, 5879, has no options.",
     "urls": { "cart": "/cart.php" },
     "products": {
         "sizes": {
@@ -81,9 +81,9 @@
             ]
         },
         "other-option": {
-            "id": 5879,
-            "title": "42 CH Bow River Streamers",
-            "url": "https://reelflies.ca/42-ch-bow-river-streamers/",
+            "id": 9101,
+            "title": "Fixture Streamer Selection",
+            "url": "https://reelflies.ca/fixture-streamer-selection/",
             "cart_url": "https://reelflies.ca/cart.php",
             "can_purchase": true,
             "category": ["Fly Selections & Fly Boxes"],

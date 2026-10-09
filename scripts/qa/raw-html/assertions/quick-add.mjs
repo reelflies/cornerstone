@@ -7,6 +7,8 @@
 //   view button: the switch that renders "+ Add" also takes Quick view off the cards (build
 //   pipeline 6.4's Quick view guard).
 // - No card sold out in every size (ticket 31's sold-out badge) has "+ Add".
+// - No card on a page with "+ Add" has stock's Add to Cart (add_to_cart_url, which adds and opens
+//   the cart): a card with no options links to its product page instead (criterion 4).
 // - Never on a product page, whose related cards keep their stock actions, and never a panel in
 //   the server HTML: quick-add.js builds it on a tap.
 //
@@ -39,9 +41,12 @@ export function quickAddProblems(html, { productPage = false } = {}) {
     for (const card of cardsOf(markup)) {
         const [article] = findTags(card, 'article');
         const own = findTags(card).filter(tag => MARKER in tag.attrs);
+        const id = article.attrs['data-entity-id'];
+        if (findTags(card, 'a').some(tag => tag.attrs['data-button-type'] === 'add-cart' || /cart\.php\?action=add/.test(decodeHtml(tag.attrs.href || '')))) {
+            problems.push(`card ${id} has stock's Add to Cart beside "+ Add", which adds and opens the cart: a card with no options links to its page while quick add is on`);
+        }
         if (!own.length) continue; // eslint-disable-line no-continue
         inCards += own.length;
-        const id = article.attrs['data-entity-id'];
         if (own.length > 1) problems.push(`card ${id} has ${own.length} "+ Add"`);
         if (own.some(tag => tag.attrs[MARKER] !== id)) problems.push(`card ${id}'s "+ Add" names another product`);
         const link = elementsHtml(card, 'a', attrs => MARKER in attrs)[0] || '';
@@ -60,7 +65,7 @@ export function quickAddProblems(html, { productPage = false } = {}) {
 export default {
     id: 'quick-add',
     ticket: 43,
-    description: 'every "+ Add" a link to its product in a card with no stock actions row, no card Quick view beside it, none on a sold-out card or a product page, and no panel in the server HTML',
+    description: 'every "+ Add" a link to its product in a card with no stock actions row, no card Quick view or stock Add to Cart beside it, none on a sold-out card or a product page, and no panel in the server HTML',
     check(page) {
         return quickAddProblems(page.html, { productPage: page.kind === 'product' });
     },

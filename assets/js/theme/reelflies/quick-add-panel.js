@@ -25,7 +25,8 @@
 //   page behind is inert, Tab stays inside, Escape closes, focus back on "+ Add"); from 801px a
 //   popover by the button with no backdrop (Escape or a click outside closes it, focus back on
 //   "+ Add"; focus moving out of it closes it and stays where it went, so a Tab lands on the
-//   next card's control). While it is open <html data-rf-open> holds `quick-add`
+//   next card's control, and so does a Shift+Tab on past "+ Add"). It is named "Choose sizes of
+//   {name}" (reelflies.quick_add.dialog). While it is open <html data-rf-open> holds `quick-add`
 //   (open-state.js), which ticket 52's prompt reads.
 // - Its footer reads the cart (the Storefront Cart API) and counts it by the brand rule
 //   (cart-count.js): "15 flies in your cart." with View cart.
@@ -286,6 +287,7 @@ export function startQuickAdd(doc, context = {}, deps = {}) {
         open = null;
         if (stopPills) stopPills();
         dialog.removeEventListener('focusout', onFocusOut);
+        button.removeEventListener('focusout', onFocusOut);
         dialog.removeEventListener('click', onDialogClick);
         dialog.removeEventListener('close', onCancel);
         doc.removeEventListener('pointerdown', onPointerDown, true);
@@ -302,8 +304,12 @@ export function startQuickAdd(doc, context = {}, deps = {}) {
         const dialog = doc.createElement('dialog');
         dialog.className = 'rf-qa-panel';
         dialog.setAttribute('data-rf-qa-panel', '');
+        // Named "Choose sizes of Royal Coachman Streamer", as the reference names it; a product
+        // that failed to load, by its heading.
+        const name = content.getAttribute('data-rf-dialog-name');
         const title = content.querySelector('.rf-qa-title');
-        if (title && title.id) dialog.setAttribute('aria-labelledby', title.id);
+        if (name) dialog.setAttribute('aria-label', name);
+        else if (title && title.id) dialog.setAttribute('aria-labelledby', title.id);
         dialog.appendChild(content);
         wrapOf(button).appendChild(dialog);
         // The grid's cell clips its card (stock's .productGrid .product): while the popover is
@@ -321,6 +327,8 @@ export function startQuickAdd(doc, context = {}, deps = {}) {
             const room = doc.documentElement.clientWidth - wrapOf(button).getBoundingClientRect().left;
             dialog.classList.toggle('rf-qa-panel--end', room < 336);
         }
+        // Focus leaving the popover, or its "+ Add" once Shift+Tab has taken it back there, for
+        // anything but the two of them closes it, and focus stays where it went.
         const onFocusOut = event => {
             if (!open || open.modal) return;
             const to = event.relatedTarget;
@@ -333,6 +341,7 @@ export function startQuickAdd(doc, context = {}, deps = {}) {
         // Escape on the modal sheet: the browser closes it.
         const onCancel = () => close({ focusBack: true });
         dialog.addEventListener('focusout', onFocusOut);
+        button.addEventListener('focusout', onFocusOut);
         dialog.addEventListener('click', onDialogClick);
         dialog.addEventListener('close', onCancel);
 

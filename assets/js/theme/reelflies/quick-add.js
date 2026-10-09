@@ -1,8 +1,9 @@
 // Quick add on the listing pages (ticket 43; spec module 14), the chunk rf-quick-add, which
-// page-modules.js loads on the listing templates only where a card has "+ Add", so never with
-// rf_quick_add off (the card renders no "+ Add" then). What a tap does is quick-add-panel.js's;
-// this hands it the storefront: stencil-utils for the product, stock's option change and the
-// add, jQuery for stock's cart-quantity-update (jQuery isn't global in this build).
+// page-modules.js loads on the listing templates while rf_quick_add is on (context.rfQuickAdd),
+// with or without a "+ Add" in the first render, and never with it off. What a tap does is
+// quick-add-panel.js's; this hands it the storefront: stencil-utils for the product, stock's
+// option change and the add, jQuery for stock's cart-quantity-update (jQuery isn't global in
+// this build).
 
 import $ from 'jquery';
 import utils from '@bigcommerce/stencil-utils';

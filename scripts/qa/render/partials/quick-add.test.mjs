@@ -66,7 +66,29 @@ describe('"+ Add" on a listing card (quick-add-gate.html, quick-add-button.html)
         const list = cards(html);
         assert.deepEqual(list.map(card => Boolean(actions(card))), [false, true, true, true, true, false]);
         assert.equal(quickViews(html).length, 0, 'no Quick view on any card');
-        assert.match(textOf(actions(list[3])), /Add to Cart/i, 'a product with no options keeps stock\'s add link');
+    });
+
+    it('gives a card with no options a link to its product page in place of stock\'s Add to Cart while the switch is on: 42 CH Bow River Streamers (5879; criterion 4, the ticket\'s drafted answer)', async () => {
+        const assortment = CARDS.find(card => card.id === 5879);
+        assert.equal(assortment.has_options, false);
+        assert.ok(assortment.add_to_cart_url, 'the store gives 5879 stock\'s one-tap add');
+        const row = actions(cards(await grid()).find(card => findTags(card, 'article')[0].attrs['data-entity-id'] === '5879'));
+        const links = findTags(row, 'a');
+        assert.deepEqual(links.map(tag => tag.attrs.href), [assortment.url], 'one link, to the product page');
+        assert.ok(!links.some(tag => tag.attrs['data-button-type'] === 'add-cart'));
+        assert.doesNotMatch(row, /cart\.php\?action=add/);
+        assert.equal(textOf(row).replace(/\s+/g, ' ').trim(), 'View 42 CH Bow River Streamers');
+        assert.match(row, /<span class="is-srOnly"> 42 CH Bow River Streamers<\/span>/, '"View" is the visible word; the name is for screen readers');
+        assert.deepEqual(quickAddProblems(await grid()), []);
+    });
+
+    it('leaves stock\'s Add to Cart on a card with no options with the switch off, and on the product page', async () => {
+        const stockAdd = html => actions(cards(html).find(card => findTags(card, 'article')[0].attrs['data-entity-id'] === '5879'));
+        for (const html of [await grid({ on: false }), await grid({ before: "{{assignVar 'rf_product_page' 1}}" })]) {
+            const row = stockAdd(html);
+            assert.ok(findTags(row, 'a').some(tag => tag.attrs['data-button-type'] === 'add-cart' && /cart\.php\?action=add/.test(decodeHtml(tag.attrs.href))));
+            assert.doesNotMatch(textOf(row), /View/);
+        }
     });
 
     it('renders the stock card with the switch off: no "+ Add" and Quick view back on every card (story 35)', async () => {
@@ -160,7 +182,8 @@ describe('the product for the panel (quick-add-product.html)', () => {
         const title = outerHtml(html, 'p', attrs => attrs.class === 'rf-qa-title');
         assert.equal(findTags(title, 'p')[0].attrs.id, 'rf-qa-title-4831');
         assert.equal(findTags(title, 'a')[0].attrs.href, PRODUCTS.sizes.url);
-        assert.equal(textOf(title), 'Royal Coachman Streamer', 'the dialog\'s name');
+        assert.equal(textOf(title), 'Royal Coachman Streamer');
+        assert.equal(decodeHtml(content(html).attrs['data-rf-dialog-name']), 'Choose sizes of Royal Coachman Streamer', 'the dialog\'s name, as the reference names it');
         const price = markup => outerHtml(markup, 'div', attrs => attrs.class === 'rf-qa-price');
         // Stock's price partial keeps its hidden MSRP and Was labels, as on the card.
         assert.match(textOf(price(html)), /\$1\.25 \/ fly$/);

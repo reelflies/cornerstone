@@ -11,7 +11,8 @@
     - data-rf-qa-options holds product.options as JSON, for quick-add-route.js: Fly Sizes alone
       opens the panel or adds its one size, any other shape goes to the product page.
     - The heading: the name, a link to the product page, and the price with "/ fly" by ticket
-      31's rule (price-unit.html), then Close.
+      31's rule (price-unit.html), then Close. The dialog's name is "Choose sizes of {name}", as
+      the reference's (data-rf-dialog-name).
     - The footer: the cart's count, which quick-add.js reads from the Cart API by the brand rule
       (cart-count.js), and View cart.
     - The words quick-add.js says ride on data attributes, each with # or {name} where a value
@@ -30,6 +31,7 @@
      data-rf-qa-content
      data-rf-qa-product="{{product.id}}"
      data-rf-qa-options="{{json product.options}}"
+     data-rf-dialog-name="{{lang 'reelflies.quick_add.dialog' name=product.title}}"
      data-rf-added="{{lang 'reelflies.add_flow.added' qty='{qty}' choice='{choice}'}}"
      data-rf-size="{{lang 'reelflies.add_flow.size' size='{size}'}}"
      data-rf-cart-fly="{{lang 'reelflies.add_flow.cart_fly'}}"
