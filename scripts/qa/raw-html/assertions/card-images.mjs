@@ -48,7 +48,9 @@ export function cardImageProblems(html, kind) {
     const high = findTags(markupOnly(html), 'img').filter(tag => tag.attrs.fetchpriority === 'high');
     if (photos.length && high.length === 0) problems.push('no image on the page has fetchpriority="high": with no banner, the first card\'s photo takes it');
     if (high.length > 1) problems.push(`${high.length} images have fetchpriority="high": one at most, the banner's or else the first card's`);
-    if (high.length === 1 && !isBanner(high[0]) && photos[0] && high[0].raw !== photos[0].raw) problems.push(`the page's fetchpriority="high" is on ${high[0].attrs.src || 'an image'}, not the banner or the first card's photo`);
+    const banner = findTags(markupOnly(html), 'img').find(isBanner);
+    if (banner && high.length === 1 && !isBanner(high[0])) problems.push('the page has a banner (.rf-listing-banner), so the banner holds the one fetchpriority="high", not the first card (ticket 32\'s rf_banner was lost?)');
+    else if (high.length === 1 && !isBanner(high[0]) && photos[0] && high[0].raw !== photos[0].raw) problems.push(`the page's fetchpriority="high" is on ${high[0].attrs.src || 'an image'}, not the banner or the first card's photo`);
     return problems;
 }
 

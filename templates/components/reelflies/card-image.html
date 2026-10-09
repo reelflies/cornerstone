@@ -9,7 +9,8 @@
       grid (components/products/grid.html), whose hook passes rf_listing to each card with its
       position: category, search and brand pages, and an account's recently viewed products. The
       first also takes fetchpriority="high", unless the page has a banner, which holds it: ticket
-      32's listing header sets rf_banner (build pipeline 6.9).
+      32's listing header sets rf_banner (build pipeline 6.9), and its <img> carries the class
+      rf-listing-banner, by which the card-images assertion knows it.
     - Everything else is loading="lazy": later cards, related products, and the stock lists.
     - sizes: half the width less the gutter and gap on phones, a third of the 1088px container
       from 801px.

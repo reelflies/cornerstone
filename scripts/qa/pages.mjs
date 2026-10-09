@@ -77,11 +77,11 @@ export const CHANNELS = {
         },
         // The live catalogue decides which products these pages list, so the lists can't
         // be pinned here. Pin a listing that holds still before unmasking one.
-        // The search pin's result counts (its heading and the Products tab) change with the
-        // catalogue too.
+        // The search pin's result counts (its heading and both tabs) change with the catalogue
+        // too. The tabs by role: stock search.js swaps the active tab's navBar-action class.
         mask: {
             category: ['.productGrid'],
-            search: ['.productGrid', '.page-heading', '[data-search-page-tabs] .navBar-action'],
+            search: ['.productGrid', '.page-heading', '[data-search-page-tabs] [role="tab"]'],
         },
         // The related products' cards (Related Products, and Customers Also Viewed when the
         // store shows it), whose titles wrap to two or three lines, so the live list sets

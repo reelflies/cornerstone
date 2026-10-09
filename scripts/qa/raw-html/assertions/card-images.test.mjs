@@ -69,6 +69,9 @@ test('wants one fetchpriority="high" on the page: the first card\'s, or the bann
     assert.match(cardImages.check({ ...good, html: BANNER + good.html }).join('\n'), /2 images have fetchpriority="high"/);
     const second = good.html.replace(/(<img class="card-image[^>]*?)( decoding)/g, (match, head, tail, offset) => (offset > good.html.indexOf('data-position="2"') && !match.includes('fetchpriority') ? `${head} fetchpriority="high"${tail}` : match));
     assert.match(cardImages.check({ ...good, html: second }).join('\n'), /card 2's photo has fetchpriority="high"/);
+    const lost = await page({ kind: 'category' });
+    const quietBanner = `${BANNER.replace(' fetchpriority="high"', '')}${lost.html}`;
+    assert.match(cardImages.check({ ...lost, html: quietBanner }).join('\n'), /the page has a banner \(\.rf-listing-banner\), so the banner holds the one fetchpriority="high", not the first card/);
     const elsewhere = `<img src="/logo.png" fetchpriority="high">${good.html.replace(' fetchpriority="high"', '')}`;
     assert.match(cardImages.check({ ...good, html: elsewhere }).join('\n'), /fetchpriority="high" is on \/logo\.png, not the banner or the first card's photo/);
 });
