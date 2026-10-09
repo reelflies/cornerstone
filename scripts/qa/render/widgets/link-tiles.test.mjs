@@ -40,9 +40,11 @@ test('the shot\'s fixture is exactly what ReelFlies_CA gets', () => {
 });
 
 test('it is placed first in home_below_top_products on ReelFlies_CA, active since the checkpoint-02 release carried its styles, with the uuids its first write made', () => {
-    assert.deepEqual(channelFile.placement, {
-        template_file: 'pages/home', region: 'home_below_top_products', sort_order: 10, status: 'active',
-    });
+    // The status isn't pinned: an R12 unpublish (ticket 57) sets it inactive in a PR that must
+    // pass CI; --verify compares it with the store.
+    const { status, ...placement } = channelFile.placement;
+    assert.deepEqual(placement, { template_file: 'pages/home', region: 'home_below_top_products', sort_order: 10 });
+    assert.ok(['active', 'inactive'].includes(status), status);
     // Recorded by --record after the first write (2026-10-08, plan c89f5701); --verify compares them with the store.
     for (const name of ['template', 'widget', 'placement']) assert.match(channelFile.uuids[name], UUID, `its ${name} is recorded`);
     assert.equal(fixture.region, channelFile.placement.region);

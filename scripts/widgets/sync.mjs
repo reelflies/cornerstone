@@ -152,16 +152,19 @@ function step(context, {
 }
 
 // Any placement of the recorded widget on the channel that the channel file doesn't record, and
-// the twin check in step() doesn't already name (a placement on a listed template file with no
-// recorded uuid): a second one on a listed file, or one on a file the list leaves out. Either
-// would show the widget where the repo doesn't say, and --verify would never see it.
+// the twin check in step() doesn't already name (a placement on a listed template file, in the
+// listed region, with no recorded uuid): a second one on a listed file, one in another region, or
+// one on a file the list leaves out. Each would show the widget where the repo doesn't say, and
+// --verify would never see it.
 function unrecordedPlacements({
     channel, problems, store, where, entryName,
 }, widgetUuid, placements) {
-    const recorded = new Map(placements.map(placement => [placement.template_file, placement.uuid]));
+    const recorded = new Map(placements.map(placement => [placement.template_file, placement]));
+    const recordedUuids = placements.map(placement => placement.uuid).filter(Boolean);
     for (const item of store.placements || []) {
-        if (item.widget?.uuid !== widgetUuid || [...recorded.values()].includes(item.uuid)) continue; // eslint-disable-line no-continue
-        if (recorded.has(item.template_file) && !recorded.get(item.template_file)) continue; // eslint-disable-line no-continue
+        if (item.widget?.uuid !== widgetUuid || recordedUuids.includes(item.uuid)) continue; // eslint-disable-line no-continue
+        const twin = recorded.get(item.template_file);
+        if (twin && !twin.uuid && twin.region === item.region) continue; // eslint-disable-line no-continue
         const listed = recorded.has(item.template_file);
         problems.push(`${entryName}: channel ${channel} has placement ${item.uuid} of the widget on ${item.template_file} ${item.region}, which ${where} doesn't record: delete it in the control panel${listed ? '' : ', or list its template file and run --record'}`);
     }
@@ -173,7 +176,8 @@ function unrecordedPlacements({
 //   only       'all' (default), 'content' (templates and widgets: ticket 53 makes channel-1
 //              widgets before ticket 56 places them) or 'placement' (placements of widgets
 //              already recorded)
-//   unpublish  a widget name: only its placement's status, set inactive (R12; allowed from T-14)
+//   unpublish  a widget name: only the status of each of its placements on the channel, set
+//              inactive (R12; allowed from T-14)
 export function planSync({
     channel, entries, store, only = 'all', unpublish = null,
 }) {
@@ -196,14 +200,18 @@ export function planSync({
         if (unpublish) {
             // Every placement of the widget on the channel, recorded or not, so the off switch
             // leaves nothing on: a template file listed but not placed yet, or placed but not
-            // recorded, never stops it.
-            const ofWidget = uuids.widget ? (store.placements || []).filter(item => item.widget?.uuid === uuids.widget) : [];
+            // recorded, never stops it. A widget the channel file doesn't record yet (an apply
+            // whose --record PR hasn't merged) is found by its name.
+            const byName = uuids.widget ? null : (store.widgets || []).find(item => item.name === widget.widgetName);
+            const widgetUuid = uuids.widget || byName?.uuid;
+            const ofWidget = widgetUuid ? (store.placements || []).filter(item => item.widget?.uuid === widgetUuid) : [];
             const recordedUuids = placements.map(placement => placement.uuid).filter(Boolean);
-            if (!uuids.widget) {
-                problems.push(`${widget.name}: the widget isn't recorded in ${channelFile.where}, so there is nothing to unpublish`);
+            if (!widgetUuid) {
+                problems.push(`${widget.name}: channel ${channel} has no widget named ${widget.widgetName}, and ${channelFile.where} records none, so there is nothing to unpublish`);
             } else if (!ofWidget.length) {
-                problems.push(`${widget.name}: channel ${channel} has no placement of widget ${uuids.widget}, so there is nothing to unpublish`);
+                problems.push(`${widget.name}: channel ${channel} has no placement of widget ${widgetUuid}, so there is nothing to unpublish`);
             }
+            if (byName) lines.push(`  widget ${widget.widgetName} (${short(byName.uuid)}), found by name: not recorded yet in ${channelFile.where}`);
             for (const item of ofWidget) {
                 const label = `  placement ${item.template_file} ${item.region} (${short(item.uuid)}${recordedUuids.includes(item.uuid) ? '' : ', not recorded'})`;
                 if (item.status === 'inactive') {

@@ -2,13 +2,14 @@
 # scan (.github/workflows/reelflies-checks.yml) reads it from the checkout's root.
 #
 # gitleaks' default rules all apply. One allowlist narrows generic-api-key:
-# - Widget channel files (widgets/<name>/channels/<channel>.json, docs/widgets.md) record the uuids
+# - Widget channel files (widgets/<name>/channels/<channel>.json; see docs/widgets.md) record the uuids
 #   the store gave a widget's template, widget and placements. A placement's uuid sits beside its
 #   template file, and "pages/auth/forgot-password" reads to generic-api-key as a password key
 #   (ticket 27's follow-up, PR #65). Only a value that is a whole uuid, in a channel file, is let
 #   through: anything else in those files, a uuid anywhere else, and every other rule still apply.
-# - It is a rule allowlist, not a global one: gitleaks skips a file whose path matches a global
-#   allowlist before it reads the condition, so a global one would let anything in those files.
+# - It is a rule allowlist, not a global one. A global one applies to every rule, so `gitleaks git`
+#   (what CI runs) would also pass a uuid-shaped secret another rule catches (heroku-api-key), and
+#   `gitleaks dir` skips a file whose path matches it whole, before it reads the condition.
 
 [extend]
 useDefault = true
