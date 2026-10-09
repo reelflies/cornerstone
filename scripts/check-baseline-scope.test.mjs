@@ -6,10 +6,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-    SELFTEST_WIDGETS_DIR, WIDGETS_DIR, checkScope, knownWidgets, parseBaselinePath, parseDeclaration,
+    PAGE_FIXTURES_DIR, SELFTEST_WIDGETS_DIR, WIDGETS_DIR, checkScope, knownWidgets, parseBaselinePath, parseDeclaration,
 } from './check-baseline-scope.mjs';
 import { WIDGETS_DIR as RENDER_WIDGETS_DIR, widgetCases } from './qa/render/render.mjs';
-import { SELFTEST_WIDGETS } from './qa/render/widget-page.mjs';
+import { PAGE_FIXTURES, SELFTEST_WIDGETS } from './qa/render/widget-page.mjs';
 import { ROOT, slug } from './qa/storefront.mjs';
 
 const B = 'scripts/qa/baselines';
@@ -267,9 +267,9 @@ const tempDir = () => {
     return dir;
 };
 
-test('the widgets are the folders in widgets/ and the self-test folder, and any this PR adds or deletes', () => {
+test('the widgets are the folders in widgets/, the self-test folder and the fixture pages, and any this PR adds or deletes', () => {
     const root = tempDir();
-    for (const dir of ['widgets/home-lead/fixtures', 'widgets/_shared', 'scripts/qa/render/selftest/widgets/rf-selftest']) fs.mkdirSync(path.join(root, dir), { recursive: true });
+    for (const dir of ['widgets/home-lead/fixtures', 'widgets/_shared', 'scripts/qa/render/selftest/widgets/rf-selftest', 'scripts/qa/render/pages/card-grid/fixtures']) fs.mkdirSync(path.join(root, dir), { recursive: true });
     fs.writeFileSync(path.join(root, 'widgets/README.md'), 'not a widget');
     const files = [
         'widgets/best-sellers/template.html', // added or deleted by the PR
@@ -279,7 +279,7 @@ test('the widgets are the folders in widgets/ and the self-test folder, and any 
         'widgets/notes.md',
         'scripts/qa/baselines/widgets/reelflies-ca/x-default-phone-375-darwin.png',
     ];
-    assert.deepEqual(knownWidgets(files, root), ['Signature-band', 'best-sellers', 'home-lead', 'rf-other', 'rf-selftest']);
+    assert.deepEqual(knownWidgets(files, root), ['Signature-band', 'best-sellers', 'card-grid', 'home-lead', 'rf-other', 'rf-selftest']);
     assert.deepEqual(knownWidgets([], tempDir()), [], 'a checkout with no widgets/ folder has none');
 });
 
@@ -302,10 +302,12 @@ const VARIATIONS = JSON.parse(fs.readFileSync(path.join(ROOT, 'config.json'), 'u
 test('the check looks for widgets where the fixture renderer finds them', () => {
     assert.equal(path.resolve(ROOT, WIDGETS_DIR), RENDER_WIDGETS_DIR);
     assert.equal(path.resolve(ROOT, SELFTEST_WIDGETS_DIR), SELFTEST_WIDGETS);
+    assert.equal(path.resolve(ROOT, PAGE_FIXTURES_DIR), PAGE_FIXTURES);
 });
 
 test('every widget shot the spec takes, in every variation, is read as its own widget\'s and covered by "widget <name>"', () => {
-    const cases = widgetCases([RENDER_WIDGETS_DIR, SELFTEST_WIDGETS]).filter(({ shot }) => shot);
+    // A fixture page's own spec shoots every case it has, shot or not.
+    const cases = [...widgetCases([RENDER_WIDGETS_DIR, SELFTEST_WIDGETS]).filter(({ shot }) => shot), ...widgetCases([PAGE_FIXTURES])];
     assert.ok(cases.some(({ widget }) => widget === 'rf-selftest'), 'the self-test widget has a shot');
     const widgets = knownWidgets();
     for (const variation of VARIATIONS) {

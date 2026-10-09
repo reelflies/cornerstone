@@ -51,6 +51,9 @@ export const WIDGET_SET = 'widgets';
 // lives outside it so no sync uploads it (scripts/qa/render/widget-page.mjs, SELFTEST_WIDGETS).
 export const WIDGETS_DIR = 'widgets/';
 export const SELFTEST_WIDGETS_DIR = 'scripts/qa/render/selftest/widgets/';
+// Fixture pages (ticket 31's card grid): a widget folder whose fixture renders a real page
+// template round it, so a spec can shoot what the page shows from fixed data. Never synced.
+export const PAGE_FIXTURES_DIR = 'scripts/qa/render/pages/';
 const VARIATION = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const WIDGET_FILE = /^(?<shot>[A-Za-z0-9_-]+)-(?<project>[a-z]+-\d+)-(?<platform>darwin|linux|win32)\.png$/;
 
@@ -119,14 +122,14 @@ function folders(dir) {
     }
 }
 
-// The widget names a widget shot may belong to: each folder in widgets/ and the self-test
-// folder in this checkout, and each widget folder the PR's own files name, so a widget the PR
-// adds or deletes counts too. Folders starting with "_" (widgets/_shared/) aren't widgets. A
-// name too many only asks for one more declaration; a name missing could let a shorter
-// widget's declaration cover a longer one's shot, which is why both sources count.
+// The widget names a widget shot may belong to: each folder in widgets/, the self-test folder
+// and the fixture pages in this checkout, and each widget folder the PR's own files name, so a
+// widget the PR adds or deletes counts too. Folders starting with "_" (widgets/_shared/) aren't
+// widgets. A name too many only asks for one more declaration; a name missing could let a
+// shorter widget's declaration cover a longer one's shot, which is why both sources count.
 export function knownWidgets(files = [], root = THEME_ROOT) {
     const names = new Set();
-    for (const dir of [WIDGETS_DIR, SELFTEST_WIDGETS_DIR]) {
+    for (const dir of [WIDGETS_DIR, SELFTEST_WIDGETS_DIR, PAGE_FIXTURES_DIR]) {
         folders(path.join(root, dir)).forEach(name => names.add(name));
         for (const file of files.filter(each => each.toLowerCase().startsWith(dir))) {
             const parts = file.slice(dir.length).split('/');
@@ -185,7 +188,7 @@ function coverWidgetShot(declaration, file, parsed) {
     const { owners, variation } = parsed;
     if (!owners.length) {
         return {
-            file, parsed, covered: false, reason: `no widget folder (in widgets/, ${SELFTEST_WIDGETS_DIR} or this PR's files) owns the shot ${parsed.shot}, so only an epoch covers it`,
+            file, parsed, covered: false, reason: `no widget folder (in ${WIDGETS_DIR}, ${SELFTEST_WIDGETS_DIR}, ${PAGE_FIXTURES_DIR} or this PR's files) owns the shot ${parsed.shot}, so only an epoch covers it`,
         };
     }
     const declared = new Set(declaration.items.map(item => item.widget).filter(Boolean));

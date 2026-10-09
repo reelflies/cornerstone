@@ -13,8 +13,9 @@
 //   network request ever reaches: Playwright answers each request (requestAction, respond).
 //   - The page, the compiled CSS and the theme's assets/ come from this checkout.
 //   - Any other path, and any store CDN image URL, is answered with the fixture file of the
-//     same name from widgets/<name>/fixtures/files/, whatever its size segment, so a fixture can
-//     keep the URLs a real GraphQL response holds.
+//     same name from widgets/<name>/fixtures/files/ (or the self-test's or fixture page's own
+//     fixtures/files/), whatever its size segment, so a fixture can keep the URLs a real GraphQL
+//     response holds.
 //   - The theme's Google Fonts load, as on the storefront.
 //   - Every other request is blocked and reported, so a shot never depends on the store's
 //     state, analytics, or any other host.
@@ -32,6 +33,9 @@ export const THEME_CSS_PATH = '/assets/css/theme.css';
 // The shot self-test's widget (widget-screens.spec.mjs). It lives outside widgets/, so the
 // widget sync never sees it.
 export const SELFTEST_WIDGETS = path.join(THEME_DIR, 'scripts/qa/render/selftest/widgets');
+// Fixture pages (ticket 31): a widget folder whose fixture renders a real page template round it,
+// so a spec can shoot what that page shows from fixed data (card-screens.spec.mjs). Never synced.
+export const PAGE_FIXTURES = path.join(THEME_DIR, 'scripts/qa/render/pages');
 const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 const STORE_IMAGE_HOST = /^cdn\d*\.bigcommerce\.com$/;
 const LAYOUT = fs.readFileSync(new URL('./widget-layout.html', import.meta.url), 'utf8');
