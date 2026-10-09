@@ -1,17 +1,22 @@
 // The cart page (ticket 41; spec module 18; stories 50, 55, 56, 67, 68 and 71), at 375 and 1280,
 // on the fixture page: the real cart page rendered round a 12-pattern cart
-// (render/pages/cart-page/fixtures/twelve.json), with the products' own photos. A cart on
-// channel 1 would be a live write (W0-6), and ReelFlies_CA has no products until refactor 14, so
-// the cart's look and behaviour are checked here. The fixture page loads no theme bundle, so the
-// spec runs the real cart-groups.js in the page (render/theme-script.mjs).
+// (render/pages/cart-page/fixtures/twelve.json), and a smaller one with a coupon on every line and
+// a four-figure total (discounted.json), with the products' own photos. A cart on channel 1 would
+// be a live write (W0-6), and ReelFlies_CA has no products until refactor 14, so the cart's look
+// and behaviour are checked here. The fixture page loads no theme bundle, so the spec runs the
+// real cart-groups.js in the page (render/theme-script.mjs, built as the bundle builds it).
 //
-// - The page at both widths matches its baseline (widget baselines, declared as `widget cart-page`).
+// - Each cart at both widths matches its baseline (widget baselines, declared as
+//   `widget cart-page`).
 // - Each pattern is one group from the server, its sizes in hook order once sorted; until then a
 //   group of several sizes keeps them out of view, so sorting moves nothing on the page.
 // - A pattern whose sizes are priced differently shows each size's unit price, and the lines add
 //   up to the subtotal.
-// - Every group keeps its 64px photo, linked to the product, at 320, 375 and 1280.
-// - Nothing scrolls sideways at 320.
+// - Every group keeps its 64px photo, linked to the product, at 320, 360, 375, 414 and 1280.
+// - In both carts, at eleven widths (320, either side of 360 and of the one-line breakpoint at
+//   420, the common phones, and 1280), every row and its line total fit inside the group, no total
+//   is wider than its column, and nothing scrolls sideways (story 71). These width checks set
+//   their own viewport, so they run in the phone project only.
 // - At 375 the phone bar shows the total for the flies and Check out, and tabbing to Check out
 //   never leaves the focused element under it; without the page's scroll padding it would.
 // - axe finds no serious or critical issue in the cart.
@@ -31,19 +36,27 @@ import { PAGE_FIXTURES, openWidget } from './render/widget-page.mjs';
 
 test.skip(Boolean(QA_OVERLAY), `the cart renders from its fixture, not under an overlay (QA_OVERLAY=${QA_OVERLAY})`);
 
-const CART = widgetCases([PAGE_FIXTURES]).find(({ widget, name }) => widget === 'cart-page' && name === 'twelve');
-if (!CART) throw new Error('render/pages/cart-page/fixtures/twelve.json is missing');
+const fixture = name => {
+    const found = widgetCases([PAGE_FIXTURES]).find(({ widget, name: caseName }) => widget === 'cart-page' && caseName === name);
+    if (!found) throw new Error(`render/pages/cart-page/fixtures/${name}.json is missing`);
+    return found;
+};
+const CART = fixture('twelve');
+const DISCOUNTED = fixture('discounted');
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
 const SORT = "modules['reelflies/cart-groups'].sortCartRows(document);";
 const phone = testInfo => testInfo.project.name === 'phone-375';
+// An element shot of the cart: the phone bar is fixed to the viewport and the phone header sticky,
+// so either would cover the lines wherever the viewport was.
+const SHOT_STYLE = '[data-rf-cart-bar] { visibility: hidden !important; } [data-rf-header] { position: static !important; }';
 
 async function sortRows(page) {
     await page.addScriptTag({ content: themeScript(['reelflies/hook-order', 'reelflies/cart-groups'], SORT) });
     await expect(page.locator('[data-rf-cart-group]:not([data-rf-cart-sorted])')).toHaveCount(0);
 }
 
-async function open(page, { sort = true } = {}) {
-    const { problems } = await openWidget(page, CART, { variation: QA_VARIATION });
+async function open(page, { sort = true, cart = CART } = {}) {
+    const { problems } = await openWidget(page, cart, { variation: QA_VARIATION });
     expect(problems, 'the fixture page loads nothing but its fixture\'s files, the theme\'s assets and fonts').toEqual([]);
     for (const img of await page.locator('.rf-cart-group > .rf-cart-photo img').all()) {
         await img.scrollIntoViewIfNeeded(); // eslint-disable-line no-await-in-loop
@@ -74,15 +87,19 @@ async function focusUnderBar(page) {
 test.describe('the cart (ticket 41)', () => {
     test('matches its baseline', async ({ page }, testInfo) => {
         await open(page);
-        // The phone bar is fixed to the viewport, so a shot of the whole page would draw it over the
-        // lines wherever the viewport was: the page is shot without it, and the bar on its own.
-        // The phone header is sticky too, and would cover the cart's top in an element shot.
-        await page.addStyleTag({ content: '[data-rf-cart-bar] { visibility: hidden !important; } [data-rf-header] { position: static !important; }' });
+        // The page without the phone bar (SHOT_STYLE), then the bar on its own.
+        await page.addStyleTag({ content: SHOT_STYLE });
         await expect(page.locator('[data-cart]')).toHaveScreenshot(['widgets', slug(QA_VARIATION), 'cart-page-twelve.png']);
         if (phone(testInfo)) {
             await page.addStyleTag({ content: '[data-rf-cart-bar] { visibility: visible !important; }' });
             await expect(page.locator('[data-rf-cart-bar]')).toHaveScreenshot(['widgets', slug(QA_VARIATION), 'cart-page-twelve-bar.png']);
         }
+    });
+
+    test('matches its baseline with a coupon on every line (story 71)', async ({ page }) => {
+        await open(page, { cart: DISCOUNTED });
+        await page.addStyleTag({ content: SHOT_STYLE });
+        await expect(page.locator('[data-cart]')).toHaveScreenshot(['widgets', slug(QA_VARIATION), 'cart-page-discounted.png']);
     });
 
     test('groups each pattern once, its sizes in hook order (story 50)', async ({ page }) => {
@@ -126,8 +143,9 @@ test.describe('the cart (ticket 41)', () => {
         expect(totals.reduce((sum, total) => sum + cents(total), 0)).toBe(cents(subtotal));
     });
 
-    for (const width of [320, 375, 1280]) {
-        test(`keeps each group's 64px photo, linked to the product, at ${width} (story 56)`, async ({ page }) => {
+    for (const width of [320, 360, 375, 414, 1280]) {
+        test(`keeps each group's 64px photo, linked to the product, at ${width} (story 56)`, async ({ page }, testInfo) => {
+            test.skip(!phone(testInfo), 'the viewport is set here, once');
             await page.setViewportSize({ width, height: 900 });
             await open(page);
             const photos = await page.locator('.rf-cart-group > .rf-cart-photo').evaluateAll(links => links.map(link => ({
@@ -140,14 +158,28 @@ test.describe('the cart (ticket 41)', () => {
                 expect(photo.width).toBe(64);
                 expect(photo.href).toBe(photo.name);
             }
-            const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-            expect(overflow, 'nothing scrolls sideways').toBeLessThanOrEqual(0);
-            const past = await page.locator('[data-rf-cart-row]').evaluateAll(rows => rows.filter(row => {
-                const group = row.closest('[data-rf-cart-group]').getBoundingClientRect();
-                return [row, ...row.children].some(element => element.getBoundingClientRect().right > group.right + 0.5);
-            }).map(row => row.dataset.rfSize));
-            expect(past, 'rows whose controls run past their group').toEqual([]);
         });
+    }
+
+    for (const cart of [CART, DISCOUNTED]) {
+        for (const width of [320, 359, 360, 375, 390, 400, 414, 419, 420, 430, 1280]) {
+            test(`fits every row and its line total inside its group in ${cart.name}.json at ${width} (story 71)`, async ({ page }, testInfo) => {
+                test.skip(!phone(testInfo), 'the viewport is set here, once');
+                await page.setViewportSize({ width, height: 900 });
+                await open(page, { cart });
+                const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+                expect(overflow, 'nothing scrolls sideways').toBeLessThanOrEqual(0);
+                const past = await page.locator('[data-rf-cart-row]').evaluateAll(rows => rows.filter(row => {
+                    const group = row.closest('[data-rf-cart-group]').getBoundingClientRect();
+                    return [row, ...row.children].some(element => element.getBoundingClientRect().right > group.right + 0.5);
+                }).map(row => row.dataset.rfSize || row.textContent.trim().slice(0, 20)));
+                expect(past, 'rows whose controls run past their group').toEqual([]);
+                // A total's text can outgrow its box while the box stays inside the group.
+                const cramped = await page.locator('.rf-cart-total').evaluateAll(totals => totals.filter(total => total.scrollWidth > total.clientWidth + 0.5)
+                    .map(total => total.textContent.trim()));
+                expect(cramped, 'line totals wider than their column').toEqual([]);
+            });
+        }
     }
 
     test('on phones, the bar shows the total for the flies and Check out (story 55)', async ({ page }, testInfo) => {

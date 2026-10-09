@@ -43,6 +43,14 @@ describe('sortCartRows', () => {
         expect([...document.querySelectorAll('[data-rf-cart-group]')]).toEqual([adams, bugger]);
     });
 
+    it('still shows a group it can\'t sort, sorts the groups after it, then throws the first error', () => {
+        const [broken, adams] = render([[['x', '14'], ['y', '12']], [['a', '14'], ['b', '12']]]);
+        broken.querySelector('[data-rf-cart-row]').getAttribute = () => { throw new Error('a broken row'); };
+        expect(() => sortCartRows(document)).toThrow('a broken row');
+        expect(order(adams)).toEqual(['b', 'a']);
+        expect([broken, adams].every(group => group.hasAttribute('data-rf-cart-sorted'))).toBe(true);
+    });
+
     it('keeps focus on a control in a row it moves', () => {
         const [adams] = render([[['a', '14'], ['b', '12']]]);
         const button = adams.querySelector('[data-cart-itemid="a"]');

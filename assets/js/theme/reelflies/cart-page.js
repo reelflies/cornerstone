@@ -36,7 +36,6 @@ export function restoreFocus(selector, doc = document) {
 
 export default {
     load(_context, doc = document) {
-        sortCartRows(doc);
         let used = null;
         // Any click or change sets it, so a later coupon or options change doesn't send focus
         // back to a stepper used before.
@@ -49,9 +48,14 @@ export default {
             used = null;
         });
         doc.addEventListener(RENDERED_EVENT, () => {
-            sortCartRows(doc);
-            restoreFocus(used, doc);
-            used = null;
+            try {
+                sortCartRows(doc);
+            } finally {
+                restoreFocus(used, doc);
+                used = null;
+            }
         });
+        // Last, so a group that throws can't stop the listeners above from being added.
+        sortCartRows(doc);
     },
 };

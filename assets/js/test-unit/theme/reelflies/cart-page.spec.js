@@ -68,6 +68,24 @@ describe('the cart page module', () => {
         expect(rows()).toEqual(['a2', 'a1']);
     });
 
+    it('puts focus back even when a group can\'t be sorted, the error still reported', () => {
+        const reported = [];
+        const report = event => {
+            reported.push(event.error.message);
+            event.preventDefault();
+        };
+        window.addEventListener('error', report);
+        document.body.innerHTML = LINES;
+        click(document.querySelector('[data-cart-itemid="a1"][data-action="inc"]'));
+        swapContent();
+        document.querySelector('.rf-cart-rows').appendChild = () => { throw new Error('a broken row'); };
+        document.dispatchEvent(new CustomEvent(RENDERED_EVENT));
+        window.removeEventListener('error', report);
+        expect(reported).toEqual(['a broken row']);
+        expect(document.activeElement).toBe(document.querySelector('[data-cart-itemid="a1"][data-action="inc"]'));
+        expect(document.querySelector('[data-rf-cart-group]').hasAttribute('data-rf-cart-sorted')).toBe(true);
+    });
+
     it('puts focus on the heading when a coupon change re-renders the cart, even after a failed stepper change', () => {
         document.body.innerHTML = LINES;
         click(document.querySelector('[data-cart-itemid="a1"][data-action="inc"]'));

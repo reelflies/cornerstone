@@ -8,10 +8,10 @@
 //
 // - rowOrder(sizes) is the pure part: the rows' sizes in page order, returning their indexes in
 //   hook order.
-// - sortCartRows(root) reorders every group's rows to match and marks each group sorted. Until
-//   then a group with more than one row keeps its rows out of view at their full height
-//   (_cart.scss), so sorting them moves nothing on the page. cart-page.js runs it on load and
-//   after each re-render of the cart's content.
+// - sortCartRows(root) reorders every group's rows to match and marks each group sorted, even one
+//   it couldn't sort. Until then a group with more than one row keeps its rows out of view at
+//   their full height (_cart.scss), so sorting them moves nothing on the page. cart-page.js runs
+//   it on load and after each re-render of the cart's content.
 
 import { sortByHookOrder } from './hook-order';
 
@@ -23,17 +23,26 @@ export function rowOrder(sizes) {
     return sortByHookOrder(sizes.map((_size, index) => index), index => sizes[index]);
 }
 
+// Each group is shown once it is tried, sorted or not: one that throws keeps the store's order
+// rather than staying hidden till the timer, the groups after it are still sorted, and the first
+// error is thrown once every group is done.
 export function sortCartRows(root = document) {
+    let failure = null;
     root.querySelectorAll(GROUP).forEach(group => {
-        const rows = [...group.querySelectorAll(ROW)];
-        const order = rowOrder(rows.map(row => row.getAttribute('data-rf-size') || ''));
-        if (order.some((index, position) => index !== position)) {
-            // Moving a row takes focus off whatever in it had focus, so give it back.
-            const focused = group.ownerDocument.activeElement;
-            const hadFocus = focused !== group && group.contains(focused);
-            order.forEach(index => rows[index].parentNode.appendChild(rows[index]));
-            if (hadFocus && group.ownerDocument.activeElement !== focused) focused.focus();
+        try {
+            const rows = Array.from(group.querySelectorAll(ROW));
+            const order = rowOrder(rows.map(row => row.getAttribute('data-rf-size') || ''));
+            if (order.some((index, position) => index !== position)) {
+                // Moving a row takes focus off whatever in it had focus, so give it back.
+                const focused = group.ownerDocument.activeElement;
+                const hadFocus = focused !== group && group.contains(focused);
+                order.forEach(index => rows[index].parentNode.appendChild(rows[index]));
+                if (hadFocus && group.ownerDocument.activeElement !== focused) focused.focus();
+            }
+        } catch (error) {
+            failure = failure || error;
         }
         group.setAttribute(SORTED, '');
     });
+    if (failure) throw failure;
 }

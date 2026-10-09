@@ -59,8 +59,8 @@ export function words(text) {
 }
 
 // The categories in the nav, in nav order, once per URL: [{ name, url }].
-// Array.from, never [...nodeList]: the theme's Babel is loose (babel.config.js), which spreads a
-// NodeList into an array holding the NodeList itself.
+// Array.from, from when loose Babel spread a NodeList into an array holding the NodeList itself;
+// babel.config.js's iterableIsArray assumption (ticket 41's follow-up) fixed that at the root.
 export function navCategories(doc = document) {
     let links = Array.from(doc.querySelectorAll(CATEGORY_SELECTOR));
     if (!links.length) {

@@ -16,8 +16,10 @@
 //   of view at their full height, so sorting moves nothing. If the script never comes, they show
 //   after 10s, in the store's order.
 // - A size row is one line from $rf-cart-row-one: the size, the stepper, the line total and
-//   Remove. Below that it takes two (the size and Remove, then the stepper and the total), so
-//   nothing scrolls sideways at 320px.
+//   Remove. Narrower, it takes two: the size, then the stepper, the total and Remove, in the order
+//   they are read. A line total never breaks inside a price, and its column is never narrower
+//   than its widest price, a coupon's struck total included. Below $rf-cart-narrow the steppers'
+//   buttons are 40px wide (still 44px tall) and the gaps 8px, so "$1,258.20" fits at 320.
 // - The summary (stock totals, then cart-summary.html): "Order summary", the totals, Check out,
 //   the promise line, "Have a coupon code?". Below 801px the phone bar (data-rf-cart-bar) is fixed
 //   to the bottom, and the page pads its scroll by the bar's height, so a focused element never
@@ -25,7 +27,8 @@
 //
 // -----------------------------------------------------------------------------
 
-$rf-cart-row-one: 360px; // the narrowest width a size row fits on one line
+$rf-cart-row-one: 420px; // a row's one line fits from here, "Size Assorted" or "$1,258.20" included
+$rf-cart-narrow: 360px; // below it the second line is tighter, so a four-figure total fits at 320
 $rf-cart-bar-h: 4.5rem; // the phone bar's height (72px at 16px text); the scroll padding matches it
 
 .page-content[data-cart] {
@@ -191,18 +194,23 @@ $rf-cart-bar-h: 4.5rem; // the phone bar's height (72px at 16px text); the scrol
     column-gap: 10px;
     display: grid;
     grid-template-areas:
-        "size size remove"
-        "stepper total total";
-    grid-template-columns: minmax(0, 1fr) auto 44px;
+        "size size size"
+        "stepper total remove";
+    grid-template-columns: auto minmax(min-content, 1fr) 44px;
     margin: 0;
     row-gap: 6px;
 
-    // The size column is at least a two-digit size's tag wide, so the steppers line up; the total
-    // takes what is left, so the row never runs past its group (story 71).
+    @media not all and (min-width: $rf-cart-narrow) {
+        column-gap: 8px;
+    }
+
+    // The size column is at least a two-digit size's tag wide, so the steppers line up. The total's
+    // column is never narrower than its widest price (min-content, each price unbroken), so a
+    // coupon's two prices wrap onto two lines rather than push Remove out of the group (story 71).
     @media (min-width: $rf-cart-row-one) {
         column-gap: 8px;
         grid-template-areas: "size stepper total remove";
-        grid-template-columns: minmax(76px, auto) auto minmax(0, 1fr) 44px;
+        grid-template-columns: minmax(76px, auto) auto minmax(min-content, 1fr) 44px;
     }
 }
 
@@ -272,6 +280,10 @@ $rf-cart-bar-h: 4.5rem; // the phone bar's height (72px at 16px text); the scrol
     justify-content: center;
     width: var(--rf-target-buy);
 
+    @media not all and (min-width: $rf-cart-narrow) {
+        width: 40px;
+    }
+
     &:hover {
         background: var(--rf-tile);
     }
@@ -301,9 +313,11 @@ $rf-cart-bar-h: 4.5rem; // the phone bar's height (72px at 16px text); the scrol
     margin: 0;
     text-align: right;
 
-    // Stock pads the table cell's value for its own layout, which here pushes it into Remove.
+    // Stock pads the table cell's value for its own layout, which here pushes it into Remove. A
+    // price never breaks inside, so the column's min-content is the widest price.
     .cart-item-value {
         padding: 0;
+        white-space: nowrap;
     }
 }
 

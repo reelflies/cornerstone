@@ -798,11 +798,12 @@ node --test scripts/qa/render/partials/hook-chart-page.test.mjs
 
 ## The cart (`cart-screens.spec.mjs`)
 
-Ticket 41's cart (spec module 18) on the fixture page: the real cart page rendered round a 12-pattern cart (`render/pages/cart-page/fixtures/twelve.json`, products from the reference page's data with their own photos). A cart on channel 1 would be a live write (W0-6), and ReelFlies_CA has no products until refactor 14. The server groups the lines by pattern; the fixture page loads no theme bundle, so the spec runs the real `cart-groups.js`, which sorts each group's sizes, in it through `render/theme-script.mjs`, which turns listed theme modules into one browser script with Babel.
+Ticket 41's cart (spec module 18) on the fixture page: the real cart page rendered round a 12-pattern cart (`render/pages/cart-page/fixtures/twelve.json`, products from the reference page's data with their own photos), and a smaller one with a coupon on every line and a four-figure total (`discounted.json`). A cart on channel 1 would be a live write (W0-6), and ReelFlies_CA has no products until refactor 14. The server groups the lines by pattern; the fixture page loads no theme bundle, so the spec runs the real `cart-groups.js`, which sorts each group's sizes, in it through `render/theme-script.mjs`, which turns listed theme modules into one browser script with the bundle's own Babel options.
 
-- **The look,** at 375 and 1280: the page without the fixed phone bar, and the bar on its own at 375 (widget baselines, `widget cart-page`).
+- **The look,** at 375 and 1280: each cart without the fixed phone bar, and the bar on its own at 375 (widget baselines, `widget cart-page`).
 - **Grouping:** one group per pattern, sizes in hook order once sorted; until then a group of several sizes keeps them out of view, and sorting moves no group and not the summary (CLS); a pattern with sizes priced differently shows each size's unit price; the lines add up to the subtotal.
-- **Photos and reflow:** each group's 64px photo, linked to the product, at 320, 375 and 1280, and nothing scrolls sideways.
+- **Photos:** each group's 64px photo, linked to the product, at 320, 360, 375, 414 and 1280.
+- **Rows and totals (story 71):** in both carts at 320, 359, 360, 375, 390, 400, 414, 419, 420, 430 and 1280 (either side of the 360px tightening and the 420px one-line breakpoint), every row and its controls inside the group, no line total wider than its column, and nothing scrolling sideways. The discounted cart has a coupon on every line, a "Size Assorted" tag and a four-figure total. These checks and the photo checks set their own viewport, so they run in the phone project only.
 - **The phone bar:** the total for the flies and Check out; tabbing from the top to the summary's Check out never leaves the focused element under it, and a second test shows that check fails with the page's scroll padding taken away.
 - **axe** in the cart.
 
@@ -823,7 +824,7 @@ The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixtu
 | `render/render.mjs` | `renderPartial` and `renderWidget`, `readFixture`, `widgetCases`, `themeConfig`. A Jest spec can use it through a child `node` process (ticket 33's `size-filter-stock.spec.js`) |
 | `render/html-checks.mjs` | `unbalancedTags(html)`: elements closed in the wrong place, closed with nothing open, or never closed |
 | `render/widget-page.mjs` | the fixture page a widget shot is taken on |
-| `render/theme-script.mjs` | `themeScript(names, run)`: listed theme modules as one browser script, through Babel, for a fixture page, which loads no bundle (ticket 41's `cart-screens.spec.mjs`, and `size-filter.js` in ticket 33's `category-screens.spec.mjs`) |
+| `render/theme-script.mjs` | `themeScript(names, run)`: listed theme modules as one browser script for a fixture page, which loads no bundle (ticket 41's `cart-screens.spec.mjs`, and `size-filter.js` in ticket 33's `category-screens.spec.mjs`), built with the Babel options babel-loader resolves (`bundleBabelOptions()`: `webpack.common.js`'s merged with `babel.config.js`), through `fixtureBabelOptions()`, loose mode and its assumptions included, so a module that breaks only in the bundle's build breaks there too. Its test also holds those options and `babel.config.js` to spreading a NodeList, a Set and a Map whole |
 | `render/home-page.mjs` | the whole home page with every widget a channel places on `pages/home`, each from a fixture, in its region and placement order: `homeCases`, `renderHomePage` and `openHomePage` (ticket 47; `home-widgets-screens.spec.mjs`, below) |
 | `render/photo-contrast.mjs` | `worstContrastOverPhoto(page, selector)`: a line of text against the lightest pixel behind it, for text on a scrim over a photo, which axe can't judge (the hero's and the cards', tickets 46 and 47) |
 | `widget-screens.spec.mjs` | the widget element shots |

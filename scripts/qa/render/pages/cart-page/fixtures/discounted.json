@@ -1,0 +1,292 @@
+{
+    "description": "A cart with a coupon on every line (ticket 41's follow-up; story 71), for cart-screens.spec.mjs: three of twelve.json's patterns (three sizes out of hook order and one \"Assorted\", which sorts after them and is the widest size tag, two sizes priced differently, and a fly box with no size, 36 of them), each line with its total struck through and the discounted total beside it, as stock's cart shows a coupon, so the widest line total is \"$1,258.20 $1,069.47\". The width checks run on it as on twelve.json. Only the lines are the coupon's: the cart has no coupons entry or discount total, so the summary shows no Discounts block; the first live cart with a coupon (wave R2) checks the summary and whether its subtotal is before or after the discount.",
+    "page": "pages/cart",
+    "region": "cart_below_totals",
+    "chrome": true,
+    "configuration": {},
+    "page_context": {
+        "page_type": "cart",
+        "breadcrumbs": [],
+        "theme_settings": {
+            "rf_fly_brands": "ReelFlies"
+        },
+        "settings": {
+            "hide_price_from_guests": false
+        },
+        "urls": {
+            "checkout": {
+                "single_address": "/checkout"
+            },
+            "cart": "/cart.php",
+            "home": "/",
+            "auth": {
+                "login": "/login.php"
+            }
+        },
+        "cart": {
+            "items": [
+                {
+                    "id": "line-01",
+                    "product_id": 5663,
+                    "name": "Fat Albert",
+                    "url": "https://reelflies.ca/fat-albert/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 3,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/5663/1/5663-fat-albert.jpg",
+                        "alt": "Fat Albert"
+                    },
+                    "price": {
+                        "value": 1.75,
+                        "formatted": "$1.75"
+                    },
+                    "total": {
+                        "value": 5.25,
+                        "formatted": "$5.25"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "10"
+                        }
+                    ],
+                    "total_discounted": {
+                        "value": 4.46,
+                        "formatted": "$4.46"
+                    }
+                },
+                {
+                    "id": "line-02",
+                    "product_id": 5663,
+                    "name": "Fat Albert",
+                    "url": "https://reelflies.ca/fat-albert/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 6,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/5663/1/5663-fat-albert.jpg",
+                        "alt": "Fat Albert"
+                    },
+                    "price": {
+                        "value": 1.75,
+                        "formatted": "$1.75"
+                    },
+                    "total": {
+                        "value": 10.5,
+                        "formatted": "$10.50"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "14"
+                        }
+                    ],
+                    "total_discounted": {
+                        "value": 8.92,
+                        "formatted": "$8.92"
+                    }
+                },
+                {
+                    "id": "line-03",
+                    "product_id": 5663,
+                    "name": "Fat Albert",
+                    "url": "https://reelflies.ca/fat-albert/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 3,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/5663/1/5663-fat-albert.jpg",
+                        "alt": "Fat Albert"
+                    },
+                    "price": {
+                        "value": 1.75,
+                        "formatted": "$1.75"
+                    },
+                    "total": {
+                        "value": 5.25,
+                        "formatted": "$5.25"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "4"
+                        }
+                    ],
+                    "total_discounted": {
+                        "value": 4.46,
+                        "formatted": "$4.46"
+                    }
+                },
+                {
+                    "id": "line-01-assorted",
+                    "product_id": 5663,
+                    "name": "Fat Albert",
+                    "url": "https://reelflies.ca/fat-albert/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 3,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/5663/1/5663-fat-albert.jpg",
+                        "alt": "Fat Albert"
+                    },
+                    "price": {
+                        "value": 1.75,
+                        "formatted": "$1.75"
+                    },
+                    "total": {
+                        "value": 5.25,
+                        "formatted": "$5.25"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "Assorted"
+                        }
+                    ],
+                    "total_discounted": {
+                        "value": 4.46,
+                        "formatted": "$4.46"
+                    }
+                },
+                {
+                    "id": "line-16",
+                    "product_id": 4979,
+                    "name": "Royal Wulff Dry Fly",
+                    "url": "https://reelflies.ca/royal-wulff-dry-fly/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 2,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/4979/1/4979-royal-wulff-dry-fly.jpg",
+                        "alt": "Royal Wulff Dry Fly"
+                    },
+                    "price": {
+                        "value": 0.95,
+                        "formatted": "$0.95"
+                    },
+                    "total": {
+                        "value": 1.9,
+                        "formatted": "$1.90"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "6"
+                        }
+                    ],
+                    "total_discounted": {
+                        "value": 1.61,
+                        "formatted": "$1.61"
+                    }
+                },
+                {
+                    "id": "line-17",
+                    "product_id": 4979,
+                    "name": "Royal Wulff Dry Fly",
+                    "url": "https://reelflies.ca/royal-wulff-dry-fly/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 2,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/4979/1/4979-royal-wulff-dry-fly.jpg",
+                        "alt": "Royal Wulff Dry Fly"
+                    },
+                    "price": {
+                        "value": 1.25,
+                        "formatted": "$1.25"
+                    },
+                    "total": {
+                        "value": 2.5,
+                        "formatted": "$2.50"
+                    },
+                    "options": [
+                        {
+                            "name": "Fly Sizes",
+                            "value": "4"
+                        }
+                    ],
+                    "total_discounted": {
+                        "value": 2.12,
+                        "formatted": "$2.12"
+                    }
+                },
+                {
+                    "id": "line-22",
+                    "product_id": 3886,
+                    "name": "42 Mayfly Assortment",
+                    "url": "https://reelflies.ca/42-mayfly-assortment/",
+                    "type": "PhysicalItem",
+                    "can_modify": true,
+                    "quantity": 36,
+                    "min_purchase_quantity": 0,
+                    "max_purchase_quantity": 0,
+                    "brand": {
+                        "name": "ReelFlies"
+                    },
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/3886/1/3886-42-mayfly-assortment.jpg",
+                        "alt": "42 Mayfly Assortment"
+                    },
+                    "price": {
+                        "value": 34.95,
+                        "formatted": "$34.95"
+                    },
+                    "total": {
+                        "value": 1258.2,
+                        "formatted": "$1,258.20"
+                    },
+                    "options": [],
+                    "total_discounted": {
+                        "value": 1069.47,
+                        "formatted": "$1,069.47"
+                    }
+                }
+            ],
+            "quantity": 55,
+            "sub_total": {
+                "formatted": "$1,095.50"
+            },
+            "grand_total": {
+                "formatted": "$1,095.50"
+            },
+            "show_primary_checkout_button": true,
+            "taxes": [],
+            "status_messages": [
+                {
+                    "message": "Your fly order qualifies for free standard shipping in Canada."
+                }
+            ]
+        }
+    }
+}

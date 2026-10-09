@@ -109,7 +109,9 @@ it('refuses to load with QA_FRESH_SERVER=1 while anything answers on QA_PORT, wh
     try {
         const { status, stderr } = load({ QA_FRESH_SERVER: '1', QA_PORT: String(port) }, 'config.webServer.reuseExistingServer');
         assert.notEqual(status, 0);
-        assert.match(stderr, new RegExp(`already answers on port ${port}\\. Stop that server first`));
+        // The next port is free when freePort picks this one, but a test file running beside this
+        // one may bind it before the config looks, and the message then names both.
+        assert.match(stderr, new RegExp(`already answers on ports? ${port}(?: and ${port + 1})?\\. Stop that server first`));
     } finally {
         holder.close();
     }
