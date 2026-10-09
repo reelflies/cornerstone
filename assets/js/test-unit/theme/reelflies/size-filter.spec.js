@@ -163,6 +163,16 @@ describe('after a refresh (story 68)', () => {
         expect(announce).not.toHaveBeenCalled();
         expect(document.activeElement).toBe(document.body);
     });
+
+    it('takes an element added and removed again in one task for no refresh', async () => {
+        sizeFilter.load({}, document);
+        const later = document.createElement('div');
+        document.getElementById('product-listing-container').appendChild(later);
+        later.remove();
+        await settle();
+        expect(announce).not.toHaveBeenCalled();
+        expect(document.activeElement).toBe(document.body);
+    });
 });
 
 describe('a size picked in "Show more" (story 68)', () => {

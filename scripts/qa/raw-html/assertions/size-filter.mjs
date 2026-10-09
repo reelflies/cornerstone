@@ -5,7 +5,7 @@
 //   mean?" beside it: one link to /fly-hook-size-chart/ in the facet's block.
 // - No page has stock's no-products alert, which category.js focused on load
 //   (data-no-products-notification): the empty states take no focus.
-// - A fly category's pin (FLY_PINS) that lists any facet lists Fly Sizes: ticket 21 shows it
+// - A fly listing's pin (FLY_PINS) that lists any facet lists Fly Sizes: ticket 21 shows it
 //   first, so a pin without it means the option was renamed and the templates' name
 //   (size-facet-name.html) no longer matches, which would leave stock's list on the page.
 //
@@ -21,8 +21,9 @@ export const CHART_PATH = '/fly-hook-size-chart/';
 // (render/partials/size-filter.test.mjs holds the two together).
 export const SIZE_FACET = 'Fly Sizes';
 
-// The category pins that are fly listings (pages.mjs); category@more is the gear's.
-export const FLY_PINS = ['category', 'category@noindex'];
+// The pins that are fly listings (pages.mjs): channel 1's category pins but category@more, the
+// gear's, and the Fly Type and Species kinds the prelaunch host pins (wave R2).
+export const FLY_PINS = ['category', 'category@noindex', 'fly-type', 'species'];
 
 export function sizeFilterProblems(html, key) {
     const markup = markupOnly(html);
@@ -44,7 +45,7 @@ export default {
     id: 'size-filter',
     ticket: 33,
     description: '"What do sizes mean?" beside the Fly Sizes pills, Fly Sizes on the fly pins that list facets, and no focus-grabbing no-products alert',
-    pages: ['category'],
+    pages: ['category', 'fly-type', 'species'],
     check(page) {
         return sizeFilterProblems(page.html, page.key ?? page.kind);
     },

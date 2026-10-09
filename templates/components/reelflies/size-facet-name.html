@@ -4,8 +4,9 @@
     sends it in each facet's `facet` and each selected item's `facet`. Stock facets/multi.html's
     hook and listing-top.html include this, then compare with rf_size_facet.
 
-    facet-order.js (FLY_SIZE_FACET) and the size-filter assertion (SIZE_FACET) name it too, and
-    render/partials/size-filter.test.mjs fails when the three differ. If the option is renamed in
-    the catalogue, the pills fall back to stock's list, so change all three with it.
+    facet-order.js (FLY_SIZE_FACET), the size-filter assertion (SIZE_FACET) and quick-add-route.js
+    (SIZE_OPTION_NAMES, the product option's name) name it too, and a render test
+    (render/partials/size-filter.test.mjs) fails when the four differ. If the option is renamed in
+    the catalogue, the pills fall back to stock's list, so change all four with it.
 --}}
 {{~assignVar 'rf_size_facet' 'Fly Sizes'~}}

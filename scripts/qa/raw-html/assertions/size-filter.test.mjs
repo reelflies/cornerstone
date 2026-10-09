@@ -18,8 +18,8 @@ const page = async (name, change = context_ => context_) => ({
 });
 const problems = (good, from, to) => sizeFilter.check({ ...good, html: good.html.replace(from, to) }).join('\n');
 
-test('applies to category pins, ticket 33', () => {
-    assert.deepEqual(sizeFilter.pages, ['category']);
+test('applies to category pins and the Fly Type and Species kinds, ticket 33', () => {
+    assert.deepEqual(sizeFilter.pages, ['category', 'fly-type', 'species']);
     assert.equal(sizeFilter.ticket, 33);
 });
 

@@ -25,7 +25,8 @@
 //   - Filter beside Sort by on phones, in place of stock's toggle, with the header or without it
 //   - Sort by on the row's right as the reference's, a 44px pill with its label beside it
 //   - "Show more" under the pills, 24px tall or more; stock's "Clear" centred on its heading;
-//     stock's "Refine by" only once a filter is applied
+//     stock's "Refine by" only once a filter is applied, and the listing in its column beside a
+//     sidebar that shows nothing
 //
 // The fixture page loads no theme bundle, so the spec runs the real category-chips.js in the
 // page: it has no imports, so its source goes in as a classic script, its exports dropped.
@@ -263,6 +264,29 @@ test.describe('the Fly size filter (ticket 33)', () => {
         expect(Math.abs(box.y + box.height / 2 - (select.y + select.height / 2))).toBeLessThanOrEqual(2);
     });
 
+    test('fits the longest sort option whole at 320, the sort box on a line of its own under Filter', async ({ page }, testInfo) => {
+        test.skip(!phone(testInfo), 'the phone layout');
+        await page.setViewportSize({ width: 320, height: 900 });
+        await open(page, byName('fly-type'));
+        const { box, needed } = await page.locator('.rf-list-tools select').evaluate(select => {
+            const style = getComputedStyle(select);
+            const probe = document.createElement('span');
+            Object.assign(probe.style, { font: style.font, position: 'absolute', whiteSpace: 'nowrap' });
+            document.body.appendChild(probe);
+            const widest = Math.max(...Array.from(select.options).map(option => {
+                probe.textContent = option.text;
+                return probe.getBoundingClientRect().width;
+            }));
+            probe.remove();
+            const sides = ['paddingLeft', 'paddingRight', 'borderLeftWidth', 'borderRightWidth'].reduce((sum, side) => sum + parseFloat(style[side]), 0);
+            return { box: select.getBoundingClientRect().width, needed: widest + sides };
+        });
+        expect(box, 'the longest option, "Price: Descending", whole').toBeGreaterThanOrEqual(needed - 1);
+        expect(await page.locator('.rf-list-tools select').evaluate(select => getComputedStyle(select).fontSize), 'no zoom on iOS').toBe('16px');
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        expect(overflow, 'nothing scrolls sideways').toBeLessThanOrEqual(0);
+    });
+
     test('shows "Show more" under the pills, 24px tall or more and clear of the last row', async ({ page }, testInfo) => {
         test.skip(phone(testInfo), 'the facets are closed on phones until Filter opens them');
         await open(page, byName('species'));
@@ -282,5 +306,19 @@ test.describe('the Fly size filter (ticket 33)', () => {
         const [clear, title] = await Promise.all([page.locator('.rf-size-facet .facetedSearch-clearLink').boundingBox(), page.locator('.rf-size-facet .accordion-title').boundingBox()]);
         expect(Math.abs(clear.y + clear.height / 2 - (title.y + title.height / 2))).toBeLessThanOrEqual(2);
         expect(clear.height).toBeGreaterThanOrEqual(24);
+    });
+
+    test('keeps the listing in its column when the sidebar shows nothing, as on a listing with no facet', async ({ page }, testInfo) => {
+        test.skip(phone(testInfo), 'the sidebar stacks above the listing on phones');
+        await open(page, byName('fly-type'));
+        // Stock renders no facet list when no facet is visible (faceted-search/index.html), as on
+        // every channel-1 category today; "Refine by" is hidden with no filter applied.
+        await page.evaluate(() => document.getElementById('facetedSearch-navList').remove());
+        await expect(page.locator('.facetedSearch-refineFilters')).toBeHidden();
+        const [sidebar, listing] = await page.evaluate(() => ['.page-sidebar', '#product-listing-container'].map(selector => {
+            const box = document.querySelector(selector).getBoundingClientRect();
+            return { left: box.left, right: box.right };
+        }));
+        expect(listing.left, 'beside the sidebar\'s column').toBeGreaterThanOrEqual(sidebar.right);
     });
 });

@@ -10,8 +10,9 @@
 //   (in the sidebar, for one picked in "Show more" too), or the sort box, or else the count.
 //   Focus still on the page is left where it is. Then the listing's count (listing-top.html) is
 //   announced through the shared live region, unless focus went to the count, which says it.
-// - A refresh is a batch that removes the listing's children, as stock's replacement does; an
-//   element only added there (tickets 42 and 43 work in the listing) is not one.
+// - A refresh is a batch that removes children the listing already had, as stock's replacement
+//   does; an element added there (tickets 42 and 43 work in the listing), even one added and
+//   removed again in the same task, is not one.
 // - A size picked in "Show more" refreshes while the modal is still closing, and its focus trap
 //   would pull focus back in. Focus waits until Foundation's reveal has hidden the modal
 //   (display: none, set just before its closed event, so it is seen after stock's handlers have
@@ -34,19 +35,20 @@ const PANEL = 'facetedSearch-navList';
 const SIZES_TOGGLE = '.rf-size-facet .accordion-navigation';
 const FIRST_PILL = '.rf-size-pill';
 const MODAL = 'modal';
+const FACET_LISTS = '#facetedSearch [data-facet]';
 
 // What the shopper last used to refresh the listing, so focus can go back to it.
 export function controlUsed(target) {
     const link = target.closest(FACET_LINK);
     if (link) {
-        const list = link.closest('#facetedSearch [data-facet], #modal [data-facet]');
+        const list = link.closest(`${FACET_LISTS}, #${MODAL} [data-facet]`);
         return list ? { facet: list.getAttribute('data-facet'), label: facetLabel(link) } : { other: true };
     }
     return target.closest(SORT) ? { sort: true } : null;
 }
 
 function findFacetLink(doc, { facet, label }) {
-    const list = Array.from(doc.querySelectorAll('#facetedSearch [data-facet]'))
+    const list = Array.from(doc.querySelectorAll(FACET_LISTS))
         .find(element => element.getAttribute('data-facet') === facet);
     const item = list && Array.from(list.children).find(child => facetLabel(child) === label);
     return item ? item.querySelector(FACET_LINK) : null;
@@ -132,7 +134,10 @@ export default {
         // Stock replaces the listing's children on each refresh, then the sidebar's, in one task,
         // so this runs once both are in.
         new view.MutationObserver(records => {
-            if (!records.some(record => record.removedNodes.length)) return;
+            const added = new Set();
+            records.forEach(record => record.addedNodes.forEach(node => added.add(node)));
+            const replaced = records.some(record => Array.from(record.removedNodes).some(node => !added.has(node)));
+            if (!replaced) return;
             afterRefresh(doc, used);
             used = null;
         }).observe(listing, { childList: true });

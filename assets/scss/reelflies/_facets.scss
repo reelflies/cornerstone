@@ -20,7 +20,8 @@
 //   so they hold with or without the header. Without script stock's toggle stays, though
 //   stock's own collapsible needs script too.
 // - Stock's "Refine by" block shows only once a filter is applied, as the reference's sidebar
-//   starts with the sizes.
+//   starts with the sizes. A sidebar left empty by it (a listing with no facet to show) keeps its
+//   column from medium up, so the listing stays where it is.
 //
 // -----------------------------------------------------------------------------
 
@@ -140,15 +141,18 @@ $rf-facets-phone: "not all and (min-width: #{$screen-medium})"; // below 801px, 
     display: flex;
     gap: 10px;
 
+    // Where Filter and the sort box don't fit side by side (320, whose box is as wide as its
+    // longest option, "Price: Descending"), the box takes a line of its own, on the right.
     @media #{$rf-facets-phone} {
+        flex-wrap: wrap;
         justify-content: space-between;
         width: 100%;
     }
 }
 
 // Stock's sort bar as the reference's: no box round the field, "Sort by" in dun, and the select
-// a 44px pill with stock's arrow. It may narrow beside Filter at 320 (a fieldset is otherwise
-// never narrower than its content).
+// a 44px pill with stock's arrow, its text 16px on phones, where iOS zooms into a smaller field.
+// A fieldset is otherwise never narrower than its content.
 .rf-list-tools .actionBar {
     min-width: 0;
 }
@@ -193,6 +197,10 @@ $rf-facets-phone: "not all and (min-width: #{$screen-medium})"; // below 801px, 
         max-width: 100%;
         min-width: 0;
         padding: 0 38px 0 16px;
+
+        @media #{$rf-facets-phone} {
+            font-size: 16px;
+        }
 
         &:hover {
             border-color: var(--rf-ink);
@@ -246,6 +254,14 @@ $rf-facets-phone: "not all and (min-width: #{$screen-medium})"; // below 801px, 
 // Stock's "Refine by" block, from medium up, only once a filter is applied
 .rf-listing-page .facetedSearch-refineFilters:not(:has(.facetLabel)) {
     display: none;
+}
+
+// With nothing in it, stock's floated sidebar (layouts/body/_body.scss) would have no height, and
+// the listing would slide into its column.
+.rf-listing-page .page-sidebar {
+    @include breakpoint("medium") {
+        min-height: 1px;
+    }
 }
 
 

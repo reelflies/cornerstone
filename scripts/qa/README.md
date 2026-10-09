@@ -757,15 +757,17 @@ The Fly Sizes facet as pills (`components/reelflies/facet-sizes.html`, through s
   - focus back on the size used, on the sort box, or else on the count, and left alone when it is still on the page
   - the count announced once after a refresh, and not when focus goes to the count, which says it
   - a size picked in "Show more": focus on it in the sidebar, after the modal has closed
-  - an element only added to the listing taken for no refresh
+  - an element only added to the listing, or added and removed in one task, taken for no refresh
   - Filter opening the facets through stock's toggle, opening Fly Sizes, and moving focus to the first pill
   - `hook-order.js` and `facet-order.js` keep their own specs.
+- **`size-filter-stock.spec.js`** (Jest) runs the same module with stock's own `category.js`, `faceted-search.js` and `collapsible.js`, on the sidebar and listing that `renderPartial` renders from the `fly-type` and `filtered` fixtures (in a child `node` process, since Jest can't load `render.mjs`), with phone CSS and a stubbed `api.getPage`: Filter opening the panel and Fly Sizes with either script loaded first; both staying open through stock's whole refresh after a pill, both toggles saying so, focus on the size and the count spoken once; a sort refresh keeping a closed panel closed.
 - **`category-screens.spec.mjs`** runs the real module in the page (`render/theme-script.mjs`):
   - the pills in hook order
   - a refresh with focus and the announcement
   - the empty state
-  - Filter at 375, and Sort by on the row's right
+  - Filter at 375, and Sort by on the row's right; at 320 the sort box on its own line with its longest option whole, in 16px text
   - "Show more" under the pills, at least 24px tall
+  - the listing in its column beside a sidebar that shows nothing (no facet visible, no filter applied), at 1280
   - with the chips' and the fold checks as before
 - **The `size-filter` and `facet-links` assertions** check the server HTML.
 
@@ -818,7 +820,7 @@ The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixtu
 
 | File | What |
 |---|---|
-| `render/render.mjs` | `renderPartial` and `renderWidget`, `readFixture`, `widgetCases`, `themeConfig` |
+| `render/render.mjs` | `renderPartial` and `renderWidget`, `readFixture`, `widgetCases`, `themeConfig`. A Jest spec can use it through a child `node` process (ticket 33's `size-filter-stock.spec.js`) |
 | `render/html-checks.mjs` | `unbalancedTags(html)`: elements closed in the wrong place, closed with nothing open, or never closed |
 | `render/widget-page.mjs` | the fixture page a widget shot is taken on |
 | `render/theme-script.mjs` | `themeScript(names, run)`: listed theme modules as one browser script, through Babel, for a fixture page, which loads no bundle (ticket 41's `cart-screens.spec.mjs`, and `size-filter.js` in ticket 33's `category-screens.spec.mjs`) |
