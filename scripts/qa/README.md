@@ -966,6 +966,7 @@ Ticket 39's layout (spec module 15): `pages/product.html` and stock `products/pr
   - related patterns: a grid of four cards under "Related patterns", lazy, no fetchpriority, no carousel or tab, nothing without related products
   - no weight row, no share links and no wallet buttons in the buy box; and Quick view still stock's
 - **The server HTML** is the `product-page` assertion's.
+- **The outline after a variant's photo:** `assets/js/test-unit/theme/product/image-gallery.spec.js` (Jest) holds stock `image-gallery.js`'s constructor hook: the main image's tile, outlined from the start, is outlined again when the main photo comes back after a variant's (`setAlternateImage`, then `restoreImage`); a clicked tile keeps its outline the same way, and with no tile outlined (Quick view) nothing is.
 - **The look:** the pins' page shots (`product`, `product@sizes` and its states), with the related grid held (`pages.mjs`), and **`product-page-screens.spec.mjs`** (in `qa:screens`), on the fixture page: the real product page round the reference's product, with its own photos (`render/pages/product-page/fixtures/files/`), at 375 and 1280, and at 1280 scrolled until the buy box is held at the top of the window beside the details (story 36). Its baselines are widget baselines (`widgets/<variation>/product-page-adams-…`, and `…-adams-scrolled-desktop-1280-…`), declared as `widget product-page`. The fixture page loads no theme script, so it shows the layout as the server and the stylesheet give it.
 - **`product-page.spec.mjs`** runs on channel 1's product pins (6178 and Fat Albert), at 375 and 1280:
   - the order at both widths, and the buy box left-aligned on phones
@@ -974,7 +975,7 @@ Ticket 39's layout (spec module 15): `pages/product.html` and stock `products/pr
   - the main image the page's only `fetchpriority="high"`, loaded from its srcset, and one thumbnail outlined as the page loads
   - on `/realistic-hopper-assortment/` (15 photos, so stock's carousel runs): the thumbnail row the same height before the carousel starts (the theme's scripts blocked) and after, and nothing below it moved
   - "About this fly" open; "Shipping and delivery" and "Hooks and tying" opening and closing with Enter and Space; the chart link
-  - the shipping line under the price and the promise line under Add to cart
+  - the shipping line under the price and the promise line under Add to cart; on Fat Albert the promise in the same place once a Colour and a size make the form valid, and on the pin (its one size checked from the start) too: stock's `toggleWalletButtonsVisibility` then shows the wallet box with an inline `display: block`, and while the store sends no wallet buttons the empty box still takes no row
   - "Save to wish list" for a guest: the store's own `wishlist.php` sends a guest to sign in (a read); the save itself, a POST, is answered here as the store answers a guest, and lands on the sign-in page
   - no weight row, no wallet buttons, no share links in the buy box
   - related patterns: four cards, one row at 1280 and two across at 375, no carousel or tab, lazy photos

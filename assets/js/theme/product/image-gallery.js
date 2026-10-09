@@ -5,7 +5,7 @@ export default class ImageGallery {
         this.$mainImage = $gallery.find('[data-image-gallery-main]');
         this.$mainImageNested = $gallery.find('[data-main-image]');
         this.$selectableImages = $gallery.find('[data-image-gallery-item]');
-        this.currentImage = {};
+        this.currentImage = { $selectedThumb: this.$selectableImages.filter('.is-active') }; // ReelFlies hook (ticket 39; CUSTOMIZATIONS.md): the tile outlined from the start is outlined again after a variant's photo
     }
 
     init() {

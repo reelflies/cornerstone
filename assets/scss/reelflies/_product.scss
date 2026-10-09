@@ -287,13 +287,16 @@ $rf-thumb-h-phone: 43px;
 }
 
 // Stock's wallet box (add-to-cart.html), empty while the store sends no wallet buttons, takes no
-// row of ticket 38's buy row, so the promise line sits right under Add to cart. Without :has() it
-// keeps its row, 12px more.
+// row of ticket 38's buy row, so the promise line sits right under Add to cart. Stock's
+// toggleWalletButtonsVisibility (product-details-base.js) shows the box with an inline
+// display: block once the form is valid, so only !important keeps an empty box out; a box with a
+// wallet button in it no longer matches, and stock's show and hide apply. A browser without :has()
+// keeps the box's row while stock shows it: 12px more under Add to cart, and none before then.
 .rf-product-buy .add-to-cart-wallet-buttons {
     margin-top: 0;
 
     &:not(:has(*)) {
-        display: none;
+        display: none !important;
     }
 }
 

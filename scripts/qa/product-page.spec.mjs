@@ -16,7 +16,8 @@
 // - The details: "About this fly" open; the other two open and close with Enter and Space (story
 //   46). "Hooks and tying" links to the hook size chart.
 // - The shipping line under the price (story 44), the promise line under Add to cart (story 45),
-//   and "Save to wish list": a guest who uses it is sent to sign in (story 49). The store's answer
+//   where it stays once a Colour and a size make the form valid (stock then shows its wallet box,
+//   empty while the store sends no wallet buttons), and "Save to wish list": a guest who uses it is sent to sign in (story 49). The store's answer
 //   to the add is mocked here (a POST on channel 1 is a live write); that the store sends a guest
 //   from its wish lists to sign in is read from wishlist.php itself.
 // - No weight row, no wallet buttons, and no share links in the buy box.
@@ -37,6 +38,7 @@ import {
     dismissCookieBanner, expect, storefrontPage, test,
 } from './fixtures.mjs';
 import { QA_CHANNEL } from './storefront.mjs';
+import { chunkLoaded } from './states.mjs';
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
 const FAT_ALBERT = '/fat-albert/';
@@ -62,6 +64,18 @@ const boxes = (page, selectors) => page.evaluate(list => Object.fromEntries(list
 const GALLERY = '.productView-images';
 const BUY = '[data-rf-product-buy]';
 const DETAILS = '[data-rf-product-details]';
+const PROMISE = `${BUY} [data-rf-promise]`;
+const WALLET = `${BUY} [data-add-to-cart-wallet-buttons]`;
+// Fat Albert's Colour: stock swatches, required, none chosen; its sizes are ticket 37's pills.
+const COLOUR = '[data-product-attribute="swatch"] .form-option';
+const SIZE_GROUP = '[data-rf-pills="size"]';
+
+// A click on a choice, then stock's option-change answer to it (a listed read-only POST).
+async function chooseAndSettle(page, locator) {
+    const answered = page.waitForResponse(response => /\/remote\/v1\/product-attributes\//.test(response.url()));
+    await locator.click();
+    await answered;
+}
 
 test.describe('the product page layout (ticket 39)', () => {
     test.skip(QA_CHANNEL !== '1', 'ReelFlies_CA has no products until refactor 14: run with QA_CHANNEL=1');
@@ -196,6 +210,30 @@ test.describe('the product page layout (ticket 39)', () => {
         expect(gap('#form-action-addToCart', `${BUY} [data-rf-promise]`), 'the promise just under Add to cart').toBeLessThanOrEqual(24);
         expect(gap('#form-action-addToCart', `${BUY} [data-rf-promise]`)).toBeGreaterThanOrEqual(0);
         await expect(page.locator(`${BUY} [data-rf-promise]`)).toHaveText('We stand behind every fly we sell.');
+    });
+
+    test('keeps the promise where it is once a Colour and a size are chosen: the empty wallet box stock shows takes no row (story 45)', async ({ page }) => {
+        const promiseGap = async () => {
+            const at = await boxes(page, ['#form-action-addToCart', PROMISE]);
+            return Math.round(at[PROMISE].top - at['#form-action-addToCart'].bottom);
+        };
+        // Stock's toggleWalletButtonsVisibility shows the box (an inline display: block) once the
+        // form is valid: on Fat Albert after a Colour and a size, on the pin (one size, checked
+        // for the shopper) from the start. It stays empty while the store sends no wallet buttons.
+        const shownEmpty = async () => {
+            await expect(page.locator(WALLET)).toHaveAttribute('style', /display:\s*block/);
+            await expect(page.locator(`${WALLET} *`)).toHaveCount(0);
+        };
+        await open(page, FAT_ALBERT);
+        await chunkLoaded(page, 'rf-size-pills');
+        const before = await promiseGap();
+        await chooseAndSettle(page, page.locator(COLOUR).first());
+        await chooseAndSettle(page, page.locator(`${SIZE_GROUP} .rf-pill[data-product-attribute-value]:not(.unavailable)`).first());
+        await shownEmpty();
+        expect(await promiseGap(), 'Fat Albert, after a Colour and a size').toBe(before);
+        await open(page);
+        await shownEmpty();
+        expect(await promiseGap(), 'the product pin, its size checked from the start').toBe(before);
     });
 
     test('sends a guest who saves to a wish list to sign in (story 49; UX-20)', async ({ page }) => {
