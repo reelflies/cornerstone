@@ -410,10 +410,14 @@ export function createAddFlow(root, context = {}, {
         barButton?.addEventListener('click', () => {
             // The main button disabled: an add in flight (stock disables it, and the bar's button
             // with it, so a second tap adds nothing), or stock's quantity limit, whose alert above
-            // the screen is said in the bar too.
+            // the screen (it has no role) is said in the bar and the live region.
             if (button && button.disabled) {
                 const limit = form.querySelector('.productAttributes-message[data-qty-limit] .alertBox-message');
-                if (limit && limit.textContent.trim()) showBar(limit.textContent.trim(), 'error');
+                const text = limit ? limit.textContent.trim() : '';
+                if (text) {
+                    showBar(text, 'error');
+                    announce(text, doc);
+                }
                 return;
             }
             // requestSubmit checks the required options first, so the bar says why first: in the

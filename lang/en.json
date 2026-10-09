@@ -1124,6 +1124,7 @@
             "one_fly": "# fly",
             "many_flies": "# flies",
             "quantity": "Quantity #",
+            "quantity_label": "Quantity",
             "preview_heading": "Added to cart. Your cart now has {count, plural, one {# item} other {# items}}."
         },
 

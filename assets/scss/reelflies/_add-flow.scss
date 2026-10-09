@@ -8,6 +8,8 @@
 //
 // - The stepper and the button on one row, both 52px tall as the reference's: the stepper's − and
 //   + 44px targets, the button the buy colour, a pill filling the rest, its label 17px semibold.
+//   "Quantity" sits over the stepper, semibold, as the reference's .lab; the row aligns to its
+//   foot, so the button lines up with the stepper, not with the label and stepper together.
 //   Stock sets the wrapper's display under .productView-options .form, so these rules go through
 //   the same selector. The wallet buttons take a row of their own.
 // - The status line under the row, the reference's .status: a soft box with the check icon, or
@@ -24,7 +26,7 @@ $rf-add-height: 52px; // the reference's .buy-row: the stepper and the button
 $rf-add-error-tint: #fdecea; // the reference's .status.err; the error colour on it is 5.75:1
 
 .productView-options .form .rf-add {
-    align-items: center;
+    align-items: end;
     column-gap: 12px;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
@@ -52,6 +54,16 @@ $rf-add-error-tint: #fdecea; // the reference's .status.err; the error colour on
     .add-to-cart-wallet-buttons {
         grid-column: 1 / -1;
     }
+}
+
+// "Quantity" over the stepper: the reference's .lab, 8px above it.
+.rf-add .rf-add-qty-label.form-label {
+    color: var(--rf-ink);
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 8px;
+    text-align: left; // stock centres .productView-options below 551px
 }
 
 .rf-add-stepper {

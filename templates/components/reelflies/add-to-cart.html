@@ -62,7 +62,7 @@
     {{#if product.show_quantity_input}}
         {{inject 'productQuantityErrorMessage' (lang 'products.quantity_error_message')}}
         <div class="form-field form-field--increments rf-add-qty">
-            <label class="form-label form-label--alternate is-srOnly" for="qty[]">{{lang 'products.quantity'}}</label>
+            <label class="form-label form-label--alternate rf-add-qty-label" for="qty[]">{{lang 'reelflies.add_flow.quantity_label'}}</label>
             <div class="form-increment rf-add-stepper" data-quantity-change>
                 <button type="button" class="button button--icon rf-add-step" data-action="dec">
                     <span class="is-srOnly">{{lang 'products.quantity_decrease' name=product.title}}</span>

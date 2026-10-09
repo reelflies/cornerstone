@@ -459,7 +459,7 @@ describe('the sticky bar (story 43)', () => {
         expect(barButton.hasAttribute('aria-disabled')).toBe(false);
     });
 
-    it('says stock\'s quantity limit in the bar when the main button is disabled for it, and adds nothing', async () => {
+    it('says stock\'s quantity limit in the bar and the live region when the main button is disabled for it, and adds nothing', async () => {
         load();
         choose('s1');
         document.getElementById('add-to-cart-wrapper').insertAdjacentHTML('beforeend', '<div class="productAttributes-message" data-qty-limit="true"><p class="alertBox-message">The maximum purchasable quantity is 2</p></div>');
@@ -471,6 +471,7 @@ describe('the sticky bar (story 43)', () => {
         document.querySelector('form').requestSubmit = jest.fn();
         barButton.click();
         expect(bar.querySelector('[data-rf-sticky-text]').textContent).toBe('The maximum purchasable quantity is 2');
+        expect(announce).toHaveBeenCalledWith('The maximum purchasable quantity is 2', document);
         expect(document.querySelector('form').requestSubmit).not.toHaveBeenCalled();
     });
 
