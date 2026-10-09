@@ -599,7 +599,7 @@ It exits 1 on a failed check, and 2 when the storefront can't be reached or, wit
 
 Ticket 25's checks in a browser (spec seam 1; stories 67 to 71), on every page pinned for `QA_CHANNEL`, at 375 and 1280:
 
-- **Focus ring:** one Tab, then focus on the first visible link and the first visible button; each shows the ReelFlies ring (2px solid #23272B, 2px offset, `!important` over the stock #0f7fff, on `:focus-visible` only), or the gold bead #F2C14E when it sits on a forest ground (`.rf-on-dark`), as the footer's do (ticket 50). A mouse press on each focuses it with no ring. Stock `.button` eases `all` over 0.15s, so the check waits for the ring to settle.
+- **Focus ring:** one Tab, then focus on the first visible link and the first visible button; each shows the ReelFlies ring (2px solid #23272B, 2px offset, `!important` over the stock #0f7fff, on `:focus-visible` only), or the gold bead #F2C14E when it sits on a forest ground (`.rf-on-dark`), as the footer's do (ticket 50). The phone logo's ring is inset (-2px offset): its link fills the 56px sticky bar, so a ring outside would lose its top edge (#67). A mouse press on each focuses it with no ring. Stock `.button` eases `all` over 0.15s, so the check waits for the ring to settle.
 - **Skip link:** the first Tab lands on `.skip-to-main-link`.
 - **Landmarks:** axe's `landmark-one-main` and `landmark-no-duplicate-main`, which are moderate, so the axe gate doesn't fail on them.
 - **Onest:** `onest-latin-var.woff2` is requested once, nothing goes to Google Fonts for the theme's fonts (the create-account page's reCAPTCHA loads its own Roboto, which is the store's widget), one Onest face is loaded, the body's stack starts `Onest, "Onest Fallback"`, and the root font size is 16px.
