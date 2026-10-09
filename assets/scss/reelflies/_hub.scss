@@ -1,0 +1,169 @@
+// =============================================================================
+// SPECIES HUB (ticket 34; spec module 10; R8, SEO-2; stories 13, 14, 70 and 71)
+// =============================================================================
+//
+// The Species hub (pages/custom/category/species-hub.html): the plain listing header, one tile
+// per Species page (components/reelflies/category-tile.html), then the grid. From the reference's
+// .hub, .hub-intro, .hub-grid and .hub-tile (plan/design/src/reference.src.html:690-698, :888).
+//
+// - The intro runs wider than a category page's (44em, the reference's .hub-intro).
+// - The tiles: two columns on phones (12px apart) and three from 801px (20px), never a sideways
+//   scroll. A tile is a white card with the home tiles' 1px #DDE2DC border and a 12px radius:
+//   the photo in a 3:2 box, cropped to fill it, then the name, the count, the intro and the Fly
+//   Type links, underlined as the reference's .link, each at least 24px tall (WCAG 2.5.8).
+//   - The columns are what category-tile.html's sizes and its two eager photos assume: change
+//     them together.
+// - The grid after the tiles, under its heading and count: ticket 31's cards in its own grid
+//   (_card.scss), the full width of the page.
+//
+// -----------------------------------------------------------------------------
+
+$rf-hub-gap-phone:   12px;
+$rf-hub-gap:         20px;
+
+.rf-hub {
+    padding-bottom: var(--rf-section);
+
+    .rf-listing-intro {
+        max-width: 44em;
+    }
+}
+
+
+// The tiles
+// -----------------------------------------------------------------------------
+
+.rf-hub-tiles {
+    display: grid;
+    gap: $rf-hub-gap-phone;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    list-style: none;
+    margin: 24px 0 0;
+    padding: 0;
+
+    @include breakpoint("medium") {
+        gap: $rf-hub-gap;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.rf-hub-tile {
+    background: var(--rf-paper);
+    border: 1px solid $rf-tile-border;
+    border-radius: var(--rf-radius-mid);
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.rf-hub-tile__media {
+    display: block;
+}
+
+// The Species page's photo (a 16:7 stone banner in the store) fills the 3:2 box, centred; so does
+// the default image, white with the faded logo in its middle.
+.rf-hub-tile__img {
+    aspect-ratio: 3 / 2;
+    background: var(--rf-tile);
+    display: block;
+    height: auto;
+    object-fit: cover;
+    width: 100%;
+}
+
+.rf-hub-tile__body {
+    align-content: start;
+    display: grid;
+    gap: 4px;
+    padding: 12px 14px 14px;
+}
+
+.rf-hub-tile__name {
+    font-size: 19px;
+    line-height: 1.25;
+    margin: 0;
+    overflow-wrap: anywhere;
+
+    a {
+        color: var(--rf-ink);
+        text-decoration: none;
+
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+}
+
+.rf-hub-tile__count {
+    color: var(--rf-dun);
+    font-size: 14px;
+    margin: 0;
+}
+
+.rf-hub-tile .rf-listing-intro {
+    font-size: 15px;
+    line-height: 1.45;
+    margin: 2px 0 0;
+}
+
+.rf-hub-tile__types {
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 15px;
+    gap: 2px 14px;
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
+
+    li {
+        margin: 0;
+        max-width: 100%;
+    }
+}
+
+.rf-hub-tile__type {
+    align-items: center;
+    color: var(--rf-ink);
+    display: inline-flex;
+    min-height: var(--rf-target-min);
+    overflow-wrap: anywhere;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+
+    &:hover {
+        color: var(--rf-ink);
+        text-decoration-thickness: 2px;
+    }
+}
+
+
+// The grid after the tiles
+// -----------------------------------------------------------------------------
+
+.rf-hub-products {
+    margin-top: var(--rf-section);
+}
+
+.rf-hub-products__head {
+    align-items: baseline;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    justify-content: space-between;
+    margin: 0 0 16px;
+}
+
+.rf-hub-products__title {
+    font-size: var(--rf-fs-h2);
+    line-height: 1.15;
+    margin: 0;
+}
+
+.rf-hub-products__count {
+    color: var(--rf-dun);
+    font-size: 15px;
+    margin: 0;
+}

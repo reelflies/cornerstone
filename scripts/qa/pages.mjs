@@ -86,6 +86,11 @@ export const CHANNELS = {
             // rule and the listing's eager and lazy photos are checked on a real search page
             // (2026-10-09).
             search: '/search.php?search_query=streamer&section=product',
+            // Ticket 34: the Species hub's stand-in until wave R1 pins /species/ on 1895766: tree
+            // 1's Saltwater, Warmwater & Salmon (272), which custom-layouts.json renders with the
+            // hub template. Its nine subcategories are the tiles, each with its image and count;
+            // tree 1 puts their children past Menu Display Depth 3, so no tile has Fly Type links.
+            'species-hub': '/flies/saltwater-warmwater-salmon/',
         },
         // The live catalogue decides which products the category and search pins list, so
         // their grids are held (below), not masked. Pin a listing that holds still before
@@ -98,6 +103,8 @@ export const CHANNELS = {
             'category@more': ['[data-rf-list-count]'],
             'category@noindex': ['[data-rf-list-count]'],
             search: ['.page-heading', '[data-search-page-tabs] [role="tab"]'],
+            // The tiles' counts and the grid's (ticket 34) follow the catalogue.
+            'species-hub': ['[data-rf-hub-count]'],
             // Fat Albert's option rows, whose sold-out marks follow the live stock (its sizes, and
             // its colours once a size is chosen), whole, so a mark that moves to another value
             // doesn't move the mask; and the line naming the sizes. A UI state marks the options
@@ -139,6 +146,9 @@ export const CHANNELS = {
                 '.page-content > .panel': 360,
                 '#product-listing-container .productGrid': 1200,
             },
+            // The hub's grid (ticket 34), not in #product-listing-container: the root lists its
+            // Species pages' products, which the live catalogue decides, as the category pins'.
+            'species-hub': { '[data-rf-hub-products] .productGrid': 1200 },
         },
     },
     1855224: {
