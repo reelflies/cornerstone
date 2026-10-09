@@ -15,7 +15,7 @@ import { WIDGET_ENGINE, renderWidget, widgetCases } from '../qa/render/render.mj
 import { Handlebars3, STORE_ENGINE } from './engine.mjs';
 import { pasteShared } from './paste.mjs';
 import {
-    SYNC_CHANNELS, WIDGETS_DIR, emptyComments, entriesFor, readChannelFile, readWidget, setPlacementStatus, writeUuids,
+    SYNC_CHANNELS, WIDGETS_DIR, emptyComments, entriesFor, placementsOf, readChannelFile, readWidget, setPlacementStatus, writeUuids,
 } from './source.mjs';
 
 const require = createRequire(import.meta.url);
@@ -321,6 +321,11 @@ test('a channel file is checked before anything is read from the store', () => {
         }, /placement needs a region/],
         [{
             placement: {
+                template_file: 'home', region: 'home_below_menu', sort_order: 0, status: 'active',
+            },
+        }, /placement template_file "home" isn't a template file such as "pages\/home"/],
+        [{
+            placement: {
                 template_file: 'pages/home', region: 'home_below_menu', sort_order: 1.5, status: 'active',
             },
         }, /sort_order must be a whole number/],
@@ -373,6 +378,64 @@ test('a template that includes anything but a _shared partial, or a missing one,
         const { root } = widgetsRoot('rf-x', { template });
         assert.throws(() => readWidget('rf-x', { root }), error);
     }
+});
+
+// Ticket 27's follow-up: a global region's placement still names one template file, and the store
+// shows it on that page alone, so the strip is placed once per template file (docs/widgets.md).
+test('a placement can name several template files, each with its own recorded uuid', () => {
+    const several = {
+        placement: {
+            template_files: ['pages/home', 'pages/cart'], region: 'header_bottom--global', sort_order: 0, status: 'active',
+        },
+        uuids: { template: null, widget: null, placements: { 'pages/home': UUID } },
+    };
+    const { root } = widgetsRoot('rf-x', { channel: several });
+    const channelFile = readChannelFile(readWidget('rf-x', { root }), 1895766);
+    assert.deepEqual(channelFile.placement.template_files, ['pages/home', 'pages/cart']);
+    assert.deepEqual(placementsOf(channelFile), [
+        {
+            template_file: 'pages/home', region: 'header_bottom--global', sort_order: 0, status: 'active', uuid: UUID,
+        },
+        {
+            template_file: 'pages/cart', region: 'header_bottom--global', sort_order: 0, status: 'active', uuid: null,
+        },
+    ]);
+    const { root: one } = widgetsRoot('rf-x');
+    assert.deepEqual(placementsOf(readChannelFile(readWidget('rf-x', { root: one }), 1895766)), [{
+        template_file: 'pages/home', region: 'home_below_menu', sort_order: 0, status: 'inactive', uuid: null,
+    }]);
+    const placement = over => ({ ...several.placement, ...over });
+    const cases = [
+        [{ ...several, placement: placement({ template_file: 'pages/home' }) }, /placement names template_file or template_files, not both/],
+        [{ ...several, placement: placement({ template_files: [] }) }, /template_files lists no template file/],
+        [{ ...several, placement: placement({ template_files: ['pages/home', 'pages/home'] }) }, /template_files lists pages\/home twice/],
+        [{ ...several, placement: placement({ template_files: ['pages/home', 'cart'] }) }, /template_files has "cart", which isn't a template file such as "pages\/cart"/],
+        [{ ...several, uuids: { template: null, widget: null, placement: null } }, /uuids needs placements, a uuid or null per template file, with template_files/],
+        [{ ...several, uuids: { template: null, widget: null, placements: { 'pages/search': UUID } } }, /uuids\.placements records pages\/search, which template_files doesn't list/],
+        [{ ...several, uuids: { template: null, widget: null, placements: { 'pages/home': 'x' } } }, /uuids\.placements\["pages\/home"\] must be null or a uuid/],
+        [{ uuids: { template: null, widget: null, placements: {} } }, /uuids needs placement, not placements, with one template_file/],
+    ];
+    for (const [channel, error] of cases) {
+        const { root: bad } = widgetsRoot('rf-x', { channel });
+        assert.throws(() => readChannelFile(readWidget('rf-x', { root: bad }), 1895766), error, JSON.stringify(channel));
+    }
+});
+
+test('the uuids of a placement on several template files are written back as a map, in the list\'s order', () => {
+    const { root } = widgetsRoot('rf-x', {
+        channel: {
+            placement: {
+                template_files: ['pages/home', 'pages/cart'], region: 'header_bottom--global', sort_order: 0, status: 'active',
+            },
+            uuids: { template: null, widget: null, placements: {} },
+        },
+    });
+    const widget = readWidget('rf-x', { root });
+    const channelFile = readChannelFile(widget, 1895766);
+    writeUuids(channelFile, { template: UUID, widget: UUID, placements: { 'pages/cart': UUID, 'pages/home': null } });
+    const text = fs.readFileSync(channelFile.file, 'utf8');
+    assert.deepEqual(JSON.parse(text).uuids, { template: UUID, widget: UUID, placements: { 'pages/home': null, 'pages/cart': UUID } });
+    assert.deepEqual(Object.keys(JSON.parse(text).uuids.placements), ['pages/home', 'pages/cart'], 'the map follows template_files\' order');
 });
 
 test('recorded uuids and a placement status are written back into the channel file, and nothing else changes', () => {

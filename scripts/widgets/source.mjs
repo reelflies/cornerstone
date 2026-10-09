@@ -24,6 +24,16 @@
 //
 // The uuids are null until the store creates the objects; `widgets-sync.mjs --record` fills
 // them in from the channel's snapshot, and the PR that follows the apply commits them.
+//
+// A widget on several pages names `template_files` instead of `template_file`, and records one
+// placement uuid per template file in `uuids.placements` (ticket 27's strip: the store shows a
+// global region's placement on its own template file's page only, docs/widgets.md):
+//
+//     "placement": { "template_files": ["pages/home", "pages/cart"], "region": "header_bottom--global", … },
+//     "uuids": { "template": null, "widget": null, "placements": { "pages/home": null, "pages/cart": null } }
+//
+// A template file left out of `uuids.placements` reads as null. placementsOf(channelFile) gives
+// either shape as one list of placements, each with its uuid.
 
 import fs from 'fs';
 import { createRequire } from 'module';
@@ -44,6 +54,8 @@ export const SYNC_CHANNELS = [1895766];
 export const PLACEMENT_STATUSES = ['active', 'inactive'];
 
 const NAME = /^[a-z0-9][a-z0-9-]*$/;
+// A Widgets API template_file: pages/<name>, pages/custom/<kind>/<file> and so on.
+const TEMPLATE_FILE = /^pages\/[a-z0-9][a-z0-9_-]*(\/[a-z0-9][a-z0-9_-]*)*$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isObject = value => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const show = value => JSON.stringify(value);
@@ -199,22 +211,50 @@ export function readChannelFile(widget, channel) {
         widget.settings.filter(key => !(key in configuration)).forEach(key => problems.push(`configuration doesn't set "${key}", a schema setting`));
         [...new Set(channelsNamed(configuration).map(show))].forEach(value => problems.push(`configuration names channel ${value}: the channel is the file's channel_id alone`));
     }
+    const several = isObject(placement) && 'template_files' in placement;
     if (!isObject(placement)) {
         problems.push('placement must be an object');
     } else {
-        if (typeof placement.template_file !== 'string' || !placement.template_file) problems.push('placement needs a template_file, such as "pages/home"');
+        if (several) {
+            const files = placement.template_files;
+            if ('template_file' in placement) problems.push('placement names template_file or template_files, not both');
+            if (!Array.isArray(files) || !files.length) {
+                problems.push('placement template_files lists no template file: name one or more, such as "pages/cart"');
+            } else {
+                files.filter(name => typeof name !== 'string' || !TEMPLATE_FILE.test(name)).forEach(name => problems.push(`placement template_files has ${show(name)}, which isn't a template file such as "pages/cart"`));
+                [...new Set(files.filter((name, index) => files.indexOf(name) !== index))].forEach(name => problems.push(`placement template_files lists ${name} twice`));
+            }
+        } else if (typeof placement.template_file !== 'string' || !placement.template_file) {
+            problems.push('placement needs a template_file, such as "pages/home"');
+        } else if (!TEMPLATE_FILE.test(placement.template_file)) {
+            problems.push(`placement template_file ${show(placement.template_file)} isn't a template file such as "pages/home"`);
+        }
         if (typeof placement.region !== 'string' || !placement.region) problems.push('placement needs a region, such as "home_below_menu"');
         if (!Number.isInteger(placement.sort_order)) problems.push('placement sort_order must be a whole number');
         if (!PLACEMENT_STATUSES.includes(placement.status)) problems.push('placement status must be "active" or "inactive"');
-        const unknown = Object.keys(placement).filter(key => !['template_file', 'region', 'sort_order', 'status'].includes(key));
-        unknown.forEach(key => problems.push(`placement has "${key}": a placement here is template_file, region, sort_order and status`));
+        const unknown = Object.keys(placement).filter(key => !['template_file', 'template_files', 'region', 'sort_order', 'status'].includes(key));
+        unknown.forEach(key => problems.push(`placement has "${key}": a placement here is template_file (or template_files), region, sort_order and status`));
     }
-    if (!isObject(uuids) || !['template', 'widget', 'placement'].every(key => key in uuids)) {
-        problems.push('uuids needs template, widget and placement (each null until the store makes it)');
+    const placementKey = several ? 'placements' : 'placement';
+    if (!isObject(uuids) || !['template', 'widget'].every(key => key in uuids)) {
+        problems.push(`uuids needs template, widget and ${placementKey} (each null until the store makes it)`);
+    } else if (several && !isObject(uuids.placements)) {
+        problems.push('uuids needs placements, a uuid or null per template file, with template_files');
+    } else if (!several && !('placement' in uuids)) {
+        problems.push(`uuids needs ${'placements' in uuids ? 'placement, not placements, with one template_file' : 'template, widget and placement (each null until the store makes it)'}`);
     } else {
-        for (const key of ['template', 'widget', 'placement']) {
+        for (const key of ['template', 'widget', ...(several ? [] : ['placement'])]) {
             if (uuids[key] !== null && !UUID.test(String(uuids[key]))) problems.push(`uuids.${key} must be null or a uuid`);
         }
+        if (several) {
+            const listed = Array.isArray(placement.template_files) ? placement.template_files : [];
+            for (const [name, uuid] of Object.entries(uuids.placements)) {
+                if (!listed.includes(name)) problems.push(`uuids.placements records ${name}, which template_files doesn't list: the sync never deletes a placement, so delete it in the control panel (the store-write helper can't), then remove its uuid here`);
+                else if (uuid !== null && !UUID.test(String(uuid))) problems.push(`uuids.placements[${show(name)}] must be null or a uuid`);
+            }
+        }
+        const unknownUuids = Object.keys(uuids).filter(key => !['template', 'widget', placementKey].includes(key));
+        unknownUuids.forEach(key => problems.push(`uuids has "${key}": they are template, widget and ${placementKey}`));
     }
     const unknown = Object.keys(data).filter(key => !['channel_id', 'configuration', 'placement', 'uuids'].includes(key));
     unknown.forEach(key => problems.push(`"${key}" isn't a channel file key (channel_id, configuration, placement, uuids)`));
@@ -222,6 +262,14 @@ export function readChannelFile(widget, channel) {
     return {
         file, where, channel, configuration, placement, uuids,
     };
+}
+
+// The channel file's placements as one list, one per template file, each with its recorded uuid
+// (null until the store makes it).
+export function placementsOf({ placement, uuids }) {
+    const { template_file: one, template_files: files, ...rest } = placement;
+    if (!files) return [{ template_file: one, ...rest, uuid: uuids.placement }];
+    return files.map(file => ({ template_file: file, ...rest, uuid: uuids.placements[file] ?? null }));
 }
 
 // Every widget with a file for the channel, by name, or the named ones only.
@@ -245,9 +293,16 @@ function rewrite(channelFile, change) {
     fs.writeFileSync(channelFile.file, `${JSON.stringify(data, null, 4)}\n`);
 }
 
-// Writes the uuids the store gave the widget's objects into its channel file.
+// Writes the uuids the store gave the widget's objects into its channel file: `placement`, or
+// `placements` by template file in template_files' order.
 export function writeUuids(channelFile, uuids) {
-    rewrite(channelFile, data => ({ ...data, uuids: { template: uuids.template, widget: uuids.widget, placement: uuids.placement } }));
+    rewrite(channelFile, data => {
+        const files = data.placement.template_files;
+        const placementUuids = files
+            ? { placements: Object.fromEntries(files.map(file => [file, uuids.placements?.[file] ?? null])) }
+            : { placement: uuids.placement };
+        return { ...data, uuids: { template: uuids.template, widget: uuids.widget, ...placementUuids } };
+    });
 }
 
 // Sets the placement's status in the channel file: "inactive" unpublishes the widget (R12).

@@ -23,6 +23,7 @@ import { isDeepStrictEqual } from 'util';
 import { channelsNamed } from '../store/channel.mjs';
 import { showValue } from '../store/plan.mjs';
 import { STORE_ENGINE } from './engine.mjs';
+import { placementsOf } from './source.mjs';
 
 export const PATHS = {
     'widget-templates': '/v3/content/widget-templates',
@@ -150,6 +151,22 @@ function step(context, {
     return { $created: requests.length - 1 };
 }
 
+// Any placement of the recorded widget on the channel that the channel file doesn't record, and
+// the twin check in step() doesn't already name (a placement on a listed template file with no
+// recorded uuid): a second one on a listed file, or one on a file the list leaves out. Either
+// would show the widget where the repo doesn't say, and --verify would never see it.
+function unrecordedPlacements({
+    channel, problems, store, where, entryName,
+}, widgetUuid, placements) {
+    const recorded = new Map(placements.map(placement => [placement.template_file, placement.uuid]));
+    for (const item of store.placements || []) {
+        if (item.widget?.uuid !== widgetUuid || [...recorded.values()].includes(item.uuid)) continue; // eslint-disable-line no-continue
+        if (recorded.has(item.template_file) && !recorded.get(item.template_file)) continue; // eslint-disable-line no-continue
+        const listed = recorded.has(item.template_file);
+        problems.push(`${entryName}: channel ${channel} has placement ${item.uuid} of the widget on ${item.template_file} ${item.region}, which ${where} doesn't record: delete it in the control panel${listed ? '' : ', or list its template file and run --record'}`);
+    }
+}
+
 // The requests that bring the channel in step with the repo, the diff and any problems. With
 // problems, `requests` is empty: nothing is half-synced.
 //
@@ -174,20 +191,29 @@ export function planSync({
         const context = {
             channel, requests, lines, problems, store, where: channelFile.where, entryName: widget.name,
         };
-        const { uuids, placement } = channelFile;
+        const { uuids } = channelFile;
+        const placements = placementsOf(channelFile);
         if (unpublish) {
-            const item = uuids.placement && (store.placements || []).find(candidate => candidate.uuid === uuids.placement);
-            if (!uuids.placement) {
-                problems.push(`${widget.name}: no placement is recorded, so there is nothing to unpublish`);
-            } else if (!item) {
-                problems.push(`${widget.name}: placement ${uuids.placement} is recorded in ${channelFile.where}, but channel ${channel} has no such placement`);
-            } else if (item.status === 'inactive') {
-                lines.push(`  placement ${placement.template_file} ${placement.region} (${short(item.uuid)}): already inactive`);
-            } else {
-                lines.push(`  placement ${placement.template_file} ${placement.region} (${short(item.uuid)}): unpublish`, `${INDENT}status: ${showValue(item.status)} -> "inactive"`);
-                requests.push(buildRequest({
-                    object: 'placements', id: item.uuid, body: { status: 'inactive' }, channel,
-                }));
+            // Every placement of the widget on the channel, recorded or not, so the off switch
+            // leaves nothing on: a template file listed but not placed yet, or placed but not
+            // recorded, never stops it.
+            const ofWidget = uuids.widget ? (store.placements || []).filter(item => item.widget?.uuid === uuids.widget) : [];
+            const recordedUuids = placements.map(placement => placement.uuid).filter(Boolean);
+            if (!uuids.widget) {
+                problems.push(`${widget.name}: the widget isn't recorded in ${channelFile.where}, so there is nothing to unpublish`);
+            } else if (!ofWidget.length) {
+                problems.push(`${widget.name}: channel ${channel} has no placement of widget ${uuids.widget}, so there is nothing to unpublish`);
+            }
+            for (const item of ofWidget) {
+                const label = `  placement ${item.template_file} ${item.region} (${short(item.uuid)}${recordedUuids.includes(item.uuid) ? '' : ', not recorded'})`;
+                if (item.status === 'inactive') {
+                    lines.push(`${label}: already inactive`);
+                } else {
+                    lines.push(`${label}: unpublish`, `${INDENT}status: ${showValue(item.status)} -> "inactive"`);
+                    requests.push(buildRequest({
+                        object: 'placements', id: item.uuid, body: { status: 'inactive' }, channel,
+                    }));
+                }
             }
         } else {
             let template = uuids.template;
@@ -215,14 +241,17 @@ export function planSync({
             if (only === 'placement' && !uuids.widget) {
                 problems.push(`${widget.name}: the widget isn't recorded in ${channelFile.where} yet, so it can't be placed on its own: create it (--only content), then --record`);
             } else if (only !== 'content' && widgetRef) {
-                step(context, {
-                    object: 'placements',
-                    name: `${placement.template_file} ${placement.region}`,
-                    recorded: uuids.placement,
-                    desired: { widget_uuid: widgetRef, ...placement },
-                    twin: item => typeof widgetRef === 'string' && item.widget?.uuid === widgetRef && item.template_file === placement.template_file && item.region === placement.region,
-                    twinWhat: `a placement of widget ${widgetRef} in ${placement.template_file} ${placement.region}`,
-                });
+                for (const { uuid, ...placement } of placements) {
+                    step(context, {
+                        object: 'placements',
+                        name: `${placement.template_file} ${placement.region}`,
+                        recorded: uuid,
+                        desired: { widget_uuid: widgetRef, ...placement },
+                        twin: item => typeof widgetRef === 'string' && item.widget?.uuid === widgetRef && item.template_file === placement.template_file && item.region === placement.region,
+                        twinWhat: `a placement of widget ${widgetRef} in ${placement.template_file} ${placement.region}`,
+                    });
+                }
+                if (typeof widgetRef === 'string') unrecordedPlacements(context, widgetRef, placements);
             }
         }
     }
@@ -247,21 +276,34 @@ export function recordUuids({ channel, entries, store }) {
         const widgetFound = template.uuid
             ? findOne(store.widgets || [], item => item.name === widget.widgetName && item.widget_template?.uuid === template.uuid, `widgets named ${widget.widgetName} on template ${template.uuid}`)
             : { uuid: null };
-        const { placement } = channelFile;
-        const placementFound = widgetFound.uuid
-            ? findOne(store.placements || [], item => item.widget?.uuid === widgetFound.uuid && item.template_file === placement.template_file && item.region === placement.region, `placements of widget ${widgetFound.uuid} in ${placement.template_file} ${placement.region}`)
-            : { uuid: null };
-        const found = { template, widget: widgetFound, placement: placementFound };
-        const uuids = {};
-        for (const key of ['template', 'widget', 'placement']) {
-            if (found[key].problem) problems.push(`${widget.name}: ${found[key].problem}`);
-            const now = channelFile.uuids[key];
-            if (now && found[key].uuid && now !== found[key].uuid) problems.push(`${widget.name}: ${channelFile.where} records ${key} ${now}, but the channel's is ${found[key].uuid}`);
-            if (now && !found[key].uuid && !found[key].problem) problems.push(`${widget.name}: ${channelFile.where} records ${key} ${now}, and channel ${channel} has none: check the store before recording again`);
-            uuids[key] = found[key].uuid ?? now ?? null;
+        const placements = placementsOf(channelFile).map(placement => ({
+            placement,
+            found: widgetFound.uuid
+                ? findOne(store.placements || [], item => item.widget?.uuid === widgetFound.uuid && item.template_file === placement.template_file && item.region === placement.region, `placements of widget ${widgetFound.uuid} in ${placement.template_file} ${placement.region}`)
+                : { uuid: null },
+        }));
+        // Checks one found uuid against the one recorded, and returns the uuid to record.
+        const settle = (what, found, now) => {
+            if (found.problem) problems.push(`${widget.name}: ${found.problem}`);
+            if (now && found.uuid && now !== found.uuid) problems.push(`${widget.name}: ${channelFile.where} records ${what} ${now}, but the channel's is ${found.uuid}`);
+            if (now && !found.uuid && !found.problem) problems.push(`${widget.name}: ${channelFile.where} records ${what} ${now}, and channel ${channel} has none: check the store before recording again`);
+            return found.uuid ?? now ?? null;
+        };
+        const uuids = {
+            template: settle('template', template, channelFile.uuids.template),
+            widget: settle('widget', widgetFound, channelFile.uuids.widget),
+        };
+        if (channelFile.placement.template_files) {
+            uuids.placements = Object.fromEntries(placements.map(({ placement, found }) => [placement.template_file, settle(`placement ${placement.template_file}`, found, placement.uuid)]));
+        } else {
+            uuids.placement = settle('placement', placements[0].found, placements[0].placement.uuid);
         }
+        // A template file left out of uuids.placements reads as null, so recording null for it is no change.
+        const recordedNow = channelFile.placement.template_files
+            ? { ...channelFile.uuids, placements: Object.fromEntries(placements.map(({ placement }) => [placement.template_file, placement.uuid])) }
+            : channelFile.uuids;
         return {
-            entry: { widget, channelFile }, uuids, problems, changed: !isDeepStrictEqual(uuids, channelFile.uuids),
+            entry: { widget, channelFile }, uuids, problems, changed: !isDeepStrictEqual(uuids, recordedNow),
         };
     });
 }

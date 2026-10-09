@@ -38,6 +38,9 @@
     display: flex;
     gap: 8px;
     margin: 0;
+    // A line that wraps (the long one from 801px to about 840px, with "Prices in Canadian
+    // dollars." leading it) wraps into two even lines, never one word alone on the second.
+    text-wrap: balance;
 }
 
 .rf-strip-line--long {

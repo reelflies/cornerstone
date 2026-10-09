@@ -250,7 +250,7 @@ test('unpublishing sends only the placement\'s status, which the content freeze 
     const unplaced = planSync({
         channel: CH, entries: [hero()], store: empty, unpublish: 'home-lead',
     });
-    assert.match(unplaced.problems.join('\n'), /home-lead: no placement is recorded, so there is nothing to unpublish/);
+    assert.match(unplaced.problems.join('\n'), /home-lead: the widget isn't recorded in .*channels\/1895766\.json, so there is nothing to unpublish/);
 });
 
 test('a recorded uuid the channel doesn\'t have stops the sync', () => {
@@ -309,4 +309,139 @@ test('--record refuses two candidates, or a uuid other than the one recorded', (
     assert.match(recordUuids({ channel: CH, entries: [entry], store })[0].problems.join('\n'), /2 widget-templates named rf-home-lead/);
     const changed = hero({ template: OTHER, widget: null, placement: null });
     assert.match(recordUuids({ channel: CH, entries: [changed], store: synced(changed) })[0].problems.join('\n'), /records template f2f2f2f2.*, but the channel's is c0ffee00/);
+});
+
+// Ticket 27's follow-up: the store shows a global region's placement on its own template file's
+// page alone (#62's rf/skeptic), so the strip is placed once per template file. These widgets name
+// `template_files` and record `uuids.placements`, one uuid per template file.
+const FILES = ['pages/home', 'pages/cart', 'pages/search'];
+const P2 = 'e2e2e2e2-1234-4abc-8def-0123456789ab';
+const P3 = 'e3e3e3e3-1234-4abc-8def-0123456789ab';
+const several = (uuids = { template: null, widget: null, placements: {} }, placement = {}) => {
+    const entry = hero();
+    return {
+        ...entry,
+        channelFile: {
+            ...entry.channelFile,
+            placement: {
+                template_files: FILES, region: 'header_bottom--global', sort_order: 0, status: 'active', ...placement,
+            },
+            uuids,
+        },
+    };
+};
+const placedOn = (templateFile, uuid, over = {}) => ({
+    uuid,
+    template_file: templateFile,
+    region: 'header_bottom--global',
+    sort_order: 0,
+    status: 'active',
+    entity_id: '',
+    channel_id: CH,
+    widget: { uuid: W, name: 'rf-home-lead', channel_id: CH },
+    ...over,
+});
+
+test('a widget on several template files gets one placement on each, all with the channel', () => {
+    const { requests, problems, lines } = planSync({ channel: CH, entries: [several()], store: empty });
+    assert.deepEqual(problems, []);
+    assert.deepEqual(requests.slice(2).map(request => request.body), FILES.map(templateFile => ({
+        widget_uuid: { $created: 1 }, template_file: templateFile, region: 'header_bottom--global', sort_order: 0, status: 'active', channel_id: CH,
+    })));
+    for (const templateFile of FILES) {
+        assert.ok(lines.includes(`  placement ${templateFile} header_bottom--global: create`), lines.join('\n'));
+    }
+    assert.doesNotThrow(() => checkRequests(requests, { mode: 'lifted', phase: unset }));
+});
+
+test('a template file added to the list gets its placement; the recorded ones are left or updated', () => {
+    const entry = several({ template: T, widget: W, placements: { 'pages/home': P, 'pages/cart': P2 } });
+    const store = {
+        templates: [storeTemplate(entry)],
+        widgets: [storeWidget(entry)],
+        placements: [placedOn('pages/home', P), placedOn('pages/cart', P2, { status: 'inactive' })],
+    };
+    const { requests, problems, lines } = planSync({ channel: CH, entries: [entry], store });
+    assert.deepEqual(problems, []);
+    assert.deepEqual(requests, [
+        {
+            method: 'PUT', path: `${PATHS.placements}/${P2}`, query: {}, body: { status: 'active', channel_id: CH },
+        },
+        {
+            method: 'POST',
+            path: PATHS.placements,
+            query: {},
+            body: {
+                widget_uuid: W, template_file: 'pages/search', region: 'header_bottom--global', sort_order: 0, status: 'active', channel_id: CH,
+            },
+        },
+    ]);
+    assert.ok(lines.includes('  placement pages/home header_bottom--global (e1e1e1e1): no change'), lines.join('\n'));
+    const inStep = planSync({ channel: CH, entries: [entry], store: { ...store, placements: [...store.placements.slice(0, 1), placedOn('pages/cart', P2), placedOn('pages/search', P3)] } });
+    assert.match(inStep.problems.join('\n'), /already has a placement of widget d00dfeed.* in pages\/search header_bottom--global \(e3e3e3e3.*\), which .* doesn't record: run with --record first/);
+});
+
+test('unpublishing a widget on several template files sets every recorded placement inactive', () => {
+    const entry = several({ template: T, widget: W, placements: { 'pages/home': P, 'pages/cart': P2, 'pages/search': P3 } });
+    const store = {
+        templates: [storeTemplate(entry)],
+        widgets: [storeWidget(entry)],
+        placements: [placedOn('pages/home', P), placedOn('pages/cart', P2, { status: 'inactive' }), placedOn('pages/search', P3)],
+    };
+    const { requests, problems, lines } = planSync({
+        channel: CH, entries: [entry], store, unpublish: 'home-lead',
+    });
+    assert.deepEqual(problems, []);
+    assert.deepEqual(requests.map(request => `${request.method} ${request.path} ${JSON.stringify(request.body)}`), [P, P3].map(uuid => `PUT ${PATHS.placements}/${uuid} {"status":"inactive","channel_id":${CH}}`));
+    assert.ok(lines.includes('  placement pages/cart header_bottom--global (e2e2e2e2): already inactive'), lines.join('\n'));
+    assert.doesNotThrow(() => checkRequests(requests, { mode: 'lifted', phase: contentFreeze }));
+});
+
+// The off switch works whatever the channel file has recorded yet: a template file listed but not
+// placed (a ticket that adds a custom template, before its write), or one placed but not recorded.
+test('unpublishing switches off every placement of the widget on the channel, recorded or not', () => {
+    const partly = several({ template: T, widget: W, placements: { 'pages/home': P } });
+    const store = {
+        templates: [storeTemplate(partly)],
+        widgets: [storeWidget(partly)],
+        placements: [placedOn('pages/home', P), placedOn('pages/cart', P2), placedOn('pages/product', P3, { status: 'inactive' })],
+    };
+    const { requests, problems, lines } = planSync({
+        channel: CH, entries: [partly], store, unpublish: 'home-lead',
+    });
+    assert.deepEqual(problems, []);
+    assert.deepEqual(requests.map(request => request.path), [`${PATHS.placements}/${P}`, `${PATHS.placements}/${P2}`]);
+    assert.ok(lines.includes('  placement pages/cart header_bottom--global (e2e2e2e2, not recorded): unpublish'), lines.join('\n'));
+    assert.ok(lines.includes('  placement pages/product header_bottom--global (e3e3e3e3, not recorded): already inactive'), lines.join('\n'));
+    const none = planSync({
+        channel: CH, entries: [partly], store: { ...store, placements: [] }, unpublish: 'home-lead',
+    });
+    assert.match(none.problems.join('\n'), /home-lead: channel 1895766 has no placement of widget d00dfeed.*, so there is nothing to unpublish/);
+});
+
+test('a placement of the widget the channel file doesn\'t record stops the sync and fails --verify', () => {
+    const entry = several({ template: T, widget: W, placements: { 'pages/home': P, 'pages/cart': P2, 'pages/search': P3 } });
+    const base = [placedOn('pages/home', P), placedOn('pages/cart', P2), placedOn('pages/search', P3)];
+    const store = placements => ({ templates: [storeTemplate(entry)], widgets: [storeWidget(entry)], placements });
+    assert.deepEqual(planSync({ channel: CH, entries: [entry], store: store(base) }).problems, []);
+    const duplicate = planSync({ channel: CH, entries: [entry], store: store([...base, placedOn('pages/cart', OTHER)]) });
+    assert.deepEqual(duplicate.requests, []);
+    assert.match(duplicate.problems.join('\n'), /home-lead: channel 1895766 has placement f2f2f2f2.* of the widget on pages\/cart header_bottom--global, which .*channels\/1895766\.json doesn't record: delete it in the control panel/);
+    const unlisted = planSync({ channel: CH, entries: [entry], store: store([...base, placedOn('pages/product', OTHER)]) });
+    assert.match(unlisted.problems.join('\n'), /placement f2f2f2f2.* of the widget on pages\/product header_bottom--global, which .* doesn't record: delete it in the control panel, or list its template file and run --record/);
+});
+
+test('--record finds each template file\'s placement and records them as a map', () => {
+    const entry = several();
+    const store = {
+        templates: [storeTemplate(entry)],
+        widgets: [storeWidget(entry)],
+        placements: [placedOn('pages/home', P), placedOn('pages/cart', P2), placedOn('pages/product', OTHER)],
+    };
+    const [result] = recordUuids({ channel: CH, entries: [entry], store });
+    assert.deepEqual(result.problems, []);
+    assert.deepEqual(result.uuids, { template: T, widget: W, placements: { 'pages/home': P, 'pages/cart': P2, 'pages/search': null } });
+    assert.equal(result.changed, true);
+    const moved = several({ template: T, widget: W, placements: { 'pages/cart': OTHER } });
+    assert.match(recordUuids({ channel: CH, entries: [moved], store })[0].problems.join('\n'), /records placement pages\/cart f2f2f2f2.*, but the channel's is e2e2e2e2/);
 });

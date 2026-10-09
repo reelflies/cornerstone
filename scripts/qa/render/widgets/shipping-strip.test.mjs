@@ -25,8 +25,9 @@ const render = (configuration = {}) => renderWidget('shipping-strip', { ...fixtu
 const text = html => html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 const lines = html => [...html.matchAll(/<p class="([^"]+)">([\s\S]*?)<\/p>/g)].map(([, cls, body]) => [cls, text(body)]);
 
-// Ticket 13's decision 2, as ticket 27's owner-decisions comment words it.
-const LONG = 'Free standard shipping in Canada on fly orders over $60. Fly boxes and gear not included.';
+// Ticket 13's decision 2, as ticket 27's owner-decisions comment words it, led by the reference's
+// "Prices in Canadian dollars." (Shaun, review-02; ticket 27's 2026-10-09 comment).
+const LONG = 'Prices in Canadian dollars. Free standard shipping in Canada on fly orders over $60. Fly boxes and gear not included.';
 const SHORT = 'Free standard shipping on fly orders over $60';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -34,16 +35,33 @@ test('the shot\'s fixture is exactly what ReelFlies_CA gets', () => {
     assert.deepEqual(fixture.configuration, channelFile.configuration);
 });
 
-test('the channel file places it on 1895766 in header_bottom--global, the region every page has, active, with the uuids its first write made', () => {
-    assert.equal(channelFile.channel_id, 1895766);
-    // A global region still names a template file. BigCommerce says the widget then shows on every
-    // page that has the region; that waits on a check on the prelaunch host (docs/widgets.md, #62).
-    // Active since the checkpoint-02 release carried 27's landmark and styles.
-    assert.deepEqual(channelFile.placement, {
-        template_file: 'pages/home', region: 'header_bottom--global', sort_order: 0, status: 'active',
+// Every theme template that renders layout/base, and so the header and its strip region, as its
+// Widgets API template_file (templates/pages/<path>.html is pages/<path>).
+function headerTemplateFiles(dir = path.resolve('templates/pages'), prefix = 'pages') {
+    return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+        const name = `${prefix}/${entry.name.replace(/\.html$/, '')}`;
+        if (entry.isDirectory()) return headerTemplateFiles(path.join(dir, entry.name), name);
+        return /\{\{>\s*layout\/base\s*\}\}/.test(fs.readFileSync(path.join(dir, entry.name), 'utf8')) ? [name] : [];
     });
-    // Recorded by --record after the first write (2026-10-08, plan 6a53f3f4).
-    for (const name of ['template', 'widget', 'placement']) assert.match(channelFile.uuids[name], UUID, `its ${name} is recorded`);
+}
+
+test('the channel file places it on 1895766 in header_bottom--global, active, once per template file with the header', () => {
+    assert.equal(channelFile.channel_id, 1895766);
+    // A global region's placement names one template file, and the store shows it on that page
+    // only (#62's rf/skeptic; ticket 27's follow-up), so the strip has a placement per template file.
+    const { template_files: files, ...placement } = channelFile.placement;
+    assert.deepEqual(placement, { region: 'header_bottom--global', sort_order: 0, status: 'active' });
+    // Every template with the header but the hibernation page (a closed store makes no shipping
+    // promise) and the stored payment-method pages, which the Widgets API refuses ("422 template_file:
+    // unsupported template file", 2026-10-09, plan 78d5173a; its documented list leaves them out). A
+    // ticket that adds a custom template (pages/custom/<kind>/<file>) adds it here.
+    const notPlaceable = ['pages/unavailable/hibernation', 'pages/account/add-payment-method', 'pages/account/edit-payment-method', 'pages/account/payment-methods'];
+    const expected = headerTemplateFiles().filter(file => !notPlaceable.includes(file));
+    assert.deepEqual([...files].sort(), expected.sort());
+    assert.deepEqual(files.slice(0, 2), ['pages/home', 'pages/cart'], 'the placements already made stay first');
+    // The first write's placement (2026-10-08, plan 6a53f3f4); --record fills in the rest after their apply.
+    assert.match(channelFile.uuids.placements['pages/home'], UUID);
+    for (const name of ['template', 'widget']) assert.match(channelFile.uuids[name], UUID, `its ${name} is recorded`);
     assert.equal(fixture.region, 'header_bottom--global');
     assert.equal(fixture.chrome, true, 'its fixture page renders the theme\'s header round it');
 });
