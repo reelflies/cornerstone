@@ -4,7 +4,8 @@
 // category-screens.spec.mjs's. The pins (pages.mjs) are tree 1's:
 //
 // - category: Realistic Trout Flies, one of channel 1's rf_menu_type_ids, so it has the banner:
-//   eager with fetchpriority="high", no taller than 220px from 801px with the H1 and the intro on
+//   eager with fetchpriority="high", 220px tall from 801px (taller only when a long name wraps)
+//   with the H1 and the intro on
 //   it, every line of that text at 4.5:1 or better over its lightest pixel. Under the
 //   menu-ids-empty overlay it has the plain header.
 // - category@more (Fly Gear, a More from ReelFlies category) and category@noindex (a sub-type on
@@ -42,12 +43,14 @@ async function context(request, key) {
 async function open(page, key) {
     await storefrontPage(page, key);
     await dismissCookieBanner(page);
-    await expect(page.locator('[data-rf-chips]').first()).toHaveAttribute('data-rf-chips-ready', '', { timeout: 15000 }).catch(() => {});
+    // A page with chips waits for category-chips.js to lay them out; one with none has nothing to
+    // wait for.
+    if (await page.locator('[data-rf-chips]').count()) await expect(page.locator('[data-rf-chips]')).toHaveAttribute('data-rf-chips-ready', '');
 }
 
 test.skip(!CATEGORY_PINS.length, `no category page is pinned for channel ${QA_CHANNEL}; try QA_CHANNEL=1`);
 
-test(`${BANNER_PIN}: the banner is eager and high priority, at most 220px tall from 801px, with the H1 and the intro on it (story 21)`, async ({ page }, testInfo) => {
+test(`${BANNER_PIN}: the banner is eager and high priority, 220px tall from 801px, with the H1 and the intro on it (story 21)`, async ({ page }, testInfo) => {
     test.skip(!PAGES[BANNER_PIN], `no ${BANNER_PIN} pin on channel ${QA_CHANNEL}`);
     await open(page, BANNER_PIN);
     const banner = page.locator('.rf-listing-banner');

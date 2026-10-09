@@ -3,8 +3,8 @@
 //
 // Keys are page keys: a page kind, which is a template name from the spec's seam 1 list
 // (home, fly-type, species, species-hub, product, cart, hook-chart, 404 and brand, plus
-// category for the stock category template until ticket 32 builds the Fly Type and Species
-// pages, page for a Web Page, login and create-account for the sign-in forms, and search for
+// category for the category template, ticket 32's page, while the fly-type and species keys
+// wait for tree 4's pages (refactor 13), page for a Web Page, login and create-account for the sign-in forms, and search for
 // the search results, ticket 31), or kind@name for one more pin of the same kind (W0-8), such
 // as product@5663 or product@sold-out. A template ticket adds its page here when it lands; the
 // screenshot and axe runs then cover it.

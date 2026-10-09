@@ -8,12 +8,13 @@
 // .cat-desc (plan/design/src/reference.src.html:333-371, :669-676, :817-822, :886-887). And the
 // breadcrumbs on every page, which ticket 26's spike gave this ticket.
 //
-// - The banner: from 801px a strip 220px tall, the photo cropped to fill it, with the H1 and the
-//   intro on it over a neutral left scrim. On phones the photo shows at 16:6 with the H1 and the
-//   intro under it.
-//   - The scrim holds 0.82 to 0.72 across the text's column (45% of the banner) and clears by
-//     78%: CD-6's 0.82 to clear at 65% left the intro's last words at 2:1 over a pale photo. At
-//     0.72 even a white photo leaves the intro at 5.6:1 and the H1 at 7:1, whatever the image.
+// - The banner: from 801px a strip 220px tall (taller only when a long name wraps), the photo
+//   cropped to fill it, with the H1 and the intro on it over the neutral left scrim. On phones
+//   the photo shows at 16:6 with the H1 and the intro under it.
+//   - The scrim (--rf-scrim-banner, _foundation.scss) holds 0.82 to 0.72 across the text's
+//     column (45% of the banner) and clears by 78%: CD-6's 0.82 to clear at 65% left the
+//     intro's last words at 2:1 over a pale photo. At 0.72 even a white photo leaves the intro
+//     at 5.6:1 and the H1 at 7:1, whatever the image.
 //   - A name long enough to wrap grows the banner rather than being cut: the copy is in the
 //     flow, at least 220px tall, and the photo fills whatever box it makes.
 // - The plain header: the H1 and the intro alone.
@@ -26,8 +27,7 @@
 
 $rf-banner-height:      220px;      // the banner strip's height from 801px (O10)
 $rf-banner-column:      45%;        // the H1's and the intro's width on the banner
-$rf-banner-scrim-rgb:   rgb(nth($rf-scrim, 1), nth($rf-scrim, 2), nth($rf-scrim, 3)); // $rf-scrim as a colour (CD-6)
-$rf-banner-scrim:       linear-gradient(to right, rgba($rf-banner-scrim-rgb, 0.82) 0%, rgba($rf-banner-scrim-rgb, 0.72) 50%, rgba($rf-banner-scrim-rgb, 0) 78%);
+$rf-banner-title:       #ffffff;    // the H1 on the banner's scrim
 $rf-chip-height:        40px;       // a chip with its name alone
 $rf-chip-thumb-height:  56px;       // from 801px, a chip with a 72x48 thumbnail, inset 3px and bordered
 $rf-chips-gap:          8px;
@@ -140,7 +140,7 @@ ol.breadcrumbs {
         }
 
         .rf-listing-copy {
-            background: $rf-banner-scrim;
+            background: var(--rf-scrim-banner);
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
@@ -157,11 +157,11 @@ ol.breadcrumbs {
         }
 
         .rf-listing-title {
-            color: #ffffff;
+            color: $rf-banner-title;
         }
 
         .rf-listing-intro {
-            color: #e6e9ec;
+            color: $rf-on-photo-soft;
             margin: 0;
         }
     }

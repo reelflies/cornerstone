@@ -77,12 +77,14 @@
         --rf-header-h: 0px;
     }
 
-    // Image scrims, neutral #1C1D1F: cards darken from the bottom to 42% of their height,
-    // category banners from the left to 65% of their width (CD-6). The home page's Fly Type
-    // cards don't use --rf-scrim-card: on a square crop it left their label at 3:1, so their scrim
-    // sits behind the text block instead (_home-tiles.scss, docs/widgets.md "Scrim"; ticket 47).
+    // Image scrims, neutral #1C1D1F: cards darken from the bottom to 42% of their height (CD-6).
+    // The home page's Fly Type cards don't use --rf-scrim-card: on a square crop it left their
+    // label at 3:1, so their scrim sits behind the text block instead (_home-tiles.scss,
+    // docs/widgets.md "Scrim"; ticket 47). Category banners darken from the left: 0.82 to 0.72
+    // across the text's column (45% of the banner), clear by 78%. CD-6's 0.82 to clear at 65% left
+    // a banner's intro at 2:1 over a pale photo (ticket 32, revisitable).
     --rf-scrim-card: linear-gradient(to top, rgba(#{$rf-scrim}, 0.8) 0%, rgba(#{$rf-scrim}, 0) 42%);
-    --rf-scrim-banner: linear-gradient(to right, rgba(#{$rf-scrim}, 0.82) 0%, rgba(#{$rf-scrim}, 0) 65%);
+    --rf-scrim-banner: linear-gradient(to right, rgba(#{$rf-scrim}, 0.82) 0%, rgba(#{$rf-scrim}, 0.72) 50%, rgba(#{$rf-scrim}, 0) 78%);
 
     // Shadows only on what floats: menus, sheets, popovers
     --rf-pop: 0 12px 36px rgba(35, 39, 43, 0.16);

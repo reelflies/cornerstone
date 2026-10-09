@@ -143,6 +143,12 @@ describe('the description, split at <!--more--> (O10; story 21)', () => {
         assert.equal(textOf(rest(html)), 'Elk hair, X-caddis and CDC patterns for the evening hatch.');
     });
 
+    it('wraps the rest once, and prints no wrapper when the marker ends the description', async () => {
+        const count = html => findTags(html, 'div').filter(tag => 'data-rf-description' in tag.attrs).length;
+        assert.equal(count(await render('fly-type')), 1);
+        assert.equal(count(await render('fly-type', { category: { description: '<p>Only an intro.</p><!--more-->' } })), 0);
+    });
+
     it('prints neither part for an empty description', async () => {
         const html = await render('more');
         assert.equal(textOf(header(html)), 'Fly Gear');

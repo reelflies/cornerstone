@@ -184,7 +184,7 @@ Every Playwright gate opens its pages through `fixtures.mjs`, which puts a guard
 
 `scripts/qa/pages.mjs` is the one place that says which page each gate visits, per channel:
 
-- **Page keys** are the spec's template names: `home`, `fly-type`, `species`, `species-hub`, `product`, `cart`, `hook-chart`, `404` and `brand`, plus `category` for the stock category template until ticket 32, `page` for a Web Page, `login` and `create-account` for the sign-in forms (ticket 25), and `search` for the search results (ticket 31). ReelFlies_CA has no Web Page yet, so channel 1 pins one (`/coupon-codes/`, a paragraph of terms). A channel pins more pages of one kind as `kind@name`, such as `product@5663` or `product@sold-out` ([Render modes](#render-modes-w0-8)).
+- **Page keys** are the spec's template names: `home`, `fly-type`, `species`, `species-hub`, `product`, `cart`, `hook-chart`, `404` and `brand`, plus `category` for the category template (ticket 32's page; the `fly-type` and `species` keys wait for tree 4's pages, refactor 13), `page` for a Web Page, `login` and `create-account` for the sign-in forms (ticket 25), and `search` for the search results (ticket 31). ReelFlies_CA has no Web Page yet, so channel 1 pins one (`/coupon-codes/`, a paragraph of terms). A channel pins more pages of one kind as `kind@name`, such as `product@5663` or `product@sold-out` ([Render modes](#render-modes-w0-8)).
 - **Test products are pinned** by URL. Pick ones that will stay in the catalogue.
 - **Every pinned page must answer as its template:** HTTP 404 for `404`, and 200 for every other page. Otherwise axe, the screenshots and the raw-HTML check fail the page instead of checking an error page. A renamed product or a mistyped pin shows up as that failure.
 - **A 5xx or a 429 is asked again** (`retry.mjs`, W0-4). Each retry prints a `RETRY` line first, so a run that passed after one shows it.
@@ -317,7 +317,7 @@ On the store, a custom template is chosen by a template association, which belon
 - **A problem stops the start** before anything is written: a type other than `brand`, `category`, `page` and `product` (stencil-cli's), a template that doesn't exist, a URL that isn't a path on the store, or one URL mapped to two files.
 - The page must exist on the store as that type, such as a category on channel 1 or a Web Page on 1895766. Pin it in `pages.mjs` (for example `category@noindex`), and add the mapping in the same PR as the template.
 - `stencil start` reads `config.stencil.json` once, when it starts, so stop a running server after changing `custom-layouts.json`. A plain run reuses a running server.
-- The file maps nothing today. Tickets 32, 34 and 35 add theirs.
+- It maps ticket 32's `rf-noindex.html` to channel 1's `category@noindex` pin. Tickets 34 and 35 add theirs.
 
 ## Switch matrix and the extra checks (ticket 54a)
 
@@ -744,7 +744,7 @@ The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixtu
 | `render/home-page.mjs` | the whole home page with every widget a channel places on `pages/home`, each from a fixture, in its region and placement order: `homeCases`, `renderHomePage` and `openHomePage` (ticket 47; `home-widgets-screens.spec.mjs`, below) |
 | `render/photo-contrast.mjs` | `worstContrastOverPhoto(page, selector)`: a line of text against the lightest pixel behind it, for text on a scrim over a photo, which axe can't judge (the hero's and the cards', tickets 46 and 47) |
 | `widget-screens.spec.mjs` | the widget element shots |
-| `render/pages/<name>/` | fixture pages: a real page template rendered round an empty widget from fixed data, each shot by its own `*-screens.spec.mjs` (ticket 31's `card-grid`, by `card-screens.spec.mjs`; "Fixture pages" below) |
+| `render/pages/<name>/` | fixture pages: a real page template rendered round an empty widget from fixed data, each shot by its own `*-screens.spec.mjs` (ticket 31's `card-grid`, by `card-screens.spec.mjs`; ticket 32's `category-page`, by `category-screens.spec.mjs`; "Fixture pages" below) |
 | `render/example/` | the worked example below |
 
 ### Partials
@@ -834,7 +834,7 @@ Page baselines hide widget regions ("What the screenshots hide" above), because 
 
 A theme change that restyles buttons or headings changes the self-test's baselines too: update them in the same commit and name `widget rf-selftest` on the `Baselines:` line.
 
-**Fixture pages** (`render/pages/<name>/`, from ticket 31) are widget folders whose fixture renders a real page template round an empty widget (`"page"`, with the page's context in `"page_context"`), so a spec can shoot what that page shows from fixed data, where the live page is masked or the store has no such page yet. `widget-page.mjs` exports the folder as `PAGE_FIXTURES`, and nothing syncs it. `widget-screens.spec.mjs` doesn't shoot them: each has its own `*-screens.spec.mjs` (`card-grid`'s is `card-screens.spec.mjs`), which shoots its cases, and its baselines take the widget shots' names and rules, declared as `widget <name>`. The baseline-scope check reads each folder's name as an owner, and `widget-baselines.test.mjs` and `check-baseline-scope.test.mjs` count every case, so a fixture page's cases are all shot cases.
+**Fixture pages** (`render/pages/<name>/`, from ticket 31) are widget folders whose fixture renders a real page template round an empty widget (`"page"`, with the page's context in `"page_context"`), so a spec can shoot what that page shows from fixed data, where the live page is masked or the store has no such page yet. `widget-page.mjs` exports the folder as `PAGE_FIXTURES`, and nothing syncs it. `widget-screens.spec.mjs` doesn't shoot them: each has its own `*-screens.spec.mjs` (`card-grid`'s is `card-screens.spec.mjs`, `category-page`'s `category-screens.spec.mjs`), which shoots its cases, and its baselines take the widget shots' names and rules, declared as `widget <name>`. The baseline-scope check reads each folder's name as an owner, and `widget-baselines.test.mjs` and `check-baseline-scope.test.mjs` count every case, so a fixture page's cases are all shot cases.
 
 ### Widget layout specs
 

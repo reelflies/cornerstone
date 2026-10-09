@@ -6,7 +6,8 @@
 // templates' look is checked here; category.spec.mjs checks the live channel-1 pins.
 //
 // - Each page matches its baseline (widget baselines, declared as `widget category-page`).
-// - The banner: eager with fetchpriority="high", no taller than 220px from 801px, with the H1 and
+// - The banner: eager with fetchpriority="high", 220px tall from 801px (taller only when a long
+//   name wraps), with the H1 and
 //   the intro on it; on phones the photo first, then the H1 and the intro. Every line of text on
 //   it holds 4.5:1 against its lightest pixel (photo-contrast.mjs).
 // - The chips: at most two rows, with "+N more" at 1280 and "Show all N" at 375 when some are
@@ -68,7 +69,7 @@ for (const fixture of CASES) {
             await expect(page.locator('#main-content')).toHaveScreenshot(['widgets', slug(QA_VARIATION), `category-page-${fixture.name}.png`]);
         });
 
-        test('shows the banner: eager and high priority, at most 220px tall from 801px, with the H1 and the intro on it (story 21)', async ({ page }, testInfo) => {
+        test('shows the banner: eager and high priority, 220px tall from 801px, with the H1 and the intro on it (story 21)', async ({ page }, testInfo) => {
             await open(page, fixture);
             const banner = page.locator('.rf-listing-banner');
             await expect(banner).toHaveAttribute('fetchpriority', 'high');

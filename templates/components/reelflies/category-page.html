@@ -50,8 +50,4 @@
         {{{region name="category_below_content"}}}
     </div>
 </div>
-{{#if category.description}}
-<div class="rf-listing-description" data-rf-description>
-    {{> components/reelflies/description-part rf_description=category.description rf_part='rest'}}
-</div>
-{{/if}}
+{{> components/reelflies/description-part rf_description=category.description rf_part='rest'}}

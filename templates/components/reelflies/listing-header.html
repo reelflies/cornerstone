@@ -11,8 +11,9 @@
       with a srcset, sizes and its dimensions. Stock's responsive-img partial can't print
       fetchpriority (it escapes otherAttributes), so the <img> is written here. It sets the
       variable rf_banner, so ticket 31's first card gives up its own fetchpriority.
-      - From 801px it is a strip at most 220px tall, the photo cropped to fill it, with the H1
-        and the intro on it over the neutral left scrim (CD-6, --rf-scrim-banner).
+      - From 801px it is a strip 220px tall (taller only when a long name wraps), the photo
+        cropped to fill it, with the H1 and the intro on it over the neutral left scrim
+        (--rf-scrim-banner: stronger than CD-6's, for the text's contrast).
       - On phones the photo shows at 16:6 with the H1 and the intro under it, as the reference.
       - alt="": the H1 on it names the category.
     - Without: the plain header, the H1 and the intro alone.
