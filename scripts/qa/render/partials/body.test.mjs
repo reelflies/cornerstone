@@ -58,7 +58,7 @@ describe('the body wrapper', () => {
         });
     }
 
-    for (const template of [...WITH_MAIN, 'pages/custom/category/rf-noindex', 'pages/custom/product/anything']) {
+    for (const template of [...WITH_MAIN, 'pages/custom/category/rf-noindex', 'pages/custom/page/hook-size-chart', 'pages/custom/product/anything']) {
         it(`stays the stock <div> on ${template}, which carries its own <main> or isn't hooked`, async () => {
             const html = await render(template);
             const tag = wrapper(html);
