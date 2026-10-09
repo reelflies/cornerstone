@@ -1,0 +1,40 @@
+{{!--
+    A listing's header (ticket 32; O10, UX-5, CD-6, CD-10; stories 21 and 70): the banner, or the
+    plain header, with the page's one H1 and the description's intro. Ticket 36's brand listing
+    reuses it as it is.
+
+        {{> components/reelflies/listing-header rf_name=category.name rf_description=category.description rf_image=category.image}}
+        {{> components/reelflies/listing-header rf_name=category.name rf_description=category.description}}
+
+    - With rf_image (category-page.html passes it only where category-banner-rule.html allows):
+      the banner. The image is the page's one high-priority image: eager, fetchpriority="high",
+      with a srcset, sizes and its dimensions. Stock's responsive-img partial can't print
+      fetchpriority (it escapes otherAttributes), so the <img> is written here. It sets the
+      variable rf_banner, so ticket 31's first card gives up its own fetchpriority.
+      - From 801px it is a strip at most 220px tall, the photo cropped to fill it, with the H1
+        and the intro on it over the neutral left scrim (CD-6, --rf-scrim-banner).
+      - On phones the photo shows at 16:6 with the H1 and the intro under it, as the reference.
+      - alt="": the H1 on it names the category.
+    - Without: the plain header, the H1 and the intro alone.
+    - The intro is the description before its <!--more--> marker (description-part.html). With
+      no marker the header holds the H1 alone.
+
+    A <div>, not a <header>: outside <main> a <header> is a second banner landmark.
+--}}
+{{#if rf_image.data}}
+{{~assignVar 'rf_banner' 1~}}
+<div class="rf-listing-header rf-listing-header--banner">
+    <img class="rf-listing-banner" src="{{getImageSrcset rf_image 1x='1280w'}}" srcset="{{getImageSrcset rf_image 480w='480w' 640w='640w' 960w='960w' 1280w='1280w' 1600w='1600w'}}" sizes="(min-width: 1136px) 1088px, calc(100vw - 32px)" width="1600" height="700" alt="" fetchpriority="high" decoding="async">
+    <div class="rf-listing-copy">
+        <h1 class="page-heading rf-listing-title">{{rf_name}}</h1>
+        {{> components/reelflies/description-part rf_description=rf_description rf_part='intro'}}
+    </div>
+</div>
+{{else}}
+<div class="rf-listing-header rf-listing-header--plain">
+    <div class="rf-listing-copy">
+        <h1 class="page-heading rf-listing-title">{{rf_name}}</h1>
+        {{> components/reelflies/description-part rf_description=rf_description rf_part='intro'}}
+    </div>
+</div>
+{{/if}}

@@ -65,6 +65,13 @@ export const CHANNELS = {
             // them: `hold` below keeps that from moving the page.
             product: '/realistic-flying-hot-butt-hopper-brown/',
             category: '/flies/realistic-trout-flies/', // tree 1; 12 cards with Quick view, and facets
+            // Ticket 32: a More from ReelFlies category (a top-level category outside the menu
+            // ids), whose four subcategories have images, so its plain header and thumbnail
+            // chips are checked live.
+            'category@more': '/fly-gear/',
+            // Ticket 32: a Fly Type sub-type rendered with the noindex template, which
+            // custom-layouts.json maps to it: its plain header and its one robots meta.
+            'category@noindex': '/flies/realistic-trout-flies/realistic-nymphs/',
             // A Web Page (pages/page), for ticket 25's focus ring and landmark checks: ReelFlies_CA
             // has none yet (ticket 22's sources sync later). One paragraph of terms that read the
             // same on 2026-10-07 as the coupon wording on reelflies.ca has for years.
@@ -81,6 +88,8 @@ export const CHANNELS = {
         // too. The tabs by role: stock search.js swaps the active tab's navBar-action class.
         mask: {
             category: ['.productGrid'],
+            'category@more': ['.productGrid'],
+            'category@noindex': ['.productGrid'],
             search: ['.productGrid', '.page-heading', '[data-search-page-tabs] [role="tab"]'],
         },
         // The related products' cards (Related Products, and Customers Also Viewed when the

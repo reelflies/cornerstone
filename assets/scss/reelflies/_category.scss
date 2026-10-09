@@ -1,0 +1,310 @@
+// =============================================================================
+// FLY TYPE AND SPECIES PAGES (ticket 32; spec module 8; O10, UX-5, CD-6, CD-10; stories 21, 22
+// and 71)
+// =============================================================================
+//
+// The category page (components/reelflies/category-page.html): the listing header, the chips and
+// the description below the grid, from the reference's .cat-banner, .cat-plain, .chips and
+// .cat-desc (plan/design/src/reference.src.html:333-371, :669-676, :817-822, :886-887). And the
+// breadcrumbs on every page, which ticket 26's spike gave this ticket.
+//
+// - The banner: from 801px a strip 220px tall, the photo cropped to fill it, with the H1 and the
+//   intro on it over a neutral left scrim. On phones the photo shows at 16:6 with the H1 and the
+//   intro under it.
+//   - The scrim holds 0.82 to 0.72 across the text's column (45% of the banner) and clears by
+//     78%: CD-6's 0.82 to clear at 65% left the intro's last words at 2:1 over a pale photo. At
+//     0.72 even a white photo leaves the intro at 5.6:1 and the H1 at 7:1, whatever the image.
+//   - A name long enough to wrap grows the banner rather than being cut: the copy is in the
+//     flow, at least 220px tall, and the photo fills whatever box it makes.
+// - The plain header: the H1 and the intro alone.
+// - The chips: 1px #879186 borders, wrapping, at most two rows. Until category-chips.js lays the
+//   list out, it is clipped to two rows, so nothing below it moves when the script hides what
+//   doesn't fit. A chip with a thumbnail is a rounded rectangle, the thumbnail inset in it.
+// - Nothing scrolls sideways at 320px: a chip's name wraps rather than overflow.
+//
+// -----------------------------------------------------------------------------
+
+$rf-banner-height:      220px;      // the banner strip's height from 801px (O10)
+$rf-banner-column:      45%;        // the H1's and the intro's width on the banner
+$rf-banner-scrim-rgb:   rgb(nth($rf-scrim, 1), nth($rf-scrim, 2), nth($rf-scrim, 3)); // $rf-scrim as a colour (CD-6)
+$rf-banner-scrim:       linear-gradient(to right, rgba($rf-banner-scrim-rgb, 0.82) 0%, rgba($rf-banner-scrim-rgb, 0.72) 50%, rgba($rf-banner-scrim-rgb, 0) 78%);
+$rf-chip-height:        40px;       // a chip with its name alone
+$rf-chip-thumb-height:  56px;       // a chip with a 72x48 thumbnail, inset 3px and bordered
+$rf-chips-gap:          8px;
+
+
+// Breadcrumbs, on every page
+// -----------------------------------------------------------------------------
+//
+// Left-aligned, in dun, 14px, with no underline and "/" between (the reference's .crumbs), on
+// phones too: stock centres them, underlines them, draws a slanted rule between them and hides
+// them below 551px.
+
+ol.breadcrumbs {
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 14px;
+    gap: 4px;
+    justify-content: flex-start;
+    line-height: 1.4;
+    margin: 0;
+    padding: 12px 0 0;
+    text-align: left;
+}
+
+.breadcrumb {
+    color: var(--rf-dun);
+    margin: 0;
+
+    &:not(:first-child)::before {
+        border: 0;
+        content: "/";
+        height: auto;
+        margin: 0 4px 0 0;
+        transform: none;
+    }
+
+    .breadcrumb-label {
+        color: var(--rf-dun);
+        text-decoration: none;
+
+        &:hover {
+            color: var(--rf-ink);
+            text-decoration: underline;
+        }
+    }
+
+    &.is-active > .breadcrumb-label {
+        cursor: default;
+        font-weight: inherit;
+    }
+}
+
+
+// The listing header
+// -----------------------------------------------------------------------------
+
+.rf-listing-header {
+    margin-top: 12px;
+
+    .rf-listing-title {
+        font-size: var(--rf-fs-h1);
+        letter-spacing: -0.02em;
+        line-height: 1.05;
+        margin: 0;
+        text-align: left;
+    }
+}
+
+.rf-listing-intro {
+    color: var(--rf-dun);
+    margin: 8px 0 0;
+    max-width: 34em;
+
+    p {
+        margin: 0;
+    }
+}
+
+.rf-listing-banner {
+    aspect-ratio: 16 / 6;
+    background: var(--rf-tile);
+    border-radius: var(--rf-radius-mid);
+    display: block;
+    height: auto;
+    object-fit: cover;
+    width: 100%;
+}
+
+.rf-listing-header--banner .rf-listing-copy {
+    padding-top: 16px;
+}
+
+@include breakpoint("medium") {
+    .rf-listing-header--banner {
+        background: var(--rf-tile);
+        border-radius: var(--rf-radius-banner);
+        overflow: hidden;
+        position: relative;
+
+        .rf-listing-banner {
+            aspect-ratio: auto;
+            border-radius: 0;
+            height: 100%;
+            inset: 0;
+            position: absolute;
+        }
+
+        .rf-listing-copy {
+            background: $rf-banner-scrim;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            justify-content: flex-end;
+            min-height: $rf-banner-height;
+            padding: 28px 40px;
+            position: relative;
+        }
+
+        .rf-listing-title,
+        .rf-listing-intro {
+            max-width: $rf-banner-column;
+        }
+
+        .rf-listing-title {
+            color: #ffffff;
+        }
+
+        .rf-listing-intro {
+            color: #e6e9ec;
+            margin: 0;
+        }
+    }
+}
+
+
+// The chips
+// -----------------------------------------------------------------------------
+
+.rf-chips {
+    --rf-chip-h: #{$rf-chip-height};
+    display: flex;
+    flex-wrap: wrap;
+    gap: $rf-chips-gap;
+    list-style: none;
+    margin: 0;
+    padding: 16px 0 4px;
+
+    @include breakpoint("medium") {
+        padding-top: 20px;
+    }
+}
+
+.rf-chips--thumbs {
+    --rf-chip-h: #{$rf-chip-thumb-height};
+}
+
+// Two rows until category-chips.js has laid the list out (the chips' own height, twice, and the
+// gap); then the hidden attribute holds it to two.
+.js .rf-chips:not([data-rf-chips-ready]) {
+    max-height: calc(2 * var(--rf-chip-h) + #{$rf-chips-gap});
+    overflow: hidden;
+}
+
+.rf-chips-item {
+    margin: 0;
+    max-width: 100%;
+}
+
+.rf-chip {
+    align-items: center;
+    background: var(--rf-paper);
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-pill);
+    box-sizing: border-box;
+    color: var(--rf-ink);
+    display: inline-flex;
+    font-size: 15px;
+    font-weight: 500;
+    gap: 8px;
+    line-height: 1.2;
+    max-width: 100%;
+    min-height: var(--rf-chip-h);
+    padding: 0 16px;
+    text-decoration: none;
+    transition: background-color var(--rf-t-fast) ease-out;
+
+    &:hover {
+        background: var(--rf-tile);
+        color: var(--rf-ink);
+    }
+}
+
+.rf-chips--thumbs .rf-chip {
+    border-radius: var(--rf-radius-mid);
+}
+
+.rf-chip--thumb {
+    padding: 3px 14px 3px 3px;
+}
+
+.rf-chip-image {
+    background: var(--rf-tile);
+    border-radius: var(--rf-radius-small);
+    flex: none;
+    height: 48px;
+    object-fit: cover;
+    width: 72px;
+}
+
+.rf-chip-name {
+    overflow-wrap: anywhere;
+}
+
+.rf-chip--more {
+    border-style: dashed;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+}
+
+// The listing under the chips, as the reference's .cat-body, from 801px; on phones every pixel
+// above the first row counts (stories 20 and 21).
+.rf-chips + .page {
+    @include breakpoint("medium") {
+        margin-top: 20px;
+    }
+}
+
+// "+N more" from 801px, "Show all N" on phones.
+.rf-chips-more-wide {
+    display: none;
+
+    @include breakpoint("medium") {
+        display: inline;
+    }
+}
+
+.rf-chips-more-narrow {
+    @include breakpoint("medium") {
+        display: none;
+    }
+}
+
+
+// The sort bar and, on phones, stock's filter toggle: stock's margins round them (24px each
+// side, and the toggle's 21px padding) put the first row below the fold under a banner and two
+// rows of chips, at 1366x768 and at 375x667 (stories 20 and 21). Ticket 33 restyles both.
+.rf-listing-header ~ .page .facetedSearch-toggle {
+    margin-bottom: 12px;
+    padding: 10px 16px;
+}
+
+.rf-listing-header ~ .page .actionBar {
+    margin: 0 0 16px;
+    padding: 0;
+
+    .actionBar-section,
+    .form-field {
+        margin-bottom: 0;
+    }
+}
+
+
+// The description, after the grid
+// -----------------------------------------------------------------------------
+
+.rf-listing-description {
+    max-width: 44em;
+    padding-block: var(--rf-section) 0;
+
+    h2 {
+        font-size: var(--rf-fs-h2);
+        margin: 0 0 10px;
+    }
+
+    p {
+        margin: 0 0 12px;
+    }
+}

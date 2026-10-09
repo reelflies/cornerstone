@@ -1,0 +1,57 @@
+{{!--
+    The category page (ticket 32; spec modules 8 and 11; O10, R13, UX-5, UX-7, CD-10; stories 20,
+    21, 22, 26, 27 and 72): the Fly Type pages and their sub-types, the Species pages and their
+    Species × Fly Type pages, and the More from ReelFlies categories. pages/category.html and the
+    noindex template (pages/custom/category/rf-noindex.html) both render it, so the two differ
+    only in their robots meta. Everything a crawler needs is in the server HTML.
+
+    - The breadcrumbs, as stock.
+    - The header (listing-header.html): the banner on a top-level Fly Type or a Species page with
+      an image (category-banner-rule.html decides), the plain header everywhere else, so a
+      sub-type's product photo never becomes a banner (O10). The H1 sits on it, with the
+      description's intro.
+    - The description splits at its <!--more--> marker (description-part.html): the part before
+      it under the H1, the rest after the product grid. With no marker the whole description
+      follows the grid.
+    - The subcategories as chips (category-chips.html), in place of the stock sidebar's list.
+    - The stock sidebar (the facets, which ticket 33 restyles, or shop by price), the product
+      listing with its numbered pager, and the Page Builder regions: category_below_header under
+      the header while hide_category_page_heading is off, as stock, and category_below_content.
+      With the sidebar it sets rf_listing_sidebar, so ticket 31's cards size their photos for the
+      narrower column (card-image.html).
+
+    Inside a page's {{#partial "page"}} block @root is empty: this reads the page's own context,
+    and passes what each partial needs as hash arguments.
+--}}
+{{> components/common/breadcrumbs breadcrumbs=breadcrumbs}}
+{{> components/reelflies/category-banner-rule rf_category=category rf_type_ids=theme_settings.rf_menu_type_ids rf_species_root=theme_settings.rf_menu_species_root_id rf_categories=categories}}
+{{#unless theme_settings.hide_category_page_heading}}
+    {{#if (getVar 'rf_category_banner')}}
+        {{> components/reelflies/listing-header rf_name=category.name rf_description=category.description rf_image=category.image}}
+    {{else}}
+        {{> components/reelflies/listing-header rf_name=category.name rf_description=category.description}}
+    {{/if}}
+    {{{region name="category_below_header"}}}
+{{/unless}}
+{{> components/reelflies/category-chips rf_category=category}}
+<div class="page">
+    {{#or category.faceted_search_enabled theme_settings.shop_by_price_visibility}}
+        {{assignVar 'rf_listing_sidebar' 1}}
+        <aside class="page-sidebar" id="faceted-search-container">
+            {{> components/category/sidebar}}
+        </aside>
+    {{/or}}
+
+    <main class="page-content" id="product-listing-container">
+        {{> components/category/product-listing}}
+    </main>
+
+    <div class="page-region">
+        {{{region name="category_below_content"}}}
+    </div>
+</div>
+{{#if category.description}}
+<div class="rf-listing-description" data-rf-description>
+    {{> components/reelflies/description-part rf_description=category.description rf_part='rest'}}
+</div>
+{{/if}}

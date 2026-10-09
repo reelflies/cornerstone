@@ -29,8 +29,12 @@ const pageFiles = (dir = PAGES) => fs.readdirSync(dir, { withFileTypes: true }).
     if (entry.isDirectory()) return entry.name === 'custom' ? [] : pageFiles(entryPath);
     return entry.name.endsWith('.html') ? [entryPath] : [];
 });
+// A ReelFlies hook can move a page's body into a partial (ticket 32's category-page.html), so the
+// components/reelflies/ partials a template includes count as its own source.
+const withHookPartials = source => [source, ...[...source.matchAll(/\{\{>\s*(components\/reelflies\/[\w/-]+)/g)]
+    .map(([, name]) => fs.readFileSync(path.join(THEME_DIR, 'templates', `${name}.html`), 'utf8'))].join('\n');
 const pageTemplates = () => pageFiles()
-    .map(file => ({ file, source: fs.readFileSync(file, 'utf8') }))
+    .map(file => ({ file, source: withHookPartials(fs.readFileSync(file, 'utf8')) }))
     .filter(({ source }) => /\{\{>\s*layout\/base/.test(source))
     .map(({ file, source }) => ({ template: path.relative(path.join(THEME_DIR, 'templates'), file).replace(/\.html$/, ''), hasMain: /<main\b/.test(source) }));
 const WITHOUT_MAIN = pageTemplates().filter(page => !page.hasMain).map(page => page.template);

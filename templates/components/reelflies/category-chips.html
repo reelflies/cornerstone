@@ -1,0 +1,33 @@
+{{!--
+    A category's subcategories as chips (ticket 32; UX-5, CD-10; stories 22, 27 and 71), in place
+    of the stock sidebar's list (components/category/sidebar.html):
+
+        {{> components/reelflies/category-chips rf_category=category}}
+
+    - One link per subcategory, in the store's order. On a Species page they are its Species ×
+      Fly Type pages (decision 3: the menu lists only the Species, so the chips and the hub are
+      the way to them). Every link is in the HTML, hidden or not, so a crawler finds them all.
+    - A chip has a 1px #879186 border (--rf-edge), and a 72x48 thumbnail only when its
+      subcategory has its own image in the store's data (ticket 07's probe 14); otherwise its
+      name alone. The thumbnail is lazy: it is small, and a chip the list hides never loads it.
+    - At most two rows, never a sideways scroll (category-chips.js): the chips that don't fit
+      are hidden, and the last item, the "more" chip, shows them all. It reads "+N more" from
+      801px and "Show all N" on phones. Until the script lays the list out, CSS clips it to two
+      rows, so nothing moves when it does; with no script every chip shows.
+    - No subcategories, no list.
+--}}
+{{#if rf_category.subcategories.length}}
+{{~assignVar 'rf_chip_thumbs' 0~}}
+{{~#each rf_category.subcategories~}}{{~#if image.data~}}{{~assignVar 'rf_chip_thumbs' 1~}}{{~/if~}}{{~/each~}}
+<ul class="rf-chips{{#if (getVar 'rf_chip_thumbs')}} rf-chips--thumbs{{/if}}" aria-label="{{lang 'reelflies.category.chips' name=rf_category.name}}" data-rf-chips>
+    {{#each rf_category.subcategories}}
+    <li class="rf-chips-item"><a class="rf-chip{{#if image.data}} rf-chip--thumb{{/if}}" href="{{url}}">{{#if image.data}}<img class="rf-chip-image" src="{{getImageSrcset image 1x='80w'}}" srcset="{{getImageSrcset image 1x='80w' 2x='160w'}}" width="72" height="48" alt="" loading="lazy" decoding="async">{{/if}}<span class="rf-chip-name">{{name}}</span></a></li>
+    {{/each}}
+    <li class="rf-chips-item rf-chips-more" data-rf-chips-more hidden>
+        <button class="rf-chip rf-chip--more" type="button" data-rf-more-label="{{lang 'reelflies.category.chips_more' count='#'}}">
+            <span class="rf-chips-more-wide" data-rf-chips-more-wide></span>
+            <span class="rf-chips-more-narrow">{{lang 'reelflies.category.chips_all' count=rf_category.subcategories.length}}</span>
+        </button>
+    </li>
+</ul>
+{{/if}}

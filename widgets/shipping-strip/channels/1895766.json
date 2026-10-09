@@ -35,6 +35,7 @@
             "pages/category",
             "pages/compare",
             "pages/contact-us",
+            "pages/custom/category/rf-noindex",
             "pages/errors/403",
             "pages/errors/404",
             "pages/errors/generic",

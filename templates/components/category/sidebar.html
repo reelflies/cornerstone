@@ -1,16 +1,5 @@
 <nav>
-    {{#if category.subcategories}}
-        <div class="sidebarBlock">
-            <h2 class="sidebarBlock-heading">{{category.name}}</h2>
-            <ul class="navList">
-                {{#each category.subcategories}}
-                <li class="navList-item">
-                    <a class="navList-action" href="{{url}}" title="{{name}}">{{name}}</a>
-                </li>
-                {{/each}}
-            </ul>
-        </div>
-    {{/if}}
+    {{!-- ReelFlies hook (ticket 32; CUSTOMIZATIONS.md): the subcategories are chips above the listing (components/reelflies/category-chips.html), so stock's list of them here is gone --}}
 
     {{#if category.faceted_search_enabled}}
         {{> components/faceted-search/index category}}

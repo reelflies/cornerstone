@@ -333,7 +333,7 @@ function arrayBody(file, name) {
 describe('the JavaScript and template slots', () => {
     const PAGE_MODULES = 'assets/js/theme/reelflies/page-modules.js';
 
-    for (const [name, tickets] of [['product', [37, 38, 42]], ['listing', [31, 33, 42, 43]], ['cart', [41]], ['page', [35]]]) {
+    for (const [name, tickets] of [['product', [37, 38, 42]], ['listing', [31, 32, 33, 42, 43]], ['cart', [41]], ['page', [35]]]) {
         it(`page-modules.js: the ${name} array has one slot per module, in ticket order, with blank lines between`, () => {
             assert.deepEqual(slotProblems(arrayBody(PAGE_MODULES, name), tickets, JS_SLOT), []);
         });

@@ -80,6 +80,16 @@ The release guard's rule 1 covers every `rf_*` key except the two menu ids, valu
 - Auto-format an upstream file (prettier, `eslint --fix`, `stylelint --fix`). Only the hook lines may change.
 - Delete an upstream schema entry. Hide it instead, if a setting must not be used.
 - Put a token or key in a theme setting. `templates/pages/account/add-payment-method.html:31` exposes all of them to the page's JavaScript.
+- Take a category out of Google any way but the noindex template (below). Script Manager canonicals are forbidden (refactor 11).
+
+### Taking a category out of Google (ticket 32; R13, SEO-10)
+
+The only approved way is the custom category template `templates/pages/custom/category/rf-noindex.html`: the same page as the stock category template, plus one robots meta, "noindex, follow", so Google drops the page and still follows its links.
+
+- **Switching a category to it** is a template association in the control panel (or, on 1895766, a custom template association through the store-write helper), with no theme push. It counts only once the active theme contains the template.
+- **Before the first category moves onto it,** the category also comes out of the menus (ticket 28's menu reads `rf_menu_exclude_ids` for the top level only; a child in a pane needs the same) and out of hreflang (ticket 19). Ticket 32's comment of 2026-10-09 records this as the open step.
+- **Locally,** `scripts/qa/custom-layouts.json` maps it to channel 1's `category@noindex` pin, and the `category-robots` raw-HTML assertion holds its one robots meta.
+- **Keep it in step** with `pages/category.html`: `render/partials/category.test.mjs` fails when the two pages differ but for the meta.
 
 ## Upstream files changed
 
@@ -128,7 +138,11 @@ The release guard's rule 1 covers every `rf_*` key except the two menu ids, valu
 | `templates/components/products/grid.html` | The card include gains `rf_listing=true`, with a Handlebars comment, on the same line | So the first row's photos load eagerly in a listing (category, search and brand pages, and an account's recently viewed products, `pages/account/recent-items.html`, all of which use the stock grid) and nowhere else (related products and the stock lists call the card directly). The card can't tell from `page_type`: inside a page's `{{#partial "page"}}` block `@root` is empty | 31 |
 | `config.json` | `settings` values only, no key added or removed: `productgallery_size` "600x400" (the card's 3:2 box; stock "500x659" is portrait), `product_sold_out_badges` "topleft" and `pdp_sold_out_label` "Sold out" (ticket 13's decision 1: sold-out products stay listed, badged). `variations`: "ReelFlies CA channel 1" sets `rf_price_unit_exclude` to tree 1's Gear and Assortment roots, "Fly Gear,Fly Selections & Fly Boxes" | The card (ticket 31). The values also reach stock `components/products/list-item.html`, the list display mode (`product_list_display_mode` "list"), which keeps stock's markup: ReelFlies uses the grid | 31 |
 
-New ReelFlies files in upstream folders: `.github/workflows/reelflies-checks.yml`, `.github/workflows/reelflies-baseline-scope.yml` (W0-13), `.gitleaksignore`, `.gitleaks.toml` (gitleaks' default rules, with one `generic-api-key` allowlist for whole uuids in widget channel files; ticket 27's follow-up, #65), `.gitattributes` at the repo root (W0-11: `RELEASES.md` merges as a union, so parallel log branches keep both sides' rows; upstream has no `.gitattributes`), and `RELEASES.md` at the repo root (the release log, written by `scripts/release.sh`, the Switch toggles log, the host batch's Host runs, and the My Themes log of each theme the prune deletes; tickets 05, 15 and 16, W0-3). `stencil bundle` zips only `README.md` and `CHANGELOG.md` from the root's Markdown files, so `RELEASES.md` never ships.
+| `templates/pages/category.html` | Lines 16-54, the stock page block's body (the breadcrumbs, the category image, the H1 and its region, the description, the sidebar, the listing and the region below it), become two lines: a Handlebars comment and an include of `components/reelflies/category-page`. The front matter, the inject and the head block are stock's | The Fly Type and Species pages (spec module 8; O10, UX-5, CD-10): the banner only on a top-level Fly Type or a Species page (`category-banner-rule.html`), else the plain header, both with the H1 and the description's intro (`listing-header.html`), the rest of the description after the grid (`description-part.html`), and the subcategories as chips (`category-chips.html`). The noindex template renders the same partial. An upstream change to the page block's body is ported into the partial; `render/partials/category.test.mjs` renders both templates | 32 |
+| `templates/components/category/sidebar.html` | Lines 2-13, the stock subcategory list (`.sidebarBlock` with its `navList`), become one Handlebars comment | The chips above the listing replace it (UX-5): on phones it pushed the first card about 1,100px down (ticket 26's spike). The facets and shop by price stay. Faceted search re-renders this file, so the list stays gone after a filter | 32 |
+| `config.json` | `settings` values only: `categorypage_products_per_page` and `brandpage_products_per_page` 24 (stock 12) | 24 products a page on category and brand pages, with the stock numbered pager (UX-7). The front matter of both category templates reads the setting | 32 |
+| `schema.json` | One option, 24, added at the end of `categorypage_products_per_page`'s and `brandpage_products_per_page`'s lists (stock 6 to 20) | So Theme Styles can show and keep the value 24 | 32 |
+New ReelFlies files in upstream folders: `templates/pages/custom/category/rf-noindex.html` (ticket 32: the noindex category template, below), `.github/workflows/reelflies-checks.yml`, `.github/workflows/reelflies-baseline-scope.yml` (W0-13), `.gitleaksignore`, `.gitleaks.toml` (gitleaks' default rules, with one `generic-api-key` allowlist for whole uuids in widget channel files; ticket 27's follow-up, #65), `.gitattributes` at the repo root (W0-11: `RELEASES.md` merges as a union, so parallel log branches keep both sides' rows; upstream has no `.gitattributes`), and `RELEASES.md` at the repo root (the release log, written by `scripts/release.sh`, the Switch toggles log, the host batch's Host runs, and the My Themes log of each theme the prune deletes; tickets 05, 15 and 16, W0-3). `stencil bundle` zips only `README.md` and `CHANGELOG.md` from the root's Markdown files, so `RELEASES.md` never ships.
 
 `meta/desktop_bold.png`, `mobile_bold.png`, `desktop_warm.png` and `mobile_warm.png` are now unused but still ship in every bundle (about 6 MB). Delete them, and point the variations at their own screenshots, once the skin has screenshots.
 
@@ -138,13 +152,12 @@ From the review's upgrade-safe layering plan and the design session ([ADR 0001](
 
 - `templates/components/products/options/set-rectangle.html` (37)
 - `templates/components/products/product-view.html` and `templates/components/common/responsive-img.html`
-- `templates/pages/category.html`
 - `assets/js/theme/common/product-details.js` and `assets/js/theme/cart.js`
 - `templates/pages/errors/404.html`
 
 Added by the design session (spec, "Hook count"), with the ticket that adds each:
 
-- `templates/components/category/sidebar.html` (32) and `faceted-search/facets/multi.html` (33)
+- `faceted-search/facets/multi.html` (33)
 - `templates/components/products/description-tabs.html` and `tabs.html` (39)
 - `templates/pages/cart.html`, `templates/components/cart/totals.html` and `cart/status-messages.html` (41)
 - `templates/components/products/schema.html` (40)

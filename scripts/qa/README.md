@@ -572,6 +572,8 @@ export default {
 | `home-no-stock-strips` | 47 | no stock featured, most popular or new products strip on the home page (`config.json` sets the three `homepage_*_count` to 0) |
 | `home-nothing-between` | 47 | when the page has both the Fly Type cards (`.rf-type-cards`) and the tiles (`.rf-home-tiles`): nothing between them but end tags and empty `<div>` wrappers (and `<script>`, `<style>` or `<template>`). A widget there (any `data-widget-id` but the tiles' own wrapper), any other element, or any text fails it: a Page Builder widget in `home_below_carousel` or `home_below_featured_products`, one before the tiles in `home_below_top_products` or after the hero in `home_below_menu`, or a store shipping message. The tiles before the cards fail too. A page without both passes |
 | `card-images` | 31 | on category, search and brand pages, the cards in the listing's `.productGrid` (in `#product-listing-container`): every product a card, each photo (or the default image) with a real `srcset` (no lazysizes stand-in), `sizes`, a width and a height, never through lazysizes; the first three eager and every later one `loading="lazy"`; one image on the page with `fetchpriority="high"`: the banner's when the page has one (`img.rf-listing-banner`, ticket 32), else the first card's, and no other. A category pin must have a grid; a search or brand page with none passes |
+| `category-page` | 32 | on category pins: one listing header holding the page's one H1; its banner, where it has one, eager with `fetchpriority="high"`, a `srcset` of two or more candidates, `sizes`, a width and a height and `alt=""`; every chip a link with an href and the "more" chip hidden in the HTML; the description's rest (`data-rf-description`) after the product grid, and no `<!--more-->` marker in the page |
+| `category-robots` | 32 | on category pins: exactly one robots meta, "noindex, follow", on `category@noindex` (the noindex template), and none that says noindex on the others |
 
 **Still to come:**
 
@@ -714,6 +716,22 @@ Ticket 31's card (`components/reelflies/card.html`, through stock `card.html`'s 
 QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs card.spec
 ```
 
+## The Fly Type and Species pages (`category.spec.mjs`, `category-screens.spec.mjs`)
+
+Ticket 32's category page (`components/reelflies/category-page.html`, which `pages/category.html` and the noindex template `pages/custom/category/rf-noindex.html` both render). Its markup is rendered by `render/partials/category.test.mjs` on tree-4-shaped pages (`render/partials/category/pages.json`, with tree 4's categories and menu ids): the banner rule, the description split at `<!--more-->`, the chips, 24 a page and the pager, and the noindex template matching the stock one but for its robots meta. The chips' layout is Jest's (`category-chips.spec.js`). The server HTML is the `category-page` and `category-robots` assertions'.
+
+- **`category-screens.spec.mjs`:** on the fixture page, the real category page round tree-4-shaped data (`render/pages/category-page/`: a Fly Type page and a Species page, with channel 1's own category images), at 375 and 1280, because ReelFlies_CA has no tree-4 categories until refactor 13 and the live grids are masked. Its baselines are widget baselines (`widgets/<variation>/category-page-<case>-…`), declared as `widget category-page`. It runs the real `category-chips.js` in the page.
+  - each page matches its baseline
+  - the banner: eager, `fetchpriority="high"`, 220px tall from 801px with the H1 and the intro on it (each line 4.5:1 or better over its lightest pixel), the photo first on phones
+  - the chips: two rows at most, every link in the page, "+N more" at 1280 and "Show all N" at 375, which shows them all and puts focus on the first it showed; thumbnails only where a subcategory has an image
+  - nothing scrolls sideways at 320; the first row of products starts within the first screen at 375x667 and 1366x768; no serious or critical axe issue
+- **`category.spec.mjs`:** on channel 1's category pins, at 375 and 1280: the banner on `category` (Realistic Trout Flies, one of the channel's menu ids), and the plain header under `menu-ids-empty`; the plain header on `category@more` (Fly Gear) and `category@noindex` (a sub-type, which `custom-layouts.json` maps to the noindex template), though both have images; the chips against the store's subcategories from `?debug=context`, in two rows at most; no sideways scroll at 320; the first row within the first screen.
+
+```sh
+npx playwright test --config scripts/qa/playwright.config.mjs category-screens
+QA_CHANNEL=1 npx playwright test --config scripts/qa/playwright.config.mjs category.spec
+```
+
 ## Fixture renders (`render/`)
 
 The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixture JSON instead of store data. So a template can be tested before the store has its data: ReelFlies_CA has no tree-4 categories until refactor 13, but the Species pages, the hub, the chips, the description split and the hook chart rows can be tested now. And a widget is checked from its source, not from what the store shows. Tickets 32, 34, 35, 36 and 46–49 use it.
@@ -784,7 +802,7 @@ The fixture renderer (W0-9) renders a ReelFlies partial, or a widget, from fixtu
 - `_.id` is a fixed id, so a shot is the same on every run.
 - `page` and `region` say where the widget sits. A fixture for render tests only sets `"shot": false` instead.
 - `page_context` (optional) is the page's own store data, shaped as `?debug=context` shows it, for a region inside a condition. `cart.html` renders `cart_below_totals` only when the cart has items, so a widget there needs `"page_context": { "cart": { "quantity": 1, "items": [ … ] } }`. The page's `template` is always `page`, as on the store.
-- `"chrome": true` (optional) renders the theme's header and footer round the page, as `layout/base.html` does, for a widget in a header or footer region such as `header_bottom--global` (ticket 27's shipping strip), or for a fixture page that shows a page as a shopper sees it (ticket 31's card grid). The phone header is sticky, so in an element shot lower down it can lie over the widget: such a spec sets `[data-rf-header]` static before the shot (`card-screens.spec.mjs`).
+- `"chrome": true` (optional) renders the theme's header and footer round the page, as `layout/base.html` does, for a widget in a header or footer region such as `header_bottom--global` (ticket 27's shipping strip), or for a fixture page whose spec measures the page as a shopper sees it (ticket 31's card grid, ticket 32's category page: the first row of products under the header). The phone header is sticky, so in an element shot lower down it can lie over the widget: such a spec sets `[data-rf-header]` static before the shot (`card-screens.spec.mjs`, `category-screens.spec.mjs`).
 
 `renderWidget(name, fixture, { root })` resolves to the template's output, for render tests under `node --test` (Jest ignores `scripts/`). It renders with the store's engine for widget templates, Handlebars 3 (`scripts/widgets/engine.mjs`: the store saves them as `handlebars_v3`, and the Widgets API takes no engine), not `config.json`'s v4, so `../` inside `{{#if}}` renders here as on the store, and a Handlebars 4 form such as `{{#*inline}}` fails here as it would there. `_shared` partials are registered as partials, as in the files; the widget sync's tests render the pasted store copy beside them. For example, ticket 48's "a changed price in the fixture changes the rendered price" is a `renderWidget` call with the price changed (`render.test.mjs` has the same test on a test widget). Put a widget's render tests in `scripts/qa/render/widgets/<name>.test.mjs`.
 
@@ -1078,6 +1096,7 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - `home-lead-screens.spec.mjs` and `shipping-strip-screens.spec.mjs` run with `qa:screens` too, for the same reason.
 - `home-widgets-screens.spec.mjs` runs with `qa:screens` too, for the same reason.
 - `card-screens.spec.mjs` (ticket 31) runs with `qa:screens` too, for the same reason; `card.spec.mjs` runs only when named, like the specs below.
+- `category-screens.spec.mjs` (ticket 32) runs with `qa:screens` too; `category.spec.mjs` runs only when named.
 - `header.spec.mjs` (ticket 27), `menu.spec.mjs` (ticket 28), `rail.spec.mjs` (ticket 29) and `quick-search.spec.mjs` (ticket 30) run only when named, like `skin.spec.mjs`: no npm script's filter matches them. The first three wait for their scripts with `chunkLoaded` from `states.mjs`; `quick-search.spec.mjs` waits until quick-search.js has added each search form's dropdown.
 - `retry.test.mjs` covers the retry policy itself (the waits, `Retry-After` and the 30 s limit), `storefront.test.mjs` the server check's retries, and `raw-html/fetch.test.mjs` the raw-HTML fetch's.
 - `storefront.test.mjs` also covers `QA_PORT`, the start log's name, the locks a gate holds (and the ports checked again after a slot wait), trusting only the server a gate started, and stopping that server when the gate is stopped by a signal. `playwright-config.test.mjs` covers that the config reads `QA_PORT` and holds the locks only in the runner, `prepush.test.mjs` what `qa:prepush` checks before its first gate, `serve.test.mjs` the locks around a `stencil start` by hand, and `scripts/lib/lock.test.mjs` the locks themselves: the stale rules, waiting, the three slots across processes, the signals, `RF_LOCK_ROOT`, and the command line `release.sh` uses.

@@ -1,6 +1,8 @@
 {
     "brand": {},
-    "category": {},
+    "category": {
+        "rf-noindex.html": "/flies/realistic-trout-flies/realistic-nymphs/"
+    },
     "page": {},
     "product": {}
 }

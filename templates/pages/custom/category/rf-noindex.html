@@ -1,0 +1,34 @@
+---
+category:
+    products:
+        limit: {{theme_settings.categorypage_products_per_page}}
+---
+{{!--
+    The noindex category template (ticket 32; spec module 11; R13, SEO-10; story 76): the same page
+    as pages/category.html, plus one robots meta, "noindex, follow", so Google drops the page and
+    still follows its links. It is the only approved way to take a category out of Google
+    (CUSTOMIZATIONS.md): Script Manager canonicals are forbidden. A category moves onto it in the
+    control panel (or through a custom template association on 1895766), with no theme push.
+
+    Keep it in step with pages/category.html: the front matter, the inject and the head block are
+    the stock template's, and render/partials/category.test.mjs checks the two pages match but for
+    the meta. Before a category moves onto it, it comes out of the menus and hreflang too
+    (tickets 28 and 19; ticket 32's 2026-10-09 comment).
+--~}}
+{{inject "categoryProductsPerPage" theme_settings.categorypage_products_per_page}}
+{{#partial "head"}}
+    <meta name="robots" content="noindex, follow">
+    {{#if pagination.category.previous}}
+        <link rel="prev" href="{{{pagination.category.previous}}}">
+    {{/if}}
+    {{#if pagination.category.next}}
+        <link rel="next" href="{{{pagination.category.next}}}">
+    {{/if}}
+{{/partial}}
+
+{{#partial "page"}}
+
+{{> components/reelflies/category-page}}
+
+{{/partial}}
+{{> layout/base}}
