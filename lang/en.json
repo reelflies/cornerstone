@@ -1058,7 +1058,10 @@
         },
 
         "category": {
-            "_slot": ""
+            "_slot": "",
+            "chips": "{name} categories",
+            "chips_more": "+{count} more",
+            "chips_all": "Show all {count}"
         },
 
         "facets": {

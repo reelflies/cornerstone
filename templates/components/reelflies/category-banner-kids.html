@@ -1,0 +1,7 @@
+{{!--
+    category-banner-rule.html's Species check: sets rf_category_banner to 1 when rf_id is one of
+    rf_kids' ids (the Species root's children). Renders nothing.
+--}}
+{{~#each rf_kids as |rfKid|~}}
+{{~#if rfKid.id '==' ../rf_id~}}{{~assignVar 'rf_category_banner' 1~}}{{~/if~}}
+{{~/each~}}

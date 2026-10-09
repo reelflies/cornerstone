@@ -3,10 +3,10 @@
 //
 // Keys are page keys: a page kind, which is a template name from the spec's seam 1 list
 // (home, fly-type, species, species-hub, product, cart, hook-chart, 404 and brand, plus
-// category for the stock category template until ticket 32 builds the Fly Type and Species
-// pages, page for a Web Page, login and create-account for the sign-in forms, and search for
-// the search results, ticket 31), or kind@name for one more pin of the same kind (W0-8), such
-// as product@5663 or product@sold-out. A template ticket adds its page here when it lands; the
+// category for the category template, ticket 32's page, while the fly-type and species keys
+// wait for tree 4's pages (refactor 13), page for a Web Page, login and create-account for the
+// sign-in forms, and search for the search results, ticket 31), or kind@name for one more pin
+// of the same kind (W0-8), such as product@5663 or product@sold-out. A template ticket adds its page here when it lands; the
 // screenshot and axe runs then cover it.
 // - The kind decides what the page must answer (expectedStatus), which raw-HTML assertions
 //   apply (an assertion's `pages` and `notOn` name kinds, or one kind@name pin), which pin
@@ -65,6 +65,13 @@ export const CHANNELS = {
             // them: `hold` below keeps that from moving the page.
             product: '/realistic-flying-hot-butt-hopper-brown/',
             category: '/flies/realistic-trout-flies/', // tree 1; 12 cards with Quick view, and facets
+            // Ticket 32: a More from ReelFlies category (a top-level category outside the menu
+            // ids), whose four subcategories have images, so its plain header and thumbnail
+            // chips are checked live.
+            'category@more': '/fly-gear/',
+            // Ticket 32: a Fly Type sub-type rendered with the noindex template, which
+            // custom-layouts.json maps to it: its plain header and its one robots meta.
+            'category@noindex': '/flies/realistic-trout-flies/realistic-nymphs/',
             // A Web Page (pages/page), for ticket 25's focus ring and landmark checks: ReelFlies_CA
             // has none yet (ticket 22's sources sync later). One paragraph of terms that read the
             // same on 2026-10-07 as the coupon wording on reelflies.ca has for years.
@@ -81,6 +88,8 @@ export const CHANNELS = {
         // too. The tabs by role: stock search.js swaps the active tab's navBar-action class.
         mask: {
             category: ['.productGrid'],
+            'category@more': ['.productGrid'],
+            'category@noindex': ['.productGrid'],
             search: ['.productGrid', '.page-heading', '[data-search-page-tabs] [role="tab"]'],
         },
         // The related products' cards (Related Products, and Customers Also Viewed when the

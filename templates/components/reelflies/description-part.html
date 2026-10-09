@@ -1,0 +1,29 @@
+{{!--
+    One part of a listing's description, split at its <!--more--> marker (ticket 32; O10; story
+    21), in the template and never in the browser:
+
+        {{> components/reelflies/description-part rf_description=category.description rf_part='intro'}}
+        {{> components/reelflies/description-part rf_description=category.description rf_part='rest'}}
+
+    - intro: the part before the marker, in <div class="rf-listing-intro">, for the header under
+      the H1. With no marker there is no intro.
+    - rest: everything after the marker, or the whole description when it has none, in
+      <div class="rf-listing-description" data-rf-description>, after the product grid.
+    - A part that is empty prints nothing, wrapper and all.
+    - A marker the editor wrapped in its own paragraph, <p><!--more--></p>, counts as the bare
+      marker, so neither half is left with half a paragraph. Refactor 10 writes each description
+      with the marker (ticket 03's update). The marker itself is never printed.
+--}}
+{{~#if rf_description~}}
+{{~#contains rf_description '<!--more-->'~}}
+{{~#each (split (strReplace rf_description '<p><!--more--></p>' '<!--more-->') '<!--more-->')~}}
+{{~#if @first~}}
+{{~#if ../rf_part '==' 'intro'~}}{{~#if (trim this)~}}<div class="rf-listing-intro">{{{this}}}</div>{{~/if~}}{{~/if~}}
+{{~else~}}
+{{~#if ../rf_part '==' 'rest'~}}{{~#if (trim this)~}}<div class="rf-listing-description" data-rf-description>{{{this}}}</div>{{~/if~}}{{~/if~}}
+{{~/if~}}
+{{~/each~}}
+{{~else~}}
+{{~#if rf_part '==' 'rest'~}}<div class="rf-listing-description" data-rf-description>{{{rf_description}}}</div>{{~/if~}}
+{{~/contains~}}
+{{~/if~}}

@@ -30,6 +30,8 @@ const product = [
 const listing = [
     // 31 product card and grid
 
+    () => import(/* webpackChunkName: "rf-category-chips" */ './category-chips'), // 32 chips
+
     // 33 Fly size filter: hook order, facet order, empty state
 
     // 42 cart state: the card half

@@ -1,0 +1,318 @@
+{
+    "description": "Category pages on tree-4-shaped data (ticket 32), for render/partials/category.test.mjs and the category-page fixture shots: ReelFlies_CA has no tree-4 categories until refactor 13. Ids and URLs follow render/partials/menu/tree-4.json, whose categories and menu settings the tests render with. Some subcategories carry an image and some don't (ticket 07's probe 14), so the chips show both. The images are channel 1's own category images, standing in for tree 4's.",
+    "pages": {
+        "fly-type": {
+            "category": {
+                "faceted_search_enabled": false,
+                "show_compare": false,
+                "total_products": 48,
+                "id": 501,
+                "name": "Dry Flies",
+                "url": "https://reelflies.ca/dry-flies/",
+                "image": {
+                    "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/i/dry-flies__36885.original.jpg",
+                    "alt": "Dry Flies"
+                },
+                "description": "<p>Mayflies, caddis, stoneflies, hoppers and midges that float on the surface.</p><!--more--><h2>About dry flies</h2><p>A dry fly floats on the surface film and imitates an adult insect: a hatching mayfly, a caddis laying eggs, a grasshopper blown onto the water.</p><p>Most trout dries are tied on sizes 12 to 18.</p>",
+                "subcategories": [
+                    {
+                        "id": 642,
+                        "name": "Mayfly Dry Flies",
+                        "url": "https://reelflies.ca/dry-flies/mayfly-dry-flies/",
+                        "description": "",
+                        "product_count": 61,
+                        "image": {
+                            "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/c/mayfly-dry-flys__08325.original.jpg",
+                            "alt": "Mayfly Dry Flies"
+                        }
+                    },
+                    {
+                        "id": 643,
+                        "name": "Attractor Dry Flies",
+                        "url": "https://reelflies.ca/dry-flies/attractor-dry-flies/",
+                        "description": "",
+                        "product_count": 30,
+                        "image": {
+                            "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/p/attactors-stimmulators__45199.original.jpg",
+                            "alt": "Attractor Dry Flies"
+                        }
+                    },
+                    {
+                        "id": 644,
+                        "name": "Hoppers & Terrestrials",
+                        "url": "https://reelflies.ca/dry-flies/hoppers-terrestrials/",
+                        "description": "",
+                        "product_count": 44
+                    },
+                    {
+                        "id": 645,
+                        "name": "Parachute Dry Flies",
+                        "url": "https://reelflies.ca/dry-flies/parachute-dry-flies/",
+                        "description": "",
+                        "product_count": 25,
+                        "image": {
+                            "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/z/parachute-dry-flies__90470.original.jpg",
+                            "alt": "Parachute Dry Flies"
+                        }
+                    },
+                    {
+                        "id": 641,
+                        "name": "Caddis Dry Flies",
+                        "url": "https://reelflies.ca/dry-flies/caddis-dry-flies/",
+                        "description": "",
+                        "product_count": 38,
+                        "image": {
+                            "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/p/caddis-dry-flies__30150.original.jpg",
+                            "alt": "Caddis Dry Flies"
+                        }
+                    },
+                    {
+                        "id": 646,
+                        "name": "Stonefly Dry Flies",
+                        "url": "https://reelflies.ca/dry-flies/stonefly-dry-flies/",
+                        "description": "",
+                        "product_count": 12
+                    },
+                    {
+                        "id": 647,
+                        "name": "Midge Dry Flies",
+                        "url": "https://reelflies.ca/dry-flies/midge-dry-flies/",
+                        "description": "",
+                        "product_count": 27,
+                        "image": {
+                            "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/i/midges-gnats-spiders__74119.original.jpg",
+                            "alt": "Midge Dry Flies"
+                        }
+                    },
+                    {
+                        "id": 648,
+                        "name": "Emergers & Cripples",
+                        "url": "https://reelflies.ca/dry-flies/emergers-cripples/",
+                        "description": "",
+                        "product_count": 19,
+                        "image": {
+                            "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/q/emergers-and-cripples__58802.original.jpg",
+                            "alt": "Emergers & Cripples"
+                        }
+                    }
+                ]
+            },
+            "breadcrumbs": [
+                {
+                    "url": "https://reelflies.ca/",
+                    "name": "Home"
+                },
+                {
+                    "url": "https://reelflies.ca/dry-flies/",
+                    "name": "Dry Flies"
+                }
+            ]
+        },
+        "species": {
+            "category": {
+                "faceted_search_enabled": false,
+                "show_compare": false,
+                "total_products": 48,
+                "id": 609,
+                "name": "Trout Flies",
+                "url": "https://reelflies.ca/species/trout-flies/",
+                "image": {
+                    "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/r/pro-guide-collection__90349.original.jpg",
+                    "alt": "Trout Flies"
+                },
+                "description": "<p>Every fly we tie for trout, from size 22 midges to articulated streamers.</p><p><!--more--></p><p>Narrow by fly type, then by hook size.</p>",
+                "subcategories": [
+                    {
+                        "id": 607,
+                        "name": "Dry Flies for Trout",
+                        "url": "https://reelflies.ca/species/trout-flies/dry-flies/",
+                        "description": "",
+                        "product_count": 120
+                    },
+                    {
+                        "id": 608,
+                        "name": "Nymphs for Trout",
+                        "url": "https://reelflies.ca/species/trout-flies/nymphs/",
+                        "description": "",
+                        "product_count": 96
+                    },
+                    {
+                        "id": 610,
+                        "name": "Streamers for Trout",
+                        "url": "https://reelflies.ca/species/trout-flies/streamers/",
+                        "description": "",
+                        "product_count": 54
+                    },
+                    {
+                        "id": 611,
+                        "name": "Emergers for Trout",
+                        "url": "https://reelflies.ca/species/trout-flies/emergers/",
+                        "description": "",
+                        "product_count": 22
+                    }
+                ]
+            },
+            "breadcrumbs": [
+                {
+                    "url": "https://reelflies.ca/",
+                    "name": "Home"
+                },
+                {
+                    "url": "https://reelflies.ca/species/",
+                    "name": "Flies by Species"
+                },
+                {
+                    "url": "https://reelflies.ca/species/trout-flies/",
+                    "name": "Trout Flies"
+                }
+            ]
+        },
+        "sub-type": {
+            "category": {
+                "faceted_search_enabled": false,
+                "show_compare": false,
+                "total_products": 48,
+                "id": 641,
+                "name": "Caddis Dry Flies",
+                "url": "https://reelflies.ca/dry-flies/caddis-dry-flies/",
+                "image": {
+                    "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/p/caddis-dry-flies__30150.original.jpg",
+                    "alt": "Caddis Dry Flies"
+                },
+                "description": "<p>Elk hair, X-caddis and CDC patterns for the evening hatch.</p>",
+                "subcategories": [
+                    {
+                        "id": 669,
+                        "name": "Elk Hair Caddis",
+                        "url": "https://reelflies.ca/dry-flies/caddis-dry-flies/elk-hair-caddis/",
+                        "description": "",
+                        "product_count": 9,
+                        "image": {
+                            "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/k/realistic-dry-flies__93201.original.jpg",
+                            "alt": "Elk Hair Caddis"
+                        }
+                    }
+                ]
+            },
+            "breadcrumbs": [
+                {
+                    "url": "https://reelflies.ca/",
+                    "name": "Home"
+                },
+                {
+                    "url": "https://reelflies.ca/dry-flies/",
+                    "name": "Dry Flies"
+                },
+                {
+                    "url": "https://reelflies.ca/dry-flies/caddis-dry-flies/",
+                    "name": "Caddis Dry Flies"
+                }
+            ]
+        },
+        "species-type": {
+            "category": {
+                "faceted_search_enabled": false,
+                "show_compare": false,
+                "total_products": 48,
+                "id": 607,
+                "name": "Dry Flies for Trout",
+                "url": "https://reelflies.ca/species/trout-flies/dry-flies/",
+                "image": {
+                    "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/k/realistic-dry-flies__93201.original.jpg",
+                    "alt": "Dry Flies for Trout"
+                },
+                "description": "<p>Dry flies for trout.</p><!--more--><p>Match the size first, then the colour.</p>",
+                "subcategories": []
+            },
+            "breadcrumbs": [
+                {
+                    "url": "https://reelflies.ca/",
+                    "name": "Home"
+                },
+                {
+                    "url": "https://reelflies.ca/species/",
+                    "name": "Flies by Species"
+                },
+                {
+                    "url": "https://reelflies.ca/species/trout-flies/",
+                    "name": "Trout Flies"
+                },
+                {
+                    "url": "https://reelflies.ca/species/trout-flies/dry-flies/",
+                    "name": "Dry Flies for Trout"
+                }
+            ]
+        },
+        "more": {
+            "category": {
+                "faceted_search_enabled": false,
+                "show_compare": false,
+                "total_products": 48,
+                "id": 550,
+                "name": "Fly Gear",
+                "url": "https://reelflies.ca/fly-gear/",
+                "image": {
+                    "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/g/accessories-tools__01917.original.jpg",
+                    "alt": "Fly Gear"
+                },
+                "description": "",
+                "subcategories": [
+                    {
+                        "id": 659,
+                        "name": "Fly Fishing Accessories",
+                        "url": "https://reelflies.ca/fly-gear/fly-fishing-accessories/",
+                        "description": "",
+                        "product_count": 40,
+                        "image": {
+                            "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/n/accessories-tools__42218.original.jpg",
+                            "alt": "Fly Fishing Accessories"
+                        }
+                    },
+                    {
+                        "id": 660,
+                        "name": "Fly Boxes",
+                        "url": "https://reelflies.ca/fly-gear/fly-boxes/",
+                        "description": "",
+                        "product_count": 18,
+                        "image": {
+                            "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/i/hats__06809.original.jpg",
+                            "alt": "Fly Boxes"
+                        }
+                    },
+                    {
+                        "id": 661,
+                        "name": "Fly Tying Materials",
+                        "url": "https://reelflies.ca/fly-gear/fly-tying-materials/",
+                        "description": "",
+                        "product_count": 31,
+                        "image": {
+                            "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/c/materials-threads__90202.original.jpg",
+                            "alt": "Fly Tying Materials"
+                        }
+                    },
+                    {
+                        "id": 662,
+                        "name": "Fly Tying Hooks",
+                        "url": "https://reelflies.ca/fly-gear/fly-tying-hooks/",
+                        "description": "",
+                        "product_count": 33,
+                        "image": {
+                            "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/w/mustad-hooks__83486.original.jpg",
+                            "alt": "Fly Tying Hooks"
+                        }
+                    }
+                ]
+            },
+            "breadcrumbs": [
+                {
+                    "url": "https://reelflies.ca/",
+                    "name": "Home"
+                },
+                {
+                    "url": "https://reelflies.ca/fly-gear/",
+                    "name": "Fly Gear"
+                }
+            ]
+        }
+    }
+}
