@@ -12,8 +12,10 @@
     - The content splits at the rows' start marker: the copy before it, then the gauge
       (components/reelflies/hook-gauge.html: 6/0 to 24 drawn to one scale, each size linking to
       its row) with its caption, then the rows and any copy after them. With no rows yet, the
-      copy and then the gauge.
+      copy alone: the gauge's links would lead nowhere.
     - The marker itself is never printed. The end marker stays in the HTML as a comment.
+    - The markers go between top-level blocks of the content, as rows.mjs writes them. One inside
+      an element (a <p>, a <div>, a link) splits that element, as ticket 32's <!--more--> does.
 --}}
 {{#partial "page"}}
 
@@ -37,7 +39,6 @@
         {{/each}}
     {{else}}
         <div class="rf-chart-copy">{{{page.content}}}</div>
-        {{> components/reelflies/hook-chart-gauge}}
     {{/contains}}
 </main>
 

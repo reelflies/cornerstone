@@ -13,12 +13,17 @@ import assert from 'node:assert/strict';
 import {
     decodeHtml, findTags, outerHtml, textOf,
 } from '../../raw-html/html.mjs';
-import { MARKERS } from '../../../hook-chart/rows.mjs';
+import {
+    MARKERS, buildTable, catalogueProducts, flyTypesFromTree, joinPages, readRowsConfig, renderRows,
+} from '../../../hook-chart/rows.mjs';
 import { unbalancedTags } from '../html-checks.mjs';
 import { renderPartial } from '../render.mjs';
 
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const ROWS = fs.readFileSync(path.join(HERE, 'hook-chart/rows.html'), 'utf8');
+const SCRIPT_FIXTURES = path.join(HERE, '../../../hook-chart/fixtures');
+const PAGE_FIXTURE = path.join(HERE, '../pages/hook-chart-page/fixtures/chart.json');
+const TEMPLATE_FILE = path.join(HERE, '../../../../templates/pages/custom/page/hook-size-chart.html');
 const INTRO = '<p>Fly hooks are sized by number. From 1 to 24, the bigger the number, the smaller the hook.</p>';
 const OUTRO = '<p>The smallest hook made for sale is a <a href="/blog/the-mustad-277-gold-plated-in-size-32-arguably-the-smallest-hook-ever-made-for-sale-today/">Mustad 277 in size 32</a>.</p>';
 const TEMPLATE = 'pages/custom/page/hook-size-chart';
@@ -78,9 +83,30 @@ describe('the hook size chart page (pages/custom/page/hook-size-chart.html)', ()
         assert.deepEqual(unbalancedTags(html), []);
     });
 
-    it('with no rows block yet, shows the copy and then the gauge', async () => {
+    it('with no rows block yet, shows the copy alone: the gauge\'s links would lead nowhere', async () => {
         const html = await render(`${INTRO}${OUTRO}`);
-        assert.ok(html.indexOf('rf-hook-gauge--chart') > html.indexOf('Mustad 277 in size 32'));
+        assert.match(html, /Mustad 277 in size 32/);
+        assert.equal(html.includes('rf-hook-gauge'), false);
         assert.equal(findTags(html, 'table').length, 0);
+    });
+});
+
+describe('the rows the page is tested with are the script\'s', () => {
+    const read = file => JSON.parse(fs.readFileSync(path.join(SCRIPT_FIXTURES, file), 'utf8'));
+    const pages = (file, what) => joinPages([{ file, read: read(file) }], what);
+
+    it('hook-chart/rows.html is what rows.mjs writes from its own fixtures', () => {
+        const config = readRowsConfig();
+        const products = catalogueProducts(pages('products.json', 'products'), pages('assignments.json', 'channel assignments'));
+        const table = buildTable(products, flyTypesFromTree(pages('tree.json', 'tree'), config.flyTypes));
+        assert.equal(`${renderRows(table, config)}\n`, ROWS);
+    });
+
+    it('the fixture page\'s content holds those rows, and the template splits at rows.mjs\'s own start marker', () => {
+        const fixture = JSON.parse(fs.readFileSync(PAGE_FIXTURE, 'utf8'));
+        assert.ok(fixture.page_context.page.content.includes(ROWS.trim()), 'chart.json holds rows.html');
+        const template = fs.readFileSync(TEMPLATE_FILE, 'utf8');
+        const literals = [...template.matchAll(/'(<!-- rf:hook-chart-rows [^']*-->)'/g)].map(match => match[1]);
+        assert.deepEqual(literals, [MARKERS.start, MARKERS.start]);
     });
 });

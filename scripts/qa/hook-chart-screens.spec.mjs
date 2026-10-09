@@ -6,7 +6,8 @@
 // - The page matches its baseline (widget baselines, declared as `widget hook-chart-page`).
 // - One <main> and one <h1>; the gauge between the copy and the rows, every size a link to its
 //   row, and following one lands on that row, tinted and clear of the sticky phone bar.
-// - Each hook is drawn to one scale: a bigger hook is never drawn smaller than a smaller one.
+// - Each hook is drawn to one scale at 320, 375 and 1280: its drawn width over its length
+//   (--rf-hook-len, mm) is the same px per mm for every hook.
 // - Nothing scrolls sideways at 320 (story 71).
 // - axe finds no serious or critical issue in the page's body.
 //
@@ -25,6 +26,7 @@ import { PAGE_FIXTURES, openWidget } from './render/widget-page.mjs';
 test.skip(Boolean(QA_OVERLAY), `the chart page renders from its fixture, not under an overlay (QA_OVERLAY=${QA_OVERLAY})`);
 
 const CHART = widgetCases([PAGE_FIXTURES]).find(({ widget, name }) => widget === 'hook-chart-page' && name === 'chart');
+if (!CHART) throw new Error('render/pages/hook-chart-page/fixtures/chart.json is missing');
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
 
 async function open(page) {
@@ -36,6 +38,7 @@ async function open(page) {
 test.describe('the hook size chart page (ticket 35)', () => {
     test('matches its baseline', async ({ page }) => {
         await open(page);
+        // The phone header is sticky, and would cover the page's top in an element shot.
         await page.addStyleTag({ content: '[data-rf-header] { position: static !important; }' });
         await expect(page.locator('#main-content')).toHaveScreenshot(['widgets', slug(QA_VARIATION), 'hook-chart-page-chart.png']);
     });
@@ -49,12 +52,21 @@ test.describe('the hook size chart page (ticket 35)', () => {
         expect(rows.y).toBeGreaterThanOrEqual(gauge.y + gauge.height - 1);
     });
 
-    test('draws each hook to one scale: a bigger hook is never drawn smaller (story 15)', async ({ page }) => {
-        await open(page);
-        const widths = await page.locator('.rf-hook-gauge__hook').evaluateAll(hooks => hooks.map(hook => hook.getBoundingClientRect().width));
-        expect(widths).toHaveLength(19);
-        widths.slice(1).forEach((width, index) => expect(width, `size ${index + 2} of 19`).toBeLessThanOrEqual(widths[index] + 0.5));
-    });
+    for (const width of [320, 375, 1280]) {
+        test(`draws every hook to one scale at ${width} (story 15)`, async ({ page }) => {
+            await page.setViewportSize({ width, height: 900 });
+            await open(page);
+            const scales = await page.locator('.rf-hook-gauge__hook').evaluateAll(hooks => hooks.map(hook => ({
+                size: hook.closest('a').textContent.trim(),
+                k: hook.getBoundingClientRect().width / parseFloat(getComputedStyle(hook).getPropertyValue('--rf-hook-len')),
+            })));
+            expect(scales).toHaveLength(19);
+            const [first] = scales;
+            for (const { size, k } of scales) expect(Math.abs(k - first.k), `size ${size} at ${k.toFixed(2)} px/mm, 6/0 at ${first.k.toFixed(2)}`).toBeLessThanOrEqual(0.05);
+            const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+            expect(overflow, 'nothing scrolls sideways').toBeLessThanOrEqual(0);
+        });
+    }
 
     test('takes a gauge size to its row, tinted and clear of the header (story 16)', async ({ page }) => {
         await open(page);

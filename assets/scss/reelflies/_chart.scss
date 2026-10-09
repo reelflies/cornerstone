@@ -8,13 +8,20 @@
 //
 // - The gauge: each hook drawn to one scale, its width the hook's length (--rf-hook-len, mm)
 //   times the scale (--rf-gauge-k, px per mm, set on the gauge by the partial for each layout),
-//   sitting on one line with its size under it. Phones take the partial's --rf-gauge-k-phone,
-//   and a row that doesn't fit wraps, so nothing scrolls sideways at 320.
+//   sitting on one line with its size under it. Each item is as wide as its hook (at least a 44px
+//   target), never squeezed to share a row: on phones a row that doesn't fit wraps, so every hook
+//   keeps the scale and nothing scrolls sideways at 320. Phones take the partial's
+//   --rf-gauge-k-phone, and below $rf-gauge-narrow its --rf-gauge-k-narrow where the layout sets
+//   one (ticket 49's band; the chart's stays at the phone scale).
 // - The rows: a table the row script writes into the page's content. A row the URL names
 //   (#size-14, from the gauge or a "Hook size guide" link) is tinted, and lands clear of the
-//   sticky phone bar. On phones a row's links wrap, so the table fits its column.
+//   sticky phone bar, which html's scroll-padding-top already clears (_header.scss). On phones a
+//   row's links wrap, so the table fits its column.
 //
 // -----------------------------------------------------------------------------
+
+$rf-chart-measure: 44em; // the copy's line length, as the reference's .chart-intro
+$rf-gauge-narrow: 360px; // below this, a layout's narrow scale (geometry.mjs: a 288px column at 320)
 
 .rf-chart {
     padding-block: 20px var(--rf-section);
@@ -29,7 +36,7 @@
 }
 
 .rf-chart-copy {
-    max-width: 44em;
+    max-width: $rf-chart-measure;
 
     p {
         margin: 10px 0 0;
@@ -39,7 +46,7 @@
 // The copy after the rows (the Mustad size-32 post's link, SEO-15).
 .rf-chart-body > p {
     margin: 16px 0 0;
-    max-width: 44em;
+    max-width: $rf-chart-measure;
 }
 
 .rf-chart-gauge {
@@ -78,19 +85,20 @@
     padding: 0;
     row-gap: 16px;
 
+    @media not all and (min-width: $rf-gauge-narrow) {
+        --rf-gauge-scale: var(--rf-gauge-k-narrow, var(--rf-gauge-k-phone, var(--rf-gauge-k)));
+    }
+
     @include breakpoint("medium") {
         --rf-gauge-scale: var(--rf-gauge-k);
         flex-wrap: nowrap;
     }
 }
 
+// As wide as its hook, and the row's spare width shared out, as the reference's .gauge li.
 .rf-hook-gauge__item {
-    flex: 1 1 0;
+    flex: 1 1 auto;
     min-width: 44px;
-
-    @include breakpoint("medium") {
-        flex: 1 1 auto;
-    }
 }
 
 .rf-hook-gauge__link {
@@ -162,7 +170,7 @@
     }
 
     tr {
-        scroll-margin-top: calc(var(--rf-header-h) + 12px);
+        scroll-margin-top: 12px;
     }
 
     tr:target {
@@ -173,7 +181,7 @@
     td a {
         align-items: center;
         display: inline-flex;
-        min-height: 24px;
+        min-height: var(--rf-target-min);
 
         @include breakpoint("medium") {
             white-space: nowrap;
