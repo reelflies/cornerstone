@@ -464,6 +464,97 @@ describe('a slow tap overtaken by a newer one', () => {
         expect(link.closest('article').contains(panel())).toBe(true);
         expect(link.hasAttribute('aria-disabled')).toBe(false);
     });
+
+    // The next size-pills.js chunk load waits until the returned function is called.
+    const holdNextPills = () => {
+        let release;
+        deps.loadPills.mockImplementationOnce(() => new Promise(resolve => {
+            release = () => resolve(import('../../../theme/reelflies/size-pills'));
+        }));
+        return () => release();
+    };
+
+    it('checks again after the pills\' chunk: overtaken while the chunk loads, it never replaces the newer panel', async () => {
+        const release = holdNextPills();
+        start();
+        const slow = buttonFor(SIZES);
+        await tap(slow); // the product and stock have answered; the chunk hasn't
+        expect(panel()).toBeNull();
+        const later = cardFor(SIZES);
+        await tap(later);
+        const opened = panel();
+        expect(later.closest('article').contains(opened)).toBe(true);
+        release();
+        await settle(8);
+        expect(document.querySelectorAll('[data-rf-qa-panel]').length).toBe(1);
+        expect(panel()).toBe(opened);
+        expect([slow.getAttribute('aria-expanded'), later.getAttribute('aria-expanded')]).toEqual(['false', 'true']);
+    });
+
+    // Repro (#94's rf/skeptic): hold A's load, tap B (its panel opens), press Escape or don't,
+    // tap A again while it still loads, then let A answer.
+    it('answers a second tap on its "+ Add" while it still loads: after Escape on the newer panel, its own panel opens', async () => {
+        const release = holdNextLoad();
+        start();
+        const slow = buttonFor(SIZES);
+        slow.click();
+        await settle(8);
+        const later = cardFor(SIZES);
+        await tap(later);
+        expect(later.closest('article').contains(panel())).toBe(true);
+        document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        expect(panel()).toBeNull();
+        await tap(slow);
+        expect(deps.loadProduct).toHaveBeenCalledTimes(2); // the second tap starts no load of its own
+        expect(slow.getAttribute('aria-disabled')).toBe('true');
+        release();
+        await settle(8);
+        expect(slow.closest('article').contains(panel())).toBe(true);
+        expect([slow.getAttribute('aria-expanded'), later.getAttribute('aria-expanded')]).toEqual(['true', 'false']);
+        expect(slow.hasAttribute('aria-disabled')).toBe(false);
+    });
+
+    it('answers a second tap on its "+ Add" while it still loads: the newer panel closes at that tap, and its own opens when it answers', async () => {
+        const release = holdNextLoad();
+        start();
+        const slow = buttonFor(SIZES);
+        slow.click();
+        await settle(8);
+        const later = cardFor(SIZES);
+        await tap(later);
+        expect(later.closest('article').contains(panel())).toBe(true);
+        await tap(slow);
+        expect(panel()).toBeNull();
+        expect(later.getAttribute('aria-expanded')).toBe('false');
+        expect(deps.loadProduct).toHaveBeenCalledTimes(2);
+        release();
+        await settle(8);
+        expect(document.querySelectorAll('[data-rf-qa-panel]').length).toBe(1);
+        expect(slow.closest('article').contains(panel())).toBe(true);
+        expect([slow.getAttribute('aria-expanded'), later.getAttribute('aria-expanded')]).toEqual(['true', 'false']);
+    });
+
+    it('never clears the busy state of a newer tap on its own "+ Add"', async () => {
+        const pillsReady = holdNextPills();
+        start();
+        const link = buttonFor(SIZES);
+        await tap(link); // waiting for the chunk, no longer busy
+        expect(panel()).toBeNull();
+        expect(link.hasAttribute('aria-disabled')).toBe(false);
+        const release = holdNextLoad();
+        await tap(link); // a second tap on it, loading
+        expect(link.getAttribute('aria-disabled')).toBe('true');
+        pillsReady();
+        await settle(8);
+        expect(panel()).toBeNull();
+        expect(link.getAttribute('aria-disabled')).toBe('true');
+        expect(link.classList.contains('is-busy')).toBe(true);
+        release();
+        await settle(8);
+        expect(document.querySelectorAll('[data-rf-qa-panel]').length).toBe(1);
+        expect(link.closest('article').contains(panel())).toBe(true);
+        expect(link.hasAttribute('aria-disabled')).toBe(false);
+    });
 });
 
 describe('the panel\'s form', () => {

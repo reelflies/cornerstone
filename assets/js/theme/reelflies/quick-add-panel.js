@@ -21,7 +21,8 @@
 //   The panel opens once the product has loaded, so it never changes size as it loads; a
 //   product that fails to load opens it with a link to the product page instead. Only the
 //   latest tap answers: one overtaken by a tap on another "+ Add" does nothing when its answer
-//   comes, so a slow product never replaces the panel opened since, or leaves the listing.
+//   comes, so a slow product never replaces the panel opened since, or leaves the listing. A
+//   tap on an "+ Add" still loading closes any panel and makes its pending tap the latest again.
 // - The panel is a <dialog> under the button, inside the card (never a child of the listing,
 //   which ticket 33's size-filter.js watches): below 801px a modal bottom sheet (showModal: the
 //   page behind is inert, Tab stays inside, Escape closes, focus back on "+ Add"); from 801px a
@@ -198,7 +199,10 @@ export function startQuickAdd(doc, context = {}, deps = {}) {
     } = deps;
     const busy = new Set();
     // The latest tap's number: a tap whose answer comes after a newer one does nothing (tap).
+    // Each "+ Add" keeps its newest tap's number, so a tap on it while it is still busy makes
+    // that tap the latest again (onClick).
     let latest = 0;
+    const taps = new WeakMap();
     const icon = name => iconIn(doc, name);
     const shell = {
         close: context.rfQuickAddClose || '',
@@ -435,13 +439,16 @@ export function startQuickAdd(doc, context = {}, deps = {}) {
     // A tap answers only while it is the latest: one whose answer comes after a tap on another
     // "+ Add" opens nothing, adds nothing and goes nowhere, and its "+ Add" is usable again, so a
     // slow product never replaces the panel opened since, or leaves the listing under it. It is
-    // checked after each wait before the tap acts; an add already sent still finishes.
+    // checked after each wait before the tap acts; an add already sent still finishes. An
+    // overtaken tap clears its "+ Add"'s busy state only while it is that button's newest tap,
+    // never a newer tap's on the same button.
     async function tap(button) {
         latest += 1;
         const mine = latest;
+        taps.set(button, mine);
         const overtaken = () => {
             if (mine === latest) return false;
-            setBusy(button, false);
+            if (taps.get(button) === mine) setBusy(button, false);
             return true;
         };
         const productId = Number(button.getAttribute('data-rf-quick-add'));
@@ -510,8 +517,13 @@ export function startQuickAdd(doc, context = {}, deps = {}) {
             close({ focusBack: true });
             return;
         }
-        if (busy.has(button)) return;
         close();
+        // A tap on an "+ Add" still busy with its own tap starts nothing new: that tap is the
+        // shopper's latest again, so it answers when its product does.
+        if (busy.has(button)) {
+            latest = taps.get(button);
+            return;
+        }
         tap(button);
     };
 

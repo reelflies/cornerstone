@@ -23,9 +23,10 @@
     - it isn't sold out in every size (ticket 13's decision 1). Such a product reaches the card
       either as stock_level 0, or, when its stock is kept by size (channel 1's flies), as
       has_options false with no add_to_cart_url, which takes the no-options branch above with
-      no "View" (it has no Add to Cart to replace); neither gets "+ Add". The second keeps
-      stock's "Out of stock" link (out_of_stock_message). Ticket 31's sold-out badge shows only
-      on the first until ticket 31 covers the second;
+      no "View" (it has no Add to Cart to replace); neither gets "+ Add". Both keep stock's
+      "Out of stock" link to the product page whenever the store sends out_of_stock_message,
+      so at stock_level 0 it sits beside ticket 31's sold-out badge. The badge shows only on
+      the first until ticket 31 covers the second;
     - it isn't a pre-order, which keeps stock's "Pre-Order Now".
     The card can't tell one size from several (it has only has_options): the tap decides
     (quick-add-route.js).
