@@ -93,24 +93,32 @@ it('never reuses a running stencil start with QA_FRESH_SERVER=1', () => {
 });
 
 // A port nothing answers on whose next port is free too, since the config reads both. It comes
-// from below the system's own range (macOS hands out 49152 and up for port 0), so another test
-// file in the same run, binding port 0 for a server of its own, can't take the next port between
-// this pick and the config's look: it did, under wave 4's parallel gate runs, and the case then
-// saw a server to reuse and took no slot. Each file starts its scan at its own pid, never at
-// 3300 or the worktrees' 3400 and up.
+// from below the system's own range for port 0 (macOS hands out 49152 and up, in sequence; Linux
+// 32768 and up), so another test file in the same run, binding port 0 for a server of its own,
+// can't take the next port between this pick and the config's look: it did, under wave 4's
+// parallel gate runs, and the case then saw a server to reuse and took no slot. Each file starts
+// its scan at its own pid, never at 3300 or the worktrees' 3400 and up. A port counts as free
+// when nothing accepts on it on 127.0.0.1 or ::1, as the config checks (busyPorts), and it binds.
+const accepts = (port, host) => new Promise(resolve => {
+    const socket = net.connect({ port, host });
+    socket.once('connect', () => { socket.destroy(); resolve(true); });
+    socket.once('error', () => resolve(false));
+});
 const bindable = port => new Promise(resolve => {
     const server = net.createServer();
     server.once('error', () => resolve(false));
     server.listen(port, '127.0.0.1', () => { server.close(() => resolve(true)); });
 });
-let nextPort = 20000 + (process.pid % 10000) * 2;
+const free = async port => !(await accepts(port, '127.0.0.1')) && !(await accepts(port, '::1')) && bindable(port);
+const [FIRST_PORT, LAST_PORT] = [20000, 32000];
+let nextPort = FIRST_PORT + (process.pid % ((LAST_PORT - FIRST_PORT) / 2)) * 2;
 async function freePort() {
     for (let tries = 0; tries < 200; tries += 1) {
         const port = nextPort;
-        nextPort = nextPort + 2 >= 40000 ? 20000 : nextPort + 2;
-        if (await bindable(port) && await bindable(port + 1)) return port; // eslint-disable-line no-await-in-loop
+        nextPort = nextPort + 2 >= LAST_PORT ? FIRST_PORT : nextPort + 2;
+        if (await free(port) && await free(port + 1)) return port; // eslint-disable-line no-await-in-loop
     }
-    throw new Error('no free port pair between 20000 and 40000');
+    throw new Error(`no free port pair between ${FIRST_PORT} and ${LAST_PORT}`);
 }
 
 it('picks a port pair that a server on port 0 can\'t take, as another test file\'s can', async () => {
@@ -121,7 +129,7 @@ it('picks a port pair that a server on port 0 can\'t take, as another test file\
         const taken = server.address().port;
         assert.ok(taken !== port && taken !== port + 1, `a port-0 server got ${taken}, one of the pair ${port} and ${port + 1}`);
     } finally {
-        server.close();
+        await new Promise(resolve => { server.close(resolve); });
     }
 });
 
