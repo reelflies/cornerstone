@@ -1,5 +1,5 @@
 {
-    "description": "The ReelFlies brand listing (ticket 36) as channel 1 shapes it on 2026-10-09: the brand's own 1600x700 image as the banner, nine of the brand's patterns from its live listing (their own photos, at 640w), the Fly Sizes facet in the API's order (illustrative counts: stencil start sends a brand's facets with no items), no total (BigCommerce gives a brand page none) and the store's numbered pagination window.",
+    "description": "The ReelFlies brand listing (ticket 36) as channel 1 shapes it on 2026-10-09: the brand's own 1600x700 image as the banner, nine of the brand's patterns from its live listing (their own photos, at 640w), the Fly Sizes facet in the API's order (illustrative counts: the gates' headless browser gets a brand's facets with no items, so the live pin's shots show no pills, though the raw-HTML fetch gets them), no total (BigCommerce gives a brand page none) and the store's numbered pagination window.",
     "page": "pages/brand",
     "region": "brand_below_content",
     "chrome": true,
