@@ -1,0 +1,336 @@
+{
+    "description": "The product page (ticket 39; spec module 15; stories 36, 44 to 49) as the reference draws it, for product-page-screens.spec.mjs: the reference's Adams Parachute Dry Fly (plan/design/src/store-data.json) with its two photos and seven sizes, and its four related patterns, each with its own photo, on the real product page with the theme's header and footer. It carries a weight, which the page must not show (show_product_weight is off). Channel 1's product pins hold their live related grids out of their shots (pages.mjs), so this is where the grid and the details sections are shot. The widget itself is empty.",
+    "page": "pages/product",
+    "region": "product_below_content",
+    "chrome": true,
+    "configuration": {},
+    "page_context": {
+        "page_type": "product",
+        "breadcrumbs": [
+            {
+                "url": "https://reelflies.ca/",
+                "name": "Home"
+            },
+            {
+                "url": "https://reelflies.ca/flies/dry-flies/",
+                "name": "Dry Flies"
+            },
+            {
+                "url": "https://reelflies.ca/flies/dry-flies/mayfly-dry-flies/",
+                "name": "Mayfly Dry Flies"
+            },
+            {
+                "url": "https://reelflies.ca/adams-parachute-dry-fly/",
+                "name": "Adams Parachute Dry Fly"
+            }
+        ],
+        "theme_settings": {
+            "rf_price_unit_exclude": "Fly Gear,Fly Selections & Fly Boxes"
+        },
+        "settings": {
+            "hide_price_from_guests": false,
+            "show_wishlist": true,
+            "show_product_rating": true,
+            "show_product_reviews": true,
+            "bulk_discount_enabled": false,
+            "measurements": {
+                "length": "Centimeters",
+                "weight": "Grams"
+            },
+            "add_this": {
+                "buttons": [
+                    {
+                        "service": "facebook",
+                        "annotation": ""
+                    },
+                    {
+                        "service": "email",
+                        "annotation": ""
+                    },
+                    {
+                        "service": "print",
+                        "annotation": ""
+                    },
+                    {
+                        "service": "twitter",
+                        "annotation": ""
+                    },
+                    {
+                        "service": "pinterest",
+                        "annotation": ""
+                    }
+                ]
+            }
+        },
+        "urls": {
+            "home": "/",
+            "cart": "/cart.php",
+            "search": "/search.php",
+            "auth": {
+                "login": "/login.php",
+                "logout": "/login.php?action=logout",
+                "create_account": "/login.php?action=create_account"
+            },
+            "account": {
+                "index": "/account.php"
+            }
+        },
+        "customer": null,
+        "product": {
+            "id": 4877,
+            "title": "Adams Parachute Dry Fly",
+            "sku": "RF-3905",
+            "upc": null,
+            "url": "https://reelflies.ca/adams-parachute-dry-fly/",
+            "cart_url": "https://reelflies.ca/cart.php",
+            "add_to_wishlist_url": "https://reelflies.ca/wishlist.php?action=add&product_id=4877",
+            "can_purchase": true,
+            "show_quantity_input": 1,
+            "min_purchase_quantity": 0,
+            "max_purchase_quantity": 0,
+            "availability": "",
+            "gift_wrapping_available": false,
+            "category": [
+                "Flies/Dry Flies/Mayfly Dry Flies"
+            ],
+            "brand": null,
+            "warranty": "",
+            "custom_fields": null,
+            "weight": {
+                "formatted": "0.05 Grams",
+                "value": 0.05
+            },
+            "description": "<p>ReelFlies' number one dry fly: a versatile searching parachute that imitates many mayflies, including Callibaetis and Tricos, and even midges. Vary the hook size to match what you see on the water.</p>",
+            "main_image": {
+                "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/4877/1/4877-adams-parachute-dry-fly.jpg",
+                "alt": "Adams Parachute dry fly: grey dubbed body, brown and grizzly parachute hackle, white post and mixed tail, on white"
+            },
+            "images": [
+                {
+                    "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/4877/1/4877-adams-parachute-dry-fly.jpg",
+                    "alt": "Adams Parachute dry fly: grey dubbed body, brown and grizzly parachute hackle, white post and mixed tail, on white"
+                },
+                {
+                    "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/4877/2/4877-adams-parachute-dry-fly-2.jpg",
+                    "alt": "Adams Parachute dry fly from the side"
+                }
+            ],
+            "price": {
+                "without_tax": {
+                    "formatted": "$0.95",
+                    "value": 0.95,
+                    "currency": "CAD"
+                },
+                "tax_label": "Tax"
+            },
+            "options": [
+                {
+                    "id": 29001,
+                    "type": "Configurable_PickList_Set",
+                    "display_name": "Fly Sizes",
+                    "required": true,
+                    "state": "variant_option",
+                    "partial": "set-rectangle",
+                    "condition": true,
+                    "values": [
+                        {
+                            "id": 30000,
+                            "label": "8",
+                            "selected": false,
+                            "data": "8"
+                        },
+                        {
+                            "id": 30001,
+                            "label": "10",
+                            "selected": false,
+                            "data": "10"
+                        },
+                        {
+                            "id": 30002,
+                            "label": "12",
+                            "selected": false,
+                            "data": "12"
+                        },
+                        {
+                            "id": 30003,
+                            "label": "14",
+                            "selected": false,
+                            "data": "14"
+                        },
+                        {
+                            "id": 30004,
+                            "label": "16",
+                            "selected": false,
+                            "data": "16"
+                        },
+                        {
+                            "id": 30005,
+                            "label": "18",
+                            "selected": false,
+                            "data": "18"
+                        },
+                        {
+                            "id": 30006,
+                            "label": "20",
+                            "selected": false,
+                            "data": "20"
+                        }
+                    ]
+                }
+            ],
+            "reviews": {
+                "total": 0
+            },
+            "num_reviews": 0,
+            "rating": 0,
+            "shipping_messages": [],
+            "detail_messages": "",
+            "customizations": [],
+            "bulk_discount_rates": [],
+            "related_products": [
+                {
+                    "id": 4333,
+                    "sku": "RF-3917",
+                    "name": "Blue Wing Olive Parachute Dry",
+                    "url": "https://reelflies.ca/blue-wing-olive-parachute-dry/",
+                    "availability": "",
+                    "rating": 0,
+                    "brand": null,
+                    "category": [
+                        "Flies/Dry Flies/Mayfly Dry Flies"
+                    ],
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/4333/1/4333-blue-wing-olive-parachute-dry.jpg",
+                        "alt": "Blue Wing Olive Parachute dry fly: olive dubbed body, blue-dun parachute hackle and white post, on white"
+                    },
+                    "date_added": "1st Jan 2024",
+                    "pre_order": false,
+                    "show_cart_action": true,
+                    "has_options": true,
+                    "stock_level": null,
+                    "low_stock_level": null,
+                    "qty_in_cart": 0,
+                    "custom_fields": null,
+                    "num_reviews": 0,
+                    "demo": false,
+                    "add_to_wishlist_url": "https://reelflies.ca/wishlist.php?action=add&product_id=4333",
+                    "price": {
+                        "without_tax": {
+                            "formatted": "$0.95",
+                            "value": 0.95,
+                            "currency": "CAD"
+                        },
+                        "tax_label": "Tax"
+                    }
+                },
+                {
+                    "id": 4289,
+                    "sku": "RF-3959",
+                    "name": "Purple Haze Parachute",
+                    "url": "https://reelflies.ca/purple-haze-parachute/",
+                    "availability": "",
+                    "rating": 0,
+                    "brand": null,
+                    "category": [
+                        "Flies/Dry Flies/Mayfly Dry Flies"
+                    ],
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/4289/1/4289-purple-haze-parachute.jpg",
+                        "alt": "Purple Haze Parachute dry fly: sparkling purple body, brown parachute hackle and white post, on white"
+                    },
+                    "date_added": "1st Jan 2024",
+                    "pre_order": false,
+                    "show_cart_action": true,
+                    "has_options": true,
+                    "stock_level": null,
+                    "low_stock_level": null,
+                    "qty_in_cart": 0,
+                    "custom_fields": null,
+                    "num_reviews": 0,
+                    "demo": false,
+                    "add_to_wishlist_url": "https://reelflies.ca/wishlist.php?action=add&product_id=4289",
+                    "price": {
+                        "without_tax": {
+                            "formatted": "$1.25",
+                            "value": 1.25,
+                            "currency": "CAD"
+                        },
+                        "tax_label": "Tax"
+                    }
+                },
+                {
+                    "id": 5608,
+                    "sku": "RF-3988",
+                    "name": "Parachute HiViz Adams",
+                    "url": "https://reelflies.ca/parachute-hiviz-adams/",
+                    "availability": "",
+                    "rating": 0,
+                    "brand": null,
+                    "category": [
+                        "Flies/Dry Flies/Mayfly Dry Flies"
+                    ],
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/5608/1/5608-parachute-hiviz-adams.jpg",
+                        "alt": "Parachute HiViz Adams dry fly: grey body, brown and grizzly parachute hackle and a bright red post, on white"
+                    },
+                    "date_added": "1st Jan 2024",
+                    "pre_order": false,
+                    "show_cart_action": true,
+                    "has_options": true,
+                    "stock_level": null,
+                    "low_stock_level": null,
+                    "qty_in_cart": 0,
+                    "custom_fields": null,
+                    "num_reviews": 0,
+                    "demo": false,
+                    "add_to_wishlist_url": "https://reelflies.ca/wishlist.php?action=add&product_id=5608",
+                    "price": {
+                        "without_tax": {
+                            "formatted": "$0.95",
+                            "value": 0.95,
+                            "currency": "CAD"
+                        },
+                        "tax_label": "Tax"
+                    }
+                },
+                {
+                    "id": 4001,
+                    "sku": "RF-4539",
+                    "name": "Mosquito",
+                    "url": "https://reelflies.ca/mosquito/",
+                    "availability": "",
+                    "rating": 0,
+                    "brand": null,
+                    "category": [
+                        "Flies/Dry Flies/Midge Dry Flies"
+                    ],
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/4001/1/4001-mosquito.jpg",
+                        "alt": "Mosquito dry fly: black and white striped body, grizzly hackle and grizzly hackle-tip wings, on white"
+                    },
+                    "date_added": "1st Jan 2024",
+                    "pre_order": false,
+                    "show_cart_action": true,
+                    "has_options": true,
+                    "stock_level": null,
+                    "low_stock_level": null,
+                    "qty_in_cart": 0,
+                    "custom_fields": null,
+                    "num_reviews": 0,
+                    "demo": false,
+                    "add_to_wishlist_url": "https://reelflies.ca/wishlist.php?action=add&product_id=4001",
+                    "price": {
+                        "without_tax": {
+                            "formatted": "$0.95",
+                            "value": 0.95,
+                            "currency": "CAD"
+                        },
+                        "tax_label": "Tax"
+                    }
+                }
+            ],
+            "similar_by_views": []
+        },
+        "wallet_buttons": []
+    }
+}

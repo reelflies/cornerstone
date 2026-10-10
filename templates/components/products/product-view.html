@@ -12,7 +12,7 @@
 {{inject 'backorderMessages' backorder_messages}}
 {{inject 'showBackorderMessage' product.show_backorder_message}}
 
-<div class="productView"
+<div class="productView{{#if (getVar 'rf_product_page')}} rf-product-view{{/if}}"{{!-- ReelFlies hook (ticket 39; CUSTOMIZATIONS.md): the product page's grid --}}
     data-event-type="product"
     data-entity-id="{{product.id}}"
     data-name="{{product.title}}"
@@ -33,6 +33,7 @@
     {{/or}}"
     data-product-variant="single-product-option">
 
+    {{#if (getVar 'rf_product_page')}}<div class="rf-product-alerts" data-rf-product-alerts>{{/if}}{{!-- ReelFlies hook (ticket 39; CUSTOMIZATIONS.md): the review messages in one row above the photos --}}
     {{#each product.reviews.messages}}
         {{#if error}}
             {{> components/common/alert/alert-error error}}
@@ -41,6 +42,7 @@
             {{> components/common/alert/alert-success success}}
         {{/if}}
     {{/each}}
+    {{#if (getVar 'rf_product_page')}}</div>{{/if}}{{!-- ReelFlies hook (ticket 39): the end of the review messages' row --}}
 
     <section class="productView-images" data-image-gallery>
         {{!--
@@ -62,6 +64,7 @@
                     <a href="{{getImageSrcset product.main_image (cdn theme_settings.default_image_product) 1x=theme_settings.zoom_size}}"
                         target="_blank">
                 {{/if}}
+                {{#if (getVar 'rf_product_page')}}{{> components/reelflies/product-image image=product.main_image name=product.title size=theme_settings.product_size default_image=theme_settings.default_image_product}}{{else}}{{!-- ReelFlies hook (ticket 39; CUSTOMIZATIONS.md): the main image loads first on the product page --}}
                 {{> components/common/responsive-img
                     image=product.main_image
                     class="productView-image--default"
@@ -70,6 +73,7 @@
                     default_image=theme_settings.default_image_product
                     otherAttributes="data-main-image"
                 }}
+                {{/if}}{{!-- ReelFlies hook (ticket 39): the end of the main image's --}}
                 {{!-- Remove the surrounding a-element if there is no main image. --}}
                 {{#if product.main_image}}
                     </a>
@@ -87,7 +91,7 @@
             {{#each product.images}}
                 <li class="productView-thumbnail">
                     <a
-                        class="productView-thumbnail-link"
+                        class="productView-thumbnail-link{{#if (getVar 'rf_product_page')}}{{#if this.data '===' ../product.main_image.data}} is-active{{/if}}{{/if}}"{{!-- ReelFlies hook (ticket 39; CUSTOMIZATIONS.md): the shown photo's thumbnail outlined from the start --}}
                         href="{{getImageSrcset this (cdn ../theme_settings.default_image_product) 1x=../theme_settings.zoom_size}}"
                         data-image-gallery-item
                         data-image-gallery-new-image-url="{{getImageSrcset this (cdn ../theme_settings.default_image_product) 1x=../theme_settings.product_size}}"
@@ -105,6 +109,7 @@
         </ul>
     </section>
 
+    {{#if (getVar 'rf_product_page')}}<div class="rf-product-buy" data-rf-product-buy>{{/if}}{{!-- ReelFlies hook (ticket 39; CUSTOMIZATIONS.md): the buy box, one sticky column --}}
     <section class="productView-details product-data">
         <div class="productView-product">
             <h1 class="productView-title">{{product.title}}</h1>
@@ -125,6 +130,7 @@
                     {{> components/common/login-for-pricing}}
                 {{/or}}
             </div>
+            {{#if (getVar 'rf_product_page')}}{{> components/reelflies/product-price-extras}}{{/if}}{{!-- ReelFlies hook (ticket 39; CUSTOMIZATIONS.md): "/ fly" and the shipping line --}}
             {{{region name="product_below_price"}}}
             {{#if theme_settings.show_featured_promotions}}
                 {{> components/products/promotion-callout
@@ -283,15 +289,16 @@
                 </div>
                 {{> components/products/add-to-cart with_wallet_buttons=true}}
             </form>
-            {{#if settings.show_wishlist}}
+            {{#if (getVar 'rf_product_page')}}{{> components/reelflies/buy-box-end}}{{else if settings.show_wishlist}}{{!-- ReelFlies hook (ticket 39; CUSTOMIZATIONS.md): the promise line and Save to wish list --}}
                 {{> components/common/wishlist-dropdown}}
             {{/if}}
         </div>
-        {{> components/common/share url=product.url}}
+        {{#unless (getVar 'rf_product_page')}}{{> components/common/share url=product.url}}{{/unless}}{{!-- ReelFlies hook (ticket 39; CUSTOMIZATIONS.md): no share links in the buy box --}}
     </section>
+    {{#if (getVar 'rf_product_page')}}</div>{{/if}}{{!-- ReelFlies hook (ticket 39): the end of the buy box --}}
 
     <article class="productView-description">
-        {{#if theme_settings.show_product_details_tabs}}
+        {{#if (getVar 'rf_product_page')}}{{> components/reelflies/product-details}}{{else if theme_settings.show_product_details_tabs}}{{!-- ReelFlies hook (ticket 39; CUSTOMIZATIONS.md): the details under the photos --}}
             {{> components/products/description-tabs}}
         {{else}}
             {{> components/products/description}}

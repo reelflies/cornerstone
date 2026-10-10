@@ -6123,6 +6123,15 @@
   "i18n.RfProductPage": {
     "default": "Product page"
   },
+  "i18n.RfShipFreeThreshold": {
+    "default": "Free standard shipping on fly orders over this many dollars, in Canada (empty: no shipping line)"
+  },
+  "i18n.RfShipStandardRate": {
+    "default": "Standard shipping in Canada below that, in dollars and cents (empty: the free-shipping sentence only)"
+  },
+  "i18n.RfShipExpeditedFrom": {
+    "default": "Tracked Expedited from, in dollars and cents (empty: not shown)"
+  },
 
   "i18n.RfStoreDetails": {
     "default": "Store details"

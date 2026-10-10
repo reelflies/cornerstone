@@ -24,9 +24,9 @@ import {
 import { ROOT } from './storefront.mjs';
 import { KNOWN_ISSUES, knownIssue } from './axe-known-issues.mjs';
 
-// The boxes channel 1's product page holds: its related products' carousels.
-const RELATED = '#tab-related .productCarousel';
-const SIMILAR = '#tab-similar .productCarousel';
+// The box channel 1's product pins hold: ticket 39's related patterns grid.
+const PRODUCT_PINS = ['product', 'product@sizes'];
+const RELATED_GRID = '[data-rf-related] .rf-related-grid';
 // Channel 1's pins whose product list is the live catalogue's, and the listing's grid they hold.
 const LIVE_LISTS = ['category', 'category@more', 'category@noindex', 'search', 'brand'];
 const LISTING_GRID = '#product-listing-container .productGrid';
@@ -40,7 +40,7 @@ describe('the status a pinned page must return', () => {
 
 describe('the screenshot masks', () => {
     const LIVE = ['.price-section', '[data-product-stock]', '.productView-rating', '.countPill', '.cart-total-value'];
-    const CARDS_AND_LISTS = ['.productGrid', '.productCarousel', '.card', '.card-title', '.card-image', '#tab-related', '#tab-similar'];
+    const CARDS_AND_LISTS = ['.productGrid', '.productCarousel', '.card', '.card-title', '.card-image', '[data-rf-related]', '.rf-related-grid'];
     const pinned = Object.entries(CHANNELS).flatMap(([channel, { pages }]) => Object.keys(pages).map(template => [channel, template]));
 
     it('hide prices, stock, ratings and cart counts on every pinned page', () => {
@@ -56,23 +56,30 @@ describe('the screenshot masks', () => {
         }
     });
 
-    it('hide channel 1\'s live product list, which isn\'t pinned, only on its own pages', () => {
-        assert.ok(masksFor('1', 'category').includes(LISTING_GRID));
-        assert.ok(!masksFor('1', 'product').includes(LISTING_GRID));
+    it('hide channel 1\'s live product lists, which aren\'t pinned, only on their own pages', () => {
+        for (const pin of LIVE_LISTS) {
+            assert.ok(masksFor('1', pin).includes(LISTING_GRID), `${pin} masks its listing`);
+            assert.ok(!masksFor('1', pin).includes(RELATED_GRID), `${pin} masks no related grid`);
+        }
+        for (const pin of PRODUCT_PINS) {
+            assert.ok(masksFor('1', pin).includes(RELATED_GRID), `${pin} masks its related grid`);
+            assert.ok(!masksFor('1', pin).includes(LISTING_GRID), `${pin} masks no listing`);
+        }
     });
 
     it('no longer mask widget regions, which the screenshot stylesheet hides instead (W0-5)', () => {
         for (const [channel, template] of pinned) assert.ok(!masksFor(channel, template).includes('[data-widget-id]'), `${channel} ${template}`);
     });
 
-    it('cover the boxes channel 1\'s product page holds, so a reviewer sees what isn\'t compared', () => {
-        assert.ok(masksFor('1', 'product').includes(RELATED));
-        assert.ok(masksFor('1', 'product').includes(SIMILAR));
+    it('cover the box channel 1\'s product pins hold, so a reviewer sees what isn\'t compared', () => {
+        for (const pin of PRODUCT_PINS) assert.ok(masksFor('1', pin).includes(RELATED_GRID), pin);
     });
 
-    it('leave the description and the related section\'s frame in the shot', () => {
-        for (const selector of ['#tab-related', '#tab-similar', '.productView-description', '.tabs']) {
-            assert.ok(!masksFor('1', 'product').includes(selector), `${selector} is masked on channel 1's product page`);
+    it('leave the details and the related section\'s frame in the shot (ticket 39)', () => {
+        for (const pin of PRODUCT_PINS) {
+            for (const selector of ['[data-rf-related]', '.rf-related-heading', '.productView-description', '[data-rf-product-details]']) {
+                assert.ok(!masksFor('1', pin).includes(selector), `${selector} is masked on channel 1's ${pin}`);
+            }
         }
     });
 });
@@ -151,32 +158,35 @@ describe('the screenshot stylesheet (W0-5)', () => {
         assert.ok(!HIDDEN_FROM_LOAD.includes('#consent-manager'), 'the cookie banner stays: dismissCookieBanner clicks it');
     });
 
-    it('holds channel 1\'s related and similar carousels at a fixed height, with their cards taken out', () => {
-        const css = rules(screenshotStyle('1', 'product'));
-        for (const box of [RELATED, SIMILAR]) {
-            const height = CHANNELS[1].hold.product[box];
-            assert.ok(Number.isInteger(height) && height > 0, `${box} has a height`);
-            for (const property of ['height', 'min-height', 'max-height']) assert.equal(css.get(box)?.[property], `${height}px !important`, `${box} ${property}`);
-            assert.equal(css.get(box)?.overflow, 'hidden !important', `${box} overflow`);
-            assert.equal(css.get(`${box} > *`)?.display, 'none !important', `${box}'s cards`);
+    it('holds channel 1\'s related patterns grid on both product pins at a fixed height, with its cards taken out (ticket 39)', () => {
+        for (const pin of PRODUCT_PINS) {
+            const css = rules(screenshotStyle('1', pin));
+            const height = CHANNELS[1].hold[pin][RELATED_GRID];
+            assert.ok(Number.isInteger(height) && height > 0, `${pin}'s grid has a height`);
+            for (const property of ['height', 'min-height', 'max-height']) assert.equal(css.get(RELATED_GRID)?.[property], `${height}px !important`, `${pin} ${property}`);
+            assert.equal(css.get(RELATED_GRID)?.overflow, 'hidden !important', `${pin} overflow`);
+            assert.equal(css.get(`${RELATED_GRID} > *`)?.display, 'none !important', `${pin}'s cards`);
+            assert.ok(!css.has('.productGrid'), `${pin} holds every .productGrid`);
         }
     });
 
     it('holds each box a hold key lists, and takes out each one\'s cards, without hiding a box', () => {
-        // Ticket 39 points `hold` at its grid, and a key may then name more than one box.
-        const channels = { 9: { pages: {}, hold: { product: { '#tab-related .grid, #tab-similar .grid': 200 } } } };
+        // A key may name more than one box.
+        const channels = { 9: { pages: {}, hold: { product: { '#list-a .grid, #list-b .grid': 200 } } } };
         const css = rules(screenshotStyle('9', 'product', channels));
-        for (const box of ['#tab-related .grid', '#tab-similar .grid']) {
+        for (const box of ['#list-a .grid', '#list-b .grid']) {
             assert.equal(css.get(box)?.height, '200px !important', `${box} height`);
             assert.equal(css.get(box)?.display, undefined, `${box} itself is hidden`);
             assert.equal(css.get(`${box} > *`)?.display, 'none !important', `${box}'s cards`);
         }
     });
 
-    it('never hides or holds the description or the related section\'s frame, which tickets 39 and 40 change', () => {
-        const css = rules(screenshotStyle('1', 'product'));
-        for (const selector of ['#tab-related', '#tab-similar', '.productView-description', '.tabs', '.productView']) {
-            assert.ok(!css.has(selector), `${selector} is in the stylesheet`);
+    it('never hides or holds the details or the related section\'s frame, which tickets 39 and 40 change', () => {
+        for (const pin of PRODUCT_PINS) {
+            const css = rules(screenshotStyle('1', pin));
+            for (const selector of ['[data-rf-related]', '.rf-related-heading', '.productView-description', '[data-rf-product-details]', '.productView']) {
+                assert.ok(!css.has(selector), `${selector} is in ${pin}'s stylesheet`);
+            }
         }
     });
 

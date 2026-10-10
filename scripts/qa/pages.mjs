@@ -121,10 +121,13 @@ export const CHANNELS = {
                 '[data-product-option-change]:not([data-rf-qa-state]) [data-rf-sold-out-line]',
             ],
         },
-        // The related products' cards (Related Products, and Customers Also Viewed when the
-        // store shows it), whose titles wrap to two or three lines, so the live list sets
-        // the page's height. The heading and the section around them stay in the shot,
-        // because tickets 39 and 40 change them; ticket 39 points these at its grid.
+        // The product pins' related patterns (ticket 39's grid of cards, product-related.html):
+        // the store picks them (6178's look automatic, all hoppers named like it), and their
+        // titles wrap to one line or two, so the live list sets the page's height. Held at 400px
+        // at both widths, a height neither layout of four cards has (one row at 1280, two at
+        // 375), so a hold that stops applying fails the shot. The heading and the section stay
+        // in the shot; the grid's look is shot from fixed data on the fixture page
+        // (product-page-screens.spec.mjs).
         // The search pin's "Did you mean" panel lists the categories the store finds for the
         // query, so the catalogue sets its height (#68's rf/spec).
         // The category, search and brand pins' grids (the listing's own, in
@@ -141,14 +144,8 @@ export const CHANNELS = {
             'category@more': { '#product-listing-container .productGrid': 1200 },
             'category@noindex': { '#product-listing-container .productGrid': 1200 },
             brand: { '#product-listing-container .productGrid': 1200 },
-            product: {
-                '#tab-related .productCarousel': 320,
-                '#tab-similar .productCarousel': 320,
-            },
-            'product@sizes': {
-                '#tab-related .productCarousel': 320,
-                '#tab-similar .productCarousel': 320,
-            },
+            product: { '[data-rf-related] .rf-related-grid': 400 },
+            'product@sizes': { '[data-rf-related] .rf-related-grid': 400 },
             search: {
                 '.page-content > .panel': 360,
                 '#product-listing-container .productGrid': 1200,
