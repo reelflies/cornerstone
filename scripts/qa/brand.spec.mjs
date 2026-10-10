@@ -1,7 +1,7 @@
 // The ReelFlies brand listing on its live pins (ticket 36; spec module 12; O10, UX-7; stories 17,
 // 23, 26, 70 and 71), at 375 and 1280. Its markup is render/partials/brand.test.mjs's, its server
-// HTML the brand-page, card-images and size-filter assertions', and its look on fixed data
-// brand-screens.spec.mjs's. The pins (pages.mjs) are /brands/ReelFlies.html, which the store
+// HTML the brand-page, card-images, size-filter and facet-links assertions', and its look on fixed
+// data brand-screens.spec.mjs's. The pins (pages.mjs) are /brands/ReelFlies.html, which the store
 // answers as brand 411, whose own URL is /reelflies-2/:
 //
 // - channel 1: the brand's 2,167 products, 24 a page (2026-10-09). The brand has an image, so the
@@ -13,11 +13,12 @@
 //   the brand has a next page, and the stock numbered pager of <a href> links, which leads to page
 //   2 (story 26), with focus then on the row, which names the page (story 68); nothing scrolling
 //   sideways at 320; the first row of products within the first screen at 1366x768.
-// - Browsing as a regular Chrome, since BigCommerce sends a bot no facet items: the Fly Sizes pills
-//   in hook order with BigCommerce's own anchors, and, at 1280, a size picked refreshing the
-//   listing in place through stock brand.js and ticket 36's listing, and the row's page announced
-//   (stories 23 and 68). Where the brand's facet has no items (1895766, with no products) they
-//   skip; the fixture page checks the pills.
+// - Browsing as a regular Chrome, since BigCommerce sends headless Chromium no facet items (below):
+//   the Fly Sizes pills in hook order once size-filter.js has run, every facet link on the page
+//   passing facet-links' own check, and, at 1280, a size picked refreshing the listing in place
+//   through stock brand.js and ticket 36's listing, and the row's page announced (stories 23 and
+//   68). Where the brand's facet has no items (1895766, with no products) they skip; the fixture
+//   page checks the pills.
 //
 // It runs only when named, like category.spec.mjs: no npm script's filter matches it.
 //
@@ -32,6 +33,7 @@ import { HEADERS, QA_CHANNEL } from './storefront.mjs';
 import { withQuery } from './switches.mjs';
 import { worstContrastOverPhoto } from './render/photo-contrast.mjs';
 import { SIZE_FACET } from './raw-html/assertions/size-filter.mjs';
+import facetLinks, { facetAnchors } from './raw-html/assertions/facet-links.mjs';
 
 const KEY = 'brand';
 // A regular desktop Chrome's User-Agent and client hint (below, "the Fly Sizes pills").
@@ -41,7 +43,7 @@ const phone = testInfo => testInfo.project.name === 'phone-375';
 const hookRank = size => (size.includes('/') ? -Number(size.split('/')[0]) : Number(size));
 
 // The page's store data, asked as the page is asked: with the browser's User-Agent where a test
-// sets one, since BigCommerce answers a bot's request without facet items.
+// sets one, since BigCommerce answers a request it takes for a bot's without facet items.
 async function context(request, userAgent = null) {
     const response = await request.get(withQuery(PAGES[KEY], 'debug=context'), { headers: { ...HEADERS, ...(userAgent ? { 'User-Agent': userAgent } : {}) } });
     expect(response.status(), `?debug=context on ${PAGES[KEY]}`).toBe(200);
@@ -116,15 +118,18 @@ test('a full page of 24 cards and the stock numbered pager of <a href> links, wh
     await expect.poll(() => page.evaluate(() => document.activeElement?.matches('[data-rf-list-count]')), 'focus on the row').toBe(true);
 });
 
-// BigCommerce sends no facet items to a client it takes for a bot: curl, and headless Chromium,
-// by its User-Agent or by its Sec-CH-UA client hint, which both name HeadlessChrome (2026-10-09:
-// channel 1's brand gets its ten Fly Sizes, and a Fly Type its seven, only when both read as a
-// regular Chrome's). So the page shots and the raw-HTML check, which send those, see an empty
-// sidebar, and this block browses as a regular Chrome to check the pills.
+// BigCommerce sends no facet items to a client it takes for a bot: curl's User-Agent, and headless
+// Chromium's, by its User-Agent or by its Sec-CH-UA client hint, which both name HeadlessChrome.
+// On channel 1 on 2026-10-09, those got the brand's facets with no items, where a regular Chrome,
+// Node's default fetch and the raw-HTML gate's own (raw-html.mjs's ReelFliesQA User-Agent) got its
+// ten Fly Sizes. So the page shots, in headless Chromium, show an empty sidebar, which keeps them
+// still, while the raw-HTML gate's facet-links and size-filter check the server HTML's pills
+// (brand-page fails the pin if they ever come without items). This block browses as a regular
+// Chrome to check the pills after JavaScript and a live refresh.
 test.describe('the Fly Sizes pills, as a regular browser sees them (story 23)', () => {
     test.use({ userAgent: BROWSER_UA, extraHTTPHeaders: { ...HEADERS, 'Sec-CH-UA': BROWSER_HINT } });
 
-    test('the pills in hook order, BigCommerce\'s anchors with _bc_fsnf=1 and rel="nofollow", and "What do sizes mean?" (SEO-6, SEO-12)', async ({ page, request, userAgent }) => {
+    test('the pills in hook order, every facet link with _bc_fsnf=1 and rel="nofollow" (facet-links\' own check), and "What do sizes mean?" (SEO-6, SEO-12)', async ({ page, request, userAgent }) => {
         const { brand } = await context(request, userAgent);
         const sizes = (brand.facets || []).find(facet => facet.facet === SIZE_FACET);
         test.skip(!sizes?.items?.length, `the brand's ${SIZE_FACET} facet has no items on channel ${QA_CHANNEL}; brand-screens.spec.mjs checks the pills on the fixture page`);
@@ -133,10 +138,10 @@ test.describe('the Fly Sizes pills, as a regular browser sees them (story 23)', 
         const labels = (await pills.allTextContents()).map(text => text.trim());
         expect(labels.length).toBe(sizes.items.length);
         expect([...labels].sort((a, b) => hookRank(a) - hookRank(b)), `${labels.join(', ')} in hook order`).toEqual(labels);
-        for (const pill of await pills.all()) {
-            expect(new URL(await pill.getAttribute('href'), 'http://localhost').searchParams.get('_bc_fsnf')).toBe('1'); // eslint-disable-line no-await-in-loop
-            await expect(pill).toHaveAttribute('rel', /nofollow/); // eslint-disable-line no-await-in-loop
-        }
+        // Every facet's links, not only the pills (criterion 2), as this browser has the page.
+        const html = await page.content();
+        expect(facetAnchors(html, page.url()).length, 'facet links with a filter, the pills among them').toBeGreaterThanOrEqual(labels.length);
+        expect(facetLinks.check({ html, url: page.url() }), 'facet-links on the page').toEqual([]);
         await expect(page.locator('.rf-size-help a')).toHaveAttribute('href', '/fly-hook-size-chart/');
     });
 

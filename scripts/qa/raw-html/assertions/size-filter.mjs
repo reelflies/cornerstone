@@ -9,12 +9,13 @@
 //   first, so a pin without it means the option was renamed and the templates' name
 //   (size-facet-name.html) no longer matches, which would leave stock's list on the page.
 //
-// BigCommerce sends no facet items to a client it takes for a bot, by its User-Agent or headless
-// Chromium's Sec-CH-UA hint (ticket 36, 2026-10-09), and this check's fetch is one: on channel 1
-// a category's facets come empty and a brand's with no items. So the first and third checks bite
-// only on a fetch that reads as a browser, once Product Filtering is set (ticket 21); ticket
-// 36's brand.spec.mjs checks the brand's pills live as a regular Chrome. The facet links
-// themselves are facet-links.mjs's.
+// BigCommerce sends no facet items to a client it takes for a bot: curl's User-Agent, and headless
+// Chromium's, by its User-Agent or its Sec-CH-UA hint. This check's fetch isn't taken for one:
+// through stencil start on channel 1 on 2026-10-09 (ticket 36), raw-html.mjs's ReelFliesQA
+// User-Agent got the brand's ten Fly Sizes items and Realistic Trout Flies' seven, so the first
+// and third checks bite there, and on the prelaunch host once Product Filtering is set (ticket
+// 21). The page shots, in headless Chromium, get none. brand-page.mjs fails the brand pin if its
+// facets ever come without items. The facet links themselves are facet-links.mjs's.
 
 import { elementsHtml, findTags, markupOnly } from '../html.mjs';
 

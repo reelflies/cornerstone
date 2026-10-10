@@ -19,9 +19,12 @@
 //   its marker in their URLs, without rel="nofollow".
 // - Each facet link with a filter must have _bc_fsnf=1 in its URL and nofollow in its rel.
 //
-// Through stencil start, BigCommerce sends no facets (category.facets is empty on channel 1,
-// 2026-10-06), so only the prelaunch host's pages have facet links to check (ticket 33's
-// criterion 3, once 1895766 pins a category page).
+// BigCommerce sends no facet items to a client it takes for a bot: curl's User-Agent, and headless
+// Chromium's (its User-Agent or Sec-CH-UA hint). The raw-HTML fetch's ReelFliesQA User-Agent isn't
+// taken for one: through stencil start on channel 1 on 2026-10-09 (ticket 36), the brand pin had
+// ten facet links and the category pin seven, so this bites on channel 1, and on the prelaunch
+// host's pins once they list products with filtering set (ticket 33's criterion 3). brand-page.mjs
+// fails the brand pin if its facets ever come without items.
 
 import { decodeHtml, findTags } from '../html.mjs';
 

@@ -1,10 +1,10 @@
 // The ReelFlies brand listing (ticket 36; spec module 12; O10, O20, UX-7; stories 17, 23, 25, 26,
 // 70 and 71), at 375 and 1280, on the fixture page: the real brand page rendered round channel 1's
 // brand context (render/pages/brand-page/), with nine of the brand's own patterns and their
-// photos, the brand's own 16:7 image, and the Fly Sizes facet with items, which stencil start
-// doesn't send for a brand. The live pins hold their grids out of the shots and 1895766's brand
-// has no products until refactor 14, so the page's look is checked here; brand.spec.mjs checks the
-// live pins.
+// photos, the brand's own 16:7 image, and the Fly Sizes facet with items, which the store doesn't
+// send the gates' headless browser (brand.spec.mjs). The live pins hold their grids out of the
+// shots and 1895766's brand has no products until refactor 14, so the page's look is checked
+// here; brand.spec.mjs checks the live pins.
 //
 // - Each case matches its baseline (widget baselines, declared as `widget brand-page`): `banner`
 //   (the brand's image), `plain` (no image) and `empty` (filters that match nothing).

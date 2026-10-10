@@ -7,6 +7,14 @@
 //   candidates, sizes, a width and a height, and alt="", as a category's (category-page.mjs).
 // - The brand_below_header region right after the header, so the intro widget sits under the H1.
 // - Indexable (spec module 12): no robots meta that says noindex.
+// - Facet links to check: a page that lists the brand's products under the facet nav
+//   (#facetedSearch-navList, which renders while a facet is visible) has at least one facet link
+//   (facet-links.mjs's facetAnchors). BigCommerce sends a client it takes for a bot its facets
+//   with no items: on channel 1 on 2026-10-09, curl's User-Agent and HeadlessChrome's (in the
+//   User-Agent or the Sec-CH-UA hint) got the nav and no pills, while the gates' raw-HTML fetch
+//   (raw-html.mjs's ReelFliesQA User-Agent) and Node's default got the brand's ten. Should the
+//   store start taking the gates' fetch for a bot, this fails, where facet-links and size-filter
+//   would pass with nothing to check (criterion 2's anchors).
 //
 // The canonical is the store's (its head meta tags), not the theme's: one-canonical checks there is
 // exactly one. On 2026-10-09 it was /reelflies-2/, brand 411's own URL, on both channels, though
@@ -19,10 +27,11 @@
 
 import { findTags, markupOnly } from '../html.mjs';
 import { hasClass, listingHeader, listingHeaderProblems } from './category-page.mjs';
+import { facetAnchors } from './facet-links.mjs';
 
 const REGION = 'brand_below_header';
 
-export function brandPageProblems(html) {
+export function brandPageProblems(html, url = 'http://localhost/') {
     const markup = markupOnly(html);
     const header = listingHeader(markup);
     if (!header) return ['no listing header (.rf-listing-header): the page isn\'t components/reelflies/brand-page.html'];
@@ -35,15 +44,20 @@ export function brandPageProblems(html) {
     findTags(markup, 'meta')
         .filter(tag => (tag.attrs.name || '').toLowerCase() === 'robots' && /noindex/i.test(tag.attrs.content || ''))
         .forEach(tag => problems.push(`robots "${tag.attrs.content}": the brand listing is indexable`));
+    const navList = findTags(markup, 'div').some(tag => tag.attrs.id === 'facetedSearch-navList');
+    const listsProducts = findTags(markup, 'ul').some(tag => hasClass('productGrid')(tag.attrs));
+    if (navList && listsProducts && !facetAnchors(markup, url).length) {
+        problems.push('the facet nav has no facet link over the brand\'s products, so facet-links and size-filter had nothing to check: BigCommerce sends its facets with no items to a client it takes for a bot (ticket 36)');
+    }
     return problems;
 }
 
 export default {
     id: 'brand-page',
     ticket: 36,
-    description: 'the brand listing: one header with the page\'s one H1, an eager high-priority banner, the intro\'s region under it, and no noindex',
+    description: 'the brand listing: one header with the page\'s one H1, an eager high-priority banner, the intro\'s region under it, no noindex, and facet links to check wherever it lists products under the facets',
     pages: ['brand'],
     check(page) {
-        return brandPageProblems(page.html);
+        return brandPageProblems(page.html, page.url);
     },
 };

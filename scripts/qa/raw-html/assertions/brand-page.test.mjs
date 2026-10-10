@@ -33,8 +33,8 @@ test('applies to brand pins, ticket 36', () => {
     assert.equal(brandPage.ticket, 36);
 });
 
-test('passes the rendered pages: the banner, the plain header, filters that match nothing, and a brand with no products', async () => {
-    for (const [name, brand] of [['banner', {}], ['plain', {}], ['empty', {}], ['banner', { products: [] }]]) {
+test('passes the rendered pages: the banner, the plain header, filters that match nothing, a brand with no products, and filtering off', async () => {
+    for (const [name, brand] of [['banner', {}], ['plain', {}], ['empty', {}], ['banner', { products: [] }], ['plain', { faceted_search_enabled: false }]]) {
         assert.deepEqual(brandPage.check(await page(name, brand)), [], `${name} ${JSON.stringify(brand)}`); // eslint-disable-line no-await-in-loop
     }
 });
@@ -67,6 +67,20 @@ test('fails the intro\'s region anywhere but right after the header', async () =
     assert.match(problems(good, region, ''), /no brand_below_header region right after the listing header/);
     const moved = good.html.replace(region, '').replace('<main', `${region}<main`);
     assert.match(brandPage.check({ ...good, html: moved }).join('\n'), /no brand_below_header region right after the listing header/);
+});
+
+// As BigCommerce answers a client it takes for a bot (curl's User-Agent, or HeadlessChrome's):
+// the facets named, so the nav renders, but with no items (2026-10-09, channel 1).
+const facetsWithoutItems = name => ({ facets: context(name).brand.facets.map(facet => ({ ...facet, items: [] })) });
+
+test('fails a brand page that lists products under the facet nav with no facet link, as BigCommerce sends a bot, so facet-links can\'t pass with nothing to check (story 72)', async () => {
+    const bot = await page('banner', facetsWithoutItems('banner'));
+    assert.match(bot.html, /id="facetedSearch-navList"/);
+    assert.match(bot.html, /class="productGrid/);
+    assert.match(brandPage.check(bot).join('\n'), /the facet nav has no facet link over the brand's products/);
+    // Nothing to judge with no products listed, or with filtering off (the store's brand list).
+    assert.deepEqual(brandPage.check(await page('banner', { ...facetsWithoutItems('banner'), products: [] })), []);
+    assert.deepEqual(brandPage.check(await page('banner', { faceted_search_enabled: false })), []);
 });
 
 test('fails a robots meta that says noindex, as from the store\'s head meta tags (story 72)', async () => {
