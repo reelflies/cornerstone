@@ -1,0 +1,131 @@
+[
+    {
+        "type": "hidden",
+        "settings": [
+            {
+                "type": "graphQl",
+                "id": "graphQueries",
+                "typeMeta": {
+                    "mappings": {
+                        "pick1": {
+                            "reads": "pick1",
+                            "type": "Int!"
+                        },
+                        "pick2": {
+                            "reads": "pick2",
+                            "type": "Int!"
+                        },
+                        "pick3": {
+                            "reads": "pick3",
+                            "type": "Int!"
+                        },
+                        "pick4": {
+                            "reads": "pick4",
+                            "type": "Int!"
+                        },
+                        "pick5": {
+                            "reads": "pick5",
+                            "type": "Int!"
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "type": "tab",
+        "label": "Content",
+        "sections": [
+            {
+                "label": "Band",
+                "settings": [
+                    {
+                        "type": "input",
+                        "label": "Heading",
+                        "id": "heading",
+                        "default": "Fly selections"
+                    },
+                    {
+                        "type": "input",
+                        "label": "Text (say that the fly boxes in the photos are not included)",
+                        "id": "text",
+                        "default": "Ready-made mixes of patterns and sizes at one price. A good start for a new box or a new water. Fly boxes are shown for scale and not included."
+                    },
+                    {
+                        "type": "input",
+                        "label": "Link label (no number)",
+                        "id": "link_label",
+                        "default": "Shop fly selections"
+                    },
+                    {
+                        "type": "input",
+                        "label": "Link (the Fly Selections & Assortments page)",
+                        "id": "link_url",
+                        "default": "/fly-selections-assortments/"
+                    }
+                ]
+            },
+            {
+                "label": "Prices",
+                "settings": [
+                    {
+                        "type": "input",
+                        "label": "Currency symbol before each price (the price itself comes from the query; an Assortment's price is per set, with no unit)",
+                        "id": "currency_symbol",
+                        "default": "$"
+                    }
+                ]
+            },
+            {
+                "label": "Assortments (ids only: the query reads each one's name, photo and price)",
+                "settings": [
+                    {
+                        "type": "productId",
+                        "label": "Assortment 1",
+                        "id": "pick1",
+                        "default": "",
+                        "typeMeta": {
+                            "placeholder": "Search by name or SKU"
+                        }
+                    },
+                    {
+                        "type": "productId",
+                        "label": "Assortment 2",
+                        "id": "pick2",
+                        "default": "",
+                        "typeMeta": {
+                            "placeholder": "Search by name or SKU"
+                        }
+                    },
+                    {
+                        "type": "productId",
+                        "label": "Assortment 3",
+                        "id": "pick3",
+                        "default": "",
+                        "typeMeta": {
+                            "placeholder": "Search by name or SKU"
+                        }
+                    },
+                    {
+                        "type": "productId",
+                        "label": "Spare 1 (shown when one of the three is sold out or missing)",
+                        "id": "pick4",
+                        "default": "",
+                        "typeMeta": {
+                            "placeholder": "Search by name or SKU"
+                        }
+                    },
+                    {
+                        "type": "productId",
+                        "label": "Spare 2 (shown when two are)",
+                        "id": "pick5",
+                        "default": "",
+                        "typeMeta": {
+                            "placeholder": "Search by name or SKU"
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+]

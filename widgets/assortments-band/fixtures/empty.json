@@ -1,0 +1,25 @@
+{
+    "description": "The Assortments band on a channel without the products, as ReelFlies_CA is until refactor 14 assigns them: the query answers null for every pick, so no card renders and the band hides itself. For render tests and home-assortments-screens only. The storefront query's result is fixture data built from plan/design/src/store-data.json and the product export of 2026-09-07 (names, paths, prices and each product's default photo); probe 13 hasn't run, so no real response is saved yet (docs/widgets.md, \"The Assortments band\").",
+    "shot": false,
+    "configuration": {
+        "heading": "Fly selections",
+        "text": "Ready-made mixes of patterns and sizes at one price. A good start for a new box or a new water. Fly boxes are shown for scale and not included.",
+        "link_label": "Shop fly selections",
+        "link_url": "/fly-selections-assortments/",
+        "currency_symbol": "$",
+        "pick1": "3886",
+        "pick2": "3870",
+        "pick3": "4251",
+        "pick4": "4888",
+        "pick5": "4397"
+    },
+    "data": {
+        "site": {
+            "pick1": null,
+            "pick2": null,
+            "pick3": null,
+            "pick4": null,
+            "pick5": null
+        }
+    }
+}

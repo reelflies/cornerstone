@@ -14,7 +14,7 @@
 //   space) may carry digits, as ticket 36's canonical /reelflies-2/ does, but is still checked for
 //   a price and a name. A widget whose other settings carry digits (ticket 47's photo paths after
 //   the size segment) isn't one of these bands, so the lint covers the bands it lists
-//   (PRODUCT_BANDS); ticket 49 adds its Assortments band.
+//   (PRODUCT_BANDS): ticket 48's two and ticket 49's Assortments band.
 // - A product name: a name from the widgets' own query fixtures, in any case. The store's
 //   catalogue isn't in the repo, and the fixtures hold every product a band picks.
 // - A productId setting holding anything but an id.
@@ -23,7 +23,7 @@ import fs from 'fs';
 import path from 'path';
 import { WIDGETS_DIR, readChannelFile, readWidget } from './source.mjs';
 
-export const PRODUCT_BANDS = ['best-sellers', 'signature-band'];
+export const PRODUCT_BANDS = ['best-sellers', 'signature-band', 'assortments-band'];
 
 const PRICE = /[$€£]\s*\d|\b\d+[.,]\d{2}\b/;
 const DIGIT = /\d/;

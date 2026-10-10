@@ -588,6 +588,7 @@ export default {
 | `home-no-stock-strips` | 47 | no stock featured, most popular or new products strip on the home page (`config.json` sets the three `homepage_*_count` to 0) |
 | `home-nothing-between` | 47 | when the page has both the Fly Type cards (`.rf-type-cards`) and the tiles (`.rf-home-tiles`): nothing between them but end tags and empty `<div>` wrappers (and `<script>`, `<style>` or `<template>`). A widget there (any `data-widget-id` but the tiles' own wrapper), any other element, or any text fails it: a Page Builder widget in `home_below_carousel` or `home_below_featured_products`, one before the tiles in `home_below_top_products` or after the hero in `home_below_menu`, or a store shipping message. The tiles before the cards fail too. A page without both passes |
 | `home-product-bands` | 48 | when the page has ticket 48's bands (`section[data-rf-band]`): each band's heading an `<h2>`, best sellers before the Signature band, and no `<button>`, form control or "+ Add" in either; each card (`.rf-product-card`) one `<a href>` to a page with nothing interactive inside, its photo (when it has one) an `<img>` with `alt=""`, src, srcset, sizes, width and height, `loading="lazy"` and no `fetchpriority`; the Signature button an `<a href="/brands/ReelFlies.html">` whose label has no number (HOME-4). The hidden spare cards are checked like the rest. A page without the bands passes |
+| `home-assortments` | 49 | when the page has the Assortments band (`section[data-rf-band="assortments"]`): one `<h2>`, which names it; its copy (outside the cards and the link) says the fly boxes are not included (story 18, in any wording that says "fly box … not included") and types no price or number (HOME-4); its link (`a.rf-assortments__link`) to a page, not a hidden size category (`/fly-sizes/`), with no number in its label; no card showing a unit (`.rf-product-card__unit`, or "/ fly"): an Assortment is priced per set; and the band after the Signature band and the Species section and before the About block, where the page has them. Its cards' own rules are `home-product-bands`', which checks every `section[data-rf-band]`. A page without it passes |
 | `card-images` | 31 | on category, search and brand pages, the cards in the listing's `.productGrid` (in `#product-listing-container`): every product a card, each photo (or the default image) with a real `srcset` (no lazysizes stand-in), `sizes`, a width and a height, never through lazysizes; the first three eager and every later one `loading="lazy"`; one image on the page with `fetchpriority="high"`: the banner's when the page has one (`img.rf-listing-banner`, ticket 32), else the first card's, and no other. A category pin must have a grid; a search or brand page with none passes |
 | `category-page` | 32 | on category pins: one listing header holding the page's one H1; its banner, where it has one, eager with `fetchpriority="high"`, a `srcset` of two or more candidates, `sizes`, a width and a height and `alt=""`; every chip a link with an href and the "more" chip hidden in the HTML; the description's rest (`data-rf-description`) after the product grid, and no `<!--more-->` marker in the page |
 | `category-robots` | 32 | on category pins: exactly one robots meta, "noindex, follow", on `category@noindex` (the noindex template), and none that says noindex on the others |
@@ -1216,6 +1217,19 @@ A widget whose layout makes promises a shot can't prove has its own Playwright s
 - every shown card and the Signature button show ticket 25's ring from the keyboard: #23272B on white, the gold bead on the forest ground
 - no serious or critical axe issues in the bands
 
+`home-assortments-screens.spec.mjs` (ticket 49) checks the Assortments band on the same whole home page (`render/home-page.mjs`), the band from a named fixture (`default` unless a test names another) or left out as an unpublished placement:
+
+- at 1280, the copy in the left 4/12 beside three cards in one row in the right 8/12, the panel `#F1F3F0` with a 20px radius and lined up with the container; at 1260, 1024 and 801 the copy above the three cards in one row
+- at 375 and 320, the copy above two cards in one row, the third hidden with its photo never fetched, the tint and radius, and no sideways scroll (story 71)
+- width by width (320 to 800 in the phone project, 801 to 1440 in the desktop one): no card's name cut by its clamp, two lines from 801px and four on phones, with every pick's card shown (spares included, by a style that shows every card at the width the layout gives it); and each shown photo's `sizes` declaring the width it renders at, within 2.5%, with the `default` and `sold-out` fixtures
+- the band shows its first three cards (two on phones), the spares hidden and unfetched; with `sold-out` both spares move up, in order
+- with `two-left` the two cards share the row (no empty column), beside the copy at 1280; with `one-left` and `empty` the band is hidden and the footer sits where it does with the band unpublished
+- unpublishing the band: nothing before it moves, and the footer moves up by exactly the widget's height, which is the section's (its space above it is its own padding). Screenshots of the region on and off are attached to the report
+- the copy's not-included note, each shown card's price as `$` and two decimals, no "/ fly" in the band, each card one link with nothing focusable inside, no button
+- the band's H2 between "Shop by fish" and About's H2, with only the cards' H3s under it (story 68)
+- ticket 25's ring on the link and each shown card from the Tab key, each in turn the active element, and the next Tab leaving the band (the hidden spares take no stop)
+- no serious or critical axe issues in the band
+
 `home-links-screens.spec.mjs` (ticket 49) checks ticket 49's sections on the same whole home page (`render/home-page.mjs`), the Species section ("Shop by fish") and the About block:
 
 - at 1280, the three Species groups side by side with equal widths and photo heights (within 1px), each photo 16:10; at 1024 and 801 one photo height a row too, though group 1's name wraps there
@@ -1466,6 +1480,7 @@ It exits 0 when every counted gate passed, 1 when one failed or the theme change
 - `home-lead-screens.spec.mjs` and `shipping-strip-screens.spec.mjs` run with `qa:screens` too, for the same reason.
 - `home-widgets-screens.spec.mjs` runs with `qa:screens` too, for the same reason, and so does `home-links-screens.spec.mjs` (ticket 49).
 - `home-bands-screens.spec.mjs` (ticket 48) runs with `qa:screens` too, for the same reason.
+- `home-assortments-screens.spec.mjs` (ticket 49) runs with `qa:screens` too, for the same reason.
 - `card-screens.spec.mjs` (ticket 31) runs with `qa:screens` too, for the same reason; `card.spec.mjs` runs only when named, like the specs below.
 - `category-screens.spec.mjs` (ticket 32) runs with `qa:screens` too; `category.spec.mjs` runs only when named.
 - `species-hub-screens.spec.mjs` (ticket 34) runs with `qa:screens` too; `species-hub.spec.mjs` runs only when named.

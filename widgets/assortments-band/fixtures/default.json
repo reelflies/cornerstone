@@ -1,0 +1,121 @@
+{
+    "description": "The Assortments band as ReelFlies_CA (1895766) gets it: the reference's three Assortments, 42 Mayfly Assortment, Best Sellers Selection - 12 Flies and The Adams Family Selection - 12 Flies, every pick in stock, so the two spares (Caddis Dry Fly Selection - 10 Flies, Searching Nymph Selection - 12 Flies) render hidden; on phones the third card is hidden too. Its configuration is channels/1895766.json's, which assortments-band.test.mjs checks. The storefront query's result is fixture data built from plan/design/src/store-data.json and the product export of 2026-09-07 (names, paths, prices and each product's default photo); probe 13 hasn't run, so no real response is saved yet (docs/widgets.md, \"The Assortments band\").",
+    "page": "pages/home",
+    "region": "home_below_top_products",
+    "configuration": {
+        "heading": "Fly selections",
+        "text": "Ready-made mixes of patterns and sizes at one price. A good start for a new box or a new water. Fly boxes are shown for scale and not included.",
+        "link_label": "Shop fly selections",
+        "link_url": "/fly-selections-assortments/",
+        "currency_symbol": "$",
+        "pick1": "3886",
+        "pick2": "3870",
+        "pick3": "4251",
+        "pick4": "4888",
+        "pick5": "4397"
+    },
+    "data": {
+        "site": {
+            "pick1": {
+                "entityId": 3886,
+                "name": "42 Mayfly Assortment",
+                "path": "/42-mayfly-assortment/",
+                "inventory": {
+                    "isInStock": true
+                },
+                "prices": {
+                    "price": {
+                        "value": 34.95,
+                        "currencyCode": "CAD"
+                    }
+                },
+                "defaultImage": {
+                    "url160": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/160w/products/3886/4787/42-mayfly1__42775.1540056039.jpg?c=2",
+                    "url320": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/320w/products/3886/4787/42-mayfly1__42775.1540056039.jpg?c=2",
+                    "url480": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/480w/products/3886/4787/42-mayfly1__42775.1540056039.jpg?c=2",
+                    "url640": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/640w/products/3886/4787/42-mayfly1__42775.1540056039.jpg?c=2"
+                }
+            },
+            "pick2": {
+                "entityId": 3870,
+                "name": "Best Sellers Selection - 12 Flies",
+                "path": "/best-sellers-selection-12-flies/",
+                "inventory": {
+                    "isInStock": true
+                },
+                "prices": {
+                    "price": {
+                        "value": 9.95,
+                        "currencyCode": "CAD"
+                    }
+                },
+                "defaultImage": {
+                    "url160": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/160w/products/3870/5119/DSC_5687__96699.1540056060.jpg?c=2",
+                    "url320": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/320w/products/3870/5119/DSC_5687__96699.1540056060.jpg?c=2",
+                    "url480": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/480w/products/3870/5119/DSC_5687__96699.1540056060.jpg?c=2",
+                    "url640": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/640w/products/3870/5119/DSC_5687__96699.1540056060.jpg?c=2"
+                }
+            },
+            "pick3": {
+                "entityId": 4251,
+                "name": "The Adams Family Selection - 12 Flies",
+                "path": "/the-adams-family-selection-12-flies/",
+                "inventory": {
+                    "isInStock": true
+                },
+                "prices": {
+                    "price": {
+                        "value": 10.95,
+                        "currencyCode": "CAD"
+                    }
+                },
+                "defaultImage": {
+                    "url160": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/160w/products/4251/6210/DSC_5683__25300.1540056325.jpg?c=2",
+                    "url320": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/320w/products/4251/6210/DSC_5683__25300.1540056325.jpg?c=2",
+                    "url480": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/480w/products/4251/6210/DSC_5683__25300.1540056325.jpg?c=2",
+                    "url640": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/640w/products/4251/6210/DSC_5683__25300.1540056325.jpg?c=2"
+                }
+            },
+            "pick4": {
+                "entityId": 4888,
+                "name": "Caddis Dry Fly Selection - 10 Flies",
+                "path": "/caddis-dry-fly-selection-10-flies/",
+                "inventory": {
+                    "isInStock": true
+                },
+                "prices": {
+                    "price": {
+                        "value": 9.95,
+                        "currencyCode": "CAD"
+                    }
+                },
+                "defaultImage": {
+                    "url160": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/160w/products/4888/6227/DSC_5703_99ce2827-347c-424a-bebc-323903ad674a__15076.1540056098.jpg?c=2",
+                    "url320": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/320w/products/4888/6227/DSC_5703_99ce2827-347c-424a-bebc-323903ad674a__15076.1540056098.jpg?c=2",
+                    "url480": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/480w/products/4888/6227/DSC_5703_99ce2827-347c-424a-bebc-323903ad674a__15076.1540056098.jpg?c=2",
+                    "url640": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/640w/products/4888/6227/DSC_5703_99ce2827-347c-424a-bebc-323903ad674a__15076.1540056098.jpg?c=2"
+                }
+            },
+            "pick5": {
+                "entityId": 4397,
+                "name": "Searching Nymph Selection - 12 Flies",
+                "path": "/searching-nymph-selection-12-flies/",
+                "inventory": {
+                    "isInStock": true
+                },
+                "prices": {
+                    "price": {
+                        "value": 9.95,
+                        "currencyCode": "CAD"
+                    }
+                },
+                "defaultImage": {
+                    "url160": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/160w/products/4397/5334/DSC_5714__46822.1540056297.jpg?c=2",
+                    "url320": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/320w/products/4397/5334/DSC_5714__46822.1540056297.jpg?c=2",
+                    "url480": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/480w/products/4397/5334/DSC_5714__46822.1540056297.jpg?c=2",
+                    "url640": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/640w/products/4397/5334/DSC_5714__46822.1540056297.jpg?c=2"
+                }
+            }
+        }
+    }
+}
