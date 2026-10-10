@@ -3068,6 +3068,66 @@
         "type": "heading",
         "content": "i18n.RfStoreDetails"
       },
+      {
+        "type": "text",
+        "label": "i18n.RfStoreName",
+        "force_reload": true,
+        "id": "rf_store_name"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfStoreUrl",
+        "force_reload": true,
+        "id": "rf_store_url"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfStoreLegalName",
+        "force_reload": true,
+        "id": "rf_store_legal_name"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfStorePhone",
+        "force_reload": true,
+        "id": "rf_store_phone"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfStoreStreet",
+        "force_reload": true,
+        "id": "rf_store_street"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfStoreLocality",
+        "force_reload": true,
+        "id": "rf_store_locality"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfStoreRegion",
+        "force_reload": true,
+        "id": "rf_store_region"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfStorePostalCode",
+        "force_reload": true,
+        "id": "rf_store_postal_code"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfStoreCountry",
+        "force_reload": true,
+        "id": "rf_store_country"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfStoreSameAs",
+        "force_reload": true,
+        "id": "rf_store_same_as"
+      },
 
       {
         "type": "heading",

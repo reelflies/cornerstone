@@ -1,0 +1,28 @@
+{{!--
+    Whether one of the store's social links is in ReelFlies' social set (ticket 40, with ticket
+    50's footer): the one rule behind both the footer's social row (social-links.html) and the
+    home page's sameAs (store-schema.html), so the two always list the same links.
+
+        {{> components/reelflies/social-keep rf_network=display_name rf_filter=theme_settings.rf_store_same_as}}
+
+    - rf_network is a social_media entry's display_name, as the store gives it ("facebook",
+      "instagram", "youtube", "pinterest", "twitter"). Stock social-links.html shows "twitter" as X.
+    - rf_filter is theme setting rf_store_same_as, passed in by the caller (inside a page's
+      {{#partial "page"}} block @root is empty): the networks to keep, comma-separated, in any
+      case ("Facebook, Instagram, YouTube"); "x" names X too. Empty, or naming none (only
+      commas or spaces), keeps every link the store sets.
+    - It renders nothing. It sets rf_social_keep to 1 (keep) or 0 for the caller to read with
+      getVar, before the caller's next call.
+--}}
+{{~assignVar 'rf_social_keep' 1~}}
+{{~assignVar 'rf_social_named' 0~}}
+{{~#each (split rf_filter ',') as |rfName|~}}
+{{~#if (trim rfName)~}}{{~assignVar 'rf_social_named' 1~}}{{~/if~}}
+{{~/each~}}
+{{~#if (getVar 'rf_social_named')~}}
+{{~assignVar 'rf_social_keep' 0~}}
+{{~#each (split rf_filter ',') as |rfName|~}}
+{{~#if (toLowerCase (trim rfName)) '===' (toLowerCase ../rf_network)~}}{{~assignVar 'rf_social_keep' 1~}}{{~/if~}}
+{{~#if (toLowerCase (trim rfName)) '===' 'x'~}}{{~#if (toLowerCase ../rf_network) '===' 'twitter'~}}{{~assignVar 'rf_social_keep' 1~}}{{~/if~}}{{~/if~}}
+{{~/each~}}
+{{~/if~}}

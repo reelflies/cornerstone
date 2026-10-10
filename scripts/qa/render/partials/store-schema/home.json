@@ -1,0 +1,12 @@
+{
+    "description": "The home page's store data on 1895766: the store's five social links (as ticket 50's prelaunch fixture holds them) and the store's currencies (1895766's default is CAD).",
+    "template": "pages/home",
+    "currency_selector": { "active_currency_code": "CAD", "default_currency_code": "CAD" },
+    "social_media": [
+        { "name": "Facebook", "url": "https://www.facebook.com/reelflies.ca/", "position": 0, "display_name": "facebook" },
+        { "name": "Instagram", "url": "https://www.instagram.com/reelflies/", "position": 1, "display_name": "instagram" },
+        { "name": "Pinterest", "url": "https://www.pinterest.ca/reelflies/", "position": 2, "display_name": "pinterest" },
+        { "name": "Twitter", "url": "https://twitter.com/reelfliescanada", "position": 3, "display_name": "twitter" },
+        { "name": "YouTube", "url": "https://www.youtube.com/user/reelflies01", "position": 4, "display_name": "youtube" }
+    ]
+}

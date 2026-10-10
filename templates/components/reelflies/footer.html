@@ -11,7 +11,9 @@
     - Help: the channel's own Web Pages (page-link.html), the hook size chart (ticket 35) and the
       blog as "Fly fishing articles" (SEO-15; ticket 07's probe 15), and Gift Certificates.
     - Contact: the store profile's address and phone number, walk-ins by appointment, and
-      Cornerstone's social links while social_icon_placement_bottom isn't bottom_none. The phone
+      Cornerstone's social links while social_icon_placement_bottom isn't bottom_none, as
+      ReelFlies' social set (ticket 40's social-links.html: those rf_store_same_as keeps, every
+      link when it is empty), the same set as the home page's sameAs. The phone
       dials as tel:+1 and its digits: spaces, dashes, dots and brackets are dropped, and +1 (or +
       before a leading 1) is added unless the number starts with +. The store is in Canada, so a
       North American number; rf-footer fails any other result (an extension, say).
@@ -76,7 +78,7 @@
                 <p class="rf-footer__line">{{lang 'reelflies.footer.walk_ins'}}</p>
                 {{#if theme_settings.social_icon_placement_bottom '!==' 'bottom_none'}}
                     <div class="rf-footer__social">
-                        {{> components/common/social-links}}
+                        {{> components/reelflies/social-links rf_filter=theme_settings.rf_store_same_as}}
                     </div>
                 {{/if}}
             </article>

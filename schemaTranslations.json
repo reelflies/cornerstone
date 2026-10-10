@@ -6136,6 +6136,36 @@
   "i18n.RfStoreDetails": {
     "default": "Store details"
   },
+  "i18n.RfStoreName": {
+    "default": "Store name for search results (WebSite and OnlineStore), such as ReelFlies.ca; empty leaves the store schema out"
+  },
+  "i18n.RfStoreUrl": {
+    "default": "Store home page URL, with https:// and the closing slash; empty leaves the store schema out"
+  },
+  "i18n.RfStoreLegalName": {
+    "default": "Legal name of the business"
+  },
+  "i18n.RfStorePhone": {
+    "default": "Phone number, in international form (+1-866-250-4071)"
+  },
+  "i18n.RfStoreStreet": {
+    "default": "Street address"
+  },
+  "i18n.RfStoreLocality": {
+    "default": "City or town"
+  },
+  "i18n.RfStoreRegion": {
+    "default": "Province, as its two-letter code (ON)"
+  },
+  "i18n.RfStorePostalCode": {
+    "default": "Postal code"
+  },
+  "i18n.RfStoreCountry": {
+    "default": "Country, as its two-letter code (CA); the free-shipping rule is marked up for this country"
+  },
+  "i18n.RfStoreSameAs": {
+    "default": "Social networks for the footer row and the store's sameAs, comma-separated (facebook, instagram, youtube); empty shows every social link the store sets"
+  },
 
   "i18n.RfCart": {
     "default": "Cart"
