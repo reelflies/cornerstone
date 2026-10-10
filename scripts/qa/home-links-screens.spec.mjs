@@ -99,8 +99,9 @@ test.describe('the home page\'s Species section and About block (widgets/shop-by
         }
     });
 
-    // CD-4: the page's one allowed repeat shows only the Dry banner's left third, so none of its
-    // flies is one the Dry card shows, and sits a section or more after the card.
+    // CD-4: the page's one allowed repeat shows only the Dry banner's left third, so from 801px,
+    // where the Dry card is a square, none of its flies is one the card shows, and it sits a
+    // section or more after the card.
     test('the cold-water group shows the Dry banner\'s left third, marked data-rf-photo-repeat, a section or more after the Dry card (CD-4)', async ({ page }) => {
         await open(page);
         const crop = await page.locator(`${GROUP_PHOTO}[${REPEAT_ATTRIBUTE}]`).evaluateAll(elements => elements.map(element => {
@@ -227,21 +228,26 @@ test.describe('the home page\'s Species section and About block (widgets/shop-by
             const inside = await groups.nth(index).evaluate(element => element.querySelectorAll('a, button, input, select, textarea, [tabindex]').length); // eslint-disable-line no-await-in-loop
             expect(inside, `group ${index + 1}'s link holds nothing focusable`).toBe(0);
         }
-        const links = page.locator(`${SPECIES} a, ${ABOUT} a`);
-        const count = await links.count();
-        expect(count, 'the hub link, 3 group links, 11 pills, the phone link and the About link').toBe(17);
+        expect(await page.locator(`${SPECIES} a, ${ABOUT} a`).count(), 'the hub link, 3 group links, 11 pills, the phone link and the About link').toBe(17);
+        // Section by section (other home sections sit between them), from its first link, the Tab
+        // key moves to each of its links in turn, and each shows the ring.
         await page.keyboard.press('Tab');
-        for (let index = 0; index < count; index += 1) {
-            const link = links.nth(index);
-            await link.evaluate(element => element.focus()); // eslint-disable-line no-await-in-loop
-            await expect.poll(() => link.evaluate(element => { // eslint-disable-line no-await-in-loop
-                const style = getComputedStyle(element);
-                return {
-                    visible: element.matches(':focus-visible'), width: style.outlineWidth, style: style.outlineStyle, offset: style.outlineOffset, colour: style.outlineColor,
-                };
-            }), { message: `link ${index + 1} focused by keyboard`, timeout: 3000 }).toEqual({
-                visible: true, width: RING.width, style: RING.style, offset: RING.offset, colour: RING.colour,
-            });
+        for (const [selector, count] of [[SPECIES, 15], [ABOUT, 2]]) {
+            const links = page.locator(`${selector} a`);
+            await expect(links).toHaveCount(count); // eslint-disable-line no-await-in-loop
+            await links.first().focus(); // eslint-disable-line no-await-in-loop
+            for (let index = 0; index < count; index += 1) {
+                const link = links.nth(index);
+                if (index) await page.keyboard.press('Tab'); // eslint-disable-line no-await-in-loop
+                await expect.poll(() => link.evaluate(element => { // eslint-disable-line no-await-in-loop
+                    const style = getComputedStyle(element);
+                    return {
+                        focused: document.activeElement === element, visible: element.matches(':focus-visible'), width: style.outlineWidth, style: style.outlineStyle, offset: style.outlineOffset, colour: style.outlineColor,
+                    };
+                }), { message: `${selector} link ${index + 1} focused by the Tab key`, timeout: 3000 }).toEqual({
+                    focused: true, visible: true, width: RING.width, style: RING.style, offset: RING.offset, colour: RING.colour,
+                });
+            }
         }
         // Every pill a target of 40px, above WCAG 2.5.8's 24px.
         for (const pill of await boxes(page, '.rf-species-pill')) expect(pill.height).toBeGreaterThanOrEqual(40);

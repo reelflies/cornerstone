@@ -1226,7 +1226,7 @@ A widget whose layout makes promises a shot can't prove has its own Playwright s
 - the About block an even split from 801px with the 4:3, 16px-radius photo left of the text, stacked on phones with the photo first; Tillsonburg and the toll-free number in it, and no price
 - one `<h2>` in each section, in page order, and no heading level skipped on the page
 - unpublishing either widget (rendering the page without it) leaves no gap: nothing before it moves, and the footer moves up by exactly its height
-- each group's photo one link with nothing focusable inside, ticket 25's ring on every link in both sections from the keyboard, and every pill 40px tall
+- each group's photo one link with nothing focusable inside, ticket 25's ring on every link in both sections from the Tab key (section by section, from its first link, each link in turn the active element), and every pill 40px tall
 - no serious or critical axe issues in the two sections
 
 ### Worked example

@@ -16,7 +16,8 @@
 //   group's name and call to action over a neutral scrim (CD-6), then its Species pages as pills.
 // - The photo's crop is a class the widget's focus field picks (rf-species-group__img--x0 to --x100),
 //   never inline CSS. The cold-water group's crop of the Dry banner (--third) shows only its left
-//   third, so none of its flies is one the Dry card shows (CD-4).
+//   third, so from 801px, where the Dry card is a square, none of its flies is one the card
+//   shows (CD-4).
 // - About: an even 6/12 and 6/12 split from 801px, the 4:3 photo beside the text; stacked on
 //   phones, photo first (CD-9).
 // - Every photo's box is set by CSS before it loads (the group's shape spacer, the About photo's
