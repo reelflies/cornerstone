@@ -1,5 +1,5 @@
 {
-    "_about": "Search results cards for \"streamer\" on channel 1 (reelflies.ca, tree 1), read from stencil start -c 1 ?debug=context on 2026-10-09: a fly with sizes (4831), one without (5906), a Mustad hook pack (5697), a bulk selection (5879), a fly made sold out here (5234, stock_level 0), and a long name (4804), given the ReelFlies brand here. Images point at a fixture CDN host; the shots answer them from render/pages/card-grid/fixtures/files/, the products' own photos at 640w as JPEG (2026-10-09; the hook pack's file renamed without its encoded brackets).",
+    "_about": "Search results cards for \"streamer\" on channel 1 (reelflies.ca, tree 1), read from stencil start -c 1 ?debug=context on 2026-10-09: a fly with sizes (4831); a fly (5906) and a Mustad hook pack (5697) sold out in every size, whose stock is kept by size, so the store sends them with no options, no add_to_cart_url and its out_of_stock_message; a bulk selection (5879); a fly made sold out here (5234, stock_level 0; the store sends it the same message); and a long name (4804), given the ReelFlies brand here. The out_of_stock_message lines were added on 2026-10-09 (ticket 43's follow-up), as the store sends them. Images point at a fixture CDN host; the shots answer them from render/pages/card-grid/fixtures/files/, the products' own photos at 640w as JPEG (2026-10-09; the hook pack's file renamed without its encoded brackets).",
     "products": [
         {
             "id": 4831,
@@ -59,6 +59,7 @@
             "has_options": false,
             "stock_level": null,
             "low_stock_level": null,
+            "out_of_stock_message": "Out of stock",
             "qty_in_cart": 0,
             "custom_fields": null,
             "num_reviews": 0,
@@ -94,6 +95,7 @@
             "has_options": false,
             "stock_level": null,
             "low_stock_level": null,
+            "out_of_stock_message": "Out of stock",
             "qty_in_cart": 0,
             "custom_fields": null,
             "num_reviews": 4,
@@ -165,6 +167,7 @@
             "has_options": false,
             "stock_level": 0,
             "low_stock_level": null,
+            "out_of_stock_message": "Out of stock",
             "qty_in_cart": 0,
             "custom_fields": null,
             "num_reviews": 14,

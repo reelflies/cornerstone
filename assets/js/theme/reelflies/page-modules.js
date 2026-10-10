@@ -11,6 +11,11 @@
 //     () => import(/* webpackChunkName: "rf-size-pills" */ './size-pills'),
 //
 // - The module's default export has load(context), as the stock page classes do.
+// - A module that needs the page's context before it is imported has a slot that returns a small
+//   module of its own, () => ({ default: { load: context => import(...).then(...) } }), as 43's
+//   quick add does (it imports only while context.rfQuickAdd is on). Its import ends after
+//   composite's load has returned, so composite can't see it fail: the slot catches and reports
+//   its own failure.
 // - Change only your own slot line. The blank lines between slots keep parallel tickets' edits
 //   apart, so git never sees two of them touch the same lines.
 // - A template with no loader registers nothing, so its page runs exactly as stock.
@@ -57,7 +62,9 @@ const listing = [
 
     // 43 quick add: its chunk on every listing while rf_quick_add is on (context.rfQuickAdd),
     // even with no "+ Add" in the first render, for the cards a facet change or the pager
-    // brings; never with it off. It is imported once load(context) has the switch.
+    // brings; never with it off. It is imported once load(context) has the switch, so a failure
+    // to load or start it is caught here and reported by reportError, this file's default,
+    // never by an onError passed to composite (only tests pass one).
     () => ({
         default: {
             load: context => (context.rfQuickAdd

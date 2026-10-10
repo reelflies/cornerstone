@@ -19,7 +19,11 @@
 //     button is usable again;
 //   - anything else: the product page (deps.navigate).
 //   The panel opens once the product has loaded, so it never changes size as it loads; a
-//   product that fails to load opens it with a link to the product page instead.
+//   product that fails to load opens it with a link to the product page instead. Only the
+//   latest tap answers: one overtaken by a tap on another "+ Add" does nothing when its answer
+//   comes, so a slow product never replaces the panel opened since, or leaves the listing. A
+//   tap on an "+ Add" still loading closes any panel and makes its pending tap the latest again;
+//   every new tap still overtakes every earlier one, that pending tap included.
 // - The panel is a <dialog> under the button, inside the card (never a child of the listing,
 //   which ticket 33's size-filter.js watches): below 801px a modal bottom sheet (showModal: the
 //   page behind is inert, Tab stays inside, Escape closes, focus back on "+ Add"); from 801px a
@@ -27,7 +31,7 @@
 //   "+ Add"; focus moving out of it closes it and stays where it went, so a Tab lands on the
 //   next card's control, and so does a Shift+Tab on past "+ Add"). It is named "Choose sizes of
 //   {name}" (reelflies.quick_add.dialog). While it is open <html data-rf-open> holds `quick-add`
-//   (open-state.js), which ticket 52's prompt reads.
+//   (open-state.js), which ticket 52's prompt reads. Its form is read, never submitted.
 // - Its footer reads the cart (the Storefront Cart API) and counts it by the brand rule
 //   (cart-count.js): "15 flies in your cart." with View cart.
 //
@@ -195,6 +199,14 @@ export function startQuickAdd(doc, context = {}, deps = {}) {
         doFetch = (...args) => view.fetch(...args),
     } = deps;
     const busy = new Set();
+    // Each tap takes a number from `taken`, which only goes up, so no two taps share one. `latest`
+    // is the number of the tap that answers: a tap whose answer comes after a newer one does
+    // nothing (tap). Each "+ Add" keeps its newest tap's number, so a tap on it while it is still
+    // busy makes that tap the latest again (onClick); the next new tap still gets a number of its
+    // own, never one a pending tap holds.
+    let taken = 0;
+    let latest = 0;
+    const taps = new WeakMap();
     const icon = name => iconIn(doc, name);
     const shell = {
         close: context.rfQuickAddClose || '',
@@ -317,6 +329,11 @@ export function startQuickAdd(doc, context = {}, deps = {}) {
         const host = button.closest('.product') || button.closest('article');
         if (host) host.classList.add(HOST);
 
+        // The form is only read, never sent: a submit (an implicit one, or a button with no type,
+        // as ticket 44's would be) would GET cart.php and leave the listing.
+        const form = content.querySelector('[data-rf-qa-form]');
+        if (form) form.addEventListener('submit', event => event.preventDefault());
+
         markSizes(content, sizes);
         const pills = content.querySelector('[data-rf-pills="size"]');
         const stopPills = pills && sizePills ? sizePills.watchPills(pills) : null;
@@ -423,7 +440,22 @@ export function startQuickAdd(doc, context = {}, deps = {}) {
         doc.dispatchEvent(new view.CustomEvent(CHANGED_EVENT, { detail: { source: 'quick-add', productId } }));
     }
 
+    // A tap answers only while it is the latest: one whose answer comes after a tap on another
+    // "+ Add" opens nothing, adds nothing and goes nowhere, and its "+ Add" is usable again, so a
+    // slow product never replaces the panel opened since, or leaves the listing under it. It is
+    // checked after each wait before the tap acts; an add already sent still finishes. An
+    // overtaken tap clears its "+ Add"'s busy state only while it is that button's newest tap,
+    // never a newer tap's on the same button.
     async function tap(button) {
+        taken += 1;
+        const mine = taken;
+        latest = mine;
+        taps.set(button, mine);
+        const overtaken = () => {
+            if (mine === latest) return false;
+            if (taps.get(button) === mine) setBusy(button, false);
+            return true;
+        };
         const productId = Number(button.getAttribute('data-rf-quick-add'));
         setBusy(button, true);
         // size-pills.js's chunk loads beside the product, for a panel's pills.
@@ -438,6 +470,7 @@ export function startQuickAdd(doc, context = {}, deps = {}) {
         } catch {
             content = null;
         }
+        if (overtaken()) return;
         const options = content && optionsOf(content);
         if (!options) {
             setBusy(button, false);
@@ -455,7 +488,7 @@ export function startQuickAdd(doc, context = {}, deps = {}) {
         } catch {
             stock = null;
         }
-        if (!usable(button)) return;
+        if (overtaken() || !usable(button)) return;
         const route = quickAddRoute(options, stock);
         if (route.route === 'add') {
             await addOne(button, content, route);
@@ -467,7 +500,7 @@ export function startQuickAdd(doc, context = {}, deps = {}) {
             return;
         }
         const pills = await pillsModule;
-        if (!usable(button)) return;
+        if (overtaken() || !usable(button)) return;
         const dialog = openPanel(button, content, { sizes: route.sizes, pills });
         const count = await within(readCartCount(context.rfFlyBrands, doFetch), COUNT_MS);
         const line = dialog.querySelector('[data-rf-qa-count]');
@@ -489,8 +522,13 @@ export function startQuickAdd(doc, context = {}, deps = {}) {
             close({ focusBack: true });
             return;
         }
-        if (busy.has(button)) return;
         close();
+        // A tap on an "+ Add" still busy with its own tap starts nothing new: that tap is the
+        // shopper's latest again, so it answers when its product does.
+        if (busy.has(button)) {
+            latest = taps.get(button);
+            return;
+        }
         tap(button);
     };
 

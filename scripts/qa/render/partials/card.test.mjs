@@ -210,6 +210,30 @@ describe('the card grid\'s shot (card-screens.spec.mjs)', () => {
         assert.equal(shot.page_context.theme_settings.rf_price_unit_exclude, TREE_1);
         assert.equal(shot.page, 'pages/search');
     });
+
+    it('and every fixture page that lists these products lists them as this file has them, so the shots show what the store sends (out_of_stock_message included)', () => {
+        const byId = new Map(products.map(product => [product.id, product]));
+        const listed = [];
+        const walk = (value, found) => {
+            if (Array.isArray(value)) value.forEach(item => walk(item, found));
+            else if (value && typeof value === 'object') {
+                if (byId.has(value.id) && 'has_options' in value) found.push(value);
+                else Object.values(value).forEach(item => walk(item, found));
+            }
+        };
+        const pages = path.join(THEME_DIR, 'scripts/qa/render/pages');
+        for (const page of fs.readdirSync(pages)) {
+            const dir = path.join(pages, page, 'fixtures');
+            if (!fs.existsSync(dir)) continue; // eslint-disable-line no-continue
+            for (const file of fs.readdirSync(dir).filter(name => name.endsWith('.json'))) {
+                const found = [];
+                walk(JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8')), found);
+                found.forEach(product => assert.deepEqual(product, byId.get(product.id), `${page}/${file}: product ${product.id}`));
+                if (found.length) listed.push(`${page}/${file}`);
+            }
+        }
+        assert.ok(listed.length >= 7, `the card grid, the category pages, quick add's panel and the Species hub list them (${listed.join(', ')})`);
+    });
 });
 
 describe('the grid (components/products/grid.html)', () => {

@@ -48,7 +48,8 @@ describe('"+ Add" on a listing card (quick-add-gate.html, quick-add-button.html)
     it('shows on every card with options that isn\'t sold out, as a link to the product page named for the pattern (stories 29 and 35; SCOPE-3)', async () => {
         const html = await grid();
         const list = cards(html);
-        // 4831 and 4804 have options; 5906, 5697 and 5879 have none; 5234 is sold out.
+        // 4831 and 4804 have options; 5879 has none; 5906 and 5697 are sold out in every size, which
+        // the store sends as no options; 5234 is sold out (stock_level 0).
         assert.deepEqual(list.map(card => Boolean(button(card))), [true, false, false, false, false, true]);
         const link = button(list[0]);
         assert.equal(link.attrs.href, CARDS[0].url);
@@ -82,6 +83,14 @@ describe('"+ Add" on a listing card (quick-add-gate.html, quick-add-button.html)
         assert.deepEqual(quickAddProblems(await grid()), []);
     });
 
+    it('keeps stock\'s Add to Cart off a listing whose cards all lack "+ Add" (no options, sold out), which the quick-add assertion checks only beside a "+ Add"', async () => {
+        const html = await grid({ products: CARDS.filter(card => !card.has_options) });
+        assert.equal(findTags(html).filter(tag => 'data-rf-quick-add' in tag.attrs).length, 0, 'no "+ Add" on this listing');
+        assert.ok(!findTags(html, 'a').some(tag => tag.attrs['data-button-type'] === 'add-cart' || /cart\.php\?action=add/.test(decodeHtml(tag.attrs.href || ''))), 'no stock Add to Cart on any card');
+        assert.match(textOf(html).replace(/\s+/g, ' '), /View 42 CH Bow River Streamers/);
+        assert.equal(quickViews(html).length, 0, 'and no Quick view while the switch is on');
+    });
+
     it('leaves stock\'s Add to Cart on a card with no options with the switch off, and on the product page', async () => {
         const stockAdd = html => actions(cards(html).find(card => findTags(card, 'article')[0].attrs['data-entity-id'] === '5879'));
         for (const html of [await grid({ on: false }), await grid({ before: "{{assignVar 'rf_product_page' 1}}" })]) {
@@ -111,6 +120,19 @@ describe('"+ Add" on a listing card (quick-add-gate.html, quick-add-button.html)
         }));
         assert.deepEqual(list.map(card => Boolean(button(card))), [false, false, false, true]);
         assert.ok(outerHtml(list[0], 'div', attrs => attrs.class === 'sold-out-flag-side'), 'the sold-out badge');
+    });
+
+    it('gives a product sold out in every size no "+ Add", and leaves it stock\'s "Out of stock" link: 5906 and 5697 as the store sends them (stock kept by size: no options, no add_to_cart_url), and 5234 at stock_level 0', async () => {
+        const soldOut = [5906, 5697, 5234];
+        for (const id of soldOut) assert.equal(CARDS.find(card => card.id === id).out_of_stock_message, 'Out of stock', `${id} carries the store's out_of_stock_message (channel 1's ?debug=context)`);
+        const list = cards(await grid()).filter(card => soldOut.includes(Number(findTags(card, 'article')[0].attrs['data-entity-id'])));
+        assert.equal(list.length, soldOut.length);
+        for (const card of list) {
+            const id = findTags(card, 'article')[0].attrs['data-entity-id'];
+            assert.equal(button(card), undefined, `${id} has no "+ Add"`);
+            const links = findTags(actions(card), 'a');
+            assert.deepEqual(links.map(tag => [tag.attrs.href, textOf(elementsHtml(actions(card), 'a', attrs => attrs.href === tag.attrs.href)[0]).trim()]), [[CARDS.find(c => String(c.id) === id).url, 'Out of stock']], `${id} keeps stock's one link, to its page`);
+        }
     });
 
     it('never shows outside a listing grid: the product page\'s related products, and a grid on the product page (tickets 38 and 39)', async () => {

@@ -76,3 +76,21 @@ test('fails stock\'s Add to Cart on a card beside "+ Add": a card with no option
     assert.match(problems(good.replace(row[0], add)), /card 5879 has stock's Add to Cart beside "\+ Add"/);
     assert.deepEqual(quickAdd.check(page(await grid(false))), [], 'with quick add off it is stock\'s');
 });
+
+// The server HTML can't tell a listing with the switch on whose cards all lack "+ Add" (no-options
+// Gear, sold out) from one with the switch off, so the Add to Cart check runs only beside a
+// "+ Add"; render/partials/quick-add.test.mjs holds the gate on such a listing.
+test('checks for stock\'s Add to Cart only on a page that has a "+ Add", as its header says', async () => {
+    assert.match(quickAdd.description, /on a page with a "\+ Add"/);
+    const header = fs.readFileSync(path.join(THEME_DIR, 'scripts/qa/raw-html/assertions/quick-add.mjs'), 'utf8').split('\nimport')[0];
+    assert.match(header, /only on a page that has a "\+ Add"/);
+    const noOptions = products.filter(product => !product.has_options);
+    const on = await renderPartial(CALLER, {
+        products: noOptions, settings: {}, theme_settings: { rf_quick_add: true, show_product_quick_view: true },
+    }, { overrides: { [CALLER]: '{{> components/products/grid products=products theme_settings=theme_settings event="list"}}' } });
+    assert.doesNotMatch(on, /data-rf-quick-add=/, 'no card on this listing gets "+ Add"');
+    const view = on.match(/<a href="https:\/\/reelflies\.ca\/42-ch-bow-river-streamers\/"[^>]*class="button button--small card-figcaption-button"[^>]*>[\s\S]*?<\/a>/);
+    assert.ok(view, 'the gate still links 5879 to its page');
+    const add = '<a href="https://reelflies.ca/cart.php?action=add&amp;product_id=5879" data-button-type="add-cart" class="button button--small card-figcaption-button">Add to Cart</a>';
+    assert.deepEqual(quickAdd.check(page(on.replace(view[0], add))), [], 'with no "+ Add" on the page, stock\'s Add to Cart is not this check\'s');
+});
