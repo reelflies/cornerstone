@@ -14,17 +14,21 @@
     - Each card is widgets/_shared/product-card.html, pasted in by the sync. A pick that is sold
       out in every size, or missing from the channel, renders nothing; the band shows the first
       four cards it gets, so pick5 and pick6 are spares that move up.
+    - The six calls pass the same sizes, the card's width in this band's grid: a fixed 256px from
+      1261px (the large container), a quarter of 100vw - 48px less the gaps from 801px, and half
+      of it on phones. Change all six together: the render test checks every card's sizes, and
+      home-bands-screens measures each photo against it at every width.
     - With no card at all (no products on the channel yet, or no query result) the band hides
       itself, heading included.
 --}}
 <section class="rf-home-band rf-best-sellers" aria-labelledby="rf-best-sellers-{{_.id}}" data-rf-band="best-sellers">
     <h2 class="rf-home-band__heading" id="rf-best-sellers-{{_.id}}">{{heading}}</h2>
     <ul class="rf-product-cards">
-        {{> _shared/product-card product=_.data.site.pick1 currency=currency_symbol unit=price_unit sizes="(min-width: 1136px) 256px, (min-width: 801px) calc(23.65vw - 12px), calc(50vw - 31px)" ~}}
-        {{> _shared/product-card product=_.data.site.pick2 currency=currency_symbol unit=price_unit sizes="(min-width: 1136px) 256px, (min-width: 801px) calc(23.65vw - 12px), calc(50vw - 31px)" ~}}
-        {{> _shared/product-card product=_.data.site.pick3 currency=currency_symbol unit=price_unit sizes="(min-width: 1136px) 256px, (min-width: 801px) calc(23.65vw - 12px), calc(50vw - 31px)" ~}}
-        {{> _shared/product-card product=_.data.site.pick4 currency=currency_symbol unit=price_unit sizes="(min-width: 1136px) 256px, (min-width: 801px) calc(23.65vw - 12px), calc(50vw - 31px)" ~}}
-        {{> _shared/product-card product=_.data.site.pick5 currency=currency_symbol unit=price_unit sizes="(min-width: 1136px) 256px, (min-width: 801px) calc(23.65vw - 12px), calc(50vw - 31px)" ~}}
-        {{> _shared/product-card product=_.data.site.pick6 currency=currency_symbol unit=price_unit sizes="(min-width: 1136px) 256px, (min-width: 801px) calc(23.65vw - 12px), calc(50vw - 31px)" ~}}
+        {{> _shared/product-card product=_.data.site.pick1 currency=currency_symbol unit=price_unit sizes="(min-width: 1261px) 256px, (min-width: 801px) calc(23.65vw - 12px), calc(50vw - 31px)" ~}}
+        {{> _shared/product-card product=_.data.site.pick2 currency=currency_symbol unit=price_unit sizes="(min-width: 1261px) 256px, (min-width: 801px) calc(23.65vw - 12px), calc(50vw - 31px)" ~}}
+        {{> _shared/product-card product=_.data.site.pick3 currency=currency_symbol unit=price_unit sizes="(min-width: 1261px) 256px, (min-width: 801px) calc(23.65vw - 12px), calc(50vw - 31px)" ~}}
+        {{> _shared/product-card product=_.data.site.pick4 currency=currency_symbol unit=price_unit sizes="(min-width: 1261px) 256px, (min-width: 801px) calc(23.65vw - 12px), calc(50vw - 31px)" ~}}
+        {{> _shared/product-card product=_.data.site.pick5 currency=currency_symbol unit=price_unit sizes="(min-width: 1261px) 256px, (min-width: 801px) calc(23.65vw - 12px), calc(50vw - 31px)" ~}}
+        {{> _shared/product-card product=_.data.site.pick6 currency=currency_symbol unit=price_unit sizes="(min-width: 1261px) 256px, (min-width: 801px) calc(23.65vw - 12px), calc(50vw - 31px)" ~}}
     </ul>
 </section>

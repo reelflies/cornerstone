@@ -27,7 +27,7 @@ const DIR = path.join(WIDGETS_DIR, 'signature-band');
 const fixture = name => readFixture(path.join(DIR, 'fixtures', `${name}.json`));
 const channelFile = readFixture(path.join(DIR, 'channels', '1895766.json'));
 const render = (data = fixture('default'), configuration = {}) => renderWidget('signature-band', { ...data, configuration: { ...data.configuration, ...configuration } });
-const SIZES = '(min-width: 1261px) 142px, (min-width: 1136px) 242px, (min-width: 801px) calc(25vw - 43px), calc(50vw - 51px)';
+const SIZES = '(min-width: 1261px) 142px, (min-width: 801px) calc(25vw - 43px), calc(50vw - 47px)';
 // The reference's four Signature picks (reference.src.html:1354), then two ReelFlies patterns as
 // spares: the Psycho Caddis its story names, and the Rocky Mountain Pupa.
 const PICKED = [4797, 5837, 6232, 4576, 3899, 3855];

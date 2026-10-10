@@ -54,6 +54,20 @@ test('a number in any setting but a product id fails as a typed count (HOME-4: "
     ]);
 });
 
+test('a link may carry digits (ticket 36\'s canonical /reelflies-2/), but a label that only starts with a slash may not', () => {
+    for (const url of ['/reelflies-2/', '/brands/ReelFlies.html', 'https://reelflies.ca/reelflies-2/', '/flies/?page=2']) {
+        assert.deepEqual(check({
+            heading: 'Best sellers', button_label: 'Shop', button_url: url, pick1: '4877',
+        }), [], url);
+    }
+    assert.deepEqual(check({ heading: 'Best sellers', button_label: '/ 12 flies', pick1: '4877' }), [
+        'channels/1895766.json: button_label "/ 12 flies" holds a number: counts come from the storefront query, and a label carries none (HOME-4)',
+    ]);
+    assert.match(check({
+        heading: 'Best sellers', button_label: 'Shop', button_url: '/flies-from-$1/', pick1: '4877',
+    })[0], /button_url .* holds a price/, 'a link is still checked for a price');
+});
+
 test('a product\'s name typed into a setting fails, whatever its case', () => {
     assert.deepEqual(check({ heading: 'Try the reel egg nuke', button_label: 'Shop', pick1: '4877' }), [
         'channels/1895766.json: heading "Try the reel egg nuke" holds the product name "Reel Egg Nuke": names come from the storefront query (HOME-4)',

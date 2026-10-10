@@ -11,6 +11,8 @@
 //   left and four cards on the right, on a forest ground that reaches both edges of the window
 // - at 375 and 320, both as 2x2 grids (the Signature copy above its cards), with no sideways
 //   scroll (CD-8, story 71)
+// - width by width, from 320 to 1440: no card's name cut by its clamp, and each photo's sizes
+//   attribute declaring the width it renders at (SEO-8, story 70)
 // - the spares: a band shows its first four cards; the cards after them stay hidden and their
 //   photos unloaded, and move up when a pick is sold out in every size
 // - switching a band off (an R12 unpublish, or no products on the channel yet) closes the page up
@@ -76,6 +78,43 @@ const box = (page, selector) => page.locator(selector).first().evaluate(element 
 });
 
 const noSidewaysScroll = page => page.evaluate(() => document.scrollingElement.scrollWidth - window.innerWidth);
+
+// The window widths the width-by-width checks walk, each project its own side of 801px (the
+// medium breakpoint), with every breakpoint's edges: 801px, the container's 1261px (large), and
+// 1280px, where the large container stops growing.
+const WIDTHS = { phone: [320, 360, 375, 390, 414, 600, 800], desktop: [801, 1024, 1136, 1200, 1260, 1261, 1280, 1440] };
+const widthsFor = testInfo => (desktop(testInfo) ? WIDTHS.desktop : WIDTHS.phone);
+
+// Each name a band shows, with the lines it takes and whether its clamp cuts it.
+const namesIn = page => page.locator('.rf-home-band .rf-product-card__name').evaluateAll(elements => elements
+    .filter(element => element.getClientRects().length > 0)
+    .map(element => ({
+        band: element.closest('[data-rf-band]').dataset.rfBand,
+        name: element.textContent.trim(),
+        lines: Math.round(element.clientHeight / parseFloat(getComputedStyle(element).lineHeight)),
+        cut: element.scrollHeight > element.clientHeight + 1,
+    })));
+
+// Each photo a band shows: the width it renders at, and the width its sizes attribute declares at
+// this window width (the first entry whose media condition matches, measured as a CSS width).
+const photosIn = page => page.locator('.rf-home-band .rf-product-card__img').evaluateAll(images => images
+    .filter(image => image.getClientRects().length > 0)
+    .map(image => {
+        const entries = image.getAttribute('sizes').split(/,(?![^()]*\))/).map(entry => entry.trim());
+        const chosen = entries.map(entry => entry.match(/^(\([^()]*\))\s+(.+)$/) || [entry, null, entry])
+            .find(([, media]) => !media || window.matchMedia(media).matches);
+        const probe = document.createElement('div');
+        probe.style.cssText = `position: absolute; visibility: hidden; width: ${chosen[2]}`;
+        document.body.append(probe);
+        const declared = probe.getBoundingClientRect().width;
+        probe.remove();
+        return {
+            band: image.closest('[data-rf-band]').dataset.rfBand,
+            product: image.closest('a').dataset.rfProduct,
+            rendered: image.getBoundingClientRect().width,
+            declared,
+        };
+    }));
 
 // The colour painted at a point of the page, read from a screenshot of one pixel there.
 async function pixel(page, x, y) {
@@ -145,6 +184,35 @@ test.describe('the home page\'s product bands (widgets/best-sellers, widgets/sig
             expect(await pixel(page, 1, y), `the forest ground reaches the left edge at ${width}px`).toBe(FOREST); // eslint-disable-line no-await-in-loop
             expect(await pixel(page, width - 2, y), `and the right at ${width}px`).toBe(FOREST); // eslint-disable-line no-await-in-loop
         }
+    });
+
+    test('no card\'s name is cut at any width: two lines at most, or three on the Signature plates on phones, which are narrower by their padding', async ({ page }, testInfo) => {
+        await open(page);
+        const problems = [];
+        for (const width of widthsFor(testInfo)) {
+            await page.setViewportSize({ width, height: 900 }); // eslint-disable-line no-await-in-loop
+            const names = await namesIn(page); // eslint-disable-line no-await-in-loop
+            for (const card of names) {
+                const most = card.band === 'signature' && width < 801 ? 3 : 2;
+                if (card.cut) problems.push(`${card.band} at ${width}px: "${card.name}" is cut`);
+                if (card.lines > most) problems.push(`${card.band} at ${width}px: "${card.name}" takes ${card.lines} lines, more than ${most}`);
+            }
+        }
+        expect(problems).toEqual([]);
+    });
+
+    test('each photo\'s sizes attribute declares the width it renders at, at every width (within 2.5%), so the browser picks the right srcset file', async ({ page }, testInfo) => {
+        await open(page);
+        const problems = [];
+        for (const width of widthsFor(testInfo)) {
+            await page.setViewportSize({ width, height: 900 }); // eslint-disable-line no-await-in-loop
+            const photos = await photosIn(page); // eslint-disable-line no-await-in-loop
+            expect(photos.length, `eight photos shown at ${width}px`).toBe(8);
+            for (const photo of photos) {
+                if (Math.abs(photo.declared - photo.rendered) > photo.rendered * 0.025) problems.push(`${photo.band} ${photo.product} at ${width}px: sizes declares ${photo.declared.toFixed(1)}px, it renders at ${photo.rendered.toFixed(1)}px`);
+            }
+        }
+        expect(problems).toEqual([]);
     });
 
     test('a band shows its first four cards: the spares stay hidden with their photos unloaded, and move up when a pick is sold out in every size', async ({ page }) => {

@@ -27,7 +27,7 @@ const fixture = name => readFixture(path.join(DIR, 'fixtures', `${name}.json`));
 const channelFile = readFixture(path.join(DIR, 'channels', '1895766.json'));
 const render = (data = fixture('default'), configuration = {}) => renderWidget('best-sellers', { ...data, configuration: { ...data.configuration, ...configuration } });
 const BASE = 'https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil';
-const SIZES = '(min-width: 1136px) 256px, (min-width: 801px) calc(23.65vw - 12px), calc(50vw - 31px)';
+const SIZES = '(min-width: 1261px) 256px, (min-width: 801px) calc(23.65vw - 12px), calc(50vw - 31px)';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 // The reference's best sellers on reelflies.ca by units sold (store-data.json ranks 1 to 6):
 // four picks, then two spares.

@@ -12,8 +12,8 @@
 //
 // - The card looks like ticket 31's listing card (_card.scss): the photo on white in a 3:2 box
 //   with no frame (the photos carry the ReelFlies logo bottom-left, IMG-1), the name in two
-//   lines at most, the price and its unit on one baseline in tabular figures. It is one link,
-//   with no "+ Add".
+//   lines at most (three on a Signature plate on phones, below), the price and its unit on one
+//   baseline in tabular figures. It is one link, with no "+ Add".
 // - Each band shows its first four cards: one row of four from 801px and a 2x2 grid on phones,
 //   never a sideways scroller (CD-8). The widget renders every pick that is in stock, so a card
 //   after the fourth is a spare that moves up when a pick is sold out in every size: it stays
@@ -36,6 +36,7 @@ $rf-band-gap-row:       clamp(24px, 2.6vw, 36px);   // between the phone grid's 
 $rf-band-gap-col:       clamp(14px, 1.8vw, 24px);   // between columns, as _card.scss's grid
 $rf-band-cards:         4;                          // the cards a band shows (CD-8)
 $rf-plate-pad:          8px 10px 14px;              // round a Signature card, on its white plate
+$rf-plate-pad-phone:    8px 8px 14px;               // on phones, where a plate is narrower (below)
 $rf-plate-gap:          14px;                       // between the plates
 $rf-signature-split:    "large";                    // the copy beside the cards from here (1261px)
 
@@ -239,14 +240,22 @@ $rf-signature-split:    "large";                    // the copy beside the cards
     }
 }
 
-// The cards on white plates, over the forest ground
+// The cards on white plates, over the forest ground. On phones a plate is narrower than a best
+// seller by its padding (157px at 375, inside the kept 24px page gutter, against the reference's
+// 165px inside 16px), so its padding is 8px and a name may take three lines: at 320 two of the
+// reference's four picks need three, and a cut name hides what the fly is. From 801px a name
+// takes two lines at most, as ticket 31's card.
 .rf-product-cards--plates {
     gap: $rf-plate-gap;
 
     .rf-product-card {
         background: var(--rf-paper);
         border-radius: var(--rf-radius-mid);
-        padding: $rf-plate-pad;
+        padding: $rf-plate-pad-phone;
+
+        @include breakpoint("medium") {
+            padding: $rf-plate-pad;
+        }
     }
 
     .rf-product-card__media {
@@ -255,6 +264,11 @@ $rf-signature-split:    "large";                    // the copy beside the cards
 
     .rf-product-card__name {
         font-size: 15px;
+        -webkit-line-clamp: 3;
         margin-top: 8px;
+
+        @include breakpoint("medium") {
+            -webkit-line-clamp: 2;
+        }
     }
 }

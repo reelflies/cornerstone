@@ -9,10 +9,12 @@
 // the schema's defaults (what Page Builder fills in), and every fixture's configuration.
 //
 // - A price: a currency sign before a digit, or a number with two decimals ("1.95").
-// - A count: any digit in a setting that isn't a product id. The band settings are words and
-//   paths; HOME-4's own example is "Shop signature flies", never "Shop 355". A widget whose paths
-//   carry digits (ticket 47's photo paths) isn't one of these bands, so the lint covers the bands
-//   it lists (PRODUCT_BANDS); ticket 49 adds its Assortments band.
+// - A count: any digit in a setting that isn't a product id or a link. HOME-4's own example is
+//   "Shop signature flies", never "Shop 355". A link (a path from "/", or an http(s) URL, with no
+//   space) may carry digits, as ticket 36's canonical /reelflies-2/ does, but is still checked for
+//   a price and a name. A widget whose other settings carry digits (ticket 47's photo paths after
+//   the size segment) isn't one of these bands, so the lint covers the bands it lists
+//   (PRODUCT_BANDS); ticket 49 adds its Assortments band.
 // - A product name: a name from the widgets' own query fixtures, in any case. The store's
 //   catalogue isn't in the repo, and the fixtures hold every product a band picks.
 // - A productId setting holding anything but an id.
@@ -26,6 +28,7 @@ export const PRODUCT_BANDS = ['best-sellers', 'signature-band'];
 const PRICE = /[$€£]\s*\d|\b\d+[.,]\d{2}\b/;
 const DIGIT = /\d/;
 const ID = /^[1-9]\d*$/;
+const LINK = /^(?:\/(?!\s)|https?:\/\/)\S*$/;
 
 const isObject = value => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const readJson = file => JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -76,7 +79,7 @@ export function typedValues({
         }
         if (typeof value !== 'string') return [];
         if (PRICE.test(value)) return [`${where}: ${shown} holds a price: prices come from the storefront query (HOME-4)`];
-        if (DIGIT.test(value)) return [`${where}: ${shown} holds a number: counts come from the storefront query, and a label carries none (HOME-4)`];
+        if (DIGIT.test(value) && !LINK.test(value)) return [`${where}: ${shown} holds a number: counts come from the storefront query, and a label carries none (HOME-4)`];
         const named = lowered.find(([, name]) => value.toLowerCase().includes(name));
         return named ? [`${where}: ${shown} holds the product name "${named[0]}": names come from the storefront query (HOME-4)`] : [];
     });
