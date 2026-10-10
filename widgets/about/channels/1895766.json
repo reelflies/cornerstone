@@ -1,0 +1,36 @@
+{
+    "channel_id": 1895766,
+    "configuration": {
+        "draft_note": "DRAFT: the copy and the photo wait for Shaun's approval (ticket 14).",
+        "heading": "100% Canadian and family-run since 2003",
+        "text": "Every fly is tied by hand on branded hooks from makers such as Mustad, Daiichi, Dai-Riki and Kamasan, and ships from our shop in Tillsonburg, Ontario. Walk-ins are welcome by appointment.",
+        "quote": "",
+        "quote_by": "",
+        "signoff": "Tight lines from us all at ReelFlies.",
+        "link_label": "About ReelFlies",
+        "link_url": "/about-us/",
+        "fact_ship_lead": "Free standard shipping",
+        "fact_ship_text": "in Canada on fly orders over $60. Fly boxes and gear not included.",
+        "fact_promise": "We stand behind every fly we sell.",
+        "fact_phone_lead": "Questions?",
+        "fact_phone_text": "Call toll-free",
+        "phone_label": "1 866 250 4071",
+        "phone_tel": "+18662504071",
+        "image_base": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil",
+        "photo_path": "image-manager/shop-front-pic-2000dpi-reelflies2-thumb.jpg",
+        "photo_width": "600",
+        "photo_height": "450",
+        "photo_alt": "The ReelFlies shop front on Broadway Street in Tillsonburg, Ontario"
+    },
+    "placement": {
+        "template_file": "pages/home",
+        "region": "home_below_top_products",
+        "sort_order": 70,
+        "status": "inactive"
+    },
+    "uuids": {
+        "template": null,
+        "widget": null,
+        "placement": null
+    }
+}

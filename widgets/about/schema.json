@@ -1,0 +1,48 @@
+[
+    {
+        "type": "tab",
+        "label": "Content",
+        "sections": [
+            {
+                "label": "Approval",
+                "settings": [
+                    { "type": "input", "label": "DRAFT note shown above the heading until Shaun approves the copy (empty: none)", "id": "draft_note", "default": "" }
+                ]
+            },
+            {
+                "label": "Text",
+                "settings": [
+                    { "type": "input", "label": "Heading (the section's H2)", "id": "heading", "default": "100% Canadian and family-run since 2003" },
+                    { "type": "input", "label": "Two sentences in Shaun's voice", "id": "text", "default": "Every fly is tied by hand on branded hooks from makers such as Mustad, Daiichi, Dai-Riki and Kamasan, and ships from our shop in Tillsonburg, Ontario. Walk-ins are welcome by appointment." },
+                    { "type": "input", "label": "A line from Steve B, once Shaun approves one (empty: none)", "id": "quote", "default": "" },
+                    { "type": "input", "label": "Who said it (for example Steve B, President)", "id": "quote_by", "default": "" },
+                    { "type": "input", "label": "Sign-off", "id": "signoff", "default": "Tight lines from us all at ReelFlies." },
+                    { "type": "input", "label": "Link text", "id": "link_label", "default": "About ReelFlies" },
+                    { "type": "input", "label": "Link (a path on this storefront: the About page)", "id": "link_url", "default": "/about-us/" }
+                ]
+            },
+            {
+                "label": "Trust facts",
+                "settings": [
+                    { "type": "input", "label": "Shipping: the words in bold", "id": "fact_ship_lead", "default": "Free standard shipping" },
+                    { "type": "input", "label": "Shipping: the rest (match the shipping strip and the free-shipping promotion)", "id": "fact_ship_text", "default": "in Canada on fly orders over $60. Fly boxes and gear not included." },
+                    { "type": "input", "label": "Promise (in bold)", "id": "fact_promise", "default": "We stand behind every fly we sell." },
+                    { "type": "input", "label": "Phone: the words in bold", "id": "fact_phone_lead", "default": "Questions?" },
+                    { "type": "input", "label": "Phone: the words before the number", "id": "fact_phone_text", "default": "Call toll-free" },
+                    { "type": "input", "label": "Phone number as shown", "id": "phone_label", "default": "1 866 250 4071" },
+                    { "type": "input", "label": "Phone number to dial (+1 and ten digits)", "id": "phone_tel", "default": "+18662504071" }
+                ]
+            },
+            {
+                "label": "Photo",
+                "settings": [
+                    { "type": "input", "label": "Image CDN base, up to /images/stencil", "id": "image_base", "default": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil" },
+                    { "type": "input", "label": "Photo path after the size segment (for example image-manager/<file>), shown at 4:3", "id": "photo_path", "default": "image-manager/shop-front-pic-2000dpi-reelflies2-thumb.jpg" },
+                    { "type": "input", "label": "Photo width in px (the file's own)", "id": "photo_width", "default": "600" },
+                    { "type": "input", "label": "Photo height in px (the file's own)", "id": "photo_height", "default": "450" },
+                    { "type": "input", "label": "Photo alt text (what and where it shows)", "id": "photo_alt", "default": "The ReelFlies shop front on Broadway Street in Tillsonburg, Ontario" }
+                ]
+            }
+        ]
+    }
+]

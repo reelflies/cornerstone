@@ -1,0 +1,45 @@
+{{!--
+    The home page's About block (ticket 49; spec module 7, R5, CD-9, SEO-8; story 65), the last
+    of the home sections in home_below_top_products. Synced to each channel by
+    scripts/widgets-sync.mjs; styled by the theme's ReelFlies layer
+    (assets/scss/reelflies/_home-links.scss), so nothing here is inline CSS.
+
+    - An even split from 801px: the shop-front photo at 4:3 on one side, the text on the other;
+      stacked on phones, photo first. The photo is a real img with its alt text, a srcset from
+      the CDN base and the path after the size segment, sizes, its width and height, and lazy.
+    - The text: the h2, two sentences in Shaun's voice, an approved line from Steve B (only when
+      the quote field holds one), three trust facts with icons, the "About ReelFlies" link and
+      the "Tight lines" sign-off. No product card and no price (CD-9).
+    - The shipping fact is the shipping strip's own sentence (ticket 27; widget fields can't read
+      rf_ship_free_threshold), and about.test.mjs holds the two equal.
+    - Every word, link and the photo's path is a widget field (schema.json; each channel's values
+      are in channels/<channel>.json). The copy is a DRAFT until Shaun approves it (ticket 14):
+      while draft_note holds a line, it shows above the heading, marked data-rf-draft.
+    - The icons are drawn here, not taken from the theme's icon sheet, so the block is whole on any
+      channel's theme, as the shipping strip's truck is.
+--}}
+<section class="rf-about" aria-labelledby="rf-about-{{_.id}}">
+    <div class="rf-about__media">
+        <img class="rf-about__img" src="{{image_base}}/640w/{{photo_path}}" srcset="{{image_base}}/320w/{{photo_path}} 320w, {{image_base}}/480w/{{photo_path}} 480w, {{image_base}}/640w/{{photo_path}} 640w, {{image_base}}/960w/{{photo_path}} 960w, {{image_base}}/1280w/{{photo_path}} 1280w" sizes="(max-width: 800px) calc(100vw - 48px), (max-width: 1260px) calc(48vw - 24px), 524px" width="{{photo_width}}" height="{{photo_height}}" alt="{{photo_alt}}" loading="lazy" />
+    </div>
+    <div class="rf-about__body">
+        {{#if draft_note}}
+        <p class="rf-about__draft" data-rf-draft="about">{{draft_note}}</p>
+        {{/if}}
+        <h2 class="rf-about__heading" id="rf-about-{{_.id}}">{{heading}}</h2>
+        <p class="rf-about__text">{{text}}</p>
+        {{#if quote}}
+        <figure class="rf-about__quote">
+            <blockquote class="rf-about__quote-text"><p>{{quote}}</p></blockquote>
+            <figcaption class="rf-about__quote-by">{{quote_by}}</figcaption>
+        </figure>
+        {{/if}}
+        <ul class="rf-about__facts">
+            <li class="rf-about__fact"><svg class="rf-about__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2.5 6.5h11v10h-11z"></path><path d="M13.5 9.5h4.2l3 3.4v3.6h-7.2"></path><circle cx="7" cy="17.5" r="1.8"></circle><circle cx="17" cy="17.5" r="1.8"></circle></svg><span><strong>{{fact_ship_lead}}</strong> {{fact_ship_text}}</span></li>
+            <li class="rf-about__fact"><svg class="rf-about__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg><span><strong>{{fact_promise}}</strong></span></li>
+            <li class="rf-about__fact"><svg class="rf-about__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6.5 3.5h3l1.5 4-2 1.3a10 10 0 0 0 5.2 5.2l1.3-2 4 1.5v3a2 2 0 0 1-2.2 2A16 16 0 0 1 4.5 5.7a2 2 0 0 1 2-2.2z"></path></svg><span><strong>{{fact_phone_lead}}</strong> {{fact_phone_text}} <a class="rf-about__tel" href="tel:{{phone_tel}}">{{phone_label}}</a></span></li>
+        </ul>
+        <p class="rf-about__more"><a class="rf-about__link" href="{{link_url}}">{{link_label}}</a></p>
+        <p class="rf-about__signoff">{{signoff}}</p>
+    </div>
+</section>
