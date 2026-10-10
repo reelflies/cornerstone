@@ -28,9 +28,11 @@ product:
             {{> components/products/videos product.videos}}
         {{/if}}
 
+        {{#if false}}{{!-- ReelFlies hook (ticket 40; CUSTOMIZATIONS.md): the reviews render in ticket 39's slot under the details (components/reelflies/product-reviews.html) whatever show_product_details_tabs says, so stock's list here, kept unrendered, would be a second one --}}
         {{#all settings.show_product_reviews theme_settings.show_product_reviews (if theme_settings.show_product_details_tabs '!==' true)}}
             {{> components/products/reviews reviews=product.reviews product=product urls=urls}}
         {{/all}}
+        {{/if}}{{!-- ReelFlies hook (ticket 40): the end of stock's unrendered reviews list --}}
 
         {{> components/reelflies/product-related}}{{!-- ReelFlies hook (ticket 39; CUSTOMIZATIONS.md): related patterns as a grid of cards, in place of stock's carousel tabs (components/products/tabs); the front matter no longer asks for similar_by_views, which only those tabs showed --}}
     </div>

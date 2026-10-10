@@ -25,7 +25,7 @@ import { ROOT } from './storefront.mjs';
 import { KNOWN_ISSUES, knownIssue } from './axe-known-issues.mjs';
 
 // The box channel 1's product pins hold: ticket 39's related patterns grid.
-const PRODUCT_PINS = ['product', 'product@sizes'];
+const PRODUCT_PINS = ['product', 'product@sizes', 'product@reviews'];
 const RELATED_GRID = '[data-rf-related] .rf-related-grid';
 // Channel 1's pins whose product list is the live catalogue's, and the listing's grid they hold.
 const LIVE_LISTS = ['category', 'category@more', 'category@noindex', 'search', 'brand'];
@@ -190,6 +190,18 @@ describe('the screenshot stylesheet (W0-5)', () => {
         }
     });
 
+    it('holds channel 1\'s product@reviews review list, which shoppers add to, and masks the counts by it (ticket 40)', () => {
+        const list = '[data-rf-reviews-list]';
+        const css = rules(screenshotStyle('1', 'product@reviews'));
+        assert.equal(css.get(list)?.height, '640px !important');
+        assert.equal(css.get(`${list} > *`)?.display, 'none !important');
+        assert.equal(css.get(RELATED_GRID)?.height, '400px !important', 'and its related grid, as the other product pins');
+        const masks = masksFor('1', 'product@reviews');
+        for (const selector of [list, '[data-rf-review-summary]', '.rf-reviews-heading']) assert.ok(masks.includes(selector), selector);
+        for (const selector of ['[data-rf-reviews]', '.rf-reviews-write']) assert.ok(!masks.includes(selector), `${selector} stays in the shot`);
+        for (const pin of ['product', 'product@sizes']) assert.ok(!rules(screenshotStyle('1', pin)).has(list), `${pin} has no review list to hold`);
+    });
+
     it('masks both of channel 1\'s search tabs, whose counts the catalogue sets, whichever is active (#68\'s rf/spec and rf/skeptic)', () => {
         assert.ok(masksFor('1', 'search').includes('[data-search-page-tabs] [role="tab"]'));
     });
@@ -240,7 +252,7 @@ describe('the screenshot stylesheet (W0-5)', () => {
     });
 
     it('holds nothing on any other page or channel, so cards stay in those shots', () => {
-        const held = [['1', 'product'], ['1', 'product@sizes'], ['1', 'species-hub'], ...LIVE_LISTS.map(pin => ['1', pin]), ['1895766', 'search@none'], ['1', 'search@none']];
+        const held = [...PRODUCT_PINS.map(pin => ['1', pin]), ['1', 'species-hub'], ...LIVE_LISTS.map(pin => ['1', pin]), ['1895766', 'search@none'], ['1', 'search@none']];
         for (const [channel, template] of kinds.filter(([kindChannel, kindTemplate]) => !held.some(([c, t]) => c === kindChannel && t === kindTemplate))) {
             const css = rules(screenshotStyle(channel, template));
             assert.deepEqual([...css.keys()].sort(), [...HIDDEN].sort(), `${channel} ${template}`);

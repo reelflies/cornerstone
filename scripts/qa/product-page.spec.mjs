@@ -17,9 +17,10 @@
 //   46). "Hooks and tying" links to the hook size chart.
 // - The shipping line under the price (story 44), the promise line under Add to cart (story 45),
 //   where it stays once a Colour and a size make the form valid (stock then shows its wallet box,
-//   empty while the store sends no wallet buttons), and "Save to wish list": a guest who uses it is sent to sign in (story 49). The store's answer
-//   to the add is mocked here (a POST on channel 1 is a live write); that the store sends a guest
-//   from its wish lists to sign in is read from wishlist.php itself.
+//   empty while the store sends no wallet buttons), and "Save to wish list": a guest who uses it
+//   is sent to sign in (story 49). The store's answer to the add is mocked here (a POST on
+//   channel 1 is a live write); that the store sends a guest from its wish lists to sign in is
+//   read from wishlist.php itself.
 // - No weight row, no wallet buttons, and no share links in the buy box.
 // - Related patterns: four cards in one row at 1280 and two across at 375, no carousel or tab, and
 //   their photos lazy with no fetchpriority (story 48; O23).

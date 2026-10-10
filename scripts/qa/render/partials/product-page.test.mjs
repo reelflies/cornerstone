@@ -335,13 +335,30 @@ describe('the details under the photos (components/reelflies/product-details.htm
         assert.match(textOf(section(html, 'custom-fields')), /Hook/);
     });
 
-    it('ends with ticket 40\'s reviews slot, empty until ticket 40 fills it (build pipeline 6.9)', async () => {
+    it('ends with ticket 40\'s reviews slot, after the last section (build pipeline 6.9; render/partials/product-reviews.test.mjs)', async () => {
         const source = fs.readFileSync(path.join(THEME_DIR, 'templates/components/reelflies/product-details.html'), 'utf8');
         const slot = source.indexOf('{{> components/reelflies/product-reviews}}');
         assert.ok(slot > source.lastIndexOf('</details>'), 'the slot comes after the last section');
-        const CALLER = 'rf-test/reviews-slot';
-        const empty = await renderPartial(CALLER, { product: CONTEXT.product }, { overrides: { [CALLER]: '{{> components/reelflies/product-reviews}}' } });
-        assert.equal(empty.trim(), '');
+        assert.ok(slot > source.lastIndexOf('</div>'), 'outside the sections\' wrapper');
+        const html = await productPage();
+        assert.ok(html.indexOf('data-rf-reviews ') > html.indexOf('data-rf-product-details'), 'the reviews after the details');
+    });
+
+    it('holds only <details> sections in the wrapper, so the first draws the hairline; a product with none renders the wrapper empty, which draws nothing (#86\'s rf/skeptic)', async () => {
+        const children = html => {
+            const inside = details(html).replace(/^<div[^>]*>/, '').replace(/<\/div>$/, '');
+            return findTags(inside).filter(tag => !elementsHtml(inside, 'details').some(each => each.includes(tag.raw) && !each.startsWith(tag.raw)));
+        };
+        for (const tag of children(await productPage({ product: { warranty: '<p>Replaced.</p>' } }))) {
+            assert.equal(tag.name, 'details');
+            assert.match(tag.attrs.class, /(^|\s)rf-details-section(\s|$)/);
+        }
+        const bare = await productPage({ product: { description: '', category: ['Fly Gear/Fly Boxes'] }, theme: { rf_ship_free_threshold: '' } });
+        assert.deepEqual(sections(bare), [], 'ReelFlies US\'s gear with no description: no section');
+        assert.equal(textOf(details(bare)), '');
+        const scss = fs.readFileSync(path.join(THEME_DIR, 'assets/scss/reelflies/_product.scss'), 'utf8');
+        assert.doesNotMatch(scss, /\.rf-details \{\s*border-top/, 'the wrapper draws no hairline of its own');
+        assert.match(scss, /\.rf-details-section \{[^}]*&:first-child \{\s*border-top/);
     });
 });
 
@@ -380,5 +397,14 @@ describe('the words (lang/en.json, reelflies.product)', () => {
         assert.equal(lang.wishlist, 'Save to wish list');
         assert.equal(lang.related, 'Related patterns');
         assert.deepEqual([lang.about, lang.shipping, lang.hooks], ['About this fly', 'Shipping and delivery', 'Hooks and tying']);
+    });
+
+    it('give "Hooks and tying" the reference\'s paragraph, and a second one that is new wording (story 15; a DRAFT for Shaun, ticket 39\'s close-out)', async () => {
+        assert.equal(lang.hooks_body, 'Tied by hand on a branded hook from makers such as Mustad, Daiichi, Dai-Riki or Kamasan.');
+        assert.equal(lang.hooks_chart, 'A bigger hook number means a smaller hook.');
+        assert.equal(lang.hooks_chart_link, 'See the hook size chart');
+        const hooks = textOf(section(await productPage(), 'hooks'));
+        assert.match(hooks, /Tied by hand on a branded hook/);
+        assert.match(hooks, /A bigger hook number means a smaller hook\. See the hook size chart/);
     });
 });

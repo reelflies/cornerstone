@@ -1,11 +1,15 @@
 {
-    "description": "The product page (ticket 39; spec module 15; stories 36, 44 to 49) as the reference draws it, for product-page-screens.spec.mjs: the reference's Adams Parachute Dry Fly (plan/design/src/store-data.json) with its two photos and seven sizes, and its four related patterns, each with its own photo, on the real product page with the theme's header and footer. It carries a weight, which the page must not show (show_product_weight is off). Channel 1's product pins hold their live related grids out of their shots (pages.mjs), so this is where the grid and the details sections are shot. The widget itself is empty.",
+    "description": "The product page (ticket 39; spec module 15; stories 36, 44 to 49) as the reference draws it, for product-page-screens.spec.mjs: the reference's Adams Parachute Dry Fly (plan/design/src/store-data.json) with its two photos and seven sizes, and its four related patterns, each with its own photo, on the real product page with the theme's header and footer. It carries a weight, which the page must not show (show_product_weight is off). Channel 1's product pins hold their live related grids out of their shots (pages.mjs), so this is where the grid and the details sections are shot. Ticket 40 gives it three reviews, as SEO-5's ruling asks of the reference's product (the live one has three): samples written for this fixture, never a shopper's, so the star summary and the reviews section are shot from fixed data too (the live pin holds its review list out of its shots). The widget itself is empty.",
     "page": "pages/product",
     "region": "product_below_content",
     "chrome": true,
     "configuration": {},
     "page_context": {
         "page_type": "product",
+        "currency_selector": {
+            "active_currency_code": "CAD",
+            "default_currency_code": "CAD"
+        },
         "breadcrumbs": [
             {
                 "url": "https://reelflies.ca/",
@@ -179,10 +183,35 @@
                 }
             ],
             "reviews": {
-                "total": 0
+                "total": 3,
+                "start": 1,
+                "end": 3,
+                "list": [
+                    {
+                        "name": "Sample reviewer A",
+                        "rating": "5",
+                        "title": "Sample review: sits up on the water",
+                        "text": "A sample review written for this fixture, long enough to run to two lines on a phone.\nIts line break stays.",
+                        "date": "3rd Jun 2026"
+                    },
+                    {
+                        "name": "Sample reviewer B",
+                        "rating": "4",
+                        "title": "Sample review: four stars",
+                        "text": "A second sample review, a single line.",
+                        "date": "14th May 2026"
+                    },
+                    {
+                        "name": "",
+                        "rating": "5",
+                        "title": "Sample review with no name",
+                        "text": "A third sample, posted without a name, which stock calls Unknown.",
+                        "date": "2nd Apr 2025"
+                    }
+                ]
             },
-            "num_reviews": 0,
-            "rating": 0,
+            "num_reviews": 3,
+            "rating": 5,
             "shipping_messages": [],
             "detail_messages": "",
             "customizations": [],

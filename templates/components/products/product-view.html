@@ -138,6 +138,7 @@
                     mode="full"
                 }}
             {{/if}}
+            {{#unless (getVar 'rf_product_page')}}{{!-- ReelFlies hook (ticket 40; CUSTOMIZATIONS.md): on the product page the star summary sits under the price (product-price-extras.html) and "Write a review" with the reviews (product-reviews.html); Quick view keeps stock's rating row --}}
             <div class="productView-rating">
                 {{#if settings.show_product_rating}}
                     {{> components/products/ratings rating=product.rating}}
@@ -162,6 +163,7 @@
                     {{/unless}}
                 {{/if}}
             </div>
+            {{/unless}}{{!-- ReelFlies hook (ticket 40): the end of stock's rating row --}}
             {{product.detail_messages}}
             <dl class="productView-info">
                 <dt class="productView-info-name sku-label"{{#unless product.sku}} style="display: none;"{{/unless}}>{{lang 'products.sku'}}</dt>
