@@ -10,9 +10,12 @@
 // - The one allowed repeat is ticket 49's crop of the Dry Flies banner, a section or more away
 //   from the Dry card: the element that repeats a photo on purpose carries
 //   data-rf-photo-repeat, and isn't counted.
-// - Ticket 29's pane banners (data-rf-menu-banner inside a data-rf-menu-pane) aren't counted
-//   either. Each is its pane's category image, which is the card's banner for a Fly Type, but
-//   they are the menu's: lazy, in closed panes, desktop only. A marked <img> anywhere else counts.
+// - Ticket 29's pane banners aren't counted either: each <img> marked data-rf-menu-banner inside a
+//   div[data-rf-menu-pane], with its <picture> if it has one (from the <picture>'s start tag
+//   through that <img>, when it is the <picture>'s first). Each is its pane's category image,
+//   which is the card's banner for a Fly Type, but they are the menu's: lazy, in closed panes,
+//   desktop only. A marked <img> anywhere else counts, and so does anything after a banner in its
+//   pane, a second <img> in its <picture> or the rest of a <picture> never closed included.
 //
 // Like home-hero, it judges the page as served, whatever widgets it has.
 
@@ -40,15 +43,21 @@ const urlsIn = attrs => [attrs.src, attrs['data-src'], ...[attrs.srcset, attrs['
     .filter(url => url && !url.startsWith('data:'));
 
 // The markup with each menu pane's banners taken out, so only the menu's own copies go: a marked
-// <img>, with the <picture> round it and its <source> elements when it has one. Replacements are
-// functions, so a "$&" in a pane's text is text, not a replacement pattern.
+// <img>, and when it is the first <img> of a <picture>, everything from the <picture>'s start tag
+// through it (its <source> elements). Nothing after the banner goes with it: a second <img> in the
+// <picture>, or the rest of the pane when the <picture> is never closed, is still read.
+// Replacements are functions, so a "$&" in a pane's text is text, not a replacement pattern.
 const isBanner = tag => MENU_BANNER_ATTRIBUTE in tag.attrs;
 function withoutPaneBanners(html) {
     let markup = markupOnly(html);
     for (const pane of elementsHtml(markup, 'div', attrs => MENU_PANE_ATTRIBUTE in attrs)) {
         let kept = pane;
         for (const picture of elementsHtml(pane, 'picture')) {
-            if (findTags(picture, 'img').some(isBanner)) kept = kept.replace(picture, () => '');
+            const [first] = findTags(picture, 'img');
+            if (first && isBanner(first)) {
+                const throughBanner = picture.slice(0, picture.indexOf(first.raw) + first.raw.length);
+                kept = kept.replace(throughBanner, () => '');
+            }
         }
         for (const tag of findTags(kept, 'img').filter(isBanner)) kept = kept.replace(tag.raw, () => '');
         markup = markup.replace(pane, () => kept);
@@ -97,7 +106,7 @@ export function repeatedPhotos(html) {
 export default {
     id: 'home-photo-once',
     ticket: 47,
-    description: `no photo appears twice on the home page (a <picture> and its <img> are one photo; an element with ${REPEAT_ATTRIBUTE} is ticket 49's allowed crop; ticket 29's ${MENU_BANNER_ATTRIBUTE} banners inside a ${MENU_PANE_ATTRIBUTE} are the menu's)`,
+    description: `no photo appears twice on the home page (a <picture> and its <img> are one photo; an element with ${REPEAT_ATTRIBUTE} is ticket 49's allowed crop; ticket 29's <img ${MENU_BANNER_ATTRIBUTE}> banners inside a div[${MENU_PANE_ATTRIBUTE}], with their <picture> if they have one, are the menu's)`,
     pages: ['home'],
     check(page) {
         return repeatedPhotos(page.html);

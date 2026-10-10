@@ -1,0 +1,28 @@
+{{!--
+    The home page's Species section, "Shop by fish" (ticket 49; spec module 7, R5, CD-4, CD-6,
+    CD-7, UX-15, HOME-4, SEO-8; story 13), placed in home_below_top_products after the tiles and
+    ticket 48's bands. Synced to each channel by scripts/widgets-sync.mjs; styled by the theme's
+    ReelFlies layer (assets/scss/reelflies/_home-links.scss), so nothing here is inline CSS.
+
+    - The section is named by its one h2, with a link to the Species hub beside it that types no
+      number (HOME-4).
+    - Three equal groups, side by side from 801px and stacked on phones (the spec's equal groups
+      in place of CD-7's bento). Each is widgets/_shared/species-group.html, pasted in by the sync:
+      its photo as one link to its largest Species page, then its Species pages as pills.
+    - Every word, link and photo path is a widget field (schema.json; each channel's values are in
+      channels/<channel>.json), so channel 1's copy can carry tree-1 paths (ticket 53).
+    - Each pill's count is the storefront query's product count for its link (HOME-4):
+      _.data.site.group<n>_pill<m>, each a route's node. The widget has no query yet, so no pill
+      shows a count until tree 4 exists on the channel (docs/widgets.md, "The Species section").
+--}}
+<section class="rf-species" aria-labelledby="rf-species-{{_.id}}">
+    <div class="rf-species__head">
+        <h2 class="rf-species__title" id="rf-species-{{_.id}}">{{heading}}</h2>
+        <a class="rf-species__all" href="{{all_url}}">{{all_label}}</a>
+    </div>
+    <div class="rf-species__groups">
+        {{> _shared/species-group name=group1_name url=group1_url cta=group1_cta photo=group1_photo focus=group1_focus repeat=group1_repeat base=image_base photo_width=photo_width photo_height=photo_height pill1_name=group1_pill1_name pill1_url=group1_pill1_url pill1_count=_.data.site.group1_pill1.node.products.collectionInfo.totalItems pill2_name=group1_pill2_name pill2_url=group1_pill2_url pill2_count=_.data.site.group1_pill2.node.products.collectionInfo.totalItems pill3_name=group1_pill3_name pill3_url=group1_pill3_url pill3_count=_.data.site.group1_pill3.node.products.collectionInfo.totalItems pill4_name=group1_pill4_name pill4_url=group1_pill4_url pill4_count=_.data.site.group1_pill4.node.products.collectionInfo.totalItems}}
+        {{> _shared/species-group name=group2_name url=group2_url cta=group2_cta photo=group2_photo focus=group2_focus repeat=group2_repeat base=image_base photo_width=photo_width photo_height=photo_height pill1_name=group2_pill1_name pill1_url=group2_pill1_url pill1_count=_.data.site.group2_pill1.node.products.collectionInfo.totalItems pill2_name=group2_pill2_name pill2_url=group2_pill2_url pill2_count=_.data.site.group2_pill2.node.products.collectionInfo.totalItems pill3_name=group2_pill3_name pill3_url=group2_pill3_url pill3_count=_.data.site.group2_pill3.node.products.collectionInfo.totalItems pill4_name=group2_pill4_name pill4_url=group2_pill4_url pill4_count=_.data.site.group2_pill4.node.products.collectionInfo.totalItems}}
+        {{> _shared/species-group name=group3_name url=group3_url cta=group3_cta photo=group3_photo focus=group3_focus repeat=group3_repeat base=image_base photo_width=photo_width photo_height=photo_height pill1_name=group3_pill1_name pill1_url=group3_pill1_url pill1_count=_.data.site.group3_pill1.node.products.collectionInfo.totalItems pill2_name=group3_pill2_name pill2_url=group3_pill2_url pill2_count=_.data.site.group3_pill2.node.products.collectionInfo.totalItems pill3_name=group3_pill3_name pill3_url=group3_pill3_url pill3_count=_.data.site.group3_pill3.node.products.collectionInfo.totalItems pill4_name=group3_pill4_name pill4_url=group3_pill4_url pill4_count=_.data.site.group3_pill4.node.products.collectionInfo.totalItems}}
+    </div>
+</section>

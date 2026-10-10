@@ -1,0 +1,147 @@
+[
+    {
+        "type": "tab",
+        "label": "Content",
+        "sections": [
+            {
+                "label": "Section",
+                "settings": [
+                    { "type": "input", "label": "Heading (the section's H2)", "id": "heading", "default": "Shop by fish" },
+                    { "type": "input", "label": "Link to the Species hub: text (no typed number)", "id": "all_label", "default": "All species" },
+                    { "type": "input", "label": "Link to the Species hub (a path on this storefront)", "id": "all_url", "default": "/species/" }
+                ]
+            },
+            {
+                "label": "Photos: shared",
+                "settings": [
+                    { "type": "input", "label": "Image CDN base, up to /images/stencil", "id": "image_base", "default": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil" },
+                    { "type": "input", "label": "Photo width in px (the files' own; the stone banners are 1600x700)", "id": "photo_width", "default": "1600" },
+                    { "type": "input", "label": "Photo height in px (the files' own)", "id": "photo_height", "default": "700" }
+                ]
+            },
+            {
+                "label": "Group 1",
+                "settings": [
+                    { "type": "input", "label": "Group name (its H3, over the photo)", "id": "group1_name", "default": "Trout, steelhead & salmon" },
+                    { "type": "input", "label": "Photo link: the group's largest Species page (a path on this storefront)", "id": "group1_url", "default": "/trout-flies/" },
+                    { "type": "input", "label": "Call to action text, over the photo", "id": "group1_cta", "default": "Shop trout flies" },
+                    { "type": "input", "label": "Photo path after the size segment (16:10 on desktop, 16:9 on phones)", "id": "group1_photo", "default": "i/dry-flies__36885.original.jpg" },
+                    { "type": "select", "label": "Photo crop: where the photo's focus sits, from the left", "id": "group1_focus", "default": "0", "typeMeta": { "selectOptions": [
+                        { "label": "0% (the left edge)", "value": "0" },
+                        { "label": "5%", "value": "5" },
+                        { "label": "10%", "value": "10" },
+                        { "label": "15%", "value": "15" },
+                        { "label": "20%", "value": "20" },
+                        { "label": "25%", "value": "25" },
+                        { "label": "30%", "value": "30" },
+                        { "label": "35%", "value": "35" },
+                        { "label": "40%", "value": "40" },
+                        { "label": "45%", "value": "45" },
+                        { "label": "50% (the centre)", "value": "50" },
+                        { "label": "55%", "value": "55" },
+                        { "label": "60%", "value": "60" },
+                        { "label": "65%", "value": "65" },
+                        { "label": "70%", "value": "70" },
+                        { "label": "75%", "value": "75" },
+                        { "label": "80%", "value": "80" },
+                        { "label": "85%", "value": "85" },
+                        { "label": "90%", "value": "90" },
+                        { "label": "95%", "value": "95" },
+                        { "label": "100% (the right edge)", "value": "100" }
+                    ] } },
+                    { "type": "boolean", "label": "This photo is shown elsewhere on the page (the Dry banner): crop it to its left third and mark it as the page's one allowed repeat (CD-4)", "id": "group1_repeat", "default": true },
+                    { "type": "input", "label": "Species 1: name (empty: no pill)", "id": "group1_pill1_name", "default": "Trout Flies" },
+                    { "type": "input", "label": "Species 1: link (a path on this storefront)", "id": "group1_pill1_url", "default": "/trout-flies/" },
+                    { "type": "input", "label": "Species 2: name (empty: no pill)", "id": "group1_pill2_name", "default": "Steelhead Flies" },
+                    { "type": "input", "label": "Species 2: link (a path on this storefront)", "id": "group1_pill2_url", "default": "/steelhead-flies/" },
+                    { "type": "input", "label": "Species 3: name (empty: no pill)", "id": "group1_pill3_name", "default": "Atlantic Salmon Flies" },
+                    { "type": "input", "label": "Species 3: link (a path on this storefront)", "id": "group1_pill3_url", "default": "/atlantic-salmon-flies/" },
+                    { "type": "input", "label": "Species 4: name (empty: no pill)", "id": "group1_pill4_name", "default": "" },
+                    { "type": "input", "label": "Species 4: link (a path on this storefront)", "id": "group1_pill4_url", "default": "" }
+                ]
+            },
+            {
+                "label": "Group 2",
+                "settings": [
+                    { "type": "input", "label": "Group name (its H3, over the photo)", "id": "group2_name", "default": "Bass, pike & panfish" },
+                    { "type": "input", "label": "Photo link: the group's largest Species page (a path on this storefront)", "id": "group2_url", "default": "/bass-flies/" },
+                    { "type": "input", "label": "Call to action text, over the photo", "id": "group2_cta", "default": "Shop bass flies" },
+                    { "type": "input", "label": "Photo path after the size segment (16:10 on desktop, 16:9 on phones)", "id": "group2_photo", "default": "y/pike-musky__42262.original.jpg" },
+                    { "type": "select", "label": "Photo crop: where the photo's focus sits, from the left", "id": "group2_focus", "default": "30", "typeMeta": { "selectOptions": [
+                        { "label": "0% (the left edge)", "value": "0" },
+                        { "label": "5%", "value": "5" },
+                        { "label": "10%", "value": "10" },
+                        { "label": "15%", "value": "15" },
+                        { "label": "20%", "value": "20" },
+                        { "label": "25%", "value": "25" },
+                        { "label": "30%", "value": "30" },
+                        { "label": "35%", "value": "35" },
+                        { "label": "40%", "value": "40" },
+                        { "label": "45%", "value": "45" },
+                        { "label": "50% (the centre)", "value": "50" },
+                        { "label": "55%", "value": "55" },
+                        { "label": "60%", "value": "60" },
+                        { "label": "65%", "value": "65" },
+                        { "label": "70%", "value": "70" },
+                        { "label": "75%", "value": "75" },
+                        { "label": "80%", "value": "80" },
+                        { "label": "85%", "value": "85" },
+                        { "label": "90%", "value": "90" },
+                        { "label": "95%", "value": "95" },
+                        { "label": "100% (the right edge)", "value": "100" }
+                    ] } },
+                    { "type": "boolean", "label": "This photo is shown elsewhere on the page (the Dry banner): crop it to its left third and mark it as the page's one allowed repeat (CD-4)", "id": "group2_repeat", "default": false },
+                    { "type": "input", "label": "Species 1: name (empty: no pill)", "id": "group2_pill1_name", "default": "Bass Flies" },
+                    { "type": "input", "label": "Species 1: link (a path on this storefront)", "id": "group2_pill1_url", "default": "/bass-flies/" },
+                    { "type": "input", "label": "Species 2: name (empty: no pill)", "id": "group2_pill2_name", "default": "Pike & Muskie Flies" },
+                    { "type": "input", "label": "Species 2: link (a path on this storefront)", "id": "group2_pill2_url", "default": "/pike-muskie-flies/" },
+                    { "type": "input", "label": "Species 3: name (empty: no pill)", "id": "group2_pill3_name", "default": "Panfish Flies" },
+                    { "type": "input", "label": "Species 3: link (a path on this storefront)", "id": "group2_pill3_url", "default": "/panfish-flies/" },
+                    { "type": "input", "label": "Species 4: name (empty: no pill)", "id": "group2_pill4_name", "default": "Carp Flies" },
+                    { "type": "input", "label": "Species 4: link (a path on this storefront)", "id": "group2_pill4_url", "default": "/carp-flies/" }
+                ]
+            },
+            {
+                "label": "Group 3",
+                "settings": [
+                    { "type": "input", "label": "Group name (its H3, over the photo)", "id": "group3_name", "default": "Saltwater" },
+                    { "type": "input", "label": "Photo link: the group's largest Species page (a path on this storefront)", "id": "group3_url", "default": "/bonefish-flies/" },
+                    { "type": "input", "label": "Call to action text, over the photo", "id": "group3_cta", "default": "Shop bonefish flies" },
+                    { "type": "input", "label": "Photo path after the size segment (16:10 on desktop, 16:9 on phones)", "id": "group3_photo", "default": "v/bonefish__38606.original.jpg" },
+                    { "type": "select", "label": "Photo crop: where the photo's focus sits, from the left", "id": "group3_focus", "default": "20", "typeMeta": { "selectOptions": [
+                        { "label": "0% (the left edge)", "value": "0" },
+                        { "label": "5%", "value": "5" },
+                        { "label": "10%", "value": "10" },
+                        { "label": "15%", "value": "15" },
+                        { "label": "20%", "value": "20" },
+                        { "label": "25%", "value": "25" },
+                        { "label": "30%", "value": "30" },
+                        { "label": "35%", "value": "35" },
+                        { "label": "40%", "value": "40" },
+                        { "label": "45%", "value": "45" },
+                        { "label": "50% (the centre)", "value": "50" },
+                        { "label": "55%", "value": "55" },
+                        { "label": "60%", "value": "60" },
+                        { "label": "65%", "value": "65" },
+                        { "label": "70%", "value": "70" },
+                        { "label": "75%", "value": "75" },
+                        { "label": "80%", "value": "80" },
+                        { "label": "85%", "value": "85" },
+                        { "label": "90%", "value": "90" },
+                        { "label": "95%", "value": "95" },
+                        { "label": "100% (the right edge)", "value": "100" }
+                    ] } },
+                    { "type": "boolean", "label": "This photo is shown elsewhere on the page (the Dry banner): crop it to its left third and mark it as the page's one allowed repeat (CD-4)", "id": "group3_repeat", "default": false },
+                    { "type": "input", "label": "Species 1: name (empty: no pill)", "id": "group3_pill1_name", "default": "Bonefish Flies" },
+                    { "type": "input", "label": "Species 1: link (a path on this storefront)", "id": "group3_pill1_url", "default": "/bonefish-flies/" },
+                    { "type": "input", "label": "Species 2: name (empty: no pill)", "id": "group3_pill2_name", "default": "Permit Flies" },
+                    { "type": "input", "label": "Species 2: link (a path on this storefront)", "id": "group3_pill2_url", "default": "/permit-flies/" },
+                    { "type": "input", "label": "Species 3: name (empty: no pill)", "id": "group3_pill3_name", "default": "Tarpon, Snook & Redfish Flies" },
+                    { "type": "input", "label": "Species 3: link (a path on this storefront)", "id": "group3_pill3_url", "default": "/tarpon-snook-redfish-flies/" },
+                    { "type": "input", "label": "Species 4: name (empty: no pill)", "id": "group3_pill4_name", "default": "Barracuda Flies" },
+                    { "type": "input", "label": "Species 4: link (a path on this storefront)", "id": "group3_pill4_url", "default": "/barracuda-flies/" }
+                ]
+            }
+        ]
+    }
+]

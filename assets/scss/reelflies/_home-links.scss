@@ -1,0 +1,367 @@
+// =============================================================================
+// HOME LINK SECTIONS (ticket 49; spec module 7, R5, CD-4, CD-6, CD-7, CD-9, UX-15, SEO-8)
+// =============================================================================
+//
+// Styles for the lower home sections ticket 49 places in home_below_top_products: the Species
+// section, "Shop by fish" (widgets/shop-by-fish/template.html, its groups
+// widgets/_shared/species-group.html), and the About block (widgets/about/template.html). Widget
+// styles live in the theme, not in the widgets (build pipeline, decision 6), so the 1895766 and
+// channel-1 copies stay identical. Ticket 49's Assortments band and hook band join this file in
+// their own PRs.
+//
+// - Each section's space above it is its own padding, so an unpublished widget (R12) takes all
+//   of its space with it and leaves no gap.
+// - Species: three equal groups from 801px, stacked on phones (the spec's equal groups in place
+//   of CD-7's bento). Each group's photo is one link: 16:10 from 801px and 16:9 on phones, the
+//   group's name and call to action over a neutral scrim (CD-6), then its Species pages as pills.
+// - The photo's crop is a class the widget's focus field picks (rf-species-group__img--x0 to --x100),
+//   never inline CSS. The cold-water group's crop of the Dry banner (--third) shows only its left
+//   third, so none of its flies is one the Dry card shows (CD-4).
+// - About: an even 6/12 and 6/12 split from 801px, the 4:3 photo beside the text; stacked on
+//   phones, photo first (CD-9).
+// - Every photo's box is set by CSS before it loads (the group's shape spacer, the About photo's
+//   aspect-ratio), so nothing moves when it arrives (story 70).
+//
+// -----------------------------------------------------------------------------
+
+$rf-links-text:         #ffffff;
+$rf-links-scrim:        rgb(nth($rf-scrim, 1), nth($rf-scrim, 2), nth($rf-scrim, 3)); // $rf-scrim as a colour (CD-6)
+$rf-links-scrim-strong: 0.8;        // the scrim's opacity behind the group's name and call to action
+$rf-links-fade:         40px;       // its fade to clear, above the text
+$rf-links-gap:          24px;       // between the groups, and under the section's heading row
+$rf-links-pill-height:  40px;       // a Species pill, and the call to action over the photo
+
+
+// The section's heading row: the H2, and the link to the Species hub beside it
+// -----------------------------------------------------------------------------
+
+.rf-species,
+.rf-about {
+    padding-top: var(--rf-section);
+}
+
+.rf-species__head {
+    align-items: baseline;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px $rf-links-gap;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.rf-species__title,
+.rf-about__heading {
+    font-size: var(--rf-fs-h2);
+    letter-spacing: -0.012em;
+    line-height: 1.15;
+    margin: 0;
+    text-transform: none;
+    text-wrap: balance;
+}
+
+.rf-species__all,
+.rf-about__link {
+    color: $rf-ink;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+
+    &:hover {
+        color: $rf-ink;
+        text-decoration-thickness: 2px;
+    }
+}
+
+
+// The three groups
+// -----------------------------------------------------------------------------
+
+.rf-species__groups {
+    display: grid;
+    gap: $rf-links-gap;
+    grid-template-columns: minmax(0, 1fr);
+
+    @include breakpoint("medium") {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+// From 801px each group spans the row's two tracks, the photos' and the pills', as a subgrid, so
+// the three photos stay one height when one group's name wraps to two lines (801px to about
+// 1100px) and grows its photo past 16:10.
+.rf-species-group {
+    @include breakpoint("medium") {
+        display: grid;
+        grid-row: span 2;
+        grid-template-rows: subgrid;
+        row-gap: 0;
+    }
+}
+
+// The group's photo is its shape, and grows only when its text needs more (text-only zoom, a
+// long name on a narrow phone), so no text is ever cut off, as ticket 47's cards. The shape is a
+// spacer in the link's one grid cell, the text block shares that cell from the bottom, and the
+// photo fills whatever the link's height is.
+.rf-species-group__link {
+    background: $rf-forest;
+    border-radius: var(--rf-radius-tile);
+    color: $rf-links-text;
+    display: grid;
+    overflow: hidden;
+    position: relative;
+    text-decoration: none;
+
+    // 16:9 on phones, 16:10 from 801px. Padding is a share of the cell's width, so the box is set
+    // before the photo loads (story 70).
+    &::before {
+        content: "";
+        grid-area: 1 / 1;
+        padding-top: percentage(9 / 16);
+
+        @include breakpoint("medium") {
+            padding-top: percentage(10 / 16);
+        }
+    }
+
+    &:hover {
+        color: $rf-links-text;
+
+        .rf-species-group__cta {
+            background: var(--rf-tile);
+        }
+    }
+}
+
+.rf-species-group__media {
+    display: block;
+    inset: 0;
+    overflow: hidden;
+    position: absolute;
+}
+
+.rf-species-group__img {
+    display: block;
+    height: 100%;
+    max-width: none;
+    object-fit: cover;
+    width: 100%;
+}
+
+// The photo's focus, from the left edge, in steps of 5% (the widget's select field).
+@for $step from 0 through 20 {
+    .rf-species-group__img--x#{$step * 5} {
+        object-position: percentage($step * 0.05) 50%;
+    }
+}
+
+// The cold-water crop: the photo drawn three times as wide as its box, from its left edge, so
+// the box shows the left third of the Dry banner (about 533x333 of its 1600x700 at 16:10, ticket
+// 14's crop spec). A taller box (more text) draws it taller still, from the same edge.
+.rf-species-group__img--third {
+    object-position: 0 50%;
+    width: 300%;
+}
+
+// The scrim sits behind the text block only (CD-6), neutral #1C1D1F at 0.8 behind both lines,
+// fading to clear over the block's top padding, so the photo shows above it, as on ticket 47's
+// cards. home-links-screens.spec.mjs holds both lines to 4.5:1 on their lightest pixel.
+.rf-species-group__copy {
+    align-items: flex-start;
+    align-self: end;
+    background: linear-gradient(to top, rgba($rf-links-scrim, $rf-links-scrim-strong) 0, rgba($rf-links-scrim, $rf-links-scrim-strong) calc(100% - #{$rf-links-fade}), rgba($rf-links-scrim, 0) 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    grid-area: 1 / 1;
+    padding: $rf-links-fade 18px 16px;
+    position: relative;
+}
+
+.rf-species-group__name {
+    color: $rf-links-text;
+    font-family: $header-font-family;
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    margin: 0;
+    text-transform: none;
+    text-wrap: balance;
+}
+
+// The call to action is a span, not a control: the whole photo is the link. It looks like the
+// reference's small white pill.
+.rf-species-group__cta {
+    align-items: center;
+    background: $rf-links-text;
+    border-radius: var(--rf-radius-pill);
+    color: stencilColor("color-textHeading");
+    display: inline-flex;
+    font-family: $header-font-family;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.2;
+    min-height: $rf-links-pill-height;
+    padding: 0 14px;
+    transition: background-color var(--rf-t-fast) ease-out;
+}
+
+
+// The Species pills under each photo
+// -----------------------------------------------------------------------------
+
+.rf-species-pills {
+    align-content: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+}
+
+.rf-species-pills__item {
+    margin: 0;
+    max-width: 100%;
+}
+
+.rf-species-pill {
+    align-items: center;
+    background: var(--rf-tile);
+    border-radius: var(--rf-radius-pill);
+    color: $rf-ink;
+    display: inline-flex;
+    font-size: 15px;
+    font-weight: 500;
+    gap: 8px;
+    line-height: 1.3;
+    min-height: $rf-links-pill-height;
+    padding: 4px 14px;
+    text-decoration: none;
+    transition: background-color var(--rf-t-fast) ease-out;
+
+    &:hover {
+        background: var(--rf-tile-2);
+        color: $rf-ink;
+    }
+}
+
+// The query's product count, once tree 4 gives the widget one (HOME-4).
+.rf-species-pill__count {
+    color: $rf-dun;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 400;
+}
+
+
+// The About block
+// -----------------------------------------------------------------------------
+
+.rf-about {
+    display: grid;
+    gap: $rf-links-gap;
+    grid-template-columns: minmax(0, 1fr);
+
+    @include breakpoint("medium") {
+        align-items: center;
+        gap: clamp(24px, 4vw, 56px);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.rf-about__media {
+    min-width: 0;
+}
+
+.rf-about__img {
+    aspect-ratio: 4 / 3;
+    border-radius: var(--rf-radius-tile);
+    display: block;
+    height: auto;
+    object-fit: cover;
+    width: 100%;
+}
+
+.rf-about__body {
+    min-width: 0;
+}
+
+// The DRAFT line, while Shaun hasn't approved the copy (ticket 14): a small label above the heading.
+.rf-about__draft {
+    background: $rf-bead-soft;
+    border-radius: var(--rf-radius-small);
+    color: $rf-ink;
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin: 0 0 12px;
+    padding: 4px 10px;
+}
+
+.rf-about__text {
+    margin: 16px 0;
+    max-width: 34em;
+}
+
+// Steve B's line, once Shaun approves one.
+.rf-about__quote {
+    border-left: 3px solid $rf-sage;
+    margin: 0 0 16px;
+    max-width: 34em;
+    padding-left: 14px;
+}
+
+.rf-about__quote-text {
+    font-size: 17px;
+    margin: 0;
+
+    p {
+        margin: 0;
+    }
+}
+
+.rf-about__quote-by {
+    color: $rf-dun;
+    font-size: 15px;
+    margin-top: 4px;
+}
+
+.rf-about__facts {
+    display: grid;
+    gap: 14px;
+    list-style: none;
+    margin: 6px 0 0;
+    max-width: 34em;
+    padding: 0;
+}
+
+.rf-about__fact {
+    align-items: flex-start;
+    display: flex;
+    gap: 10px;
+    margin: 0;
+}
+
+.rf-about__icon {
+    color: $rf-sage;
+    flex: none;
+    margin-top: 2px;
+}
+
+.rf-about__tel {
+    color: $rf-ink;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    white-space: nowrap;
+}
+
+.rf-about__more {
+    margin: 16px 0 0;
+}
+
+.rf-about__signoff {
+    color: $rf-dun;
+    margin: 8px 0 0;
+}
