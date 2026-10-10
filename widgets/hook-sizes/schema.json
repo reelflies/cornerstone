@@ -1,0 +1,24 @@
+[
+    {
+        "type": "tab",
+        "label": "Content",
+        "sections": [
+            {
+                "label": "Text",
+                "settings": [
+                    { "type": "input", "label": "Heading (the section's H2)", "id": "heading", "default": "Bigger number, smaller hook." },
+                    { "type": "input", "label": "The paragraph beside it (no price and no count)", "id": "text", "default": "A size 20 midge is tiny and a size 2 streamer is long. Past size 1 the numbers climb again as 1/0, 2/0 and up." },
+                    { "type": "input", "label": "Link text, at the end of the paragraph", "id": "chart_label", "default": "See the full hook size chart" },
+                    { "type": "input", "label": "Link (the hook size chart page, which the hooks link into)", "id": "chart_url", "default": "/fly-hook-size-chart/" }
+                ]
+            },
+            {
+                "label": "Gauge",
+                "settings": [
+                    { "type": "input", "label": "The gauge's short text alternative, for screen readers", "id": "gauge_label", "default": "Hook sizes 2/0 to 20, drawn to relative scale" },
+                    { "type": "input", "label": "The word before each size in its link's name (\"Size\" names a link \"Size 14\")", "id": "gauge_size_label", "default": "Size" }
+                ]
+            }
+        ]
+    }
+]
