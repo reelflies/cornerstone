@@ -24,7 +24,9 @@ category:
       first screen, and the stock numbered pager. No sort bar, Filter or facet sidebar: the hub
       routes by Species. It isn't #product-listing-container, so stock faceted search, which
       category.js starts on every category page, never swaps it for the stock listing. With no
-      products there is no grid and no message.
+      products there is no grid and no message. The card include passes rf_quick_add_card, so
+      quick add's gate (ticket 43) gives these cards "+ Add" as a listing's; it passes no
+      rf_listing, which would make the first three card photos eager.
     - The Page Builder regions under the header and after the grid, as the category page has.
     - The description after its marker, when it has one, at the end, as on the category page.
     - The stock head's self-referencing canonical, no robots meta (refactor 11: the hub is
@@ -66,7 +68,7 @@ category:
         <ul class="productGrid">
             {{#each category.products}}
             <li class="product">
-                {{> components/products/card settings=../settings show_compare=../category.show_compare show_rating=../settings.show_product_rating theme_settings=../theme_settings customer=../customer event="list" position=(add @index 1)}}
+                {{> components/products/card settings=../settings show_compare=../category.show_compare show_rating=../settings.show_product_rating theme_settings=../theme_settings customer=../customer event="list" position=(add @index 1) rf_quick_add_card=true}}
             </li>
             {{/each}}
         </ul>

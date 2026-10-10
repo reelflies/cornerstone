@@ -3,7 +3,7 @@
 // extras slot), the card's Quick view guard (components/reelflies/card.html), the product getById
 // renders for the panel (quick-add-product.html), and the words js-settings.html passes to the
 // script. The cards are channel 1's search results for "streamer" (card/products.json); the
-// products are quick-add/products.json.
+// products are quick-add/products.json; ticket 34's Species hub is its fixture page's data.
 //
 //   node --test scripts/qa/render/partials/quick-add.test.mjs
 
@@ -136,6 +136,54 @@ describe('"+ Add" on a listing card (quick-add-gate.html, quick-add-button.html)
         const [card] = cards(await grid());
         const cardBody = outerHtml(card, 'div', attrs => /(^|\s)card-body(\s|$)/.test(attrs.class || ''));
         assert.ok(findTags(cardBody, 'a').some(tag => 'data-rf-quick-add' in tag.attrs));
+    });
+});
+
+// Ticket 34's Species hub renders ticket 31's card itself, not through the stock grid, so its card
+// include passes quick add's own flag, rf_quick_add_card: rf_listing would also make its first
+// three card photos eager, where the hub's tiles hold the first screen. The hub is the fixture
+// page's tree-4 data (render/pages/species-hub/), whose grid holds the same six cards.
+const HUB = JSON.parse(fs.readFileSync(path.join(HERE, '../pages/species-hub/fixtures/tree-4.json'), 'utf8')).page_context;
+const hub = (on = true) => renderPartial('pages/custom/category/species-hub', {
+    ...HUB, settings: {}, theme_settings: { ...HUB.theme_settings, show_product_quick_view: true, rf_quick_add: on },
+});
+const hubGrid = html => outerHtml(html, 'section', attrs => 'data-rf-hub-products' in attrs);
+const entity = id => card => findTags(card, 'article')[0].attrs['data-entity-id'] === String(id);
+
+describe('"+ Add" on the Species hub\'s grid (ticket 34\'s template passes rf_quick_add_card)', () => {
+    it('shows on the hub\'s cards as on a listing\'s: no stock actions row beside it, no Quick view, and "View" for a card with no options in place of stock\'s Add to Cart', async () => {
+        const html = await hub();
+        const list = cards(hubGrid(html));
+        assert.deepEqual(list.map(card => findTags(card, 'article')[0].attrs['data-entity-id']), CARDS.map(card => String(card.id)), 'the same six cards as the search grid');
+        assert.deepEqual(list.map(card => Boolean(button(card))), [true, false, false, false, false, true]);
+        assert.deepEqual(list.map(card => Boolean(actions(card))), [false, true, true, true, true, false]);
+        assert.equal(quickViews(html).length, 0, 'no Quick view on any card');
+        const row = actions(list.find(entity(5879)));
+        assert.equal(textOf(row).replace(/\s+/g, ' ').trim(), 'View 42 CH Bow River Streamers');
+        assert.ok(!findTags(row, 'a').some(tag => tag.attrs['data-button-type'] === 'add-cart'));
+        assert.deepEqual(quickAddProblems(html), []);
+        assert.deepEqual(unbalancedTags(html), []);
+    });
+
+    it('keeps the stock card on the hub with the switch off: no "+ Add", Quick view and stock\'s Add to Cart back', async () => {
+        const html = await hub(false);
+        const list = cards(hubGrid(html));
+        assert.equal(findTags(html).filter(tag => 'data-rf-quick-add' in tag.attrs).length, 0);
+        assert.equal(quickViews(html).length, list.length);
+        assert.ok(findTags(actions(list.find(entity(5879))), 'a').some(tag => tag.attrs['data-button-type'] === 'add-cart'));
+    });
+
+    it('leaves the hub\'s photos as ticket 34 loads them: every card photo lazy with no fetchpriority, the first tile\'s the page\'s one high-priority image', async () => {
+        const html = await hub();
+        const photos = cards(hubGrid(html)).map(card => findTags(card, 'img')[0]);
+        assert.equal(photos.length, CARDS.length);
+        for (const img of photos) {
+            assert.equal(img.attrs.loading, 'lazy');
+            assert.equal(img.attrs.fetchpriority, undefined);
+        }
+        const high = findTags(html, 'img').filter(img => img.attrs.fetchpriority === 'high');
+        assert.equal(high.length, 1);
+        assert.match(high[0].attrs.class, /rf-hub-tile/, 'the first tile\'s photo');
     });
 });
 

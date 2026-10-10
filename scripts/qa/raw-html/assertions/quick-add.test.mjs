@@ -33,6 +33,24 @@ test('passes a listing with quick add on, and the stock cards with it off', asyn
     assert.deepEqual(quickAdd.check(page(await grid(true, "{{assignVar 'rf_product_page' 1}}"), 'product')), []);
 });
 
+// Ticket 34's Species hub, whose grid renders the card itself with quick add's own flag
+// (rf_quick_add_card), on the fixture page's tree-4 data: the hub pin's page.
+const HUB = JSON.parse(fs.readFileSync(path.join(THEME_DIR, 'scripts/qa/render/pages/species-hub/fixtures/tree-4.json'), 'utf8')).page_context;
+const hub = on => renderPartial('pages/custom/category/species-hub', {
+    ...HUB, settings: {}, theme_settings: { ...HUB.theme_settings, rf_quick_add: on, show_product_quick_view: true },
+});
+
+test('passes the Species hub with "+ Add" on its grid\'s cards, and its stock cards with quick add off (ticket 34\'s pin)', async () => {
+    const on = await hub(true);
+    assert.equal((on.match(/data-rf-quick-add="/g) || []).length, 2, 'the hub\'s two cards with options have "+ Add"');
+    assert.deepEqual(quickAdd.check(page(on, 'species-hub')), []);
+    assert.deepEqual(quickAdd.check(page(await hub(false), 'species-hub')), []);
+    const add = '<a href="https://reelflies.ca/cart.php?action=add&amp;product_id=5879" data-button-type="add-cart" class="button button--small card-figcaption-button">Add to Cart</a>';
+    const view = on.match(/<a href="https:\/\/reelflies\.ca\/42-ch-bow-river-streamers\/"[^>]*class="button button--small card-figcaption-button"[^>]*>[\s\S]*?<\/a>/);
+    assert.ok(view, 'the hub\'s card with no options links to its page');
+    assert.match(problems(on.replace(view[0], add), 'species-hub'), /card 5879 has stock's Add to Cart beside "\+ Add"/);
+});
+
 test('fails "+ Add" beside the stock actions, without its link, or without the pattern\'s name', async () => {
     const good = await grid(true);
     assert.match(problems(good.replace('<div class="rf-qa-wrap"', '<div class="card-figcaption rf-card-actions"></div><div class="rf-qa-wrap"')), /card 4831 has "\+ Add" and the stock actions row too/);

@@ -8,8 +8,10 @@
     "+ Add" shows only when every one of these holds; otherwise the card keeps its stock actions:
     - rf_quick_add is on (Theme Styles, Quick add);
     - the card is in a listing grid: components/products/grid.html passes rf_listing (category,
-      search and brand pages; also an account's recently viewed products), so the home page's
-      stock strips, the cart preview and the wish list never get it;
+      search and brand pages; also an account's recently viewed products), and a listing that
+      renders the card itself passes quick add's own flag, rf_quick_add_card (ticket 34's Species
+      hub, pages/custom/category/species-hub.html, whose photos rf_listing would make eager), so
+      the home page's stock strips, the cart preview and the wish list never get it;
     - it isn't the product page: pages/product.html sets rf_product_page (ticket 38) before its
       related products, which ticket 39 may render through the grid;
     - the store shows cart actions for it (show_cart_action);
@@ -27,7 +29,7 @@
 {{~assignVar 'rf_qa_card' 0~}}
 {{~assignVar 'rf_qa_page_link' 0~}}
 {{~#if theme_settings.rf_quick_add~}}
-{{~#if rf_listing~}}
+{{~#or rf_listing rf_quick_add_card~}}
 {{~#unless (getVar 'rf_product_page')~}}
 {{~#if show_cart_action~}}
 {{~#if has_options~}}
@@ -39,5 +41,5 @@
 {{~/if~}}
 {{~/if~}}
 {{~/unless~}}
-{{~/if~}}
+{{~/or~}}
 {{~/if~}}
