@@ -60,13 +60,14 @@ async function openGrid(page, widgetCase) {
 }
 
 // The switch-on page with the cards' places noted before the cart is read, then cart-marks.js
-// started with the cart.
+// started with the cart. What follows the line is the card's stock actions row, or, on a card
+// with ticket 43's "+ Add" (quick add on, as in ReelFlies CA), its wrapper, which replaces it.
 async function openPage(page) {
     const grid = await openGrid(page, CARDS);
     await expect(grid.locator('[data-rf-cart-card]')).toHaveCount(6);
     const places = () => grid.locator('.card').evaluateAll(cards => cards.map(card => {
         const box = card.getBoundingClientRect();
-        const actions = card.querySelector('.rf-card-actions').getBoundingClientRect();
+        const actions = card.querySelector('.rf-card-actions, [data-rf-qa-wrap]').getBoundingClientRect();
         return [Math.round(box.top), Math.round(box.height), Math.round(actions.top)];
     }));
     const before = await places();
