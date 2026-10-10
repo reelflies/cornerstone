@@ -1,6 +1,6 @@
 // The home page's hook band, as ReelFlies_CA places it (ticket 49; spec modules 7 and 22, R1,
 // CD-12, UX-16, R12; stories 15, 16, 68 and 71): widgets/hook-sizes in home_below_top_products
-// between the Species section and About, rendered from its fixture with every other home widget,
+// between the Assortments band and About, rendered from its fixture with every other home widget,
 // on templates/pages/home.html with the theme's header and footer and this checkout's theme CSS
 // (render/home-page.mjs).
 //
@@ -17,7 +17,9 @@
 //   px per mm (3 from 801px, 2.1 from 375px on phones, 1.7 below 375px)
 // - one H2, in page order between "Shop by fish" and About, with no heading level skipped
 // - unpublishing the widget leaves no gap, at 1280 and 375 (R12)
-// - Tab reaches every link in the band in order, each with ticket 25's focus ring
+// - Tab from the last link before the band (the Assortments band's last shown card, or the
+//   Species section's last pill without it) reaches every link in the band in order, each with
+//   ticket 25's focus ring
 // - no serious or critical axe issue in the band
 //
 // Its name ends in "screens", so `npm run qa:screens` (and so qa:prepush and release.sh) runs it.
@@ -217,8 +219,12 @@ test.describe('the home page\'s hook band (widgets/hook-sizes)', () => {
         const links = page.locator(`${BAND} a`);
         const count = await links.count();
         expect(count, 'the text link and 13 hooks').toBe(14);
-        // Start on the last link before the band, the Species section's last pill.
-        await page.locator('.rf-species a').last().focus();
+        // Start on the last link before the band: the Assortments band's last shown card (sort_order
+        // 50, between the Species section and this band; its hidden spares take no stop), or the
+        // Species section's last pill on a page without that band.
+        const assortments = page.locator('.rf-assortments a:visible');
+        const start = await assortments.count() ? assortments.last() : page.locator('.rf-species a').last();
+        await start.focus();
         for (let index = 0; index < count; index += 1) {
             await page.keyboard.press('Tab'); // eslint-disable-line no-await-in-loop
             const link = links.nth(index);

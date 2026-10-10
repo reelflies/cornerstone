@@ -1207,13 +1207,13 @@ A widget whose layout makes promises a shot can't prove has its own Playwright s
 - each card and tile one link with nothing focusable inside, showing ticket 25's ring from the keyboard
 - no serious or critical axe issues in the widgets
 
-`hook-band-screens.spec.mjs` (ticket 49) checks the hook band (`widgets/hook-sizes`) on the whole home page (`render/home-page.mjs`, as `home-widgets-screens.spec.mjs` above), between the Species section and About:
+`hook-band-screens.spec.mjs` (ticket 49) checks the hook band (`widgets/hook-sizes`) on the whole home page (`render/home-page.mjs`, as `home-widgets-screens.spec.mjs` above), between the Assortments band and About:
 
 - at 1280, the band 260px tall or less (UX-16), on `--rf-tile` with a 20px radius, its H2 left of its paragraph and level with its top (CD-12's `align-items: start`), and the 13 hooks on one line at 3 px/mm; at 801, 850 and 1024 one line or the second row under the first, never a third, every hook still at 3 px/mm and nothing sideways
 - at 375 and 360, two rows, 2/0 to 6 then 8 to 20, every hook link 44px wide or more; at 320 the same two rows with 36px targets (ticket 35's #72 note); each hook at the band's scale for the width (2.1 px/mm from 375, 1.7 below), inside the page's column, the tint out to both window edges (read from the pixels), and `document.scrollingElement.scrollWidth` equal to the viewport's width
 - one `<h2>`, "Bigger number, smaller hook.", between "Shop by fish" and About's, and no heading level skipped on the page
 - unpublishing it (rendering the page without it) leaves no gap: the Species section doesn't move, and About moves up by exactly the band's height
-- Tab from the Species section's last pill reaching the text link and then each hook in order, each with ticket 25's ring
+- Tab from the last link before the band (the Assortments band's last shown card, or the Species section's last pill on a page without it) reaching the text link and then each hook in order, each with ticket 25's ring
 - no serious or critical axe issues in the band
 
 `home-bands-screens.spec.mjs` (ticket 48) checks ticket 48's two product bands on the same home page, with every other widget 1895766 places there (`openHomePage` waits only for the images the page renders: a band's spare cards stay hidden, their lazy photos never loaded):
