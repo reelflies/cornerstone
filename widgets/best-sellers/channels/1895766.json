@@ -1,0 +1,25 @@
+{
+    "channel_id": 1895766,
+    "configuration": {
+        "heading": "Best sellers",
+        "currency_symbol": "$",
+        "price_unit": "/ fly",
+        "pick1": "4877",
+        "pick2": "4507",
+        "pick3": "5835",
+        "pick4": "4754",
+        "pick5": "4675",
+        "pick6": "4368"
+    },
+    "placement": {
+        "template_file": "pages/home",
+        "region": "home_below_top_products",
+        "sort_order": 20,
+        "status": "inactive"
+    },
+    "uuids": {
+        "template": null,
+        "widget": null,
+        "placement": null
+    }
+}

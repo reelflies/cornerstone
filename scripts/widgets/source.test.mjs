@@ -275,6 +275,36 @@ test('every widget has a fixture, and renders from the store\'s copy as from its
     }
 });
 
+// Ticket 48's bands map product-id settings to their query's variables with a hidden graphQl
+// element (docs/widgets.md, "The product bands"). That element is a mapping, not a value: the
+// store's widget_configuration holds the product ids it reads and nothing under its id
+// (BigCommerce's GraphQL widget templates guide), so a channel file sets no value for it.
+test('a hidden graphQl mapping is not a setting the configuration sets: the settings it reads are', () => {
+    const schema = [{
+        type: 'hidden',
+        settings: [{
+            type: 'graphQl',
+            id: 'graphQueries',
+            typeMeta: { mappings: { productId: { reads: 'productId', type: 'Int!' } } },
+        }],
+    }, {
+        type: 'tab',
+        label: 'Content',
+        sections: [{
+            label: 'Product',
+            settings: [{
+                type: 'productId', label: 'Product', id: 'productId', default: '',
+            }],
+        }],
+    }];
+    const { root } = widgetsRoot('rf-x', { schema, template: '<p>{{_.data.site.product.name}}</p>', channel: { configuration: { productId: '77' } } });
+    const widget = readWidget('rf-x', { root });
+    assert.deepEqual(widget.settings, ['productId']);
+    assert.deepEqual(readChannelFile(widget, 1895766).configuration, { productId: '77' });
+    const withValue = widgetsRoot('rf-x', { schema, channel: { configuration: { productId: '77', graphQueries: '' } } });
+    assert.throws(() => readChannelFile(readWidget('rf-x', { root: withValue.root }), 1895766), /configuration sets "graphQueries", which the schema doesn't have/);
+});
+
 test('a schema setting can\'t have the id "_", which the store and the renderer give the widget itself', () => {
     const schema = [{
         type: 'tab',

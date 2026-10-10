@@ -1,0 +1,132 @@
+[
+    {
+        "type": "hidden",
+        "settings": [
+            {
+                "type": "graphQl",
+                "id": "graphQueries",
+                "typeMeta": {
+                    "mappings": {
+                        "pick1": {
+                            "reads": "pick1",
+                            "type": "Int!"
+                        },
+                        "pick2": {
+                            "reads": "pick2",
+                            "type": "Int!"
+                        },
+                        "pick3": {
+                            "reads": "pick3",
+                            "type": "Int!"
+                        },
+                        "pick4": {
+                            "reads": "pick4",
+                            "type": "Int!"
+                        },
+                        "pick5": {
+                            "reads": "pick5",
+                            "type": "Int!"
+                        },
+                        "pick6": {
+                            "reads": "pick6",
+                            "type": "Int!"
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "type": "tab",
+        "label": "Content",
+        "sections": [
+            {
+                "label": "Band",
+                "settings": [
+                    {
+                        "type": "input",
+                        "label": "Heading",
+                        "id": "heading",
+                        "default": "Best sellers"
+                    }
+                ]
+            },
+            {
+                "label": "Prices",
+                "settings": [
+                    {
+                        "type": "input",
+                        "label": "Currency symbol before each price (the price itself comes from the query)",
+                        "id": "currency_symbol",
+                        "default": "$"
+                    },
+                    {
+                        "type": "input",
+                        "label": "Unit after each price (empty for none)",
+                        "id": "price_unit",
+                        "default": "/ fly"
+                    }
+                ]
+            },
+            {
+                "label": "Products (ids only: the query reads each one's name, photo and price)",
+                "settings": [
+                    {
+                        "type": "productId",
+                        "label": "Product 1",
+                        "id": "pick1",
+                        "default": "",
+                        "typeMeta": {
+                            "placeholder": "Search by name or SKU"
+                        }
+                    },
+                    {
+                        "type": "productId",
+                        "label": "Product 2",
+                        "id": "pick2",
+                        "default": "",
+                        "typeMeta": {
+                            "placeholder": "Search by name or SKU"
+                        }
+                    },
+                    {
+                        "type": "productId",
+                        "label": "Product 3",
+                        "id": "pick3",
+                        "default": "",
+                        "typeMeta": {
+                            "placeholder": "Search by name or SKU"
+                        }
+                    },
+                    {
+                        "type": "productId",
+                        "label": "Product 4",
+                        "id": "pick4",
+                        "default": "",
+                        "typeMeta": {
+                            "placeholder": "Search by name or SKU"
+                        }
+                    },
+                    {
+                        "type": "productId",
+                        "label": "Spare 1 (shown when one of the four is sold out in every size)",
+                        "id": "pick5",
+                        "default": "",
+                        "typeMeta": {
+                            "placeholder": "Search by name or SKU"
+                        }
+                    },
+                    {
+                        "type": "productId",
+                        "label": "Spare 2 (shown when two are)",
+                        "id": "pick6",
+                        "default": "",
+                        "typeMeta": {
+                            "placeholder": "Search by name or SKU"
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+]

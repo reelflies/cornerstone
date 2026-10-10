@@ -1,0 +1,121 @@
+{
+    "description": "Best sellers when the second pick (Beadhead Prince Nymph) is sold out in every size and the fourth (Beadhead Pheasant Tail) isn't on the channel: both are skipped, and the two spares move up, so four cards still show in pick order. The storefront query's result is fixture data built from plan/design/src/store-data.json and the product export of 2026-09-07 (names, paths, prices and each product's default photo); probe 13 hasn't run, so no real response is saved yet (docs/widgets.md, \"The product bands\").",
+    "page": "pages/home",
+    "region": "home_below_top_products",
+    "configuration": {
+        "heading": "Best sellers",
+        "currency_symbol": "$",
+        "price_unit": "/ fly",
+        "pick1": "4877",
+        "pick2": "4507",
+        "pick3": "5835",
+        "pick4": "4754",
+        "pick5": "4675",
+        "pick6": "4368"
+    },
+    "data": {
+        "site": {
+            "pick1": {
+                "entityId": 4877,
+                "name": "Adams Parachute Dry Fly",
+                "path": "/adams-parachute-dry-fly/",
+                "inventory": {
+                    "isInStock": true
+                },
+                "prices": {
+                    "price": {
+                        "value": 0.95,
+                        "currencyCode": "CAD"
+                    }
+                },
+                "defaultImage": {
+                    "url160": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/160w/products/4877/7580/adams-parachute-copy__98151.1703361006.jpg?c=2",
+                    "url320": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/320w/products/4877/7580/adams-parachute-copy__98151.1703361006.jpg?c=2",
+                    "url480": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/480w/products/4877/7580/adams-parachute-copy__98151.1703361006.jpg?c=2",
+                    "url640": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/640w/products/4877/7580/adams-parachute-copy__98151.1703361006.jpg?c=2"
+                }
+            },
+            "pick2": {
+                "entityId": 4507,
+                "name": "Beadhead Prince Nymph",
+                "path": "/beadhead-prince-nymph/",
+                "inventory": {
+                    "isInStock": false
+                },
+                "prices": {
+                    "price": {
+                        "value": 0.95,
+                        "currencyCode": "CAD"
+                    }
+                },
+                "defaultImage": {
+                    "url160": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/160w/products/4507/7845/prince-nymph__04025.1764280476.jpg?c=2",
+                    "url320": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/320w/products/4507/7845/prince-nymph__04025.1764280476.jpg?c=2",
+                    "url480": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/480w/products/4507/7845/prince-nymph__04025.1764280476.jpg?c=2",
+                    "url640": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/640w/products/4507/7845/prince-nymph__04025.1764280476.jpg?c=2"
+                }
+            },
+            "pick3": {
+                "entityId": 5835,
+                "name": "Elk Hair Caddis Tan",
+                "path": "/elk-hair-caddis-tan/",
+                "inventory": {
+                    "isInStock": true
+                },
+                "prices": {
+                    "price": {
+                        "value": 0.95,
+                        "currencyCode": "CAD"
+                    }
+                },
+                "defaultImage": {
+                    "url160": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/160w/products/5835/7542/elk-hair-caddis-copy__37499.1700837980.jpg?c=2",
+                    "url320": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/320w/products/5835/7542/elk-hair-caddis-copy__37499.1700837980.jpg?c=2",
+                    "url480": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/480w/products/5835/7542/elk-hair-caddis-copy__37499.1700837980.jpg?c=2",
+                    "url640": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/640w/products/5835/7542/elk-hair-caddis-copy__37499.1700837980.jpg?c=2"
+                }
+            },
+            "pick4": null,
+            "pick5": {
+                "entityId": 4675,
+                "name": "Adams Dry Fly",
+                "path": "/adams-dry-fly/",
+                "inventory": {
+                    "isInStock": true
+                },
+                "prices": {
+                    "price": {
+                        "value": 0.95,
+                        "currencyCode": "CAD"
+                    }
+                },
+                "defaultImage": {
+                    "url160": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/160w/products/4675/7472/adams-copy__79323.1672071791.jpg?c=2",
+                    "url320": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/320w/products/4675/7472/adams-copy__79323.1672071791.jpg?c=2",
+                    "url480": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/480w/products/4675/7472/adams-copy__79323.1672071791.jpg?c=2",
+                    "url640": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/640w/products/4675/7472/adams-copy__79323.1672071791.jpg?c=2"
+                }
+            },
+            "pick6": {
+                "entityId": 4368,
+                "name": "Adams Irresistible",
+                "path": "/adams-irresistible/",
+                "inventory": {
+                    "isInStock": true
+                },
+                "prices": {
+                    "price": {
+                        "value": 0.95,
+                        "currencyCode": "CAD"
+                    }
+                },
+                "defaultImage": {
+                    "url160": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/160w/products/4368/7549/adams-irresistable-copy__51382.1701104217.jpg?c=2",
+                    "url320": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/320w/products/4368/7549/adams-irresistable-copy__51382.1701104217.jpg?c=2",
+                    "url480": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/480w/products/4368/7549/adams-irresistable-copy__51382.1701104217.jpg?c=2",
+                    "url640": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/640w/products/4368/7549/adams-irresistable-copy__51382.1701104217.jpg?c=2"
+                }
+            }
+        }
+    }
+}

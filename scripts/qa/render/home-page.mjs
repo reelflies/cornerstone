@@ -79,8 +79,9 @@ export async function renderHomePage(cases, {
 }
 
 // Opens the home page and waits until it stops moving, every lazy image included (the page is
-// scrolled to its end and back). Returns the problems met on the way: blocked requests and
-// missing files, as openWidget does.
+// scrolled to its end and back). An image the page doesn't render never loads, and isn't waited
+// for: a product band's spare card stays hidden until a pick is sold out (ticket 48). Returns the
+// problems met on the way: blocked requests and missing files, as openWidget does.
 export async function openHomePage(page, cases, { variation = DEFAULT_VARIATION, chrome = true, themeDir = THEME_DIR } = {}) {
     const [html, css] = await Promise.all([renderHomePage(cases, { variation, chrome, themeDir }), compileThemeCss(variation, themeDir)]);
     const filesDirs = [...new Set(cases.map(({ root, widget }) => path.join(root, widget, 'fixtures/files')))];
@@ -107,7 +108,7 @@ export async function openHomePage(page, cases, { variation = DEFAULT_VARIATION,
     await page.evaluate(async () => {
         window.scrollTo(0, document.scrollingElement.scrollHeight);
         await new Promise(resolve => { requestAnimationFrame(() => requestAnimationFrame(resolve)); });
-        const pending = [...document.images].filter(image => !image.complete)
+        const pending = [...document.images].filter(image => !image.complete && image.getClientRects().length)
             .map(image => new Promise(resolve => {
                 image.addEventListener('load', resolve);
                 image.addEventListener('error', resolve);

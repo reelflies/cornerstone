@@ -1,0 +1,144 @@
+{
+    "description": "The Signature band as ReelFlies_CA (1895766) gets it: the reference's copy and its four picks, Black Reel Egg Sucking Leech, ReelCray Orange Crayfish, Tungsten Beadhead Egg Flies and Reel Egg Nuke, every pick in stock, so the two spares (Psycho Caddis, Rocky Mountain Pupa Olive) render hidden. Its configuration is channels/1895766.json's, which signature-band.test.mjs checks. The storefront query's result is fixture data built from plan/design/src/store-data.json and the product export of 2026-09-07 (names, paths, prices and each product's default photo); probe 13 hasn't run, so no real response is saved yet (docs/widgets.md, \"The product bands\").",
+    "page": "pages/home",
+    "region": "home_below_top_products",
+    "configuration": {
+        "eyebrow": "Only at ReelFlies",
+        "heading": "ReelFlies Signature Flies",
+        "story": "Patterns sold under the ReelFlies name, from the Psycho Caddis to tungsten-bead eggs and the ReelCray. You'll also find each one in its fly type.",
+        "button_label": "See all ReelFlies originals",
+        "button_url": "/brands/ReelFlies.html",
+        "currency_symbol": "$",
+        "price_unit": "/ fly",
+        "pick1": "4797",
+        "pick2": "5837",
+        "pick3": "6232",
+        "pick4": "4576",
+        "pick5": "3899",
+        "pick6": "3855"
+    },
+    "data": {
+        "site": {
+            "pick1": {
+                "entityId": 4797,
+                "name": "Black Reel Egg Sucking Leech",
+                "path": "/black-reel-egg-sucking-leech/",
+                "inventory": {
+                    "isInStock": true
+                },
+                "prices": {
+                    "price": {
+                        "value": 1.75,
+                        "currencyCode": "CAD"
+                    }
+                },
+                "defaultImage": {
+                    "url160": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/160w/products/4797/7475/reel-leech-black-copy__64860.1675197585.jpg?c=2",
+                    "url320": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/320w/products/4797/7475/reel-leech-black-copy__64860.1675197585.jpg?c=2",
+                    "url480": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/480w/products/4797/7475/reel-leech-black-copy__64860.1675197585.jpg?c=2",
+                    "url640": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/640w/products/4797/7475/reel-leech-black-copy__64860.1675197585.jpg?c=2"
+                }
+            },
+            "pick2": {
+                "entityId": 5837,
+                "name": "ReelCray Orange Crayfish",
+                "path": "/reelcray-orange-crayfish/",
+                "inventory": {
+                    "isInStock": true
+                },
+                "prices": {
+                    "price": {
+                        "value": 1.95,
+                        "currencyCode": "CAD"
+                    }
+                },
+                "defaultImage": {
+                    "url160": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/160w/products/5837/7810/orange-crayfish__07847.1760976723.jpg?c=2",
+                    "url320": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/320w/products/5837/7810/orange-crayfish__07847.1760976723.jpg?c=2",
+                    "url480": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/480w/products/5837/7810/orange-crayfish__07847.1760976723.jpg?c=2",
+                    "url640": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/640w/products/5837/7810/orange-crayfish__07847.1760976723.jpg?c=2"
+                }
+            },
+            "pick3": {
+                "entityId": 6232,
+                "name": "Tungsten Beadhead Egg Flies",
+                "path": "/tungsten-beadhead-egg-flies/",
+                "inventory": {
+                    "isInStock": true
+                },
+                "prices": {
+                    "price": {
+                        "value": 1.45,
+                        "currencyCode": "CAD"
+                    }
+                },
+                "defaultImage": {
+                    "url160": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/160w/products/6232/7854/tungsten-eggs__76088.1764533844.jpg?c=2",
+                    "url320": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/320w/products/6232/7854/tungsten-eggs__76088.1764533844.jpg?c=2",
+                    "url480": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/480w/products/6232/7854/tungsten-eggs__76088.1764533844.jpg?c=2",
+                    "url640": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/640w/products/6232/7854/tungsten-eggs__76088.1764533844.jpg?c=2"
+                }
+            },
+            "pick4": {
+                "entityId": 4576,
+                "name": "Reel Egg Nuke",
+                "path": "/reel-egg-nuke/",
+                "inventory": {
+                    "isInStock": true
+                },
+                "prices": {
+                    "price": {
+                        "value": 1.95,
+                        "currencyCode": "CAD"
+                    }
+                },
+                "defaultImage": {
+                    "url160": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/160w/products/4576/4761/reel-nuke-egg__37999.1683306033.jpg?c=2",
+                    "url320": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/320w/products/4576/4761/reel-nuke-egg__37999.1683306033.jpg?c=2",
+                    "url480": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/480w/products/4576/4761/reel-nuke-egg__37999.1683306033.jpg?c=2",
+                    "url640": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/640w/products/4576/4761/reel-nuke-egg__37999.1683306033.jpg?c=2"
+                }
+            },
+            "pick5": {
+                "entityId": 3899,
+                "name": "ReelFlies - Psycho Caddis",
+                "path": "/reelflies-psycho-caddis/",
+                "inventory": {
+                    "isInStock": true
+                },
+                "prices": {
+                    "price": {
+                        "value": 1.45,
+                        "currencyCode": "CAD"
+                    }
+                },
+                "defaultImage": {
+                    "url160": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/160w/products/3899/7488/psycho-caddis-black-copy__95239.1687974328.jpg?c=2",
+                    "url320": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/320w/products/3899/7488/psycho-caddis-black-copy__95239.1687974328.jpg?c=2",
+                    "url480": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/480w/products/3899/7488/psycho-caddis-black-copy__95239.1687974328.jpg?c=2",
+                    "url640": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/640w/products/3899/7488/psycho-caddis-black-copy__95239.1687974328.jpg?c=2"
+                }
+            },
+            "pick6": {
+                "entityId": 3855,
+                "name": "ReelFlies - Rocky Mountain Pupa Olive",
+                "path": "/reelflies-rocky-mountain-pupa-olive/",
+                "inventory": {
+                    "isInStock": true
+                },
+                "prices": {
+                    "price": {
+                        "value": 1.95,
+                        "currencyCode": "CAD"
+                    }
+                },
+                "defaultImage": {
+                    "url160": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/160w/products/3855/6588/rocky-mountain-pupa-olive__11714.1685647267.jpg?c=2",
+                    "url320": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/320w/products/3855/6588/rocky-mountain-pupa-olive__11714.1685647267.jpg?c=2",
+                    "url480": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/480w/products/3855/6588/rocky-mountain-pupa-olive__11714.1685647267.jpg?c=2",
+                    "url640": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/640w/products/3855/6588/rocky-mountain-pupa-olive__11714.1685647267.jpg?c=2"
+                }
+            }
+        }
+    }
+}

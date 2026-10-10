@@ -1,0 +1,29 @@
+{
+    "channel_id": 1895766,
+    "configuration": {
+        "eyebrow": "Only at ReelFlies",
+        "heading": "ReelFlies Signature Flies",
+        "story": "Patterns sold under the ReelFlies name, from the Psycho Caddis to tungsten-bead eggs and the ReelCray. You'll also find each one in its fly type.",
+        "button_label": "See all ReelFlies originals",
+        "button_url": "/brands/ReelFlies.html",
+        "currency_symbol": "$",
+        "price_unit": "/ fly",
+        "pick1": "4797",
+        "pick2": "5837",
+        "pick3": "6232",
+        "pick4": "4576",
+        "pick5": "3899",
+        "pick6": "3855"
+    },
+    "placement": {
+        "template_file": "pages/home",
+        "region": "home_below_top_products",
+        "sort_order": 30,
+        "status": "inactive"
+    },
+    "uuids": {
+        "template": null,
+        "widget": null,
+        "placement": null
+    }
+}
