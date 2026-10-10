@@ -58,8 +58,21 @@ export const SWITCHES = {
     rf_quick_add: {
         ticket: '43',
         module: 'quick add on the cards',
-        markers: [],
-        chunks: [],
+        // "+ Add" on a listing card (components/reelflies/quick-add-button.html), and quick-add.js,
+        // which page-modules.js loads on the listing templates only with the switch on.
+        markers: ['data-rf-quick-add'],
+        chunks: ['rf-quick-add'],
+        // With it off, the stock card's Quick view button is back on the listing cards (the
+        // Quick view guard in components/reelflies/card.html; show_product_quick_view is on).
+        // The brand listing (ticket 36) and the Species hub (ticket 34) are checked once their pin
+        // lists cards: 1895766's brand pin has none until refactor 14, so a page with no card
+        // passes there.
+        stock: {
+            category: ['.productGrid .card .quickview'],
+            search: ['.productGrid .card .quickview'],
+            brand: ['.productGrid .card .quickview, html:not(:has(.productGrid .card))'],
+            'species-hub': ['.productGrid .card .quickview, html:not(:has(.productGrid .card))'],
+        },
     },
 
     rf_region_prompt: {

@@ -242,8 +242,9 @@ export const UI_STATES = {
         },
     },
 
-    // sheet-open: the quick-add sheet on a phone and its popover on desktop, on the cards of a
-    // stable listing pin (ticket 43, which adds "quick-add" to <html data-rf-open>).
+    // Quick add's sheet and popover (ticket 43) have no state here: channel 1's listing pins hold
+    // their live grids out of the shots (pages.mjs's `hold`), and channel 1's variation has quick
+    // add off. Their looks, keyboard and axe are quick-add-screens.spec.mjs's, on a fixture page.
 };
 
 // The states a pinned page is shot in, as [name, state] pairs, by its whole key.

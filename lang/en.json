@@ -1185,7 +1185,14 @@
         },
 
         "quick_add": {
-            "_slot": ""
+            "_slot": "",
+            "add": "Add",
+            "close": "Close",
+            "load_failed": "We couldn't load the sizes.",
+            "product_page": "Go to the product page",
+            "cart_empty": "Your cart is empty.",
+            "dialog": "Choose sizes of {name}",
+            "view": "View"
         },
 
         "home": {

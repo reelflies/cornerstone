@@ -39,7 +39,18 @@ const listing = [
 
     // 42 cart state: the card half
 
-    // 43 quick add
+    // 43 quick add: its chunk on every listing while rf_quick_add is on (context.rfQuickAdd),
+    // even with no "+ Add" in the first render, for the cards a facet change or the pager
+    // brings; never with it off. It is imported once load(context) has the switch.
+    () => ({
+        default: {
+            load: context => (context.rfQuickAdd
+                ? import(/* webpackChunkName: "rf-quick-add" */ './quick-add')
+                    .then(module => module.default.load(context))
+                    .catch(reportError) // eslint-disable-line no-use-before-define
+                : null),
+        },
+    }),
 ];
 
 const cart = [

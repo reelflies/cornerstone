@@ -1,0 +1,7 @@
+{
+    "description": "Quick add switched on where its variation has it off (ReelFlies CA channel 1, ticket 53): \"+ Add\" on the listing cards, with no Quick view, and quick-add.js loaded on listings (ticket 43; ticket 54's switch matrix on channel 1)",
+    "ticket": "43",
+    "settings": {
+        "rf_quick_add": true
+    }
+}

@@ -2,6 +2,9 @@ import pageModules, {
     composite, customClassesFor, TEMPLATES,
 } from '../../../theme/reelflies/page-modules';
 
+// Quick add's chunk (ticket 43), as its slot imports it: only whether it is started, and with what.
+jest.mock('../../../theme/reelflies/quick-add', () => ({ __esModule: true, default: { load: jest.fn() } }));
+
 // A module as a dynamic import resolves: its default export has load(context), as the stock
 // page classes do.
 const moduleNamed = (name, calls) => ({
@@ -140,5 +143,50 @@ describe('the product page\'s add-flow slot (ticket 38)', () => {
         const slot = templates['pages/product'].find(load => String(load).includes('add-flow'));
         await expect(slot()).rejects.toThrow('ChunkLoadError');
         expect(document.getElementById('form-action-addToCart').value).toBe('Add to Cart');
+    });
+});
+
+describe('the listings\' quick-add slot (ticket 43)', () => {
+    const slot = () => TEMPLATES['pages/category'].find(load => String(load).includes('quick-add'));
+    // The mock the slot's import gets: the add-flow test above resets the module registry.
+    let quickAdd;
+
+    beforeEach(async () => {
+        quickAdd = await import('../../../theme/reelflies/quick-add');
+    });
+
+    afterEach(() => {
+        document.body.innerHTML = '';
+    });
+
+    it('starts nothing with rf_quick_add off, so its chunk never loads', async () => {
+        document.body.innerHTML = '<article class="card"><a href="/x/" data-rf-quick-add="1">Add</a></article>';
+        const module = await Promise.resolve().then(slot());
+        await module.default.load({ rfQuickAdd: false });
+        expect(quickAdd.default.load).not.toHaveBeenCalled();
+    });
+
+    it('starts quick add with rf_quick_add on, even on a listing whose first render has no "+ Add", for the cards a facet change or the pager brings', async () => {
+        document.body.innerHTML = '<div id="product-listing-container"><article class="card"><a href="/x/">View</a></article></div>';
+        const context = { rfQuickAdd: true, template: 'pages/search' };
+        const module = await Promise.resolve().then(slot());
+        await module.default.load(context);
+        expect(quickAdd.default.load).toHaveBeenCalledWith(context);
+    });
+
+    it('reports quick add failing to load or to start, and leaves the page as it is', async () => {
+        const report = jest.spyOn(console, 'error').mockImplementation(() => {});
+        const error = new Error('quick add broke');
+        quickAdd.default.load.mockImplementationOnce(() => { throw error; });
+        const module = await Promise.resolve().then(slot());
+        await expect(module.default.load({ rfQuickAdd: true })).resolves.toBeUndefined();
+        expect(report).toHaveBeenCalledWith('ReelFlies page module failed', error);
+        report.mockRestore();
+    });
+
+    it('is in every listing template, and never on product, cart or page', () => {
+        ['pages/search', 'pages/brand', 'pages/custom/category/rf-noindex', 'pages/custom/category/species-hub']
+            .forEach(template => expect(TEMPLATES[template]).toContain(slot()));
+        ['pages/product', 'pages/cart', 'pages/page'].forEach(template => expect(TEMPLATES[template]).not.toContain(slot()));
     });
 });

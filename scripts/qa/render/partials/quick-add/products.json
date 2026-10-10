@@ -1,0 +1,106 @@
+{
+    "description": "Product contexts as getById renders quick-add-product.html with them (the product page's context, its `product`, trimmed to the keys the templates read), for ticket 43's render tests, its Jest spec and its fixture page. Fly Sizes values are channel 1's own for these patterns; the option and value ids are made up. other-option is synthetic as a whole (product 9101, one option that isn't Fly Sizes): the live bulk selection, 5879, has no options.",
+    "urls": { "cart": "/cart.php" },
+    "products": {
+        "sizes": {
+            "id": 4831,
+            "title": "Royal Coachman Streamer",
+            "url": "https://reelflies.ca/royal-coachman-streamer/",
+            "cart_url": "https://reelflies.ca/cart.php",
+            "can_purchase": true,
+            "category": ["Flies/Streamers & Buggers/Streamers & Bucktails", "Flies/Saltwater, Warmwater & Salmon/Atlantic Salmon Flies"],
+            "price": { "without_tax": { "formatted": "$1.25", "value": 1.25, "currency": "CAD" }, "tax_label": "Tax" },
+            "options": [
+                {
+                    "id": 117,
+                    "display_name": "Fly Sizes",
+                    "type": "Configurable_PickList_Set",
+                    "partial": "set-rectangle",
+                    "required": true,
+                    "values": [
+                        { "id": 301, "label": "6", "selected": false, "data": "6" },
+                        { "id": 302, "label": "8", "selected": false, "data": "8" },
+                        { "id": 303, "label": "10", "selected": true, "data": "10" },
+                        { "id": 304, "label": "12", "selected": false, "data": "12" }
+                    ]
+                }
+            ]
+        },
+        "one-size": {
+            "id": 6178,
+            "title": "Realistic Flying Hot Butt Hopper - Brown",
+            "url": "https://reelflies.ca/realistic-flying-hot-butt-hopper-brown/",
+            "cart_url": "https://reelflies.ca/cart.php",
+            "can_purchase": true,
+            "category": ["Flies/Realistic Trout Flies", "Flies/Realistic Trout Flies/Realistic Hoppers"],
+            "price": { "without_tax": { "formatted": "$3.50", "value": 3.5, "currency": "CAD" }, "tax_label": "Tax" },
+            "options": [
+                {
+                    "id": 118,
+                    "display_name": "Fly Sizes",
+                    "type": "Configurable_PickList_Set",
+                    "partial": "set-rectangle",
+                    "required": true,
+                    "values": [
+                        { "id": 401, "label": "10", "selected": false, "data": "10" }
+                    ]
+                }
+            ]
+        },
+        "two-options": {
+            "id": 5663,
+            "title": "Fat Albert",
+            "url": "https://reelflies.ca/fat-albert/",
+            "cart_url": "https://reelflies.ca/cart.php",
+            "can_purchase": true,
+            "category": ["Flies/Dry Flies/Terrestrials"],
+            "price": { "without_tax": { "formatted": "$2.25", "value": 2.25, "currency": "CAD" }, "tax_label": "Tax" },
+            "options": [
+                {
+                    "id": 119,
+                    "display_name": "Colour",
+                    "type": "Configurable_PickList_Set",
+                    "partial": "set-rectangle",
+                    "required": true,
+                    "values": [
+                        { "id": 501, "label": "Olive", "selected": false, "data": "Olive" },
+                        { "id": 502, "label": "Black", "selected": false, "data": "Black" }
+                    ]
+                },
+                {
+                    "id": 120,
+                    "display_name": "Fly Sizes",
+                    "type": "Configurable_PickList_Set",
+                    "partial": "set-rectangle",
+                    "required": true,
+                    "values": [
+                        { "id": 503, "label": "8", "selected": false, "data": "8" },
+                        { "id": 504, "label": "10", "selected": false, "data": "10" }
+                    ]
+                }
+            ]
+        },
+        "other-option": {
+            "id": 9101,
+            "title": "Fixture Streamer Selection",
+            "url": "https://reelflies.ca/fixture-streamer-selection/",
+            "cart_url": "https://reelflies.ca/cart.php",
+            "can_purchase": true,
+            "category": ["Fly Selections & Fly Boxes"],
+            "price": { "without_tax": { "formatted": "$59.99", "value": 59.99, "currency": "CAD" }, "tax_label": "Tax" },
+            "options": [
+                {
+                    "id": 121,
+                    "display_name": "Box",
+                    "type": "Configurable_PickList_Set",
+                    "partial": "set-rectangle",
+                    "required": true,
+                    "values": [
+                        { "id": 601, "label": "With box", "selected": false, "data": "With box" },
+                        { "id": 602, "label": "No box", "selected": false, "data": "No box" }
+                    ]
+                }
+            ]
+        }
+    }
+}

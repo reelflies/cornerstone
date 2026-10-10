@@ -57,11 +57,12 @@ describe('config.json: the channel-1 variation', () => {
         }
     });
 
-    it('holds only what differs on channel 1: tree 1\'s menu ids, and its Gear and Assortment roots (ticket 31)', () => {
+    it('holds only what differs on channel 1: tree 1\'s menu ids, its Gear and Assortment roots (ticket 31), and quick add off (ticket 43; build pipeline section 4)', () => {
         assert.deepEqual(variation.settings, {
             rf_menu_type_ids: TYPE_IDS,
             rf_menu_species_root_id: '',
             rf_price_unit_exclude: 'Fly Gear,Fly Selections & Fly Boxes',
+            rf_quick_add: false,
         });
     });
 
