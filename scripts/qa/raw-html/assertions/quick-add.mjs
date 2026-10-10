@@ -8,7 +8,10 @@
 //   pipeline 6.4's Quick view guard).
 // - No card sold out in every size (ticket 31's sold-out badge) has "+ Add".
 // - No card on a page with "+ Add" has stock's Add to Cart (add_to_cart_url, which adds and opens
-//   the cart): a card with no options links to its product page instead (criterion 4).
+//   the cart): a card with no options links to its product page instead (criterion 4). This runs
+//   only on a page that has a "+ Add": the server HTML can't tell a listing with the switch on
+//   whose cards all lack one (no-options Gear, sold out) from a page with it off, so
+//   render/partials/quick-add.test.mjs holds the gate on such a listing.
 // - Never on a product page, whose related cards keep their stock actions, and never a panel in
 //   the server HTML: quick-add.js builds it on a tap.
 //
@@ -65,7 +68,7 @@ export function quickAddProblems(html, { productPage = false } = {}) {
 export default {
     id: 'quick-add',
     ticket: 43,
-    description: 'every "+ Add" a link to its product in a card with no stock actions row, no card Quick view or stock Add to Cart beside it, none on a sold-out card or a product page, and no panel in the server HTML',
+    description: 'every "+ Add" a link to its product in a card with no stock actions row, no card Quick view or stock Add to Cart on a page with a "+ Add", none on a sold-out card or a product page, and no panel in the server HTML',
     check(page) {
         return quickAddProblems(page.html, { productPage: page.kind === 'product' });
     },
