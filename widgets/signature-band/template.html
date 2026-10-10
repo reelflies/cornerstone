@@ -1,0 +1,39 @@
+{{!--
+    The ReelFlies Signature Flies band on the home page (ticket 48; spec module 7, R5, CD-6, CD-8,
+    HOME-4, SEO-8; stories 17, 68 and 70), placed in home_below_top_products after best sellers
+    (sort_order 30). Synced to each channel by scripts/widgets-sync.mjs; styled by the theme's
+    ReelFlies layer (assets/scss/reelflies/_home-bands.scss), so nothing here is inline CSS.
+
+    - Full-bleed on the forest ground (#2F382F, CD-6). From 1261px the copy takes the left 4/12
+      and four product cards on white plates the right 8/12; below that the copy sits above the
+      cards, four across from 801px and a 2x2 grid on phones, never a sideways scroller (CD-8).
+    - The copy is widget fields: the eyebrow, the H2, the owner's two lines of story and the
+      button's label and link, a real <a> to the ReelFlies brand listing (ticket 36), never a
+      Signature category, which tree 4 doesn't have. No field holds a number (HOME-4).
+    - The products are picked ids (pick1 to pick6) of patterns with the ReelFlies brand, in
+      order, never names or prices: the storefront query (query.graphql) reads each one's name,
+      photo, price and stock, so prices stay live (HOME-4).
+    - Each card is widgets/_shared/product-card.html, pasted in by the sync. A pick that is sold
+      out in every size, or missing from the channel, renders nothing; the band shows the first
+      four cards it gets, so pick5 and pick6 are spares that move up.
+    - With no card at all (no products on the channel yet, or no query result) the band hides
+      itself, copy included.
+--}}
+<section class="rf-home-band rf-signature rf-on-dark" aria-labelledby="rf-signature-{{_.id}}" data-rf-band="signature">
+    <div class="rf-signature__inner">
+        <div class="rf-signature__copy">
+            <p class="rf-signature__eyebrow">{{eyebrow}}</p>
+            <h2 class="rf-home-band__heading rf-signature__heading" id="rf-signature-{{_.id}}">{{heading}}</h2>
+            <p class="rf-signature__story">{{story}}</p>
+            <a class="rf-signature__button" href="{{button_url}}">{{button_label}}</a>
+        </div>
+        <ul class="rf-product-cards rf-product-cards--plates">
+            {{> _shared/product-card product=_.data.site.pick1 currency=currency_symbol unit=price_unit sizes="(min-width: 1261px) 142px, (min-width: 1136px) 242px, (min-width: 801px) calc(25vw - 43px), calc(50vw - 51px)" ~}}
+            {{> _shared/product-card product=_.data.site.pick2 currency=currency_symbol unit=price_unit sizes="(min-width: 1261px) 142px, (min-width: 1136px) 242px, (min-width: 801px) calc(25vw - 43px), calc(50vw - 51px)" ~}}
+            {{> _shared/product-card product=_.data.site.pick3 currency=currency_symbol unit=price_unit sizes="(min-width: 1261px) 142px, (min-width: 1136px) 242px, (min-width: 801px) calc(25vw - 43px), calc(50vw - 51px)" ~}}
+            {{> _shared/product-card product=_.data.site.pick4 currency=currency_symbol unit=price_unit sizes="(min-width: 1261px) 142px, (min-width: 1136px) 242px, (min-width: 801px) calc(25vw - 43px), calc(50vw - 51px)" ~}}
+            {{> _shared/product-card product=_.data.site.pick5 currency=currency_symbol unit=price_unit sizes="(min-width: 1261px) 142px, (min-width: 1136px) 242px, (min-width: 801px) calc(25vw - 43px), calc(50vw - 51px)" ~}}
+            {{> _shared/product-card product=_.data.site.pick6 currency=currency_symbol unit=price_unit sizes="(min-width: 1261px) 142px, (min-width: 1136px) 242px, (min-width: 801px) calc(25vw - 43px), calc(50vw - 51px)" ~}}
+        </ul>
+    </div>
+</section>

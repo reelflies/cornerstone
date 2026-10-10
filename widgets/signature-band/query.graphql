@@ -1,0 +1,24 @@
+query HomeSignatureBand($pick1: Int = 0, $pick2: Int = 0, $pick3: Int = 0, $pick4: Int = 0, $pick5: Int = 0, $pick6: Int = 0) {
+  site {
+    pick1: product(entityId: $pick1) { ...RfCardProduct }
+    pick2: product(entityId: $pick2) { ...RfCardProduct }
+    pick3: product(entityId: $pick3) { ...RfCardProduct }
+    pick4: product(entityId: $pick4) { ...RfCardProduct }
+    pick5: product(entityId: $pick5) { ...RfCardProduct }
+    pick6: product(entityId: $pick6) { ...RfCardProduct }
+  }
+}
+
+fragment RfCardProduct on Product {
+  entityId
+  name
+  path
+  inventory { isInStock }
+  prices { price { value currencyCode } }
+  defaultImage {
+    url160: url(width: 160)
+    url320: url(width: 320)
+    url480: url(width: 480)
+    url640: url(width: 640)
+  }
+}

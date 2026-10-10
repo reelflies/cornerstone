@@ -55,8 +55,10 @@ const boxes = (page, selector) => page.locator(selector).evaluateAll(elements =>
 // currentSrc), and whether it repeats a photo on purpose: data-rf-photo-repeat on the <img> or on
 // a <source> of its <picture>, where home-photo-once reads it (ticket 49's crop of the Dry banner).
 // A pane's banner is its category's image, the card's banner for a Fly Type, and the menu's, as
-// home-photo-once judges it; a marked banner outside a pane counts.
-const photosOnPage = page => page.locator(`img:not(div[${MENU_PANE_ATTRIBUTE}] [${MENU_BANNER_ATTRIBUTE}])`).evaluateAll((elements, attribute) => elements.map(element => {
+// home-photo-once judges it; a marked banner outside a pane counts. An image the page doesn't
+// render isn't a photo on it: a product band's spare card stays hidden, and its lazy photo
+// unloaded, until a pick is sold out (ticket 48).
+const photosOnPage = page => page.locator(`img:not(div[${MENU_PANE_ATTRIBUTE}] [${MENU_BANNER_ATTRIBUTE}])`).evaluateAll((elements, attribute) => elements.filter(element => element.getClientRects().length).map(element => {
     const sources = element.parentElement && element.parentElement.tagName === 'PICTURE' ? [...element.parentElement.querySelectorAll('source')] : [];
     return {
         src: element.currentSrc,

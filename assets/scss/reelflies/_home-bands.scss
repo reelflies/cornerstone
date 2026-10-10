@@ -1,0 +1,260 @@
+// =============================================================================
+// HOME PRODUCT BANDS (ticket 48; spec module 7, R5, CD-6, CD-8, HOME-4, SEO-8; stories 12, 17, 70)
+// =============================================================================
+//
+// Styles for the home page's two product bands, both in home_below_top_products after ticket
+// 47's tiles: best sellers (widgets/best-sellers/template.html) and the ReelFlies Signature
+// Flies band (widgets/signature-band/template.html), and for the product card they share
+// (widgets/_shared/product-card.html), which ticket 49's Assortments band reuses. Widget styles
+// live in the theme, not in the widgets (build pipeline, decision 6), so every channel's copy
+// looks the same. From the reference's .sec, .card, .grid and .sig rules
+// (plan/design/src/reference.src.html:130-131, :254-297, :613-623, :874-875).
+//
+// - The card looks like ticket 31's listing card (_card.scss): the photo on white in a 3:2 box
+//   with no frame (the photos carry the ReelFlies logo bottom-left, IMG-1), the name in two
+//   lines at most, the price and its unit on one baseline in tabular figures. It is one link,
+//   with no "+ Add".
+// - Each band shows its first four cards: one row of four from 801px and a 2x2 grid on phones,
+//   never a sideways scroller (CD-8). The widget renders every pick that is in stock, so a card
+//   after the fourth is a spare that moves up when a pick is sold out in every size: it stays
+//   hidden, and its lazy photo never loads.
+// - A band with no card at all hides itself, its heading and copy included: the channel has
+//   none of the picks yet (ReelFlies_CA until refactor 14), or the query answered nothing.
+// - The Signature band is full-bleed on the forest ground (CD-6) although its region sits
+//   inside the page's .container: the ground is painted out to the viewport's edges by a
+//   border-image, which draws outside the box without widening the page, so nothing scrolls
+//   sideways. Its cards sit on white 12px plates; from 1261px the copy takes the left 4/12 and
+//   the cards the right 8/12, and below that the copy sits above them. The section carries
+//   rf-on-dark, so its links take ticket 25's gold ring (_foundation.scss).
+// - Every photo's box is set by CSS before it loads (aspect-ratio 3:2), so nothing moves when it
+//   arrives (story 70). Removing either widget (an R12 unpublish) takes its spacing with it: each
+//   band carries its own top space, so the page closes up with no gap.
+//
+// -----------------------------------------------------------------------------
+
+$rf-band-gap-row:       clamp(24px, 2.6vw, 36px);   // between the phone grid's rows, as _card.scss's grid
+$rf-band-gap-col:       clamp(14px, 1.8vw, 24px);   // between columns, as _card.scss's grid
+$rf-band-cards:         4;                          // the cards a band shows (CD-8)
+$rf-plate-pad:          8px 10px 14px;              // round a Signature card, on its white plate
+$rf-plate-gap:          14px;                       // between the plates
+$rf-signature-split:    "large";                    // the copy beside the cards from here (1261px)
+
+
+// The bands
+// -----------------------------------------------------------------------------
+
+.rf-home-band {
+    margin: 0;
+
+    // No card to show: hide the band, so the page closes up as if it were unpublished.
+    &:not(:has(.rf-product-cards__item)) {
+        display: none;
+    }
+}
+
+.rf-home-band__heading {
+    color: var(--rf-ink);
+    font-size: var(--rf-fs-h2);
+    font-weight: 600;
+    letter-spacing: -0.012em;
+    line-height: 1.15;
+    margin: 0 0 20px;
+    text-transform: none;
+    text-wrap: balance;
+}
+
+.rf-best-sellers {
+    padding-top: var(--rf-section);
+}
+
+
+// The cards
+// -----------------------------------------------------------------------------
+
+.rf-product-cards {
+    display: grid;
+    gap: $rf-band-gap-row $rf-band-gap-col;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    @include breakpoint("medium") {
+        grid-template-columns: repeat($rf-band-cards, minmax(0, 1fr));
+    }
+}
+
+.rf-product-cards__item {
+    display: flex;
+    margin: 0;
+    min-width: 0;
+
+    // The spares: shown only when a pick before them was skipped.
+    &:nth-child(n + #{$rf-band-cards + 1}) {
+        display: none;
+    }
+}
+
+.rf-product-card {
+    color: var(--rf-ink);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    text-decoration: none;
+    width: 100%;
+
+    &:hover {
+        color: var(--rf-ink);
+
+        .rf-product-card__name {
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+    }
+}
+
+.rf-product-card__media {
+    aspect-ratio: 3 / 2;
+    background: var(--rf-paper);
+    display: block;
+    overflow: hidden;
+}
+
+.rf-product-card__img {
+    display: block;
+    height: 100%;
+    object-fit: contain;
+    width: 100%;
+}
+
+.rf-product-card__name {
+    -webkit-box-orient: vertical;
+    color: var(--rf-ink);
+    display: -webkit-box;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    -webkit-line-clamp: 2;
+    letter-spacing: 0;
+    line-height: 1.35;
+    margin: 12px 0 0;
+    overflow: hidden;
+    text-transform: none;
+
+    @include breakpoint("medium") {
+        font-size: 16px;
+    }
+}
+
+.rf-product-card__price {
+    align-items: baseline;
+    display: flex;
+    flex-wrap: wrap;
+    font-variant-numeric: tabular-nums;
+    gap: 0 4px;
+    margin: 4px 0 0;
+}
+
+.rf-product-card__amount {
+    color: var(--rf-ink);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.rf-product-card__unit {
+    color: var(--rf-dun);
+    font-size: 14px;
+    font-weight: 400;
+}
+
+
+// The Signature band
+// -----------------------------------------------------------------------------
+
+.rf-signature {
+    background: $rf-forest;
+    // The forest ground out to the viewport's edges, painted outside the box: border-image's
+    // outset is ink overflow, so the page doesn't grow wider. Longhands, because Sass reads the
+    // shorthand's slashes as division.
+    border-image-outset: 0 100vw;
+    border-image-slice: 0 fill;
+    border-image-source: linear-gradient($rf-forest, $rf-forest);
+    border-image-width: 0;
+    color: $rf-forest-strong;
+    margin-top: var(--rf-section);
+}
+
+.rf-signature__inner {
+    display: grid;
+    gap: 28px;
+    grid-template-columns: minmax(0, 1fr);
+    padding-block: clamp(36px, 4.5vw, 64px);
+
+    @include breakpoint($rf-signature-split) {
+        align-items: center;
+        gap: clamp(24px, 4vw, 56px);
+        grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+    }
+}
+
+.rf-signature__eyebrow {
+    color: $rf-forest-text;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+    margin: 0 0 8px;
+}
+
+.rf-signature__heading {
+    color: $rf-forest-strong;
+    margin: 0;
+}
+
+.rf-signature__story {
+    color: $rf-forest-text;
+    font-size: 16px;
+    line-height: 1.55;
+    margin: 10px 0 20px;
+    max-width: 28em;
+}
+
+.rf-signature__button {
+    align-items: center;
+    background: transparent;
+    border: 1px solid $rf-forest-strong;
+    border-radius: var(--rf-radius-pill);
+    color: $rf-forest-strong;
+    display: inline-flex;
+    font-size: 16px;
+    font-weight: 600;
+    justify-content: center;
+    line-height: 1;
+    min-height: var(--rf-target-buy);
+    padding: 0 22px;
+    text-decoration: none;
+
+    &:hover {
+        background: rgba($rf-forest-strong, 0.12);
+        color: $rf-forest-strong;
+    }
+}
+
+// The cards on white plates, over the forest ground
+.rf-product-cards--plates {
+    gap: $rf-plate-gap;
+
+    .rf-product-card {
+        background: var(--rf-paper);
+        border-radius: var(--rf-radius-mid);
+        padding: $rf-plate-pad;
+    }
+
+    .rf-product-card__media {
+        border-radius: var(--rf-radius-small);
+    }
+
+    .rf-product-card__name {
+        font-size: 15px;
+        margin-top: 8px;
+    }
+}

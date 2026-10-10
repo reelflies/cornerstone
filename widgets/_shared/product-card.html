@@ -1,0 +1,41 @@
+{{!--
+    One product card in a home band (ticket 48; spec module 7, HOME-4, SEO-8, CD-8; stories 12,
+    17 and 70), pasted by the sync into widgets/best-sellers and widgets/signature-band once per
+    picked product, and into ticket 49's Assortments band (build pipeline 6.2: 48 owns it).
+
+    - It looks like ticket 31's listing card (components/reelflies/card.html, _card.scss): the
+      photo on white in a 3:2 box with no frame, the name in two lines at most, then the price
+      and its unit. A widget can't include the theme's partials, so this is the same look, not the
+      same file.
+    - The whole card is one link to the product page, with nothing interactive inside it: no
+      "+ Add", which stays on listings (ticket 43's budget).
+    - Everything the shopper reads comes from the widget's storefront query, so prices stay live
+      (HOME-4): product is one product node of _.data, or null when the channel doesn't have it.
+    - A product sold out in every size (inventory.isInStock false) renders nothing, and neither
+      does a missing one, so the next pick moves up: the band's CSS shows the first four cards it
+      gets (_home-bands.scss), and the picks after the fourth are its spares.
+    - The photo is decorative (alt="": the name in the link says what it is), lazy, with no
+      fetchpriority (both bands sit below the first screen), a srcset of the query's own URLs at
+      160w to 640w, the caller's sizes, and 600x400, the 3:2 box the CSS draws it in, as ticket
+      31's card has. A product with no photo keeps the white box.
+    - The price is the query's price.value after currency, as the store sends it: a widget has no
+      money helper the store is known to have (docs/widgets.md, "The product bands"). The unit
+      shows only when the caller passes one: "/ fly" for fly picks, nothing for an Assortment.
+
+    Arguments: product, currency, unit and sizes.
+--}}
+{{#if product.inventory.isInStock}}
+<li class="rf-product-cards__item">
+    <a class="rf-product-card" href="{{product.path}}" data-rf-product="{{product.entityId}}">
+        <span class="rf-product-card__media">
+            {{#if product.defaultImage}}
+            <img class="rf-product-card__img" src="{{product.defaultImage.url320}}" srcset="{{product.defaultImage.url160}} 160w, {{product.defaultImage.url320}} 320w, {{product.defaultImage.url480}} 480w, {{product.defaultImage.url640}} 640w" sizes="{{sizes}}" width="600" height="400" alt="" loading="lazy" />
+            {{/if}}
+        </span>
+        <h3 class="rf-product-card__name">{{product.name}}</h3>
+        {{#if product.prices.price}}
+        <span class="rf-product-card__price"><span class="rf-product-card__amount">{{currency}}{{product.prices.price.value}}</span>{{#if unit}} <span class="rf-product-card__unit">{{unit}}</span>{{/if}}</span>
+        {{/if}}
+    </a>
+</li>
+{{/if}}

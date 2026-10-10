@@ -129,9 +129,10 @@ export function respond(url, {
     return serveFile(filesDir, path.posix.basename(url.pathname));
 }
 
-// Opens the widget's fixture page and waits until it stops moving. Returns the widget's
-// wrapper as a Locator, and the problems met on the way: blocked requests and missing files.
-// A shot with problems isn't a shot of the fixture, so the spec fails on them.
+// Opens the widget's fixture page and waits until it stops moving: for every image it renders
+// (a hidden lazy image never loads, such as a product band's spare card, ticket 48). Returns the
+// widget's wrapper as a Locator, and the problems met on the way: blocked requests and missing
+// files. A shot with problems isn't a shot of the fixture, so the spec fails on them.
 export async function openWidget(page, widgetCase, { variation = DEFAULT_VARIATION, themeDir = THEME_DIR } = {}) {
     const [html, css] = await Promise.all([renderWidgetPage(widgetCase, { variation, themeDir }), compileThemeCss(variation, themeDir)]);
     const filesDir = path.join(widgetCase.root, widgetCase.widget, 'fixtures/files');
@@ -156,7 +157,7 @@ export async function openWidget(page, widgetCase, { variation = DEFAULT_VARIATI
     const widget = page.locator('[data-widget-id]');
     await widget.scrollIntoViewIfNeeded();
     await widget.evaluate(element => Promise.race([
-        Promise.all([...element.querySelectorAll('img')].filter(image => !image.complete)
+        Promise.all([...element.querySelectorAll('img')].filter(image => !image.complete && image.getClientRects().length)
             .map(image => new Promise(resolve => {
                 image.addEventListener('load', resolve);
                 image.addEventListener('error', resolve);

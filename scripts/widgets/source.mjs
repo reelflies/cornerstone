@@ -145,6 +145,8 @@ const naming = (where, make) => {
 // conditional settings. An array setting holds its items under its own id. readWidget refuses
 // "_": the store adds "_": { "id": <the widget's uuid> } to each widget_configuration, and a template
 // reads the widget's id and query result as _.id and _.data, so a setting can't have it.
+// A graphQl setting (in a hidden group) maps settings to the storefront query's variables and
+// holds no value of its own: the configuration holds the settings it reads (ticket 48).
 const settingIds = schema => {
     const ids = [];
     const walk = node => {
@@ -153,7 +155,7 @@ const settingIds = schema => {
             return;
         }
         if (!isObject(node)) return;
-        if (typeof node.id === 'string' && node.type && node.type !== 'tab') ids.push(node.id);
+        if (typeof node.id === 'string' && node.type && !['tab', 'graphQl'].includes(node.type)) ids.push(node.id);
         if (node.type === 'array') return;
         ['sections', 'settings', 'typeMeta', 'conditionalSettings'].forEach(key => walk(node[key]));
     };

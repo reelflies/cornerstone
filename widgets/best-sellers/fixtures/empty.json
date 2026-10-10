@@ -1,0 +1,25 @@
+{
+    "description": "Best sellers on a channel without the products, as ReelFlies_CA is until refactor 14 assigns them: the query answers null for every pick, so no card renders and the band hides itself. For render tests only.",
+    "shot": false,
+    "configuration": {
+        "heading": "Best sellers",
+        "currency_symbol": "$",
+        "price_unit": "/ fly",
+        "pick1": "4877",
+        "pick2": "4507",
+        "pick3": "5835",
+        "pick4": "4754",
+        "pick5": "4675",
+        "pick6": "4368"
+    },
+    "data": {
+        "site": {
+            "pick1": null,
+            "pick2": null,
+            "pick3": null,
+            "pick4": null,
+            "pick5": null,
+            "pick6": null
+        }
+    }
+}

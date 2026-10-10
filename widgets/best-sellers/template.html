@@ -1,0 +1,30 @@
+{{!--
+    Best sellers on the home page (ticket 48; spec module 7, R5, CD-8, HOME-4, SEO-8; stories 12,
+    68 and 70), placed in home_below_top_products after ticket 47's tiles (sort_order 20), before
+    the Signature band (30). Synced to each channel by scripts/widgets-sync.mjs; styled by the
+    theme's ReelFlies layer (assets/scss/reelflies/_home-bands.scss), so nothing here is inline
+    CSS.
+
+    - An H2, then one row of four product cards on desktop and a 2x2 grid on phones, never a
+      sideways scroller (CD-8).
+    - The products are picked ids (pick1 to pick6), never names or prices: the storefront query
+      (query.graphql) reads each one's name, photo, price and stock, so prices stay live
+      (HOME-4). Until ReelFlies_CA has sales of its own, the picks are the reference's best
+      sellers on reelflies.ca (docs/widgets.md, "The product bands").
+    - Each card is widgets/_shared/product-card.html, pasted in by the sync. A pick that is sold
+      out in every size, or missing from the channel, renders nothing; the band shows the first
+      four cards it gets, so pick5 and pick6 are spares that move up.
+    - With no card at all (no products on the channel yet, or no query result) the band hides
+      itself, heading included.
+--}}
+<section class="rf-home-band rf-best-sellers" aria-labelledby="rf-best-sellers-{{_.id}}" data-rf-band="best-sellers">
+    <h2 class="rf-home-band__heading" id="rf-best-sellers-{{_.id}}">{{heading}}</h2>
+    <ul class="rf-product-cards">
+        {{> _shared/product-card product=_.data.site.pick1 currency=currency_symbol unit=price_unit sizes="(min-width: 1136px) 256px, (min-width: 801px) calc(23.65vw - 12px), calc(50vw - 31px)" ~}}
+        {{> _shared/product-card product=_.data.site.pick2 currency=currency_symbol unit=price_unit sizes="(min-width: 1136px) 256px, (min-width: 801px) calc(23.65vw - 12px), calc(50vw - 31px)" ~}}
+        {{> _shared/product-card product=_.data.site.pick3 currency=currency_symbol unit=price_unit sizes="(min-width: 1136px) 256px, (min-width: 801px) calc(23.65vw - 12px), calc(50vw - 31px)" ~}}
+        {{> _shared/product-card product=_.data.site.pick4 currency=currency_symbol unit=price_unit sizes="(min-width: 1136px) 256px, (min-width: 801px) calc(23.65vw - 12px), calc(50vw - 31px)" ~}}
+        {{> _shared/product-card product=_.data.site.pick5 currency=currency_symbol unit=price_unit sizes="(min-width: 1136px) 256px, (min-width: 801px) calc(23.65vw - 12px), calc(50vw - 31px)" ~}}
+        {{> _shared/product-card product=_.data.site.pick6 currency=currency_symbol unit=price_unit sizes="(min-width: 1136px) 256px, (min-width: 801px) calc(23.65vw - 12px), calc(50vw - 31px)" ~}}
+    </ul>
+</section>
