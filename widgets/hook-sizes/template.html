@@ -1,0 +1,29 @@
+{{!--
+    The home page's slim hook band (ticket 49; spec modules 7 and 22, R1, CD-12, SEO-6, UX-16;
+    stories 15 and 16), between the Assortments band and About in home_below_top_products.
+    Synced to each channel by scripts/widgets-sync.mjs; styled by the theme's ReelFlies layer
+    (assets/scss/reelflies/_home-links.scss, with the gauge's own rules in _chart.scss), so the
+    template's own markup has no inline CSS.
+
+    - The section is named by its one h2, "Bigger number, smaller hook.", beside a paragraph that
+      ends with a text link to the hook size chart page.
+    - The gauge is ticket 35's: widgets/_shared/hook-gauge-band.html, which
+      scripts/hook-gauge/generate.mjs writes from the calibration as the band layout of the theme's
+      components/reelflies/hook-gauge.html. The sync pastes it in, so the store gets the hooks drawn
+      inline. Each of the 13 sizes, 2/0 to 6 then 8 to 20, links to its row on the chart page
+      (#size-14, build pipeline contract 6.9), never to a size category, listing or facet URL.
+    - Every word, the text link and the gauge's two labels are widget fields (schema.json; each
+      channel's values are in channels/<channel>.json). The gauge's own links come from the
+      generator, and chart_url is held to the same page (hook-sizes.test.mjs).
+    - The space above the band is the section's own padding, and the tinted ground is the panel
+      inside it, so an unpublished widget leaves no gap (R12).
+--}}
+<section class="rf-hook-band" aria-labelledby="rf-hook-band-{{_.id}}">
+    <div class="rf-hook-band__panel">
+        <div class="rf-hook-band__head">
+            <h2 class="rf-hook-band__title" id="rf-hook-band-{{_.id}}">{{heading}}</h2>
+            <p class="rf-hook-band__text">{{text}} <a class="rf-hook-band__link" href="{{chart_url}}">{{chart_label}}</a></p>
+        </div>
+        {{> _shared/hook-gauge-band gauge_label=gauge_label gauge_size_label=gauge_size_label}}
+    </div>
+</section>

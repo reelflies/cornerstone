@@ -1,0 +1,13 @@
+{
+    "description": "The hook band as ReelFlies_CA (1895766) gets it: \"Bigger number, smaller hook.\", the reference's paragraph with its \"See the full hook size chart\" link, and ticket 35's gauge, 2/0 to 6 then 8 to 20, each hook linking to its row on /fly-hook-size-chart/. Its configuration is channels/1895766.json's, which hook-sizes.test.mjs checks.",
+    "page": "pages/home",
+    "region": "home_below_top_products",
+    "configuration": {
+        "heading": "Bigger number, smaller hook.",
+        "text": "A size 20 midge is tiny and a size 2 streamer is long. Past size 1 the numbers climb again as 1/0, 2/0 and up.",
+        "chart_label": "See the full hook size chart",
+        "chart_url": "/fly-hook-size-chart/",
+        "gauge_label": "Hook sizes 2/0 to 20, drawn to relative scale",
+        "gauge_size_label": "Size"
+    }
+}

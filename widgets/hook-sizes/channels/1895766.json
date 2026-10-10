@@ -1,0 +1,22 @@
+{
+    "channel_id": 1895766,
+    "configuration": {
+        "heading": "Bigger number, smaller hook.",
+        "text": "A size 20 midge is tiny and a size 2 streamer is long. Past size 1 the numbers climb again as 1/0, 2/0 and up.",
+        "chart_label": "See the full hook size chart",
+        "chart_url": "/fly-hook-size-chart/",
+        "gauge_label": "Hook sizes 2/0 to 20, drawn to relative scale",
+        "gauge_size_label": "Size"
+    },
+    "placement": {
+        "template_file": "pages/home",
+        "region": "home_below_top_products",
+        "sort_order": 60,
+        "status": "inactive"
+    },
+    "uuids": {
+        "template": null,
+        "widget": null,
+        "placement": null
+    }
+}
