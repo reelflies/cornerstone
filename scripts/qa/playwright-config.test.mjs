@@ -92,14 +92,46 @@ it('never reuses a running stencil start with QA_FRESH_SERVER=1', () => {
     assert.equal(setting({ QA_FRESH_SERVER: '1', RF_QA_PORTS_CHECKED: '1' }, 'config.webServer.reuseExistingServer'), false);
 });
 
-// A port nothing answers on, below 65000 so the next one is a port too. The cases bind ports of
-// their own, never 3300, which the release and wave 0's worktrees use.
-async function freePort() {
+// A port nothing answers on whose next port is free too, since the config reads both. It comes
+// from below the system's own range for port 0 (macOS hands out 49152 and up, in sequence; Linux
+// 32768 and up), so another test file in the same run, binding port 0 for a server of its own,
+// can't take the next port between this pick and the config's look: it did, under wave 4's
+// parallel gate runs, and the case then saw a server to reuse and took no slot. Each file starts
+// its scan at its own pid, never at 3300 or the worktrees' 3400 and up. A port counts as free
+// when nothing accepts on it on 127.0.0.1 or ::1, as the config checks (busyPorts), and it binds.
+const accepts = (port, host) => new Promise(resolve => {
+    const socket = net.connect({ port, host });
+    socket.once('connect', () => { socket.destroy(); resolve(true); });
+    socket.once('error', () => resolve(false));
+});
+const bindable = port => new Promise(resolve => {
     const server = net.createServer();
-    const port = await new Promise(resolve => { server.listen(0, '127.0.0.1', () => resolve(server.address().port)); });
-    await new Promise(resolve => { server.close(resolve); });
-    return port < 65000 ? port : freePort();
+    server.once('error', () => resolve(false));
+    server.listen(port, '127.0.0.1', () => { server.close(() => resolve(true)); });
+});
+const free = async port => !(await accepts(port, '127.0.0.1')) && !(await accepts(port, '::1')) && bindable(port);
+const [FIRST_PORT, LAST_PORT] = [20000, 32000];
+let nextPort = FIRST_PORT + (process.pid % ((LAST_PORT - FIRST_PORT) / 2)) * 2;
+async function freePort() {
+    for (let tries = 0; tries < 200; tries += 1) {
+        const port = nextPort;
+        nextPort = nextPort + 2 >= LAST_PORT ? FIRST_PORT : nextPort + 2;
+        if (await free(port) && await free(port + 1)) return port; // eslint-disable-line no-await-in-loop
+    }
+    throw new Error(`no free port pair between ${FIRST_PORT} and ${LAST_PORT}`);
 }
+
+it('picks a port pair that a server on port 0 can\'t take, as another test file\'s can', async () => {
+    const port = await freePort();
+    const server = net.createServer();
+    await new Promise(resolve => { server.listen(0, '127.0.0.1', resolve); });
+    try {
+        const taken = server.address().port;
+        assert.ok(taken !== port && taken !== port + 1, `a port-0 server got ${taken}, one of the pair ${port} and ${port + 1}`);
+    } finally {
+        await new Promise(resolve => { server.close(resolve); });
+    }
+});
 
 it('refuses to load with QA_FRESH_SERVER=1 while anything answers on QA_PORT, whatever QA_PORT the shell has', async () => {
     // Something that isn't a stencil start holds Browsersync's port.
