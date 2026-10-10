@@ -1,0 +1,16 @@
+{{!--
+    The star summary under the price (ticket 40; spec module 15; R11, SEO-5; story 47), from
+    product-price-extras.html, on the product page only: the product's stars and "N reviews", one
+    link to the reviews section (#product-reviews, product-reviews.html). It shows by the section's
+    own rule, so it never points at reviews the page doesn't list: the store takes reviews
+    (settings.show_product_reviews), Theme Styles shows them (theme_settings.show_product_reviews),
+    and the page has some (product.reviews.list). The count is the section's, the product's review
+    total; the stars are the store's rounded rating (product.rating).
+
+    It takes the place of stock's rating row (products/product-view.html, a hook on the product
+    page), whose "Write a review" sits with the reviews now (product-reviews.html). Quick view keeps
+    stock's row.
+--}}
+{{#all settings.show_product_reviews theme_settings.show_product_reviews product.reviews.list.length}}
+<p class="rf-review-summary" data-rf-review-summary><a class="rf-review-summary-link" href="#product-reviews">{{> components/reelflies/stars rating=product.rating}}<span class="rf-review-summary-count" data-rf-review-count>{{lang 'reelflies.reviews.count' total=product.reviews.total}}</span></a></p>
+{{/all}}

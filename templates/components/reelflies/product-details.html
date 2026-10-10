@@ -11,7 +11,10 @@
         (rf_ship_free_threshold), only where the threshold is set, as the shipping line
         (shipping-line.html): its words are Canada's, so ReelFlies US (.com) has neither
       - "Hooks and tying", from lang strings, linking to the hook size chart
-      The wording is the reference's draft, for Shaun's approval (the ticket's HITL).
+      The wording is the reference's draft, for Shaun's approval (the ticket's HITL), but for
+      "Hooks and tying"'s second paragraph ("A bigger hook number means a smaller hook. See the hook
+      size chart"), which is new wording from story 15 and the ticket's chart link, not the
+      reference's: a DRAFT, awaiting Shaun (ticket 39's close-out).
     - A fly's words only on a fly, by ticket 31's rule (fly-rule.html), the rule "/ fly" follows,
       whether or not the price shows: Gear, an Assortment, or a product the rule can't place (no
       Placement, or the channel names no roots) gets stock's "Description" for the first title and
@@ -22,8 +25,11 @@
     - What stock's tabs held besides the description stays, as a closed section after these: the
       warranty, when the product has one, and the custom fields while Theme Styles puts them in a
       tab (show_custom_fields_tabs; otherwise stock lists them in the buy box).
-    - Then ticket 40's reviews slot (product-reviews.html; build pipeline 6.9), empty until ticket
-      40 fills it. Stock showed the reviews in a tab, which went with the tabs.
+    - Every child of the wrapper is a <details> section: the first draws the hairline over them
+      (_product.scss), so a product with none draws no lone rule.
+    - Then ticket 40's reviews (product-reviews.html; build pipeline 6.9's slot): the reviews
+      section, or "Write a review" when there are none. Stock showed the reviews in a tab, which
+      went with the tabs.
 --}}
 {{> components/reelflies/fly-rule rf_categories=product.category rf_exclude=theme_settings.rf_price_unit_exclude}}
 <div class="rf-details" data-rf-product-details>

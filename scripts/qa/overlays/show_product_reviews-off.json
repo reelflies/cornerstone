@@ -1,0 +1,7 @@
+{
+    "description": "Theme Styles' \"Show product reviews\" off: no reviews section, no star summary and no aggregateRating or review in the JSON-LD, though the product has reviews and the store takes them (ticket 40's criterion 3; the product-reviews raw-HTML assertion on channel 1's product@reviews)",
+    "ticket": "40",
+    "settings": {
+        "show_product_reviews": false
+    }
+}

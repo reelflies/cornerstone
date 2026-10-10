@@ -29,7 +29,8 @@
 //   #75's note): the title and price in the reference's sizes, "/ fly" beside the price, the
 //   shipping line as a soft callout, the promise line, and "Save to wish list" as a text button.
 //   Stock's info list (the SKU) stays, small.
-// - The details: <details> sections between hairlines, a chevron that turns when one is open.
+// - The details: <details> sections between hairlines, a chevron that turns when one is open; then
+//   ticket 40's reviews (_reviews.scss).
 // - Related patterns: ticket 31's grid, two across on phones and four from 801px.
 //
 // -----------------------------------------------------------------------------
@@ -377,12 +378,15 @@ $rf-thumb-h-phone: 43px;
 // The details under the photos
 // -----------------------------------------------------------------------------
 
-.rf-details {
-    border-top: 1px solid var(--rf-tile-2);
-}
-
+// The hairline over the details is the first section's, not the wrapper's, so a product with no
+// section (ReelFlies US's gear with no description or warranty: no threshold, not a fly) draws no
+// lone rule under its photos (#86's rf/skeptic). Every child of the wrapper is a section.
 .rf-details-section {
     border-bottom: 1px solid var(--rf-tile-2);
+
+    &:first-child {
+        border-top: 1px solid var(--rf-tile-2);
+    }
 }
 
 .rf-details-summary {

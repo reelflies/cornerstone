@@ -1156,7 +1156,13 @@
         "reviews": {
             "_slot": "",
             "store_shipping_name": "Free standard shipping in Canada",
-            "store_shipping_description": "Free standard shipping in Canada on fly orders over ${amount}. Fly boxes and gear not included."
+            "store_shipping_description": "Free standard shipping in Canada on fly orders over ${amount}. Fly boxes and gear not included.",
+            "heading": "Reviews ({total})",
+            "count": "{total, plural, one {# review} other {# reviews}}",
+            "rated": "Rated {rating} out of 5",
+            "write": "Write a review",
+            "none_fly": "No reviews yet for this fly.",
+            "none": "No reviews yet."
         },
 
         "cart": {

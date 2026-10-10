@@ -78,6 +78,11 @@ export const CHANNELS = {
             // swatches), so the size pills' default (no size chosen) and their UI states are shot,
             // and the size-pills assertion's multi-size rule bites. The product pin has one size.
             'product@sizes': '/fat-albert/',
+            // Ticket 40: a best seller with reviews (5865, ten on 2026-10-09), so the reviews section,
+            // its five-review page and stock's pager, the star summary and the JSON-LD's
+            // aggregateRating are on a pinned page. The product pin and Fat Albert have none: the
+            // no-reviews state.
+            'product@reviews': '/beadhead-copper-john-copper/',
             category: '/flies/realistic-trout-flies/', // tree 1; 12 cards with Quick view, and facets
             // Ticket 32: a More from ReelFlies category (a top-level category outside the menu
             // ids), whose four subcategories have images, so its plain header and thumbnail
@@ -143,6 +148,11 @@ export const CHANNELS = {
         // 375), so a hold that stops applying fails the shot. The heading and the section stay
         // in the shot; the grid's look is shot from fixed data on the fixture page
         // (product-page-screens.spec.mjs).
+        // product@reviews's review list (ticket 40, product-reviews.html) the same way: shoppers
+        // add reviews, the store lists the newest five, and each text runs to one line or several.
+        // Held at 640px at both widths, which neither layout of its five had (2026-10-09); the
+        // section's heading, its "Write a review" and the pager stay in the shot, and the reviews'
+        // look is shot from the fixture page's three samples.
         // The search pin's "Did you mean" panel lists the categories the store finds for the
         // query, so the catalogue sets its height (#68's rf/spec).
         // The category, search and brand pins' grids (the listing's own, in
@@ -161,6 +171,10 @@ export const CHANNELS = {
             brand: { '#product-listing-container .productGrid': 1200 },
             product: { '[data-rf-related] .rf-related-grid': 400 },
             'product@sizes': { '[data-rf-related] .rf-related-grid': 400 },
+            // Ticket 40: its review list too, which the store adds to (the newest five, each
+            // review's text one line or several). Its section's heading and the star summary keep
+            // their size, so their counts are only masked (LIVE_DATA).
+            'product@reviews': { '[data-rf-related] .rf-related-grid': 400, '[data-rf-reviews-list]': 640 },
             search: {
                 '.page-content > .panel': 360,
                 '#product-listing-container .productGrid': 1200,
@@ -245,6 +259,8 @@ export const LIVE_DATA = [
     '.productView-rating',
     '.productView-reviewLink',
     '.rating--small',
+    '[data-rf-review-summary]',
+    '.rf-reviews-heading',
     '[class*="sale-flag"]',
     '[class*="sold-out-flag"]',
     '.starwrap',

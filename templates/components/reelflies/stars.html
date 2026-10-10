@@ -1,0 +1,11 @@
+{{!--
+    A rating as five stars (ticket 40; story 47), for the star summary under the price
+    (review-summary.html) and each review in the reviews section (product-reviews.html):
+
+        {{> components/reelflies/stars rating=product.rating}}
+
+    `rating` is a whole number from 0 to 5: the store's rounded rating for a product, a review's own
+    rating. The stars are filled up to it, from the icon sheet's star (filled and outlined in the
+    text colour, _reviews.scss), and read as one image, "Rated 4 out of 5".
+--}}
+<span class="rf-stars" role="img" aria-label="{{lang 'reelflies.reviews.rated' rating=rating}}">{{#for 1 5}}{{#if ../rating '>=' $index}}{{> components/reelflies/icon name='star' class='rf-star rf-star--full'}}{{else}}{{> components/reelflies/icon name='star' class='rf-star'}}{{/if}}{{/for}}</span>
