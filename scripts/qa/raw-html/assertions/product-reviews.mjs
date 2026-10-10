@@ -16,17 +16,31 @@
 //   opens it ([data-reveal-id="modal-review-form"]), so a product with no reviews still offers it
 //   while the store takes reviews (criterion 2). The control sits in the section, or in the
 //   no-reviews block (data-rf-reviews-empty).
+// - The two pins that prove criteria 1 and 2 (pages.mjs), keyed as dead-ends keys search@none, so
+//   a page that lost its reviews, or its form and button together, fails rather than passing as
+//   consistently absent:
+//   - product@reviews, a best seller with reviews (criterion 1): the section, so the summary and
+//     the JSON-LD's reviews too, and "Write a review" in it. Under the overlay that hides reviews
+//     (QA_OVERLAY show_product_reviews-off, criterion 3), no section, and the no-reviews block with
+//     "Write a review" alone, not "No reviews yet".
+//   - product, the reference's hopper, with none (criterion 2): no section, and the no-reviews
+//     block with "Write a review". Should the store's product gain a review, this fails: pin a
+//     product with none.
 //
 // A block that doesn't parse is json-ld-parses' to report. A page with no product view and no
-// reviews markup (the harness's own fixture pages) passes.
+// reviews markup (the harness's own fixture pages) passes, the pins' rules included.
 
 import {
     elementsHtml, findTags, markupOnly, outerHtml, scriptsOfType, textOf,
 } from '../html.mjs';
 
 export const MAX_LISTED = 5; // productpage_reviews_count (config.json), the ticket's "latest 5"
+export const REVIEWS_PIN = 'product@reviews'; // pages.mjs, channel 1: Copper John
+export const NO_REVIEWS_PIN = 'product'; // pages.mjs: the reference's hopper (6178)
+export const REVIEWS_OFF_OVERLAY = 'show_product_reviews-off'; // overlays/, Theme Styles' setting off
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}(T[\d:.]+(Z|[+-]\d{2}:?\d{2})?)?$/;
 const has = name => attrs => name in attrs;
+const isWrite = tag => tag.attrs['data-reveal-id'] === 'modal-review-form';
 const typed = (block, type) => [].concat(block['@type']).includes(type);
 
 // The Product blocks among the JSON-LD blocks, or null when a block doesn't parse.
@@ -83,7 +97,7 @@ function summaryProblems(markup, section) {
 }
 
 function writeProblems(markup, section) {
-    const controls = findTags(markup).filter(tag => tag.attrs['data-reveal-id'] === 'modal-review-form');
+    const controls = findTags(markup).filter(isWrite);
     const form = findTags(markup).some(tag => tag.attrs.id === 'modal-review-form');
     if (form && controls.length !== 1) return [`the review form is on the page, but ${controls.length} controls open it${controls.length > 1 ? ', not one' : ''}`];
     if (!form && controls.length) return [`${controls.length} control${controls.length > 1 ? 's' : ''} open${controls.length > 1 ? '' : 's'} the review form, which isn't on the page`];
@@ -93,12 +107,36 @@ function writeProblems(markup, section) {
     return where.includes(controls[0].raw) ? [] : ['"Write a review" sits outside the reviews section and the no-reviews block'];
 }
 
+const productView = markup => findTags(markup, 'div').some(tag => /(^|\s)productView(\s|$)/.test(tag.attrs.class || ''));
+
+// What a pin that proves a criterion must show (the module header), on a page with a product view.
+function pinProblems(page, markup, section, overlay) {
+    if (![REVIEWS_PIN, NO_REVIEWS_PIN].includes(page.key) || !productView(markup)) return [];
+    const empty = outerHtml(markup, 'div', has('data-rf-reviews-empty'));
+    const emptyProblems = where => {
+        if (!empty) return [`no no-reviews block (data-rf-reviews-empty) on ${where}`];
+        return findTags(empty).some(isWrite) ? [] : [`no "Write a review" in the no-reviews block (data-rf-reviews-empty) on ${where}`];
+    };
+    if (page.key === NO_REVIEWS_PIN) {
+        const where = `${NO_REVIEWS_PIN}, the pin with no reviews`;
+        return section ? [`a reviews section on ${where}: pin a product with none (pages.mjs)`] : emptyProblems(where);
+    }
+    if (overlay === REVIEWS_OFF_OVERLAY) {
+        if (section) return [`a reviews section on ${REVIEWS_PIN} under the overlay ${REVIEWS_OFF_OVERLAY}, which hides reviews`];
+        const none = textOf(outerHtml(empty || '', 'p', attrs => /(^|\s)rf-reviews-none(\s|$)/.test(attrs.class || '')) || '');
+        return [...emptyProblems(REVIEWS_PIN), ...(none ? [`the no-reviews block says "${none}" on ${REVIEWS_PIN}, which has reviews`] : [])];
+    }
+    if (!section) return [`no reviews section (data-rf-reviews) on ${REVIEWS_PIN}, the pin with reviews: the section, the star summary and the JSON-LD's reviews are all missing`];
+    return findTags(section).some(isWrite) ? [] : [`no "Write a review" in the reviews section on ${REVIEWS_PIN}`];
+}
+
 export default {
     id: 'product-reviews',
     ticket: 40,
     description: 'aggregateRating and review in the JSON-LD only with the visible reviews section, counting what it lists; the section, the star summary and one "Write a review" whenever the store takes reviews',
     pages: ['product'],
-    check(page) {
+    // `overlay` is the run's QA_OVERLAY (raw-html.mjs renders every page with it); a test passes it.
+    check(page, { overlay = process.env.QA_OVERLAY || '' } = {}) {
         const markup = markupOnly(page.html);
         const blocks = productBlocks(page.html);
         if (blocks === null) return [];
@@ -114,7 +152,7 @@ export default {
         } else {
             problems.push(...sectionProblems(section, data));
         }
-        problems.push(...summaryProblems(markup, section), ...writeProblems(markup, section));
+        problems.push(...summaryProblems(markup, section), ...writeProblems(markup, section), ...pinProblems(page, markup, section, overlay));
         return problems;
     },
 };

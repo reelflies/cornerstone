@@ -10,6 +10,9 @@
 //   .productView), as a Brand of the same name: ticket 18's job gives in-house flies the ReelFlies
 //   brand, and stock's template then marks it up (criterion 7). A page with no product view (the
 //   harness's own fixture pages) isn't held to the view's brand.
+// - On product@in-house, the in-house fly a channel pins once ticket 18's brand job is applied,
+//   brand "ReelFlies" itself (criterion 7): the view rule alone passes a fly the job left
+//   unbranded, since the view and the JSON-LD both read product.brand. No channel pins it yet.
 //
 // A block that doesn't parse is json-ld-parses' to report: this judges only a page whose blocks all
 // parse. What the reviews add is product-reviews'.
@@ -17,6 +20,8 @@
 import { decodeHtml, findTags } from '../html.mjs';
 import { productBlocks } from './product-reviews.mjs';
 
+export const IN_HOUSE_PIN = 'product@in-house'; // pages.mjs, after ticket 18's brand apply
+export const IN_HOUSE_BRAND = 'ReelFlies'; // ticket 18's brand on in-house flies
 const typed = (value, type) => [].concat(value?.['@type']).includes(type);
 const filled = value => value !== undefined && value !== null && String(value).trim() !== '';
 
@@ -45,16 +50,23 @@ function brandProblems(data, html) {
     return [];
 }
 
+function inHouseProblems(data, key) {
+    if (key !== IN_HOUSE_PIN) return [];
+    const where = `${IN_HOUSE_PIN}, the in-house fly`;
+    if (!data.brand) return [`no brand in the JSON-LD on ${where}, which ticket 18's job brands "${IN_HOUSE_BRAND}"`];
+    return data.brand.name === IN_HOUSE_BRAND ? [] : [`the JSON-LD's brand is "${data.brand.name}" on ${where}, not "${IN_HOUSE_BRAND}"`];
+}
+
 export default {
     id: 'product-schema',
     ticket: 40,
-    description: 'one Product in the JSON-LD with exactly one Offer, and the brand marked up exactly when the product view names one',
+    description: 'one Product in the JSON-LD with exactly one Offer, and the brand marked up exactly when the product view names one; brand "ReelFlies" on product@in-house',
     pages: ['product'],
     check(page) {
         const blocks = productBlocks(page.html);
         if (blocks === null) return [];
         if (blocks.length !== 1) return [`${blocks.length} Product blocks in the JSON-LD, not one`];
         const [data] = blocks;
-        return [...offerProblems(data), ...brandProblems(data, page.html)];
+        return [...offerProblems(data), ...brandProblems(data, page.html), ...inHouseProblems(data, page.key)];
     },
 };

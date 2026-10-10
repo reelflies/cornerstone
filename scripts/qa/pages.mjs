@@ -81,7 +81,8 @@ export const CHANNELS = {
             // Ticket 40: a best seller with reviews (5865, ten on 2026-10-09), so the reviews section,
             // its five-review page and stock's pager, the star summary and the JSON-LD's
             // aggregateRating are on a pinned page. The product pin and Fat Albert have none: the
-            // no-reviews state.
+            // no-reviews state. product-reviews requires the section here (criterion 1) and the
+            // no-reviews block on the product pin (criterion 2), so either pin changing fails it.
             'product@reviews': '/beadhead-copper-john-copper/',
             category: '/flies/realistic-trout-flies/', // tree 1; 12 cards with Quick view, and facets
             // Ticket 32: a More from ReelFlies category (a top-level category outside the menu

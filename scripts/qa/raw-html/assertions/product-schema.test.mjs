@@ -10,7 +10,7 @@ import path from 'path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { THEME_DIR, readFixture, renderPartial } from '../../render/render.mjs';
-import productSchema from './product-schema.mjs';
+import productSchema, { IN_HOUSE_BRAND, IN_HOUSE_PIN } from './product-schema.mjs';
 
 const { page_context: CONTEXT } = readFixture(path.join(THEME_DIR, 'scripts/qa/render/pages/product-page/fixtures/adams.json'));
 const BRAND = { name: 'ReelFlies', url: 'https://reelflies.ca/reelflies-2/' };
@@ -26,9 +26,11 @@ const harnessFixture = name => ({
     kind: 'product', key: 'product', path: '/', status: 200, html: fs.readFileSync(path.join(THEME_DIR, 'scripts/qa/raw-html/fixtures', name), 'utf8'),
 });
 
-test('applies to product pins, ticket 40', () => {
+test('applies to product pins, ticket 40, and names the in-house fly\'s pin and brand', () => {
     assert.deepEqual(productSchema.pages, ['product']);
     assert.equal(productSchema.ticket, 40);
+    assert.equal(IN_HOUSE_PIN, 'product@in-house');
+    assert.equal(IN_HOUSE_BRAND, 'ReelFlies');
 });
 
 test('passes the rendered page, with and without a brand, reviews or a SKU, and the harness\'s product page', async () => {
@@ -69,4 +71,14 @@ test('fails a brand the page doesn\'t show, a shown brand not marked up, or anot
     assert.match(problems(branded, /"brand": \{[\s\S]*?\},/, ''), /the product view names the brand "ReelFlies", but the JSON-LD has none/);
     assert.match(problems(branded, /"name": "ReelFlies"\s*\}/, '"name": "Reel Flies" }'), /the JSON-LD's brand is "Reel Flies", the product view's "ReelFlies"/);
     assert.match(problems(branded, /"@type": "Brand",/, ''), /the brand isn't a Brand/);
+});
+
+test('requires brand "ReelFlies" on product@in-house, the in-house fly ticket 18\'s job brands, where an unbranded fly would pass the view rule (criterion 7)', async () => {
+    const inHouse = async product => ({ ...(await page(product)), key: IN_HOUSE_PIN });
+    const other = { name: 'Umpqua', url: 'https://reelflies.ca/umpqua/' };
+    assert.deepEqual(productSchema.check(await inHouse({ brand: BRAND })), []);
+    assert.match(productSchema.check(await inHouse()).join('\n'), /no brand in the JSON-LD on product@in-house, the in-house fly, which ticket 18's job brands "ReelFlies"/);
+    assert.match(productSchema.check(await inHouse({ brand: other })).join('\n'), /the JSON-LD's brand is "Umpqua" on product@in-house, the in-house fly, not "ReelFlies"/);
+    assert.deepEqual(productSchema.check(await page({ brand: other })), [], 'another pin may carry another brand');
+    assert.deepEqual(productSchema.check(await page()), [], 'and none');
 });
