@@ -267,7 +267,9 @@ test.describe('the home page\'s product bands (widgets/best-sellers, widgets/sig
         const signature = headings.indexOf('h2 ReelFlies Signature Flies');
         expect(headings.slice(0, best).filter(line => line.startsWith('h2'))).toEqual(['h2 Dry Flies', 'h2 Nymphs', 'h2 Streamers']);
         expect(headings.slice(best + 1, signature)).toEqual(['Adams Parachute Dry Fly', 'Beadhead Prince Nymph', 'Elk Hair Caddis Tan', 'Beadhead Pheasant Tail'].map(name => `h3 ${name}`));
-        expect(headings.slice(signature + 1)).toEqual(['Black Reel Egg Sucking Leech', 'ReelCray Orange Crayfish', 'Tungsten Beadhead Egg Flies', 'Reel Egg Nuke'].map(name => `h3 ${name}`));
+        // Ticket 49's sections follow the Signature band (sort_order 40 and 70), each with its own H2.
+        const next = headings.findIndex((line, index) => index > signature && line.startsWith('h2'));
+        expect(headings.slice(signature + 1, next === -1 ? undefined : next)).toEqual(['Black Reel Egg Sucking Leech', 'ReelCray Orange Crayfish', 'Tungsten Beadhead Egg Flies', 'Reel Egg Nuke'].map(name => `h3 ${name}`));
     });
 
     test('every card and the Signature button show ticket 25\'s focus ring from the keyboard, gold on the forest ground', async ({ page }) => {
