@@ -12,6 +12,10 @@
 //   scripts/qa/baselines/widgets/<variation>/cart-state-cards-<project>-<platform>.png, declared on
 //   a PR's Baselines line as `widget cart-state`. The cards with an empty cart are card-grid's shot.
 // - With it: no card moves when the read's lines fill in (story 70), and axe on the grid.
+// - The same grid with the switch off (story 73; fixture `off`, rf_cart_state false in its
+//   page_context's theme_settings): the stock card, with no line and no space kept for one, shot as
+//   cart-state-off-<project>-<platform>.png. Widget shots skip under an overlay, and the live
+//   listing pins hold their grids, so this is the switch-off card's picture.
 //
 // Its name ends in "screens", so `npm run qa:screens` (and so qa:prepush and release.sh) runs it:
 //
@@ -29,7 +33,9 @@ import { cartOf } from './fixtures/cart/routes.mjs';
 
 test.skip(Boolean(QA_OVERLAY), `the card line renders from its fixture, not under an overlay (QA_OVERLAY=${QA_OVERLAY})`);
 
-const CARDS = widgetCases([PAGE_FIXTURES]).find(({ widget, name }) => widget === 'cart-state' && name === 'cards');
+const fixtureCase = name => widgetCases([PAGE_FIXTURES]).find(({ widget, name: caseName }) => widget === 'cart-state' && caseName === name);
+const CARDS = fixtureCase('cards');
+const OFF = fixtureCase('off');
 const MODULES = ['cart-events', 'cart-state', 'cart-marks'].map(name => `reelflies/${name}`);
 const CART = cartOf([
     { productId: 4831, quantity: 4, options: [{ nameId: 1, valueId: 11 }] },
@@ -38,20 +44,26 @@ const CART = cartOf([
 ]);
 const BLOCKING = ['serious', 'critical'];
 
-// The fixture page, its photos loaded and the phone header static, with the cards' places noted
-// before the cart is read, then cart-marks.js started with the cart.
-async function openPage(page) {
-    const { problems } = await openWidget(page, CARDS, { variation: QA_VARIATION });
+// A fixture case's page, its six cards' photos loaded and the phone header static.
+async function openGrid(page, widgetCase) {
+    const { problems } = await openWidget(page, widgetCase, { variation: QA_VARIATION });
     expect(problems, 'the fixture page loads nothing but its fixture\'s files, the theme\'s assets and fonts').toEqual([]);
     const grid = page.locator('.productGrid');
     await expect(grid.locator('.card')).toHaveCount(6);
-    await expect(grid.locator('[data-rf-cart-card]')).toHaveCount(6);
     for (const img of await grid.locator('.card-image').all()) {
         await img.scrollIntoViewIfNeeded(); // eslint-disable-line no-await-in-loop
         await expect.poll(() => img.evaluate(element => element.complete && element.naturalWidth > 0)).toBe(true); // eslint-disable-line no-await-in-loop
     }
     await page.addStyleTag({ content: '[data-rf-header] { position: static !important; }' });
     await page.evaluate(() => window.scrollTo(0, 0));
+    return grid;
+}
+
+// The switch-on page with the cards' places noted before the cart is read, then cart-marks.js
+// started with the cart.
+async function openPage(page) {
+    const grid = await openGrid(page, CARDS);
+    await expect(grid.locator('[data-rf-cart-card]')).toHaveCount(6);
     const places = () => grid.locator('.card').evaluateAll(cards => cards.map(card => {
         const box = card.getBoundingClientRect();
         const actions = card.querySelector('.rf-card-actions').getBoundingClientRect();
@@ -102,4 +114,11 @@ test('axe finds no serious or critical issue in the grid with the lines showing'
     const { violations } = await new AxeBuilder({ page }).include('.productGrid')
         .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice']).analyze();
     expect(violations.filter(({ impact }) => BLOCKING.includes(impact)).map(({ id, nodes }) => `${id}: ${nodes.map(node => node.target).join(', ')}`)).toEqual([]);
+});
+
+test('with rf_cart_state off, the cards are the stock card and match their baseline: no line and no space kept for one (story 73)', async ({ page }) => {
+    const grid = await openGrid(page, OFF);
+    await expect(grid.locator('[data-rf-cart-card], .rf-card-cart')).toHaveCount(0);
+    await page.mouse.move(0, 0);
+    await expect(grid).toHaveScreenshot(['widgets', slug(QA_VARIATION), 'cart-state-off.png']);
 });
