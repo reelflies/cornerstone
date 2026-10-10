@@ -22,7 +22,8 @@
 //   product that fails to load opens it with a link to the product page instead. Only the
 //   latest tap answers: one overtaken by a tap on another "+ Add" does nothing when its answer
 //   comes, so a slow product never replaces the panel opened since, or leaves the listing. A
-//   tap on an "+ Add" still loading closes any panel and makes its pending tap the latest again.
+//   tap on an "+ Add" still loading closes any panel and makes its pending tap the latest again;
+//   every new tap still overtakes every earlier one, that pending tap included.
 // - The panel is a <dialog> under the button, inside the card (never a child of the listing,
 //   which ticket 33's size-filter.js watches): below 801px a modal bottom sheet (showModal: the
 //   page behind is inert, Tab stays inside, Escape closes, focus back on "+ Add"); from 801px a
@@ -198,9 +199,12 @@ export function startQuickAdd(doc, context = {}, deps = {}) {
         doFetch = (...args) => view.fetch(...args),
     } = deps;
     const busy = new Set();
-    // The latest tap's number: a tap whose answer comes after a newer one does nothing (tap).
-    // Each "+ Add" keeps its newest tap's number, so a tap on it while it is still busy makes
-    // that tap the latest again (onClick).
+    // Each tap takes a number from `taken`, which only goes up, so no two taps share one. `latest`
+    // is the number of the tap that answers: a tap whose answer comes after a newer one does
+    // nothing (tap). Each "+ Add" keeps its newest tap's number, so a tap on it while it is still
+    // busy makes that tap the latest again (onClick); the next new tap still gets a number of its
+    // own, never one a pending tap holds.
+    let taken = 0;
     let latest = 0;
     const taps = new WeakMap();
     const icon = name => iconIn(doc, name);
@@ -443,8 +447,9 @@ export function startQuickAdd(doc, context = {}, deps = {}) {
     // overtaken tap clears its "+ Add"'s busy state only while it is that button's newest tap,
     // never a newer tap's on the same button.
     async function tap(button) {
-        latest += 1;
-        const mine = latest;
+        taken += 1;
+        const mine = taken;
+        latest = mine;
         taps.set(button, mine);
         const overtaken = () => {
             if (mine === latest) return false;

@@ -534,6 +534,53 @@ describe('a slow tap overtaken by a newer one', () => {
         expect([slow.getAttribute('aria-expanded'), later.getAttribute('aria-expanded')]).toEqual(['true', 'false']);
     });
 
+    // Repro (#94's round-2 rf/spec and rf/skeptic): with A's and B's loads held, tap A, B, A again
+    // and then C, whose panel opens, then let B answer. A re-tap makes A's pending tap the latest
+    // again, so C's tap must get a number no other tap has had, or B's late answer counts as C's.
+    // A and C are Royal Coachman's card and a copy of Red Devil's; B is Red Devil's, pointed at
+    // each shape of product.
+    it.each([
+        ['several sizes', SIZES],
+        ['Colour and Fly Sizes (5663)', 5663],
+        ['one size (6178)', 6178],
+    ])('never answers after a newer tap that followed a second tap on a loading "+ Add": B with %s', async (shape, id) => {
+        const a = buttonFor(SIZES);
+        const cell = RED_DEVIL().closest('article').parentElement;
+        const copy = cell.cloneNode(true);
+        copy.querySelector('article').setAttribute('data-entity-id', '7777');
+        cell.after(copy);
+        const c = copy.querySelector(QUICK_ADD);
+        c.setAttribute('data-rf-quick-add', String(SIZES));
+        const b = cardFor(id);
+        const releaseA = holdNextLoad();
+        const releaseB = holdNextLoad();
+        start();
+        await tap(a);
+        await tap(b);
+        await tap(a); // A still loads: no new load, and A's pending tap is the latest again
+        expect(deps.loadProduct).toHaveBeenCalledTimes(2);
+        await tap(c);
+        const opened = panel();
+        expect(c.closest('article').contains(opened)).toBe(true);
+        expect(opened.contains(document.activeElement)).toBe(true);
+        releaseB();
+        await settle(8);
+        expect(deps.navigate).not.toHaveBeenCalled();
+        expect(deps.addItem).not.toHaveBeenCalled();
+        expect(document.querySelectorAll('[data-rf-qa-panel]').length).toBe(1);
+        expect(panel()).toBe(opened);
+        expect(opened.contains(document.activeElement)).toBe(true);
+        expect(b.hasAttribute('aria-disabled')).toBe(false);
+        expect(b.classList.contains('is-busy')).toBe(false);
+        releaseA();
+        await settle(8);
+        expect(panel()).toBe(opened);
+        expect(opened.contains(document.activeElement)).toBe(true);
+        expect([a, b, c].map(button => button.getAttribute('aria-expanded'))).toEqual(['false', 'false', 'true']);
+        expect(a.hasAttribute('aria-disabled')).toBe(false);
+        expect(deps.loadProduct).toHaveBeenCalledTimes(3);
+    });
+
     it('never clears the busy state of a newer tap on its own "+ Add"', async () => {
         const pillsReady = holdNextPills();
         start();
