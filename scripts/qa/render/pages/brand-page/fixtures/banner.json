@@ -1,0 +1,1020 @@
+{
+    "description": "The ReelFlies brand listing (ticket 36) as channel 1 shapes it on 2026-10-09: the brand's own 1600x700 image as the banner, nine of the brand's patterns from its live listing (their own photos, at 640w), the Fly Sizes facet in the API's order (illustrative counts: the gates' headless browser gets a brand's facets with no items, so the live pin's shots show no pills, though the raw-HTML fetch gets them), no total (BigCommerce gives a brand page none) and the store's numbered pagination window.",
+    "page": "pages/brand",
+    "region": "brand_below_content",
+    "chrome": true,
+    "configuration": {},
+    "page_context": {
+        "template": "pages/brand",
+        "page_type": "brand",
+        "breadcrumbs": [
+            {
+                "url": "https://reelflies.ca/",
+                "name": "Home"
+            },
+            {
+                "url": "https://reelflies.ca/reelflies-2/",
+                "name": "ReelFlies"
+            }
+        ],
+        "brand": {
+            "facets": [
+                {
+                    "facet": "Fly Sizes",
+                    "type": "term",
+                    "title": "Fly Sizes",
+                    "partial": "multi",
+                    "display": "multi",
+                    "visible": true,
+                    "start_collapsed": false,
+                    "show_product_counts": true,
+                    "show_more_toggle": false,
+                    "has_more_results": false,
+                    "selected": false,
+                    "remove_url": "https://reelflies.ca/reelflies-2/?_bc_fsnf=1",
+                    "items": [
+                        {
+                            "id": "6",
+                            "title": "6",
+                            "count": 41,
+                            "selected": false,
+                            "url": "https://reelflies.ca/reelflies-2/?_bc_fsnf=1&Fly+Sizes=6"
+                        },
+                        {
+                            "id": "8",
+                            "title": "8",
+                            "count": 38,
+                            "selected": false,
+                            "url": "https://reelflies.ca/reelflies-2/?_bc_fsnf=1&Fly+Sizes=8"
+                        },
+                        {
+                            "id": "4",
+                            "title": "4",
+                            "count": 33,
+                            "selected": false,
+                            "url": "https://reelflies.ca/reelflies-2/?_bc_fsnf=1&Fly+Sizes=4"
+                        },
+                        {
+                            "id": "10",
+                            "title": "10",
+                            "count": 30,
+                            "selected": false,
+                            "url": "https://reelflies.ca/reelflies-2/?_bc_fsnf=1&Fly+Sizes=10"
+                        },
+                        {
+                            "id": "2",
+                            "title": "2",
+                            "count": 27,
+                            "selected": false,
+                            "url": "https://reelflies.ca/reelflies-2/?_bc_fsnf=1&Fly+Sizes=2"
+                        },
+                        {
+                            "id": "12",
+                            "title": "12",
+                            "count": 24,
+                            "selected": false,
+                            "url": "https://reelflies.ca/reelflies-2/?_bc_fsnf=1&Fly+Sizes=12"
+                        },
+                        {
+                            "id": "1/0",
+                            "title": "1/0",
+                            "count": 19,
+                            "selected": false,
+                            "url": "https://reelflies.ca/reelflies-2/?_bc_fsnf=1&Fly+Sizes=1%2F0"
+                        },
+                        {
+                            "id": "14",
+                            "title": "14",
+                            "count": 17,
+                            "selected": false,
+                            "url": "https://reelflies.ca/reelflies-2/?_bc_fsnf=1&Fly+Sizes=14"
+                        },
+                        {
+                            "id": "2/0",
+                            "title": "2/0",
+                            "count": 12,
+                            "selected": false,
+                            "url": "https://reelflies.ca/reelflies-2/?_bc_fsnf=1&Fly+Sizes=2%2F0"
+                        },
+                        {
+                            "id": "16",
+                            "title": "16",
+                            "count": 9,
+                            "selected": false,
+                            "url": "https://reelflies.ca/reelflies-2/?_bc_fsnf=1&Fly+Sizes=16"
+                        },
+                        {
+                            "id": "3/0",
+                            "title": "3/0",
+                            "count": 6,
+                            "selected": false,
+                            "url": "https://reelflies.ca/reelflies-2/?_bc_fsnf=1&Fly+Sizes=3%2F0"
+                        },
+                        {
+                            "id": "18",
+                            "title": "18",
+                            "count": 4,
+                            "selected": false,
+                            "url": "https://reelflies.ca/reelflies-2/?_bc_fsnf=1&Fly+Sizes=18"
+                        }
+                    ]
+                }
+            ],
+            "faceted_search_enabled": true,
+            "products": [
+                {
+                    "add_to_wishlist_url": "/wishlist.php?action=add&product_id=6248",
+                    "availability": "",
+                    "brand": null,
+                    "category": [
+                        "Flies/Saltwater, Warmwater & Salmon/Bass & Pan Fish/Bass Bugs & Poppers",
+                        "Flies/Saltwater, Warmwater & Salmon/Bass & Pan Fish/Bass Bugs & Poppers"
+                    ],
+                    "custom_fields": null,
+                    "date_added": "9th Oct 2026",
+                    "demo": false,
+                    "has_options": true,
+                    "id": 6248,
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/6248/7896/mouse-hot-ear__06367.1791563115.jpg?c=2",
+                        "alt": "Hot-Eared Mouse Fly for Bass & Trout"
+                    },
+                    "low_stock_level": null,
+                    "name": "Hot-Eared Mouse",
+                    "num_reviews": 0,
+                    "pre_order": false,
+                    "price": {
+                        "without_tax": {
+                            "formatted": "$2.95",
+                            "value": 2.95,
+                            "currency": "CAD"
+                        },
+                        "tax_label": "Tax"
+                    },
+                    "qty_in_cart": 0,
+                    "rating": 0,
+                    "show_cart_action": true,
+                    "sku": "RF-9974",
+                    "stock_level": null,
+                    "url": "https://reelflies.ca/hot-eared-mouse/"
+                },
+                {
+                    "add_to_wishlist_url": "/wishlist.php?action=add&product_id=6242",
+                    "availability": "",
+                    "brand": null,
+                    "category": [
+                        "Flies",
+                        "Flies/Realistic Trout Flies",
+                        "Flies/Realistic Trout Flies/Realistic Terrestrials",
+                        "Flies",
+                        "Flies/Realistic Trout Flies",
+                        "Flies/Realistic Trout Flies/Realistic Terrestrials"
+                    ],
+                    "custom_fields": null,
+                    "date_added": "26th Dec 2025",
+                    "demo": false,
+                    "has_options": true,
+                    "id": 6242,
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/6242/7876/yellow-hopper2__50936.1766761740.jpg?c=2",
+                        "alt": "Realistic Hopper Bright Yellow"
+                    },
+                    "low_stock_level": null,
+                    "name": "Realistic Hopper Bright Yellow",
+                    "num_reviews": 0,
+                    "pre_order": false,
+                    "price": {
+                        "without_tax": {
+                            "formatted": "$3.95",
+                            "value": 3.95,
+                            "currency": "CAD"
+                        },
+                        "tax_label": "Tax"
+                    },
+                    "qty_in_cart": 0,
+                    "rating": 0,
+                    "show_cart_action": true,
+                    "sku": "RF-13228",
+                    "stock_level": null,
+                    "url": "https://reelflies.ca/realistic-hopper-bright-yellow/"
+                },
+                {
+                    "add_to_wishlist_url": "/wishlist.php?action=add&product_id=6224",
+                    "availability": "",
+                    "brand": null,
+                    "category": [
+                        "Flies/Nymphs & Sub Surface Flies/Damsel & Dragon Nymphs",
+                        "All Fly Patterns",
+                        "Flies/Nymphs & Sub Surface Flies/Damsel & Dragon Nymphs"
+                    ],
+                    "custom_fields": null,
+                    "date_added": "20th Dec 2024",
+                    "demo": false,
+                    "has_options": true,
+                    "id": 6224,
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/6224/7777/dragon2__73307.1734713651.jpg?c=2",
+                        "alt": "Dragonfly Nymph Fly"
+                    },
+                    "low_stock_level": null,
+                    "name": "Dragonfly Nymph",
+                    "num_reviews": 0,
+                    "pre_order": false,
+                    "price": {
+                        "without_tax": {
+                            "formatted": "$1.95",
+                            "value": 1.95,
+                            "currency": "CAD"
+                        },
+                        "tax_label": "Tax"
+                    },
+                    "qty_in_cart": 0,
+                    "rating": 0,
+                    "show_cart_action": true,
+                    "sku": "RF-3323",
+                    "stock_level": null,
+                    "url": "https://reelflies.ca/dragonfly-nymph/"
+                },
+                {
+                    "add_to_wishlist_url": "/wishlist.php?action=add&product_id=6223",
+                    "availability": "",
+                    "brand": null,
+                    "category": [
+                        "Flies/Nymphs & Sub Surface Flies/Beadhead Nymphs/BH Stonefly Nymphs",
+                        "All Fly Patterns",
+                        "Flies/Nymphs & Sub Surface Flies/Beadhead Nymphs/BH Stonefly Nymphs"
+                    ],
+                    "custom_fields": null,
+                    "date_added": "28th Nov 2024",
+                    "demo": false,
+                    "has_options": true,
+                    "id": 6223,
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/6223/7766/tungsten-kauffman-stonefly__94111.1732831103.jpg?c=2",
+                        "alt": "Tungsten Kaufmann Stonefly Black from ReelFlies"
+                    },
+                    "low_stock_level": null,
+                    "name": "Tungsten Kaufmann Stonefly Black",
+                    "num_reviews": 0,
+                    "pre_order": false,
+                    "price": {
+                        "without_tax": {
+                            "formatted": "$1.95",
+                            "value": 1.95,
+                            "currency": "CAD"
+                        },
+                        "tax_label": "Tax"
+                    },
+                    "qty_in_cart": 0,
+                    "rating": 0,
+                    "show_cart_action": true,
+                    "sku": "RF-1907",
+                    "stock_level": null,
+                    "url": "https://reelflies.ca/tungsten-kaufmann-stonefly-black/"
+                },
+                {
+                    "add_to_wishlist_url": "/wishlist.php?action=add&product_id=6133",
+                    "availability": "",
+                    "brand": null,
+                    "category": [
+                        "Flies/Saltwater, Warmwater & Salmon/Bass & Pan Fish",
+                        "Flies/Saltwater, Warmwater & Salmon/Bass & Pan Fish/Bass Bugs & Poppers",
+                        "Flies/Saltwater, Warmwater & Salmon/Bass & Pan Fish",
+                        "Flies/Saltwater, Warmwater & Salmon/Bass & Pan Fish/Bass Bugs & Poppers"
+                    ],
+                    "custom_fields": null,
+                    "date_added": "2nd Sep 2022",
+                    "demo": false,
+                    "has_options": false,
+                    "id": 6133,
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/6133/7602/DSC_0339-copy__99993.1715788165.jpg?c=2",
+                        "alt": "Olive Waterdog Bass Popper"
+                    },
+                    "low_stock_level": null,
+                    "name": "Swimming Waterdog Olive",
+                    "num_reviews": 0,
+                    "pre_order": false,
+                    "price": {
+                        "without_tax": {
+                            "formatted": "$3.95",
+                            "value": 3.95,
+                            "currency": "CAD"
+                        },
+                        "tax_label": "Tax"
+                    },
+                    "qty_in_cart": 0,
+                    "rating": 0,
+                    "show_cart_action": true,
+                    "sku": "RF-7234",
+                    "stock_level": null,
+                    "url": "https://reelflies.ca/swimming-waterdog-olive/"
+                },
+                {
+                    "add_to_wishlist_url": "/wishlist.php?action=add&product_id=6228",
+                    "availability": "",
+                    "brand": null,
+                    "category": [
+                        "Flies/Saltwater, Warmwater & Salmon/Bonefish & Permit/Crab Flies",
+                        "All Fly Patterns",
+                        "Flies/Saltwater, Warmwater & Salmon/Bonefish & Permit/Crab Flies"
+                    ],
+                    "custom_fields": null,
+                    "date_added": "13th Nov 2025",
+                    "demo": false,
+                    "has_options": false,
+                    "id": 6228,
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/6228/7825/meril-flexicrab3__55573.1764775110.jpg?c=2",
+                        "alt": "ReelFlies Flexo Crab Fly – Merle Grey Blue"
+                    },
+                    "low_stock_level": null,
+                    "name": "Flexo Crab Fly – Merle Grey Blue",
+                    "num_reviews": 0,
+                    "pre_order": false,
+                    "price": {
+                        "without_tax": {
+                            "formatted": "$5.95",
+                            "value": 5.95,
+                            "currency": "CAD"
+                        },
+                        "tax_label": "Tax"
+                    },
+                    "qty_in_cart": 0,
+                    "rating": 0,
+                    "show_cart_action": true,
+                    "sku": "RF-4856",
+                    "stock_level": null,
+                    "url": "https://reelflies.ca/flexo-crab-fly-merle-grey-blue/"
+                },
+                {
+                    "add_to_wishlist_url": "/wishlist.php?action=add&product_id=6221",
+                    "availability": "",
+                    "brand": null,
+                    "category": [
+                        "All Fly Patterns",
+                        "Flies/Saltwater, Warmwater & Salmon/Atlantic Salmon Flies/Atlantic Salmon Hairwing",
+                        "Flies/Saltwater, Warmwater & Salmon/Atlantic Salmon Flies/Atlantic Salmon Hairwing"
+                    ],
+                    "custom_fields": null,
+                    "date_added": "26th Nov 2024",
+                    "demo": false,
+                    "has_options": true,
+                    "id": 6221,
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/6221/7742/print-shrimp-variation2__22520.1732658646.jpg?c=2",
+                        "alt": "Mallard Flank Spawning Shrimp Bright Pink"
+                    },
+                    "low_stock_level": null,
+                    "name": "Mallard Flank Spawning Shrimp Bright Pink",
+                    "num_reviews": 0,
+                    "pre_order": false,
+                    "price": {
+                        "without_tax": {
+                            "formatted": "$2.45",
+                            "value": 2.45,
+                            "currency": "CAD"
+                        },
+                        "tax_label": "Tax"
+                    },
+                    "qty_in_cart": 0,
+                    "rating": 0,
+                    "show_cart_action": true,
+                    "sku": "RF-6199",
+                    "stock_level": null,
+                    "url": "https://reelflies.ca/mallard-flank-spawning-shrimp-bright-pink/"
+                },
+                {
+                    "add_to_wishlist_url": "/wishlist.php?action=add&product_id=6219",
+                    "availability": "",
+                    "brand": null,
+                    "category": [
+                        "Flies/Saltwater, Warmwater & Salmon/Bonefish & Permit",
+                        "All Fly Patterns",
+                        "Flies/Saltwater, Warmwater & Salmon/Bonefish & Permit"
+                    ],
+                    "custom_fields": null,
+                    "date_added": "26th Nov 2024",
+                    "demo": false,
+                    "has_options": false,
+                    "id": 6219,
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/6219/7736/bonefish-muncher2__98674.1732656206.jpg?c=2",
+                        "alt": "Bonefish Muncher Shrimp Fly"
+                    },
+                    "low_stock_level": null,
+                    "name": "Bonefish Muncher",
+                    "num_reviews": 0,
+                    "pre_order": false,
+                    "price": {
+                        "without_tax": {
+                            "formatted": "$2.95",
+                            "value": 2.95,
+                            "currency": "CAD"
+                        },
+                        "tax_label": "Tax"
+                    },
+                    "qty_in_cart": 0,
+                    "rating": 0,
+                    "show_cart_action": true,
+                    "sku": "RF-4864",
+                    "stock_level": null,
+                    "url": "https://reelflies.ca/bonefish-muncher/"
+                },
+                {
+                    "add_to_wishlist_url": "/wishlist.php?action=add&product_id=6217",
+                    "availability": "",
+                    "brand": null,
+                    "category": [
+                        "Flies/Saltwater, Warmwater & Salmon/Bass & Pan Fish/Bass Bugs & Poppers",
+                        "Flies/Saltwater, Warmwater & Salmon/Saltwater Baitfish Flies",
+                        "Flies/Saltwater, Warmwater & Salmon/Barracuda Flies",
+                        "All Fly Patterns",
+                        "Flies/Saltwater, Warmwater & Salmon/Pike & Muskie Flies",
+                        "Flies/Saltwater, Warmwater & Salmon/Bass & Pan Fish/Bass Bugs & Poppers",
+                        "Flies/Saltwater, Warmwater & Salmon/Saltwater Baitfish Flies",
+                        "Flies/Saltwater, Warmwater & Salmon/Barracuda Flies",
+                        "Flies/Saltwater, Warmwater & Salmon/Pike & Muskie Flies"
+                    ],
+                    "custom_fields": null,
+                    "date_added": "26th Nov 2024",
+                    "demo": false,
+                    "has_options": true,
+                    "id": 6217,
+                    "image": {
+                        "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/products/6217/7738/white-popper__49431.1732656395.jpg?c=2",
+                        "alt": "White Saltwater Popper"
+                    },
+                    "low_stock_level": null,
+                    "name": "Saltwater Popper White",
+                    "num_reviews": 0,
+                    "pre_order": false,
+                    "price": {
+                        "without_tax": {
+                            "formatted": "$3.95",
+                            "value": 3.95,
+                            "currency": "CAD"
+                        },
+                        "tax_label": "Tax"
+                    },
+                    "qty_in_cart": 0,
+                    "rating": 0,
+                    "show_cart_action": true,
+                    "sku": "RF-7035",
+                    "stock_level": null,
+                    "url": "https://reelflies.ca/saltwater-popper-white/"
+                }
+            ],
+            "selected": {
+                "remove_all_url": "",
+                "items": []
+            },
+            "show_compare": true,
+            "meta": [],
+            "state": [],
+            "config": [],
+            "name": "ReelFlies",
+            "image": {
+                "data": "https://cdn11.bigcommerce.com/s-fixture/images/stencil/{:size}/w/boxes-assortments-for-website_1662739586__80374.original.jpg",
+                "alt": "ReelFlies"
+            },
+            "search_error": false,
+            "url": "https://reelflies.ca/reelflies-2/"
+        },
+        "categories": [
+            {
+                "id": "540",
+                "name": "Fly Selections & Assortments",
+                "url": "/fly-selections-assortments/",
+                "children": [
+                    {
+                        "id": "600",
+                        "name": "Bulk Fly Selections",
+                        "url": "/fly-selections-assortments/bulk-fly-selections/",
+                        "children": []
+                    },
+                    {
+                        "id": "601",
+                        "name": "Mini Fly Selections",
+                        "url": "/fly-selections-assortments/mini-fly-selections/",
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "id": "503",
+                "name": "Streamers",
+                "url": "/streamers/",
+                "children": [
+                    {
+                        "id": "602",
+                        "name": "Woolly Buggers & Leeches",
+                        "url": "/streamers/woolly-buggers-leeches/",
+                        "children": []
+                    },
+                    {
+                        "id": "603",
+                        "name": "Muddler Minnows & Sculpins",
+                        "url": "/streamers/muddler-minnows-sculpins/",
+                        "children": []
+                    },
+                    {
+                        "id": "604",
+                        "name": "Baitfish & Minnows",
+                        "url": "/streamers/baitfish-minnows/",
+                        "children": []
+                    },
+                    {
+                        "id": "605",
+                        "name": "Zonkers & Zuddlers",
+                        "url": "/streamers/zonkers-zuddlers/",
+                        "children": []
+                    },
+                    {
+                        "id": "606",
+                        "name": "Articulated Streamers",
+                        "url": "/streamers/articulated-streamers/",
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "id": "520",
+                "name": "Flies by Species",
+                "url": "/species/",
+                "children": [
+                    {
+                        "id": "609",
+                        "name": "Trout Flies",
+                        "url": "/species/trout-flies/",
+                        "children": [
+                            {
+                                "id": "607",
+                                "name": "Dry Flies",
+                                "url": "/species/trout-flies/dry-flies/",
+                                "children": []
+                            },
+                            {
+                                "id": "608",
+                                "name": "Nymphs",
+                                "url": "/species/trout-flies/nymphs/",
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "id": "612",
+                        "name": "Steelhead Flies",
+                        "url": "/species/steelhead-flies/",
+                        "children": [
+                            {
+                                "id": "610",
+                                "name": "Dry Flies",
+                                "url": "/species/steelhead-flies/dry-flies/",
+                                "children": []
+                            },
+                            {
+                                "id": "611",
+                                "name": "Nymphs",
+                                "url": "/species/steelhead-flies/nymphs/",
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "id": "615",
+                        "name": "Atlantic Salmon Flies",
+                        "url": "/species/atlantic-salmon-flies/",
+                        "children": [
+                            {
+                                "id": "613",
+                                "name": "Dry Flies",
+                                "url": "/species/atlantic-salmon-flies/dry-flies/",
+                                "children": []
+                            },
+                            {
+                                "id": "614",
+                                "name": "Nymphs",
+                                "url": "/species/atlantic-salmon-flies/nymphs/",
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "id": "618",
+                        "name": "Bass Flies",
+                        "url": "/species/bass-flies/",
+                        "children": [
+                            {
+                                "id": "616",
+                                "name": "Dry Flies",
+                                "url": "/species/bass-flies/dry-flies/",
+                                "children": []
+                            },
+                            {
+                                "id": "617",
+                                "name": "Nymphs",
+                                "url": "/species/bass-flies/nymphs/",
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "id": "621",
+                        "name": "Pike & Muskie Flies",
+                        "url": "/species/pike-muskie-flies/",
+                        "children": [
+                            {
+                                "id": "619",
+                                "name": "Dry Flies",
+                                "url": "/species/pike-muskie-flies/dry-flies/",
+                                "children": []
+                            },
+                            {
+                                "id": "620",
+                                "name": "Nymphs",
+                                "url": "/species/pike-muskie-flies/nymphs/",
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "id": "624",
+                        "name": "Panfish Flies",
+                        "url": "/species/panfish-flies/",
+                        "children": [
+                            {
+                                "id": "622",
+                                "name": "Dry Flies",
+                                "url": "/species/panfish-flies/dry-flies/",
+                                "children": []
+                            },
+                            {
+                                "id": "623",
+                                "name": "Nymphs",
+                                "url": "/species/panfish-flies/nymphs/",
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "id": "627",
+                        "name": "Carp Flies",
+                        "url": "/species/carp-flies/",
+                        "children": [
+                            {
+                                "id": "625",
+                                "name": "Dry Flies",
+                                "url": "/species/carp-flies/dry-flies/",
+                                "children": []
+                            },
+                            {
+                                "id": "626",
+                                "name": "Nymphs",
+                                "url": "/species/carp-flies/nymphs/",
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "id": "630",
+                        "name": "Bonefish Flies",
+                        "url": "/species/bonefish-flies/",
+                        "children": [
+                            {
+                                "id": "628",
+                                "name": "Dry Flies",
+                                "url": "/species/bonefish-flies/dry-flies/",
+                                "children": []
+                            },
+                            {
+                                "id": "629",
+                                "name": "Nymphs",
+                                "url": "/species/bonefish-flies/nymphs/",
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "id": "633",
+                        "name": "Permit Flies",
+                        "url": "/species/permit-flies/",
+                        "children": [
+                            {
+                                "id": "631",
+                                "name": "Dry Flies",
+                                "url": "/species/permit-flies/dry-flies/",
+                                "children": []
+                            },
+                            {
+                                "id": "632",
+                                "name": "Nymphs",
+                                "url": "/species/permit-flies/nymphs/",
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "id": "636",
+                        "name": "Tarpon, Snook & Redfish Flies",
+                        "url": "/species/tarpon-snook-redfish-flies/",
+                        "children": [
+                            {
+                                "id": "634",
+                                "name": "Dry Flies",
+                                "url": "/species/tarpon-snook-redfish-flies/dry-flies/",
+                                "children": []
+                            },
+                            {
+                                "id": "635",
+                                "name": "Nymphs",
+                                "url": "/species/tarpon-snook-redfish-flies/nymphs/",
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "id": "639",
+                        "name": "Barracuda Flies",
+                        "url": "/species/barracuda-flies/",
+                        "children": [
+                            {
+                                "id": "637",
+                                "name": "Dry Flies",
+                                "url": "/species/barracuda-flies/dry-flies/",
+                                "children": []
+                            },
+                            {
+                                "id": "638",
+                                "name": "Nymphs",
+                                "url": "/species/barracuda-flies/nymphs/",
+                                "children": []
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": "501",
+                "name": "Dry Flies",
+                "url": "/dry-flies/",
+                "children": [
+                    {
+                        "id": "642",
+                        "name": "Mayfly Dry Flies",
+                        "url": "/dry-flies/mayfly-dry-flies/",
+                        "children": []
+                    },
+                    {
+                        "id": "643",
+                        "name": "Attractor Dry Flies",
+                        "url": "/dry-flies/attractor-dry-flies/",
+                        "children": []
+                    },
+                    {
+                        "id": "644",
+                        "name": "Hoppers & Terrestrials",
+                        "url": "/dry-flies/hoppers-terrestrials/",
+                        "children": []
+                    },
+                    {
+                        "id": "645",
+                        "name": "Parachute Dry Flies",
+                        "url": "/dry-flies/parachute-dry-flies/",
+                        "children": []
+                    },
+                    {
+                        "id": "641",
+                        "name": "Caddis Dry Flies",
+                        "url": "/dry-flies/caddis-dry-flies/",
+                        "children": [
+                            {
+                                "id": "640",
+                                "name": "Elk Hair Caddis",
+                                "url": "/dry-flies/caddis-dry-flies/elk-hair-caddis/",
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "id": "646",
+                        "name": "Stonefly Dry Flies",
+                        "url": "/dry-flies/stonefly-dry-flies/",
+                        "children": []
+                    },
+                    {
+                        "id": "647",
+                        "name": "Midge Dry Flies",
+                        "url": "/dry-flies/midge-dry-flies/",
+                        "children": []
+                    },
+                    {
+                        "id": "648",
+                        "name": "Emergers & Cripples",
+                        "url": "/dry-flies/emergers-cripples/",
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "id": "502",
+                "name": "Nymphs",
+                "url": "/nymphs/",
+                "children": [
+                    {
+                        "id": "649",
+                        "name": "Mayfly Nymphs",
+                        "url": "/nymphs/mayfly-nymphs/",
+                        "children": []
+                    },
+                    {
+                        "id": "650",
+                        "name": "Attractor & Searching Nymphs",
+                        "url": "/nymphs/attractor-searching-nymphs/",
+                        "children": []
+                    },
+                    {
+                        "id": "651",
+                        "name": "Chironomids & Midge Nymphs",
+                        "url": "/nymphs/chironomids-midge-nymphs/",
+                        "children": []
+                    },
+                    {
+                        "id": "652",
+                        "name": "Stonefly Nymphs",
+                        "url": "/nymphs/stonefly-nymphs/",
+                        "children": []
+                    },
+                    {
+                        "id": "653",
+                        "name": "Euro Nymphs",
+                        "url": "/nymphs/euro-nymphs/",
+                        "children": []
+                    },
+                    {
+                        "id": "654",
+                        "name": "Hare's Ear Nymphs",
+                        "url": "/nymphs/hares-ear-nymphs/",
+                        "children": []
+                    },
+                    {
+                        "id": "655",
+                        "name": "Scuds & Sow Bugs",
+                        "url": "/nymphs/scuds-sow-bugs/",
+                        "children": []
+                    },
+                    {
+                        "id": "656",
+                        "name": "Wet Flies & Soft Hackles",
+                        "url": "/nymphs/wet-flies-soft-hackles/",
+                        "children": []
+                    },
+                    {
+                        "id": "657",
+                        "name": "Caddis Nymphs",
+                        "url": "/nymphs/caddis-nymphs/",
+                        "children": []
+                    },
+                    {
+                        "id": "658",
+                        "name": "Damsel & Dragonfly Nymphs",
+                        "url": "/nymphs/damsel-dragonfly-nymphs/",
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "id": "550",
+                "name": "Fly Gear",
+                "url": "/fly-gear/",
+                "children": [
+                    {
+                        "id": "659",
+                        "name": "Fly Fishing Accessories",
+                        "url": "/fly-gear/fly-fishing-accessories/",
+                        "children": []
+                    },
+                    {
+                        "id": "660",
+                        "name": "Fly Boxes",
+                        "url": "/fly-gear/fly-boxes/",
+                        "children": []
+                    },
+                    {
+                        "id": "661",
+                        "name": "Fly Tying Materials",
+                        "url": "/fly-gear/fly-tying-materials/",
+                        "children": []
+                    },
+                    {
+                        "id": "662",
+                        "name": "Fly Tying Hooks",
+                        "url": "/fly-gear/fly-tying-hooks/",
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "id": "506",
+                "name": "Saltwater Flies",
+                "url": "/saltwater-flies/",
+                "children": [
+                    {
+                        "id": "663",
+                        "name": "Saltwater Baitfish Flies",
+                        "url": "/saltwater-flies/saltwater-baitfish-flies/",
+                        "children": []
+                    },
+                    {
+                        "id": "664",
+                        "name": "Shrimp & Crab Flies",
+                        "url": "/saltwater-flies/shrimp-crab-flies/",
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "id": "504",
+                "name": "Eggs & Worms",
+                "url": "/eggs-worms/",
+                "children": [
+                    {
+                        "id": "665",
+                        "name": "San Juan & Squirmy Worms",
+                        "url": "/eggs-worms/san-juan-squirmy-worms/",
+                        "children": []
+                    },
+                    {
+                        "id": "666",
+                        "name": "Egg Flies",
+                        "url": "/eggs-worms/egg-flies/",
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "id": "505",
+                "name": "Warmwater Flies",
+                "url": "/warmwater-flies/",
+                "children": [
+                    {
+                        "id": "667",
+                        "name": "Warmwater Streamers",
+                        "url": "/warmwater-flies/warmwater-streamers/",
+                        "children": []
+                    },
+                    {
+                        "id": "668",
+                        "name": "Poppers & Topwater Flies",
+                        "url": "/warmwater-flies/poppers-topwater-flies/",
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "id": "560",
+                "name": "Clearance",
+                "url": "/clearance/",
+                "children": []
+            }
+        ],
+        "pagination": {
+            "brand": {
+                "current": 1,
+                "links": [
+                    {
+                        "number": 1,
+                        "url": "/brands/ReelFlies.html?page=1"
+                    },
+                    {
+                        "number": 2,
+                        "url": "/brands/ReelFlies.html?page=2"
+                    },
+                    {
+                        "number": 3,
+                        "url": "/brands/ReelFlies.html?page=3"
+                    },
+                    {
+                        "number": 4,
+                        "url": "/brands/ReelFlies.html?page=4"
+                    },
+                    {
+                        "number": 5,
+                        "url": "/brands/ReelFlies.html?page=5"
+                    },
+                    {
+                        "number": 6,
+                        "url": "/brands/ReelFlies.html?page=6"
+                    }
+                ],
+                "sort": "featured",
+                "next": "/brands/ReelFlies.html?page=2"
+            }
+        },
+        "theme_settings": {
+            "rf_menu_type_ids": "501,502,503,504,505,506",
+            "rf_menu_species_root_id": "520",
+            "rf_menu_exclude_ids": ""
+        }
+    }
+}

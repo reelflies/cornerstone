@@ -28,7 +28,7 @@ import { KNOWN_ISSUES, knownIssue } from './axe-known-issues.mjs';
 const RELATED = '#tab-related .productCarousel';
 const SIMILAR = '#tab-similar .productCarousel';
 // Channel 1's pins whose product list is the live catalogue's, and the listing's grid they hold.
-const LIVE_LISTS = ['category', 'category@more', 'category@noindex', 'search'];
+const LIVE_LISTS = ['category', 'category@more', 'category@noindex', 'search', 'brand'];
 const LISTING_GRID = '#product-listing-container .productGrid';
 
 describe('the status a pinned page must return', () => {
@@ -182,6 +182,11 @@ describe('the screenshot stylesheet (W0-5)', () => {
 
     it('masks both of channel 1\'s search tabs, whose counts the catalogue sets, whichever is active (#68\'s rf/spec and rf/skeptic)', () => {
         assert.ok(masksFor('1', 'search').includes('[data-search-page-tabs] [role="tab"]'));
+    });
+
+    it('masks the category pins\' count, which the catalogue sets, and not the brand pin\'s row, which names the page (ticket 36)', () => {
+        for (const pin of ['category', 'category@more', 'category@noindex']) assert.ok(masksFor('1', pin).includes('[data-rf-list-count]'), pin);
+        assert.ok(!masksFor('1', 'brand').includes('[data-rf-list-count]'));
     });
 
     it('holds channel 1\'s search page\'s "Did you mean" panel, whose categories the catalogue sets (ticket 31)', () => {

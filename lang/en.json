@@ -1093,7 +1093,8 @@
         },
 
         "brand": {
-            "_slot": ""
+            "_slot": "",
+            "page": "Page {page}"
         },
 
         "size_pills": {
