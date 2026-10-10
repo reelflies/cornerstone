@@ -16,7 +16,8 @@
 //   group's name and call to action over a neutral scrim (CD-6), then its Species pages as pills.
 // - The photo's crop is a class the widget's focus field picks (rf-species-group__img--x0 to --x100),
 //   never inline CSS. The cold-water group's crop of the Dry banner (--third) shows only its left
-//   third, so none of its flies is one the Dry card shows (CD-4).
+//   third, so from 801px, where the Dry card is a square, none of its flies is one the card
+//   shows (CD-4).
 // - About: an even 6/12 and 6/12 split from 801px, the 4:3 photo beside the text; stacked on
 //   phones, photo first (CD-9).
 // - Every photo's box is set by CSS before it loads (the group's shape spacer, the About photo's
@@ -252,6 +253,149 @@ $rf-links-pill-height:  40px;       // a Species pill, and the call to action ov
     font-size: 14px;
     font-variant-numeric: tabular-nums;
     font-weight: 400;
+}
+
+
+// The Assortments band (ticket 49's PR 2)
+// -----------------------------------------------------------------------------
+//
+// widgets/assortments-band/template.html, "Fly selections", from the reference's .sel rules
+// (plan/design/src/reference.src.html:743-748 and :859-861). Its cards are ticket 48's
+// (widgets/_shared/product-card.html) on the Signature band's white plates
+// (.rf-product-cards--plates, _home-bands.scss), which are the reference's .sel-cards cards.
+//
+// - The band's space above it is the section's own padding, and the tint is on its inner panel,
+//   so an unpublished widget (R12) takes all of its space with it.
+// - The tinted panel ($rf-tile, #F1F3F0, the 20px banner radius) sits inside the page's container.
+//   From 1261px the copy takes the left 4/12 and three cards the right 8/12, as ticket 48's
+//   Signature band splits there; from 801px the copy sits above the three; on phones above two,
+//   the third hidden, so no card sits alone.
+// - A card after those is a spare: hidden, its lazy photo never fetched, until a pick before it
+//   is skipped. With only two cards left they share the row from 801px, so no column stands
+//   empty; with one or none, the band hides itself, copy included.
+// - A card's name takes two lines from 801px and up to four on phones, where an Assortment's
+//   long name ("The Adams Family Selection - 12 Flies") would otherwise be cut at 320.
+// - On phones the panel's padding is 16px: inside the theme's 24px page gutter (the reference's
+//   is 16px) that keeps each card about as wide as the reference's (140px at 375).
+// - Every value sizes depends on is fixed from 1261px, where the container stops growing, so
+//   each photo's sizes is a fixed width there (home-assortments-screens measures it).
+
+$rf-assortments-pad:        16px;               // the panel's padding on phones
+$rf-assortments-pad-medium: 3vw;                // from 801px: the reference's clamp(22px, 3cqi, 40px), 24px to 38px here
+$rf-assortments-pad-large:  40px;               // from 1261px
+$rf-assortments-gap-large:  44px;               // between the copy and the cards from 1261px (the reference's 3.4cqi at 1280)
+$rf-assortments-cards:      3;                  // the cards the band shows from 801px
+$rf-assortments-split:      "large";            // the copy beside the cards from here (1261px)
+$rf-assortments-name-lines: 4;                  // a card name's most lines on phones (below)
+$rf-assortments-ink-hover:  #3a4047;            // the reference's .btn-ink:hover, as _empty-states.scss (white on it: 10.5:1)
+
+.rf-assortments {
+    padding-top: var(--rf-section);
+
+    // Fewer than two cards: no card sits alone beside the copy, so the band hides, copy
+    // included, and the page closes up as if the widget were unpublished.
+    &:not(:has(.rf-product-cards__item + .rf-product-cards__item)) {
+        display: none;
+    }
+}
+
+.rf-assortments__inner {
+    background: var(--rf-tile);
+    border-radius: var(--rf-radius-banner);
+    display: grid;
+    gap: 20px;
+    grid-template-columns: minmax(0, 1fr);
+    padding: $rf-assortments-pad;
+
+    @include breakpoint("medium") {
+        gap: 24px;
+        padding: $rf-assortments-pad-medium;
+    }
+
+    @include breakpoint($rf-assortments-split) {
+        align-items: center;
+        gap: $rf-assortments-gap-large;
+        grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+        padding: $rf-assortments-pad-large;
+    }
+}
+
+.rf-assortments__copy {
+    min-width: 0;
+}
+
+.rf-assortments__heading {
+    color: $rf-ink;
+    font-size: var(--rf-fs-h2);
+    font-weight: 600;
+    letter-spacing: -0.012em;
+    line-height: 1.15;
+    margin: 0;
+    text-transform: none;
+    text-wrap: balance;
+}
+
+.rf-assortments__text {
+    color: $rf-dun;
+    margin: 10px 0 20px;
+    max-width: 30em;
+}
+
+// The reference's ink pill (.btn-ink): the buy colour is for buy actions only (ticket 25).
+.rf-assortments__link {
+    align-items: center;
+    background: $rf-ink;
+    border-radius: var(--rf-radius-pill);
+    color: $rf-paper;
+    display: inline-flex;
+    font-size: 16px;
+    font-weight: 600;
+    justify-content: center;
+    line-height: 1;
+    min-height: 48px;
+    padding: 0 22px;
+    text-decoration: none;
+
+    &:hover {
+        background: $rf-assortments-ink-hover;
+        color: $rf-paper;
+    }
+}
+
+// Ticket 48's grid is two columns on phones and four from 801px; here it is three from 801px.
+// _home-links.scss is imported after _home-bands.scss, so these rules follow its own.
+.rf-assortments__cards {
+    > .rf-product-cards__item:nth-child(n + 3) {
+        display: none;
+    }
+
+    @include breakpoint("medium") {
+        grid-template-columns: repeat($rf-assortments-cards, minmax(0, 1fr));
+
+        > .rf-product-cards__item:nth-child(n + 3) {
+            display: flex;
+        }
+
+        > .rf-product-cards__item:nth-child(n + #{$rf-assortments-cards + 1}) {
+            display: none;
+        }
+
+        // Only two cards left: they share the row.
+        &:not(:has(> .rf-product-cards__item:nth-child(#{$rf-assortments-cards}))) {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    // An Assortment's name carries its count ("… Selection - 12 Flies"), and on phones a plate's
+    // text is 97px wide at 320, so a name may take four lines there rather than be cut; from
+    // 801px it takes two, as the Signature plates' do.
+    .rf-product-card__name {
+        -webkit-line-clamp: $rf-assortments-name-lines;
+
+        @include breakpoint("medium") {
+            -webkit-line-clamp: 2;
+        }
+    }
 }
 
 

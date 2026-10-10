@@ -1,0 +1,26 @@
+{
+    "channel_id": 1895766,
+    "configuration": {
+        "heading": "Fly selections",
+        "text": "Ready-made mixes of patterns and sizes at one price. A good start for a new box or a new water. Fly boxes are shown for scale and not included.",
+        "link_label": "Shop fly selections",
+        "link_url": "/fly-selections-assortments/",
+        "currency_symbol": "$",
+        "pick1": "3886",
+        "pick2": "3870",
+        "pick3": "4251",
+        "pick4": "4888",
+        "pick5": "4397"
+    },
+    "placement": {
+        "template_file": "pages/home",
+        "region": "home_below_top_products",
+        "sort_order": 50,
+        "status": "inactive"
+    },
+    "uuids": {
+        "template": null,
+        "widget": null,
+        "placement": null
+    }
+}

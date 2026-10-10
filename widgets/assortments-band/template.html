@@ -1,0 +1,41 @@
+{{!--
+    The Assortments band on the home page, "Fly selections" (ticket 49; spec module 7, R5, HOME-4,
+    SEO-8; stories 18, 68 and 70), placed in home_below_top_products after the Species section
+    (sort_order 50). Synced to each channel by scripts/widgets-sync.mjs; styled by the theme's
+    ReelFlies layer (assets/scss/reelflies/_home-links.scss), so nothing here is inline CSS.
+
+    - A tinted band (#F1F3F0, 20px radius): the copy beside three Assortment cards from 1261px
+      (4/12 and 8/12), the copy above the three from 801px, and above two on phones, where the
+      third is hidden so no card sits alone.
+    - The copy is widget fields: the H2, the text, which says the fly boxes in the photos are shown
+      for scale and not included (story 18), and the link to the Fly Selections & Assortments
+      page. No field holds a number (HOME-4).
+    - The products are picked ids (pick1 to pick5: three, then two spares), never names or prices:
+      the storefront query (query.graphql, ticket 48's fragment) reads each one's name, photo,
+      price and stock, so prices stay live (HOME-4).
+    - Each card is ticket 48's widgets/_shared/product-card.html, pasted in by the sync. An
+      Assortment is priced per set, so no unit follows the price: unit is empty. A pick sold out
+      in every size, or missing from the channel, renders nothing, so a spare moves up; with one
+      card or none left, the band hides itself, copy included.
+    - The five calls pass the same sizes, the photo's width inside its plate: a third of the 8/12
+      less the gaps from 1261px (185px once the container stops growing at 1280px; 181px at
+      1261px), a third of the band's width from 801px, and half of it on phones. Change all five
+      together: the render test checks every card's sizes, and home-assortments-screens measures
+      each photo against it at every width.
+--}}
+<section class="rf-assortments" aria-labelledby="rf-assortments-{{_.id}}" data-rf-band="assortments">
+    <div class="rf-assortments__inner">
+        <div class="rf-assortments__copy">
+            <h2 class="rf-assortments__heading" id="rf-assortments-{{_.id}}">{{heading}}</h2>
+            <p class="rf-assortments__text">{{text}}</p>
+            <a class="rf-assortments__link" href="{{link_url}}">{{link_label}}</a>
+        </div>
+        <ul class="rf-product-cards rf-product-cards--plates rf-assortments__cards">
+            {{> _shared/product-card product=_.data.site.pick1 currency=currency_symbol unit="" sizes="(min-width: 1261px) 185px, (min-width: 801px) calc(31.33vw - 45px), calc(50vw - 63px)" ~}}
+            {{> _shared/product-card product=_.data.site.pick2 currency=currency_symbol unit="" sizes="(min-width: 1261px) 185px, (min-width: 801px) calc(31.33vw - 45px), calc(50vw - 63px)" ~}}
+            {{> _shared/product-card product=_.data.site.pick3 currency=currency_symbol unit="" sizes="(min-width: 1261px) 185px, (min-width: 801px) calc(31.33vw - 45px), calc(50vw - 63px)" ~}}
+            {{> _shared/product-card product=_.data.site.pick4 currency=currency_symbol unit="" sizes="(min-width: 1261px) 185px, (min-width: 801px) calc(31.33vw - 45px), calc(50vw - 63px)" ~}}
+            {{> _shared/product-card product=_.data.site.pick5 currency=currency_symbol unit="" sizes="(min-width: 1261px) 185px, (min-width: 801px) calc(31.33vw - 45px), calc(50vw - 63px)" ~}}
+        </ul>
+    </div>
+</section>

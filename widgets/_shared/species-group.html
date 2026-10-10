@@ -3,8 +3,9 @@
     UX-15, HOME-4, SEO-8), pasted into widgets/shop-by-fish/template.html once per group by the sync.
 
     - The photo is one link to the group's largest Species page. Inside it: the photo (alt="", the
-      link's text says where it goes), the group's name as an h3 and the call to action as a span,
-      on a neutral scrim, so nothing interactive sits inside the link.
+      link's text says where it goes), then a div (an h3 can't sit in a span) holding the group's
+      name as an h3 and the call to action as a span, on a neutral scrim, so nothing interactive
+      sits inside the link.
     - The photo is a real img with a srcset from base and the path after the size segment, lazy,
       with no fetchpriority: the hero's is the page's only one. It fills a 16:10 box from 801px
       and a 16:9 box on phones (object-fit: cover), at the object-position its focus field picks,
@@ -12,8 +13,8 @@
       a 16:10 box (1.29 times a 16:9 one).
     - repeat marks the page's one allowed repeat (CD-4): the cold-water group's crop of the Dry
       Flies banner, which the Dry card shows too. It shows only the banner's left third (drawn
-      three times as wide as its box), so no fly in it is one the card shows, and it carries
-      data-rf-photo-repeat, so home-photo-once leaves it out.
+      three times as wide as its box), so from 801px, where the card is a square, no fly in it is
+      one the card shows, and it carries data-rf-photo-repeat, so home-photo-once leaves it out.
     - Then the group's Species pages as pills: one to four links, each shown only when its name is
       set. A pill shows its count only when the storefront query returns one (HOME-4): no field
       holds a typed number.
@@ -27,10 +28,10 @@
         <span class="rf-species-group__media">
             <img class="rf-species-group__img{{#if repeat}} rf-species-group__img--third{{else}} rf-species-group__img--x{{focus}}{{/if}}" src="{{base}}/800w/{{photo}}" srcset="{{base}}/400w/{{photo}} 400w, {{base}}/800w/{{photo}} 800w, {{base}}/1200w/{{photo}} 1200w, {{base}}/1600w/{{photo}} 1600w" sizes="{{#if repeat}}(max-width: 800px) calc(300vw - 144px), (max-width: 1260px) calc(100vw - 96px), 1056px{{else}}(max-width: 800px) calc(129vw - 62px), (max-width: 1260px) calc(48vw - 46px), 503px{{/if}}" width="{{photo_width}}" height="{{photo_height}}" alt="" loading="lazy"{{#if repeat}} data-rf-photo-repeat{{/if}} />
         </span>
-        <span class="rf-species-group__copy">
+        <div class="rf-species-group__copy">
             <h3 class="rf-species-group__name">{{name}}</h3>
             <span class="rf-species-group__cta">{{cta}}</span>
-        </span>
+        </div>
     </a>
     <ul class="rf-species-pills">
         {{#if pill1_name}}

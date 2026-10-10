@@ -82,12 +82,13 @@ test('a product setting holds an id, never a name', () => {
 
 test('the product names are every product in the widgets\' query fixtures, longest first', () => {
     const names = productNames();
-    for (const name of ['Adams Parachute Dry Fly', 'Reel Egg Nuke', 'ReelFlies - Psycho Caddis']) assert.ok(names.includes(name), name);
+    for (const name of ['Adams Parachute Dry Fly', 'Reel Egg Nuke', 'ReelFlies - Psycho Caddis', '42 Mayfly Assortment']) assert.ok(names.includes(name), name);
     assert.deepEqual(names, [...names].sort((a, b) => b.length - a.length || a.localeCompare(b)));
     assert.equal(new Set(names).size, names.length);
 });
 
 test('the product bands carry no typed price, count or product name: their channel files, schema defaults and fixtures', () => {
-    assert.deepEqual(PRODUCT_BANDS, ['best-sellers', 'signature-band']);
+    // Ticket 48's two bands, and ticket 49's Assortments band.
+    assert.deepEqual(PRODUCT_BANDS, ['best-sellers', 'signature-band', 'assortments-band']);
     for (const widget of PRODUCT_BANDS) assert.deepEqual(typedValuesIn(widget), [], widget);
 });

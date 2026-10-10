@@ -15,6 +15,9 @@
 // The cards a band renders after its fourth are spares, hidden by the theme's CSS until a pick
 // is sold out; they are checked like the rest, since the served page carries them.
 //
+// Ticket 49's Assortments band is a <section data-rf-band="assortments"> holding the same cards,
+// so its cards are checked here too; home-assortments checks the rest of it.
+//
 // Like home-cards-tiles, it checks whatever the page has and passes a page without the bands: it
 // never reads the repo's record of the store (build pipeline, section 6.6). Whether the store
 // holds what the repo records is widgets-sync.mjs --verify's check, and whether each card's price

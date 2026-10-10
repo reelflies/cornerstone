@@ -141,6 +141,18 @@ test('three equal groups in the reference\'s order, each image one link to its l
     }
 });
 
+// An <h3> is flow content, which a <span> (phrasing content only) can't hold: the name and the call
+// to action sit in a <div> (PR 1's rf/skeptic minor).
+test('each group\'s name and call to action sit in a <div>, since an <h3> can\'t go inside a <span>', async () => {
+    for (const group of groupsOf(await render())) {
+        const [copy, ...more] = elementsHtml(group, 'div', attrs => (attrs.class || '').split(/\s+/).includes('rf-species-group__copy'));
+        assert.equal(more.length, 0);
+        assert.ok(copy, 'the text block is a <div class="rf-species-group__copy">');
+        assert.equal(elementsHtml(copy, 'h3').length, 1);
+        assert.equal(elementsHtml(group, 'span', attrs => (attrs.class || '').split(/\s+/).includes('rf-species-group__copy')).length, 0, 'no <span> holds the <h3>');
+    }
+});
+
 test('the pills link to all eleven Species pages, three, four and four, at tree 4\'s root-level paths, as store-data.json lists them', async () => {
     const html = await render();
     const groups = groupsOf(html);
