@@ -21,7 +21,9 @@
 {{!-- 41 cart: rf_fly_brands, for cart-count.js's brand rule (tickets 38, 43 and 44) --}}
 {{~inject 'rfFlyBrands' theme_settings.rf_fly_brands}}
 
-{{!-- 42 cart state: rf_cart_state --}}
+{{!-- 42 cart state: rf_cart_state, for page-modules.js; and, with it on, the template variable rf_cart_state for size-pills.html, which renders with its option as context, where theme_settings can't be reached. This renders before the page block, so the variable is set before the pills --}}
+{{~inject 'rfCartState' theme_settings.rf_cart_state}}
+{{~#if theme_settings.rf_cart_state}}{{assignVar 'rf_cart_state' 1}}{{/if}}
 
 {{!-- 43 quick add: rf_quick_add, and the words of its panel's failure state, which quick-add.js needs before a product has loaded --}}
 {{~inject 'rfQuickAdd' theme_settings.rf_quick_add}}

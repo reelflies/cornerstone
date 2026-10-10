@@ -32,6 +32,14 @@
       a link to the hook size chart (ticket 35; R9). Stock's "(Required)" stays for screen readers
       and for stock's setProductVariant, which reads it; "choose one" says it on screen.
     - The values keep the catalogue's order, which ticket 18 sorts into hook order.
+    - Cart state (ticket 42; O15, UX-10; stories 40 and 68), for the size option on the product page
+      only (ticket 38's rf_product_page; never Quick view or the Change dialog), while rf_cart_state
+      is on (js-settings.html sets the variable rf_cart_state, because this renders with the option
+      as context, where theme_settings can't be reached): each pill's hidden "(N in cart)" span,
+      after "(sold out)", and its corner check, hidden from screen readers; and the "In your cart"
+      line under the sold-out line, its one line kept whether or not it says anything. All empty
+      and hidden here: cart-marks.js reads the cart in the browser and fills them, with the words on
+      the line's data attributes (# for a count, % for a size). With the switch off, none of it.
 --}}
 {{> components/reelflies/size-facet-name}}
 {{~assignVar 'rf_pills_values' 0~}}
@@ -46,6 +54,8 @@
     {{~assignVar 'rf_pills_label' (concat (concat 'rf-option-' id) '-label')~}}
 {{~/if~}}
 {{~assignVar 'rf_pills_chosen' ''~}}
+{{~assignVar 'rf_cart_pills' 0~}}
+{{~#if (getVar 'rf_cart_state')~}}{{~#if (getVar 'rf_product_page')~}}{{~#if (getVar 'rf_pills_size')~}}{{~assignVar 'rf_cart_pills' 1~}}{{~/if~}}{{~/if~}}{{~/if~}}
 {{~#each values~}}{{~#if selected~}}{{~assignVar 'rf_pills_chosen' label~}}{{~/if~}}{{~/each~}}
 <div class="form-field rf-pills-field" data-product-attribute="set-rectangle" data-rf-pills="{{#if (getVar 'rf_pills_size')}}size{{/if}}" role="radiogroup" aria-labelledby="{{getVar 'rf_pills_label'}}">
     <p class="rf-pills-head">
@@ -81,6 +91,7 @@
                 {{> components/reelflies/icon name='check' class='rf-pill-check'}}
                 <span class="form-option-variant">{{label}}</span>
                 <span class="is-srOnly" data-rf-sold-out-tag hidden> {{lang 'reelflies.size_pills.sold_out_tag'}}</span>
+                {{#if (getVar 'rf_cart_pills')}}<span class="is-srOnly" data-rf-cart-tag hidden></span><span class="rf-pill-cart" data-rf-cart-dot aria-hidden="true" hidden>{{> components/reelflies/icon name='check' class='rf-pill-cart-icon'}}</span>{{/if}}
             </label>
         </div>
         {{/each}}
@@ -92,5 +103,13 @@
        data-rf-one="{{lang 'reelflies.size_pills.sold_out_one' sizes='#'}}"
        data-rf-many="{{lang 'reelflies.size_pills.sold_out_many' sizes='#'}}"
        data-rf-and="{{lang 'reelflies.size_pills.and'}}"></p>
+    {{#if (getVar 'rf_cart_pills')}}
+    <p class="rf-pills-note rf-pills-incart"
+       data-rf-cart-line="{{getVar 'rf_product_id'}}"
+       data-rf-pill="{{lang 'reelflies.cart_state.pill' count='#'}}"
+       data-rf-line="{{lang 'reelflies.cart_state.line' sizes='#'}}"
+       data-rf-size="{{lang 'reelflies.cart_state.size' count='#' size='%'}}"
+       data-rf-and="{{lang 'reelflies.cart_state.and'}}"></p>
+    {{/if}}
     {{/if}}
 </div>

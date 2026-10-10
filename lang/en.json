@@ -1187,7 +1187,13 @@
         },
 
         "cart_state": {
-            "_slot": ""
+            "_slot": "",
+            "pill": "({count} in cart)",
+            "line": "In your cart: {sizes}.",
+            "size": "{count} × size {size}",
+            "and": "and",
+            "card": "{count} in cart",
+            "card_of": "of {name}"
         },
 
         "quick_add": {

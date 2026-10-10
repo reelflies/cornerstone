@@ -6177,6 +6177,9 @@
   "i18n.RfCartState": {
     "default": "Cart state"
   },
+  "i18n.RfCartStateSwitch": {
+    "default": "Show what's in the cart on the size pills and the cards"
+  },
 
   "i18n.RfQuickAdd": {
     "default": "Quick add"

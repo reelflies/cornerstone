@@ -104,7 +104,9 @@ describe('the card (components/reelflies/card.html)', () => {
             const body = outerHtml(card, 'div', attrs => /(^|\s)card-body(\s|$)/.test(attrs.class || ''));
             assert.equal(findTags(body, 'i').filter(tag => 'data-rf-test-slot' in tag.attrs).length, 1);
         }
-        assert.equal(textOf(await renderPartial('components/reelflies/card-extras', {})), '');
+        // Ticket 42's line has only screen-reader words until the cart is read, and none with its
+        // switch off (cart-state.test.mjs).
+        assert.equal(textOf(await renderPartial('components/reelflies/card-extras', { theme_settings: { rf_cart_state: false } })), '');
     });
 });
 

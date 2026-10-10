@@ -26,7 +26,9 @@
 // a Species pane state waits for a pinned page with a Species group (wave R1). A ticket adds a
 // state in its own slot below.
 
-import { answerCartAdds, answerCartRead, cartLines } from './fixtures/cart/routes.mjs';
+import {
+    answerCartAdds, answerCartRead, cartLines, cartOf,
+} from './fixtures/cart/routes.mjs';
 
 /* eslint-env browser */ // the waitForFunction callbacks run in the page
 
@@ -239,6 +241,31 @@ export const UI_STATES = {
             await page.locator('[data-rf-sticky-add]').evaluate(bar => bar.setAttribute('data-rf-bar-ms', '600000'));
             await page.locator('[data-rf-sticky-button]').click();
             await page.locator('[data-rf-sticky-view]').waitFor({ state: 'visible' });
+        },
+    },
+
+    // Fat Albert with two of its sizes in the cart (ticket 42): the corner check on each and "In your
+    // cart: 3 × size N and 2 × size M." under the pills, from a cart the state answers (page.route,
+    // so nothing reaches the store) and sends cart-marks.js's re-read for (rf:cart-changed). The
+    // live sold-out marks are cleared first, as ticket 37's states do. With rf_cart_state off
+    // (QA_OVERLAY=rf_cart_state-off) the page has no line, and the state shows the stock pills.
+    'in-cart': {
+        description: 'the product page with two sizes in the cart: the corner checks, and "In your cart: 3 × size N and 2 × size M." under the pills',
+        ticket: '42',
+        projects: ['phone-375', 'desktop-1280'],
+        pages: ['product@sizes'],
+        async open(page) {
+            await chunkLoaded(page, 'rf-size-pills');
+            await setSizeMarks(page, []);
+            if (await page.locator('[data-rf-cart-line]').count()) {
+                await chunkLoaded(page, 'rf-cart-state');
+                const sizes = await page.locator('[data-rf-pills="size"] input[type="radio"]').evaluateAll(radios => radios.filter(radio => radio.value)
+                    .slice(0, 2).map(radio => ({ nameId: Number(/\[(\d+)\]/.exec(radio.name)[1]), valueId: Number(radio.value) })));
+                await answerCartRead(page, cartOf(sizes.map((option, index) => ({ productId: FAT_ALBERT_ID, quantity: 3 - index, options: [option] }))));
+                await page.evaluate(() => document.dispatchEvent(new CustomEvent('rf:cart-changed', { detail: { source: 'qa-state', productId: null } })));
+                await page.waitForFunction(() => / and /.test(document.querySelector('[data-rf-cart-line]').textContent));
+            }
+            await page.locator('[data-rf-pills="size"]').scrollIntoViewIfNeeded();
         },
     },
 
