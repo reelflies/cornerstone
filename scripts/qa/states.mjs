@@ -69,6 +69,24 @@ async function settleBuyRow(page) {
     });
 }
 
+// After a state has scrolled (37, 38 and 42's states on product@sizes): a control of the product
+// view that the window's top edge cuts to less than 24px in view is brought down whole, by
+// scrolling up as far as it is cut. axe reads such a control as too small when a neighbour is close
+// (target-size, "partially obscured", WCAG 2.5.8's 24px): a photo thumbnail beside the other, or
+// "Hook size guide" by the header's buttons. Which control the edge cuts follows the layout above
+// the pills: ticket 42's line under them put a thumbnail there at 375. The phone's sticky header
+// may then cover it, which axe doesn't count and the shot shows as it is. A control is a link, a
+// button, a form field or a summary with a box (the pills' visually hidden radios have none); the
+// header's own, which a desktop scroll cuts with nothing close, are left to axe.
+async function uncutTop(page) {
+    await page.evaluate(() => {
+        const cut = Array.from(document.querySelectorAll('.productView :is(a[href], button, input:not([type="hidden"]), select, textarea, summary)'))
+            .map(element => element.getBoundingClientRect())
+            .filter(box => box.width > 2 && box.height > 2 && box.top < 0 && box.bottom > 0 && box.bottom < 24);
+        if (cut.length) window.scrollBy(0, Math.floor(Math.min(...cut.map(box => box.top))));
+    });
+}
+
 // product@sizes's product, Fat Albert (pages.mjs), whose adds the bar's states answer.
 const FAT_ALBERT_ID = 5663;
 
@@ -147,6 +165,7 @@ export const UI_STATES = {
             await chunkLoaded(page, 'rf-size-pills');
             await setSizeMarks(page, []);
             await page.locator('[data-rf-pills="size"]').scrollIntoViewIfNeeded();
+            await uncutTop(page);
         },
     },
     'size-chosen': {
@@ -179,6 +198,7 @@ export const UI_STATES = {
             await setSizeMarks(page, [-2, -1]);
             await page.waitForFunction(() => /are sold out/.test(document.querySelector('[data-rf-pills="size"] [data-rf-sold-out-line]')?.textContent || ''));
             await page.locator('[data-rf-pills="size"]').scrollIntoViewIfNeeded();
+            await uncutTop(page);
         },
     },
 
@@ -200,6 +220,7 @@ export const UI_STATES = {
                 box.style.display = 'block';
             });
             await page.locator('.rf-add').scrollIntoViewIfNeeded();
+            await uncutTop(page);
             await page.mouse.move(0, 0);
         },
     },
@@ -266,6 +287,7 @@ export const UI_STATES = {
                 await page.waitForFunction(() => / and /.test(document.querySelector('[data-rf-cart-line]').textContent));
             }
             await page.locator('[data-rf-pills="size"]').scrollIntoViewIfNeeded();
+            await uncutTop(page);
         },
     },
 

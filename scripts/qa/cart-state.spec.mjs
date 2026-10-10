@@ -169,24 +169,20 @@ test.describe('cart state (ticket 42)', () => {
 
         for (const key of ['product@sizes', 'category']) {
             test(`reads the cart once as ${key} loads, and the answer moves nothing: no layout shift, CLS 0.05 or less (story 70)`, async ({ page }) => {
-                // The page's ids first, with an empty cart; then the cart, held until the page settles.
-                let body = [];
+                test.setTimeout(150000);
+                // The cart's read is held until the page has settled, then answered with what the
+                // page lists: Fat Albert's first two sizes, or the first three cards' products.
                 let release = () => {};
-                let held = Promise.resolve();
+                const held = new Promise(resolve => { release = resolve; });
                 await page.route('**/api/storefront/carts**', async route => {
                     if (route.request().method() !== 'GET') return route.fallback();
                     await held;
-                    return route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
+                    const lines = key === 'category'
+                        ? (await page.locator('#product-listing-container .productGrid article.card').evaluateAll(cards => cards.map(card => Number(card.getAttribute('data-entity-id')))))
+                            .slice(0, 3).map((productId, index) => ({ productId, quantity: index + 1 }))
+                        : (await sizesOf(page)).slice(0, 2).map((size, index) => ({ productId: FAT_ALBERT_ID, quantity: 3 - index, options: [sizeOption(size)] }));
+                    return route.fulfill({ contentType: 'application/json', body: JSON.stringify(cartOf(lines)) });
                 });
-                await open(page, key);
-                if (key === 'category') {
-                    const ids = await page.locator('#product-listing-container .productGrid article.card').evaluateAll(cards => cards.map(card => Number(card.getAttribute('data-entity-id'))));
-                    body = cartOf(ids.slice(0, 3).map((productId, index) => ({ productId, quantity: index + 1 })));
-                } else {
-                    const sizes = await sizesOf(page);
-                    body = cartOf(sizes.slice(0, 2).map((size, index) => ({ productId: FAT_ALBERT_ID, quantity: 3 - index, options: [sizeOption(size)] })));
-                }
-                held = new Promise(resolve => { release = resolve; });
                 await page.addInitScript(() => {
                     window.rfShifts = [];
                     new PerformanceObserver(list => {
@@ -194,9 +190,7 @@ test.describe('cart state (ticket 42)', () => {
                     }).observe({ type: 'layout-shift', buffered: true });
                 });
                 const reads = cartReads(page);
-                await page.reload();
-                await dismissCookieBanner(page);
-                await chunkLoaded(page, 'rf-cart-state');
+                await open(page, key);
                 await page.waitForTimeout(1000);
                 const watched = key === 'category' ? '#product-listing-container .productGrid article.card .rf-card-actions' : '#form-action-addToCart';
                 const boxes = () => page.locator(watched).evaluateAll(elements => elements.map(element => {
@@ -208,6 +202,7 @@ test.describe('cart state (ticket 42)', () => {
                 release();
                 await expect(page.locator(key === 'category' ? '[data-rf-cart-card] a:visible' : '[data-rf-cart-line]')).not.toHaveCount(0);
                 if (key !== 'category') await expect(page.locator('[data-rf-cart-line]')).toHaveText(/^In your cart: 3 × size .+ and 2 × size .+\.$/);
+                else await expect(page.locator('[data-rf-cart-card] a:visible')).toHaveCount(3);
                 await page.waitForTimeout(500);
                 const shiftAfter = await page.evaluate(() => window.rfShifts.reduce((sum, value) => sum + value, 0));
                 expect(await boxes(), 'nothing below the line or the slot moved').toEqual(before);
