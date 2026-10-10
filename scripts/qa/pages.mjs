@@ -44,6 +44,15 @@ export const CHANNELS = {
             // and whose fields carry the autocomplete tokens (raw-HTML assertion autocomplete).
             login: '/login.php',
             'create-account': '/login.php?action=create_account',
+            // Ticket 51: a search for a word nothing matches, so the help for a search with no
+            // results shows (the cart pin is the empty cart, and the 404 pin the 404 page).
+            'search@none': '/search.php?search_query=qzxjv&section=product',
+        },
+        // Ticket 51: the store's "Did you mean" panel on search@none ("qxjt" on 2026-10-09), whose
+        // words, and any categories it lists, follow the store's content, so they could change
+        // the page's height.
+        hold: {
+            'search@none': { '.page-content > .panel': 200 },
         },
         // Pin both, and delete these lines, when refactor tickets 13 and 14 land.
         notPinnedYet: {
@@ -96,6 +105,12 @@ export const CHANNELS = {
             // URL is /reelflies-2/): the brand's image as the banner, 24 of its 2,167 products a page
             // and the numbered pager (2026-10-09).
             brand: '/brands/ReelFlies.html',
+            // Ticket 51's dead ends with tree 1's menu ids, so their Fly Type links show: the 404
+            // page, the empty cart (the gates' browser has no cart; a GET of /cart.php changes
+            // nothing) and a search for a word nothing matches.
+            404: '/rf-qa-missing-page/',
+            cart: '/cart.php',
+            'search@none': '/search.php?search_query=qzxjv&section=product',
         },
         // The live catalogue decides which products the category, search and brand pins list,
         // so their grids are held (below), not masked. Pin a listing that holds still before
@@ -153,6 +168,8 @@ export const CHANNELS = {
             // The hub's grid (ticket 34), not in #product-listing-container: the root lists its
             // Species pages' products, which the live catalogue decides, as the category pins'.
             'species-hub': { '[data-rf-hub-products] .productGrid': 1200 },
+            // Ticket 51: search@none's "Did you mean" panel, if the store offers one, as on 1895766.
+            'search@none': { '.page-content > .panel': 200 },
         },
     },
     1855224: {

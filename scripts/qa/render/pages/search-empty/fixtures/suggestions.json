@@ -1,0 +1,143 @@
+{
+    "description": "A search with no results on the real search page (ticket 51), for search-empty-screens.spec.mjs: \"cadis\" matches no product, and the platform's suggestions panel offers \"Did you mean caddis\" and one category, so the ReelFlies help (the no-match line, the tip and the Fly Type links) shows above stock's panel, with stock's own no-match line and tips left out. Tree 4's menu ids and categories (the six Fly Types and Flies by Species, as category-page's fixture has them), so the links show as they will on prelaunch after wave R1. The live pins (search@none on both channels) get the store's own suggestion, held out of their shots; the store decides when it suggests, so this fixture shows the panel with a category. The page has the facet sidebar, as the live search pages do (faceted search on, no facets to list). The widget itself is empty: the spec shoots the page's content.",
+    "page": "pages/search",
+    "region": "search_below_content",
+    "chrome": true,
+    "configuration": {},
+    "page_context": {
+        "page_type": "search",
+        "breadcrumbs": [
+            {
+                "name": "Home",
+                "url": "/"
+            },
+            {
+                "name": "Search",
+                "url": "/search.php"
+            }
+        ],
+        "result_count": 0,
+        "product_results": {
+            "products": [],
+            "show_compare": true,
+            "faceted_search_enabled": true,
+            "facets": []
+        },
+        "category_results": [
+            [
+                {
+                    "name": "Dry Flies",
+                    "url": "/dry-flies/"
+                },
+                {
+                    "name": "Caddis Dry Flies",
+                    "url": "/dry-flies/caddis/"
+                }
+            ]
+        ],
+        "brand_results": [],
+        "content_results": [],
+        "forms": {
+            "search": {
+                "query": "cadis",
+                "section": "product",
+                "product_url": "/search.php?search_query=cadis&section=product",
+                "content_url": "/search.php?search_query=cadis&section=content",
+                "has_suggestions": true,
+                "suggested_query": {
+                    "query": "caddis",
+                    "url": "/search.php?search_query=caddis"
+                }
+            }
+        },
+        "pagination": {
+            "product_results": {
+                "total": 0,
+                "links": []
+            },
+            "content_results": {
+                "total": 0,
+                "links": []
+            }
+        },
+        "categories": [
+            {
+                "id": "540",
+                "name": "Fly Selections & Assortments",
+                "url": "/fly-selections-assortments/",
+                "children": []
+            },
+            {
+                "id": "503",
+                "name": "Streamers",
+                "url": "/streamers/",
+                "children": []
+            },
+            {
+                "id": "520",
+                "name": "Flies by Species",
+                "url": "/species/",
+                "children": [
+                    {
+                        "id": "521",
+                        "name": "Trout Flies",
+                        "url": "/species/trout-flies/",
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "id": "501",
+                "name": "Dry Flies",
+                "url": "/dry-flies/",
+                "children": [
+                    {
+                        "id": "511",
+                        "name": "Caddis Dry Flies",
+                        "url": "/dry-flies/caddis/",
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "id": "502",
+                "name": "Nymphs",
+                "url": "/nymphs/",
+                "children": []
+            },
+            {
+                "id": "550",
+                "name": "Fly Gear",
+                "url": "/fly-gear/",
+                "children": []
+            },
+            {
+                "id": "506",
+                "name": "Saltwater Flies",
+                "url": "/saltwater-flies/",
+                "children": []
+            },
+            {
+                "id": "504",
+                "name": "Eggs & Worms",
+                "url": "/eggs-worms/",
+                "children": []
+            },
+            {
+                "id": "505",
+                "name": "Warmwater Flies",
+                "url": "/warmwater-flies/",
+                "children": []
+            }
+        ],
+        "urls": {
+            "search": "/search.php",
+            "home": "/",
+            "cart": "/cart.php"
+        },
+        "theme_settings": {
+            "rf_menu_type_ids": "501,502,503,504,505,506",
+            "rf_menu_species_root_id": "520"
+        }
+    }
+}

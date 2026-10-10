@@ -10,12 +10,18 @@
 
         {{> components/reelflies/menu-links ids=theme_settings.rf_menu_type_ids}}
 
+    The categories are the page's, @root.categories, or rf_categories when the caller passes them.
+    Inside a page's {{#partial "page"}} block @root is empty, so a caller there passes the page's
+    own (ticket 51's dead ends, through 404-links.html):
+
+        {{> components/reelflies/menu-links ids=rf_type_ids rf_categories=categories}}
+
     Each link carries data-rf-menu-id, its category id. Used by the footer's Shop column (50) and
     the dead ends' Fly Type links (51); ticket 28 may adopt it.
 --}}
 {{~#if ids~}}
 {{~#each (split ids ',') as |rfMenuId|~}}
-{{~#each @root.categories as |rfTop|~}}
+{{~#each (default ../rf_categories @root.categories) as |rfTop|~}}
 {{~#if rfTop.id '==' (trim rfMenuId)~}}
 <li><a href="{{rfTop.url}}" data-rf-menu-id="{{rfTop.id}}">{{rfTop.name}}</a></li>
 {{~/if~}}

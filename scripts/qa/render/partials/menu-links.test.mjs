@@ -66,4 +66,35 @@ describe('menu-links', () => {
         });
         assert.deepEqual(ids(nested), ['20']);
     });
+
+    // Ticket 51's dead ends include it from a page's {{#partial "page"}} block, where @root is
+    // empty: the block renders later, inside layout/base, without the page's data. So the caller
+    // passes the page's categories (rf_categories=categories).
+    describe('inside a page\'s {{#partial "page"}} block, where @root is empty', () => {
+        const LAYOUT = 'rf-test/menu-links-layout';
+        const inPage = (call, context) => renderPartial(CALLER, context, {
+            overrides: {
+                [CALLER]: `{{#partial "page"}}<ul>${call}</ul>{{/partial}}{{> ${LAYOUT}}}`,
+                [LAYOUT]: '<body>{{{block "page"}}}</body>',
+            },
+        });
+
+        it('finds nothing in @root.categories there, which is why the categories are passed', async () => {
+            assert.equal(findTags(await inPage('{{> components/reelflies/menu-links ids=list}}', { list: '12,20', categories: TREE }), 'a').length, 0);
+        });
+
+        it('reads the categories passed as rf_categories, in the list\'s order', async () => {
+            const html = await inPage('{{> components/reelflies/menu-links ids=list rf_categories=categories}}', { list: '12,20,11', categories: TREE });
+            assert.deepEqual(ids(html), ['12', '20', '11']);
+            assert.deepEqual(unbalancedTags(html), []);
+        });
+    });
+
+    it('prefers the categories passed as rf_categories to the page\'s', async () => {
+        const passed = [category('70', 'Passed', '/passed/')];
+        const html = await renderPartial(CALLER, { list: '70,20', categories: TREE, passed }, {
+            overrides: { [CALLER]: '<ul>{{> components/reelflies/menu-links ids=list rf_categories=passed}}</ul>' },
+        });
+        assert.deepEqual(hrefs(html), ['/passed/']);
+    });
 });

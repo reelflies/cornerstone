@@ -64,6 +64,7 @@ product_results:
         </aside>
     {{/if}}
     <main class="page-content">
+        {{> components/reelflies/search-empty}}{{!-- ReelFlies hook (ticket 51; CUSTOMIZATIONS.md): help on every search with no results; stock's no-match line and tips below are skipped, so nothing is said twice --}}
         {{#if forms.search.has_suggestions}}
             <div class="panel panel--large">
                 <div class="panel-body">
@@ -73,6 +74,7 @@ product_results:
                             <a href="{{forms.search.suggested_query.url}}" class="search-refine">{{lang 'forms.search.refine'}}</a>
                         </div>
 
+                        {{#if false}}{{!-- ReelFlies hook (ticket 51; CUSTOMIZATIONS.md): the no-match line is search-empty.html's --}}
                         {{#if result_count '===' 0}}
                             <div class="search-suggestion">
                                 <p>
@@ -81,6 +83,7 @@ product_results:
                                     {{lang 'forms.search.no_match'}}
                                 </p>
                             </div>
+                        {{/if}}
                         {{/if}}
                     {{/if}}
 
@@ -113,6 +116,7 @@ product_results:
                         </div>
                     {{/if}}
 
+                    {{#if false}}{{!-- ReelFlies hook (ticket 51; CUSTOMIZATIONS.md): the tips are search-empty.html's --}}
                     {{#if result_count '===' 0}}
                         <div class="search-suggestion">
                             <h5 class="suggestion-title">{{lang 'forms.search.suggestions.title'}}</h5>
@@ -122,6 +126,7 @@ product_results:
                                 <li>{{lang 'forms.search.suggestions.line3'}}</li>
                             </ul>
                         </div>
+                    {{/if}}
                     {{/if}}
                 </div>
             </div>
