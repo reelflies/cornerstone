@@ -18,6 +18,19 @@
 // - Custom templates load their base kind's modules, because context.template names the custom
 //   file. A new custom template adds its line to TEMPLATES.
 
+// 42 cart state (ticket 42): its chunk on the product page and the listings while rf_cart_state is
+// on (context.rfCartState, js-settings.html), never with it off, so the page then makes no read of
+// the Cart API. It is imported once load(context) has the switch.
+const cartState = () => ({
+    default: {
+        load: context => (context.rfCartState
+            ? import(/* webpackChunkName: "rf-cart-state" */ './cart-marks')
+                .then(module => module.default.load(context))
+                .catch(reportError) // eslint-disable-line no-use-before-define
+            : null),
+    },
+});
+
 const product = [
     () => import(/* webpackChunkName: "rf-size-pills" */ './size-pills'), // 37 size pills
 
@@ -26,7 +39,9 @@ const product = [
         .catch(error => import(/* webpackChunkName: "rf-add-flow-failed" */ './add-flow-failed')
             .then(failed => failed.default(error), () => { throw error; })),
 
-    // 42 cart state: the product page half
+    // 42 cart state: the product page half (the size pills' marks and the "In your cart" line,
+    // and the related cards' lines): cartState, above
+    cartState,
 ];
 
 // Fly Type and Species pages, the ReelFlies brand listing and search results all list cards.
@@ -37,7 +52,8 @@ const listing = [
 
     () => import(/* webpackChunkName: "rf-size-filter" */ './size-filter'), // 33 Fly size filter
 
-    // 42 cart state: the card half
+    // 42 cart state: the card half, the same loader and chunk as the product page's
+    cartState,
 
     // 43 quick add: its chunk on every listing while rf_quick_add is on (context.rfQuickAdd),
     // even with no "+ Add" in the first render, for the cards a facet change or the pager

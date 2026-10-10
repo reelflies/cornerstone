@@ -7,7 +7,9 @@
     script: Onest comes from theme assets through the CSS's @font-face (ticket 25), and
     getFontsCollection asks Google only for a Google font picked in Theme Styles, as base.html
     does. The header and footer render only for a fixture with "chrome": true
-    (rf_fixture_chrome), as base.html renders them.
+    (rf_fixture_chrome), as base.html renders them. It includes js-settings.html in its head, as
+    base.html does: it renders no markup, but sets the template variables partials read before the
+    page block renders (ticket 42's rf_cart_state).
 --~}}
 <!DOCTYPE html>
 <html class="js" lang="en-CA">
@@ -17,6 +19,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         {{getFontsCollection font-display='swap'}}
         <link data-stencil-stylesheet href="/assets/css/theme.css" rel="stylesheet">
+        {{> components/reelflies/js-settings}}
     </head>
     <body>
         {{> components/reelflies/icons}}

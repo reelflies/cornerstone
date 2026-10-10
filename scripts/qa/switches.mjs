@@ -51,8 +51,12 @@ export const SWITCHES = {
     rf_cart_state: {
         ticket: '42',
         module: 'the cart state on the product page and the cards',
-        markers: [],
-        chunks: [],
+        // The size pills' "In your cart" line, each pill's hidden "(N in cart)" and corner check
+        // (components/reelflies/size-pills.html, on the product page), and each card's line
+        // (card-cart-state.html); and cart-marks.js, which page-modules.js loads only with
+        // context.rfCartState. Nothing of stock's is replaced, so no `stock` selectors.
+        markers: ['data-rf-cart-line', 'data-rf-cart-tag', 'data-rf-cart-dot', 'data-rf-cart-card'],
+        chunks: ['rf-cart-state'],
     },
 
     rf_quick_add: {

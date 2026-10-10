@@ -130,6 +130,7 @@ describe('"+ Add" on a listing card (quick-add-gate.html, quick-add-button.html)
         const body = source.slice(source.indexOf('--}}') + 4).split('\n').filter(line => line.trim());
         assert.deepEqual(body, [
             '{{!-- 42 cart state: "N in cart" --}}',
+            '{{> components/reelflies/card-cart-state}}',
             '{{!-- 43 quick add: "+ Add", when quick-add-gate.html says the card gets it --}}',
             '{{> components/reelflies/quick-add-button}}',
         ]);

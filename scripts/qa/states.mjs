@@ -26,7 +26,9 @@
 // a Species pane state waits for a pinned page with a Species group (wave R1). A ticket adds a
 // state in its own slot below.
 
-import { answerCartAdds, answerCartRead, cartLines } from './fixtures/cart/routes.mjs';
+import {
+    answerCartAdds, answerCartRead, cartLines, cartOf,
+} from './fixtures/cart/routes.mjs';
 
 /* eslint-env browser */ // the waitForFunction callbacks run in the page
 
@@ -64,6 +66,24 @@ async function settleBuyRow(page) {
         document.getElementById('form-action-addToCart')?.removeAttribute('aria-disabled');
         const wrapper = document.getElementById('add-to-cart-wrapper');
         if (wrapper) wrapper.style.display = '';
+    });
+}
+
+// After a state has scrolled (37, 38 and 42's states on product@sizes): a control of the product
+// view that the window's top edge cuts to less than 24px in view is brought down whole, by
+// scrolling up as far as it is cut. axe reads such a control as too small when a neighbour is close
+// (target-size, "partially obscured", WCAG 2.5.8's 24px): a photo thumbnail beside the other, or
+// "Hook size guide" by the header's buttons. Which control the edge cuts follows the layout above
+// the pills: ticket 42's line under them put a thumbnail there at 375. The phone's sticky header
+// may then cover it, which axe doesn't count and the shot shows as it is. A control is a link, a
+// button, a form field or a summary with a box (the pills' visually hidden radios have none); the
+// header's own, which a desktop scroll cuts with nothing close, are left to axe.
+async function uncutTop(page) {
+    await page.evaluate(() => {
+        const cut = Array.from(document.querySelectorAll('.productView :is(a[href], button, input:not([type="hidden"]), select, textarea, summary)'))
+            .map(element => element.getBoundingClientRect())
+            .filter(box => box.width > 2 && box.height > 2 && box.top < 0 && box.bottom > 0 && box.bottom < 24);
+        if (cut.length) window.scrollBy(0, Math.floor(Math.min(...cut.map(box => box.top))));
     });
 }
 
@@ -145,6 +165,7 @@ export const UI_STATES = {
             await chunkLoaded(page, 'rf-size-pills');
             await setSizeMarks(page, []);
             await page.locator('[data-rf-pills="size"]').scrollIntoViewIfNeeded();
+            await uncutTop(page);
         },
     },
     'size-chosen': {
@@ -177,6 +198,7 @@ export const UI_STATES = {
             await setSizeMarks(page, [-2, -1]);
             await page.waitForFunction(() => /are sold out/.test(document.querySelector('[data-rf-pills="size"] [data-rf-sold-out-line]')?.textContent || ''));
             await page.locator('[data-rf-pills="size"]').scrollIntoViewIfNeeded();
+            await uncutTop(page);
         },
     },
 
@@ -198,6 +220,7 @@ export const UI_STATES = {
                 box.style.display = 'block';
             });
             await page.locator('.rf-add').scrollIntoViewIfNeeded();
+            await uncutTop(page);
             await page.mouse.move(0, 0);
         },
     },
@@ -239,6 +262,32 @@ export const UI_STATES = {
             await page.locator('[data-rf-sticky-add]').evaluate(bar => bar.setAttribute('data-rf-bar-ms', '600000'));
             await page.locator('[data-rf-sticky-button]').click();
             await page.locator('[data-rf-sticky-view]').waitFor({ state: 'visible' });
+        },
+    },
+
+    // Fat Albert with two of its sizes in the cart (ticket 42): the corner check on each and "In your
+    // cart: 3 × size N and 2 × size M." under the pills, from a cart the state answers (page.route,
+    // so nothing reaches the store) and sends cart-marks.js's re-read for (rf:cart-changed). The
+    // live sold-out marks are cleared first, as ticket 37's states do. With rf_cart_state off
+    // (QA_OVERLAY=rf_cart_state-off) the page has no line, and the state shows the stock pills.
+    'in-cart': {
+        description: 'the product page with two sizes in the cart: the corner checks, and "In your cart: 3 × size N and 2 × size M." under the pills',
+        ticket: '42',
+        projects: ['phone-375', 'desktop-1280'],
+        pages: ['product@sizes'],
+        async open(page) {
+            await chunkLoaded(page, 'rf-size-pills');
+            await setSizeMarks(page, []);
+            if (await page.locator('[data-rf-cart-line]').count()) {
+                await chunkLoaded(page, 'rf-cart-state');
+                const sizes = await page.locator('[data-rf-pills="size"] input[type="radio"]').evaluateAll(radios => radios.filter(radio => radio.value)
+                    .slice(0, 2).map(radio => ({ nameId: Number(/\[(\d+)\]/.exec(radio.name)[1]), valueId: Number(radio.value) })));
+                await answerCartRead(page, cartOf(sizes.map((option, index) => ({ productId: FAT_ALBERT_ID, quantity: 3 - index, options: [option] }))));
+                await page.evaluate(() => document.dispatchEvent(new CustomEvent('rf:cart-changed', { detail: { source: 'qa-state', productId: null } })));
+                await page.waitForFunction(() => / and /.test(document.querySelector('[data-rf-cart-line]').textContent));
+            }
+            await page.locator('[data-rf-pills="size"]').scrollIntoViewIfNeeded();
+            await uncutTop(page);
         },
     },
 
