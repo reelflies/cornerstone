@@ -3,8 +3,6 @@
 {{> components/common/breadcrumbs breadcrumbs=breadcrumbs}}
 
 <main class="page">
-    {{> components/reelflies/not-found}}{{!-- ReelFlies hook (ticket 51; CUSTOMIZATIONS.md): the heading, sentence, note region, search box and Fly Type links; stock's section stays below, unrendered --}}
-    {{#if false}}
     <section class="page-content page-content--centered">
         <h1 class="page-heading">{{lang 'page_not_found.page_heading'}}</h1>
         <p class="u-textAlignCenter">
@@ -13,7 +11,6 @@
 
         {{> components/common/search-box}}
     </section>
-    {{/if}}
 </main>
 
 {{/partial}}

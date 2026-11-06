@@ -4,7 +4,6 @@ import utils from '@bigcommerce/stencil-utils';
 import { Validators, announceInputErrorMessage } from '../common/utils/form-utils';
 import collapsibleFactory from '../common/collapsible';
 import { showAlertModal } from '../global/modal';
-import { cartFailed } from '../reelflies/cart-feedback'; // ReelFlies hook (ticket 41; CUSTOMIZATIONS.md): the quote call's error first
 
 export default class ShippingEstimator {
     constructor($element, shippingErrorMessages, secureBaseUrl) {
@@ -181,7 +180,6 @@ export default class ShippingEstimator {
             const requestOptions = this.secureBaseUrl ? { baseUrl: this.secureBaseUrl } : {};
 
             utils.api.cart.getShippingQuotes(params, 'cart/shipping-quotes', (err, response) => {
-                if (cartFailed(err, response, { anchor: $estimatorForm[0] })) return; // ReelFlies hook (ticket 41; CUSTOMIZATIONS.md): the error first, then stock's handling
                 $('.shipping-quotes').html(response.content);
 
                 // bind the select button

@@ -51,21 +51,6 @@
         "id": "body-font",
         "options": [
           {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnest",
-            "value": "Onest_400"
-          },
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnestMedium",
-            "value": "Onest_500"
-          },
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnestSemiBold",
-            "value": "Onest_600"
-          },
-          {
             "group": "i18n.Karla",
             "label": "i18n.Karla",
             "value": "Google_Karla_400"
@@ -158,21 +143,6 @@
         "label": "i18n.HeadingFontFamily",
         "id": "headings-font",
         "options": [
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnest",
-            "value": "Onest_400"
-          },
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnestMedium",
-            "value": "Onest_500"
-          },
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnestSemiBold",
-            "value": "Onest_600"
-          },
           {
             "group": "i18n.Montserrat",
             "label": "i18n.MontserratLight",
@@ -1575,10 +1545,6 @@
           {
             "value": 20,
             "label": "20"
-          },
-          {
-            "value": 24,
-            "label": "24"
           }
         ]
       },
@@ -1619,10 +1585,6 @@
           {
             "value": 20,
             "label": "20"
-          },
-          {
-            "value": 24,
-            "label": "24"
           }
         ]
       },
@@ -2285,21 +2247,6 @@
         "id": "optimizedCheckout-headingPrimary-font",
         "options": [
           {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnest",
-            "value": "Onest_400"
-          },
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnestMedium",
-            "value": "Onest_500"
-          },
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnestSemiBold",
-            "value": "Onest_600"
-          },
-          {
             "group": "i18n.OpenSans",
             "label": "i18n.OpenSans",
             "value": "Google_Open+Sans_400"
@@ -2356,21 +2303,6 @@
         "label": "i18n.Heading2FontFamily",
         "id": "optimizedCheckout-headingSecondary-font",
         "options": [
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnest",
-            "value": "Onest_400"
-          },
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnestMedium",
-            "value": "Onest_500"
-          },
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnestSemiBold",
-            "value": "Onest_600"
-          },
           {
             "group": "i18n.OpenSans",
             "label": "i18n.OpenSans",
@@ -2447,21 +2379,6 @@
         "id": "optimizedCheckout-contentPrimary-font",
         "options": [
           {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnest",
-            "value": "Onest_400"
-          },
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnestMedium",
-            "value": "Onest_500"
-          },
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnestSemiBold",
-            "value": "Onest_600"
-          },
-          {
             "group": "i18n.OpenSans",
             "label": "i18n.OpenSans",
             "value": "Google_Open+Sans_400"
@@ -2519,21 +2436,6 @@
         "id": "optimizedCheckout-contentSecondary-font",
         "options": [
           {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnest",
-            "value": "Onest_400"
-          },
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnestMedium",
-            "value": "Onest_500"
-          },
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnestSemiBold",
-            "value": "Onest_600"
-          },
-          {
             "group": "i18n.OpenSans",
             "label": "i18n.OpenSans",
             "value": "Google_Open+Sans_400"
@@ -2590,21 +2492,6 @@
         "label": "i18n.LinkFontFamily",
         "id": "optimizedCheckout-link-font",
         "options": [
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnest",
-            "value": "Onest_400"
-          },
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnestMedium",
-            "value": "Onest_500"
-          },
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnestSemiBold",
-            "value": "Onest_600"
-          },
           {
             "group": "i18n.OpenSans",
             "label": "i18n.OpenSans",
@@ -2671,21 +2558,6 @@
         "label": "i18n.ButtonTextFontFamily",
         "id": "optimizedCheckout-buttonPrimary-font",
         "options": [
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnest",
-            "value": "Onest_400"
-          },
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnestMedium",
-            "value": "Onest_500"
-          },
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnestSemiBold",
-            "value": "Onest_600"
-          },
           {
             "group": "i18n.OpenSans",
             "label": "i18n.OpenSans",
@@ -2802,21 +2674,6 @@
         "label": "i18n.ButtonTextFontFamily",
         "id": "optimizedCheckout-buttonSecondary-font",
         "options": [
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnest",
-            "value": "Onest_400"
-          },
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnestMedium",
-            "value": "Onest_500"
-          },
-          {
-            "group": "i18n.RfOnest",
-            "label": "i18n.RfOnestSemiBold",
-            "value": "Onest_600"
-          },
           {
             "group": "i18n.OpenSans",
             "label": "i18n.OpenSans",
@@ -2990,181 +2847,6 @@
         "type": "color",
         "label": "i18n.ToasterTextColor",
         "id": "optimizedCheckout-loadingToaster-textColor"
-      }
-    ]
-  },
-  {
-    "name": "i18n.RfReelFlies",
-    "settings": [
-      {
-        "type": "heading",
-        "content": "i18n.RfHeader"
-      },
-      {
-        "type": "checkbox",
-        "label": "i18n.RfRise",
-        "force_reload": true,
-        "id": "rf_rise"
-      },
-
-      {
-        "type": "heading",
-        "content": "i18n.RfMenu"
-      },
-      {
-        "type": "text",
-        "label": "i18n.RfMenuTypeIds",
-        "force_reload": true,
-        "id": "rf_menu_type_ids"
-      },
-      {
-        "type": "text",
-        "label": "i18n.RfMenuSpeciesRootId",
-        "force_reload": true,
-        "id": "rf_menu_species_root_id"
-      },
-      {
-        "type": "text",
-        "label": "i18n.RfMenuExcludeIds",
-        "force_reload": true,
-        "id": "rf_menu_exclude_ids"
-      },
-
-      {
-        "type": "heading",
-        "content": "i18n.RfProductCards"
-      },
-      {
-        "type": "text",
-        "label": "i18n.RfPriceUnitExclude",
-        "force_reload": true,
-        "id": "rf_price_unit_exclude"
-      },
-
-      {
-        "type": "heading",
-        "content": "i18n.RfProductPage"
-      },
-      {
-        "type": "text",
-        "label": "i18n.RfShipFreeThreshold",
-        "force_reload": true,
-        "id": "rf_ship_free_threshold"
-      },
-      {
-        "type": "text",
-        "label": "i18n.RfShipStandardRate",
-        "force_reload": true,
-        "id": "rf_ship_standard_rate"
-      },
-      {
-        "type": "text",
-        "label": "i18n.RfShipExpeditedFrom",
-        "force_reload": true,
-        "id": "rf_ship_expedited_from"
-      },
-
-      {
-        "type": "heading",
-        "content": "i18n.RfStoreDetails"
-      },
-      {
-        "type": "text",
-        "label": "i18n.RfStoreName",
-        "force_reload": true,
-        "id": "rf_store_name"
-      },
-      {
-        "type": "text",
-        "label": "i18n.RfStoreUrl",
-        "force_reload": true,
-        "id": "rf_store_url"
-      },
-      {
-        "type": "text",
-        "label": "i18n.RfStoreLegalName",
-        "force_reload": true,
-        "id": "rf_store_legal_name"
-      },
-      {
-        "type": "text",
-        "label": "i18n.RfStorePhone",
-        "force_reload": true,
-        "id": "rf_store_phone"
-      },
-      {
-        "type": "text",
-        "label": "i18n.RfStoreStreet",
-        "force_reload": true,
-        "id": "rf_store_street"
-      },
-      {
-        "type": "text",
-        "label": "i18n.RfStoreLocality",
-        "force_reload": true,
-        "id": "rf_store_locality"
-      },
-      {
-        "type": "text",
-        "label": "i18n.RfStoreRegion",
-        "force_reload": true,
-        "id": "rf_store_region"
-      },
-      {
-        "type": "text",
-        "label": "i18n.RfStorePostalCode",
-        "force_reload": true,
-        "id": "rf_store_postal_code"
-      },
-      {
-        "type": "text",
-        "label": "i18n.RfStoreCountry",
-        "force_reload": true,
-        "id": "rf_store_country"
-      },
-      {
-        "type": "text",
-        "label": "i18n.RfStoreSameAs",
-        "force_reload": true,
-        "id": "rf_store_same_as"
-      },
-
-      {
-        "type": "heading",
-        "content": "i18n.RfCart"
-      },
-      {
-        "type": "text",
-        "label": "i18n.RfFlyBrands",
-        "force_reload": true,
-        "id": "rf_fly_brands"
-      },
-
-      {
-        "type": "heading",
-        "content": "i18n.RfCartState"
-      },
-      {
-        "type": "checkbox",
-        "label": "i18n.RfCartStateSwitch",
-        "force_reload": true,
-        "id": "rf_cart_state"
-      },
-
-      {
-        "type": "heading",
-        "content": "i18n.RfQuickAdd"
-      },
-      {
-        "type": "checkbox",
-        "label": "i18n.RfQuickAddSwitch",
-        "force_reload": true,
-        "id": "rf_quick_add"
-      },
-
-      {
-        "type": "heading",
-        "content": "i18n.RfRegionPrompt"
       }
     ]
   },

@@ -16,7 +16,7 @@
         {{/if}}
         "description": {{{json (ellipsis (sanitize product.description) 4000) }}},
         "image": "{{getImage product.main_image 'zoom_size' (cdn theme_settings.default_image_product)}}",
-        {{#all settings.show_product_reviews theme_settings.show_product_reviews product.reviews.list.length}}{{!-- ReelFlies hook (ticket 40; CUSTOMIZATIONS.md): the reviews section's own rule (components/reelflies/product-reviews.html), so the markup never exists without the visible reviews (stock read the store setting alone) --}}
+        {{#and settings.show_product_reviews product.reviews.list.length}}
         "aggregateRating": {
             "@type": "AggregateRating",
             "ratingValue": "{{product.rating}}",
@@ -30,7 +30,7 @@
                     "@type": "Person",
                     "name": {{#if name}}{{{JSONstringify name}}}{{else}}{{{JSONstringify (lang 'products.reviews.anonymous_poster')}}}{{/if}}
                 },
-                "datePublished": "{{moment date 'YYYY-MM-DD'}}",{{!-- ReelFlies hook (ticket 40; CUSTOMIZATIONS.md): an ISO 8601 date, which schema.org's Date is; the store sends its display string ("25th Jan 2018") --}}
+                "datePublished": "{{date}}",
                 "reviewBody": {{{JSONstringify text}}},
                 "name": {{{JSONstringify title}}},
                 "reviewRating": {
@@ -42,7 +42,7 @@
             }{{#unless @last}},{{/unless}}
         {{/each}}
         ],
-        {{/all}}{{!-- ReelFlies hook (ticket 40): the end of the reviews' rule --}}
+        {{/and}}
         "offers": {
             "@type": "Offer",
             "priceCurrency": "{{currency_selector.active_currency_code}}",

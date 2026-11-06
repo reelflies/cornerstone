@@ -12,7 +12,6 @@ import { normalizeFormData } from './utils/api';
 import { isBrowserIE, convertIntoArray } from './utils/ie-helpers';
 import bannerUtils from './utils/banner-utils';
 import currencySelector from '../global/currency-selector';
-import { addFinished, optionChangeFailed } from '../reelflies/add-bridge'; // ReelFlies hook (ticket 38; CUSTOMIZATIONS.md): the add flow takes the add's and option change's answers first
 
 export default class ProductDetails extends ProductDetailsBase {
     constructor($scope, context, productAttributesData = {}) {
@@ -58,8 +57,8 @@ export default class ProductDetails extends ProductDetailsBase {
             }
         };
 
-        this.registerAddToCartValidation(); // ReelFlies hook (ticket 38; CUSTOMIZATIONS.md): at once, not on window load, which Quick view never sees
         $(window).on('load', () => {
+            this.registerAddToCartValidation();
             $.each($productSwatchLabels, placeSwatchLabelImage);
         });
 
@@ -300,7 +299,6 @@ export default class ProductDetails extends ProductDetailsBase {
         }
 
         utils.api.productAttributes.optionChange(productId, $form.serialize(), 'products/bulk-discount-rates', (err, response) => {
-            if (optionChangeFailed(err, response, this.$scope[0])) return; // ReelFlies hook (ticket 38; CUSTOMIZATIONS.md): the error first; the pills stay usable
             const productAttributesData = response.data || {};
             const productAttributesContent = response.content || {};
             this.updateProductAttributes(productAttributesData);
@@ -474,7 +472,6 @@ export default class ProductDetails extends ProductDetailsBase {
 
         // Add item to cart
         utils.api.cart.itemAdd(normalizeFormData(new FormData(form)), (err, response) => {
-            if (addFinished(err, response, { label: originalBtnVal, overlay: this.$overlay, form })) return; // ReelFlies hook (ticket 38; CUSTOMIZATIONS.md): the error first, then the confirmation in place of the modal
             currencySelector(response.data.cart_id);
             const errorMessage = err || response.data.error;
 

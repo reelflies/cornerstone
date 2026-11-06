@@ -6,6 +6,8 @@ product:
         limit: {{theme_settings.productpage_reviews_count}}
     related_products:
         limit: {{theme_settings.productpage_related_products_count}}
+    similar_by_views:
+        limit: {{theme_settings.productpage_similar_by_views_count}}
 ---
 {{inject 'productId' product.id}}
 
@@ -18,9 +20,7 @@ product:
     {{/each}}
 
     <div>
-        {{assignVar 'rf_product_page' 1}}{{!-- ReelFlies hook (ticket 38; CUSTOMIZATIONS.md): the buy row's own labels on the product page, where add-flow.js runs; Quick view keeps stock's --}}
         {{> components/products/product-view}}
-        {{> components/reelflies/sticky-add}}{{!-- ReelFlies hook (ticket 38; CUSTOMIZATIONS.md): the phone's sticky add bar, on the product page only, never in Quick view --}}
 
         {{{region name="product_below_content"}}}
 
@@ -28,13 +28,11 @@ product:
             {{> components/products/videos product.videos}}
         {{/if}}
 
-        {{#if false}}{{!-- ReelFlies hook (ticket 40; CUSTOMIZATIONS.md): the reviews render in ticket 39's slot under the details (components/reelflies/product-reviews.html) whatever show_product_details_tabs says, so stock's list here, kept unrendered, would be a second one --}}
         {{#all settings.show_product_reviews theme_settings.show_product_reviews (if theme_settings.show_product_details_tabs '!==' true)}}
             {{> components/products/reviews reviews=product.reviews product=product urls=urls}}
         {{/all}}
-        {{/if}}{{!-- ReelFlies hook (ticket 40): the end of stock's unrendered reviews list --}}
 
-        {{> components/reelflies/product-related}}{{!-- ReelFlies hook (ticket 39; CUSTOMIZATIONS.md): related patterns as a grid of cards, in place of stock's carousel tabs (components/products/tabs); the front matter no longer asks for similar_by_views, which only those tabs showed --}}
+        {{> components/products/tabs}}
     </div>
 
     {{> components/products/schema}}

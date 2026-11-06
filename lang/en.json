@@ -109,15 +109,15 @@
             "add_info": "Add Info",
             "cancel": "Cancel",
             "select_a_country": "Country",
-            "select_a_state": "Province/territory",
+            "select_a_state": "State/province",
             "estimate_shipping": "Estimate Shipping",
-            "suburb_city": "City",
-            "zip_postal_code": "Postal code",
+            "suburb_city": "Suburb/city",
+            "zip_postal_code": "Zip/postcode",
             "free_shipping": "Free shipping",
             "hide_ups_rates": "Hide UPS Rates",
             "show_ups_rates": "Show UPS Rates",
             "empty_country_error": "The 'Country' field cannot be blank.",
-            "empty_province_error": "The 'Province/territory' field cannot be blank."
+            "empty_province_error": "The 'State/Province' field cannot be blank."
         },
         "gift_wrapping": {
             "title": "Gift Wrapping",
@@ -432,12 +432,12 @@
             "billing_address_labels": {
               "address_line_1": "Address Line 1",
               "address_line_2": "Address Line 2",
-              "suburb_city": "City",
-              "state_province": "Province/Territory",
-              "choose_state": "Choose a Province or Territory",
+              "suburb_city": "Suburb/City",
+              "state_province": "State/Province",
+              "choose_state": "Choose a State",
               "country": "Country",
               "choose_country": "Choose a Country",
-              "zip_postcode": "Postal Code"
+              "zip_postcode": "Zip/Postcode"
             }
         },
         "returns": {
@@ -600,10 +600,10 @@
             "phone": "Phone Number",
             "address1": "Address Line 1",
             "address2": "Address Line 2",
-            "city": "City",
+            "city": "Suburb/City",
             "country": "Country",
-            "state": "Province/Territory",
-            "postal_code": "Postal Code",
+            "state": "State/Province",
+            "postal_code": "Zip/Postcode",
             "choose_country": "Choose a Country",
             "default_instrument": "Default Payment Method"
         },
@@ -877,7 +877,7 @@
     },
     "errors": {
         "shipping_quote_failure": "There was a problem retrieving your shipping quote",
-        "state_error": "There was a problem retrieving provinces and territories"
+        "state_error": "There was a problem retrieving states/provinces"
     },
     "search": {
         "errorMessage": "There was a problem retrieving your results. Please try again in a few seconds.",
@@ -1016,245 +1016,6 @@
         "pdp-non-sale-price-label": "Was:",
         "pdp-retail-price-label": "MSRP:",
         "pdp-custom-fields-tab-label": "Additional Information"
-    },
-    "reelflies": {
-        "header": {
-            "_slot": "",
-            "menu": "Menu",
-            "close": "Close",
-            "logo_alt": "ReelFlies home",
-            "shop": "Shop flies",
-            "search_label": "Search flies",
-            "search_placeholder": "Search flies by name",
-            "user_label": "Your account",
-            "strip_label": "Shipping and prices"
-        },
-
-        "menu": {
-            "_slot": "",
-            "label": "Shop flies",
-            "types": "Fly types",
-            "species": "Species",
-            "more": "More from ReelFlies",
-            "show": "Show",
-            "shipping": "Shipping & Returns",
-            "contact": "Contact us",
-            "hook_chart": "Hook size chart",
-            "articles": "Fly fishing articles",
-            "call": "Call"
-        },
-
-        "search": {
-            "_slot": "",
-            "count": "{count, plural, one {# result} other {# results}} for “{query}”",
-            "none": "No results for “{query}”",
-            "category": "category",
-            "see_all": "{count, plural, one {See the result} other {See all # results}}"
-        },
-
-        "card": {
-            "_slot": "",
-            "per_fly": "/ fly"
-        },
-
-        "category": {
-            "_slot": "",
-            "chips": "{name} categories",
-            "chips_more": "+{count} more",
-            "chips_all": "Show all {count}"
-        },
-
-        "facets": {
-            "_slot": "",
-            "size": "Size {size}",
-            "sizes_help": "What do sizes mean?",
-            "count_flies": "{count, plural, one {# fly} other {# flies}}",
-            "count_products": "{count, plural, one {# product} other {# products}}",
-            "none_flies": "No flies match these filters",
-            "none_products": "No products match these filters",
-            "clear": "Clear filters",
-            "filter": "Filter"
-        },
-
-        "hub": {
-            "_slot": "",
-            "heading": "Fly Fishing Flies by Species",
-            "tiles": "Species",
-            "count": "{count, plural, one {# pattern} other {# patterns}}",
-            "types": "{name} by fly type",
-            "products": "All flies"
-        },
-
-        "chart": {
-            "_slot": "",
-            "gauge_label": "Hook sizes 6/0 to 24, drawn to relative scale",
-            "size": "Size",
-            "gauge_caption": "Drawn to relative scale on a standard-length hook, not actual size."
-        },
-
-        "brand": {
-            "_slot": "",
-            "page": "Page {page}"
-        },
-
-        "size_pills": {
-            "_slot": "",
-            "choose": "choose one",
-            "guide": "Hook size guide",
-            "sold_out_tag": "(sold out)",
-            "sold_out_one": "Size {sizes} is sold out.",
-            "sold_out_many": "Sizes {sizes} are sold out.",
-            "and": "and"
-        },
-
-        "add_flow": {
-            "_slot": "",
-            "choose": "Choose a size",
-            "add": "Add # to cart",
-            "choose_first": "Choose a fly size first.",
-            "sold_out": "Size {size} is sold out. Choose another size.",
-            "sold_out_only": "Size {size} is sold out.",
-            "sold_out_all": "Every size is sold out.",
-            "sold_out_choice": "That choice is sold out.",
-            "added": "Added {qty} × {choice}.",
-            "size": "size {size}",
-            "cart_fly": "# fly in your cart.",
-            "cart_flies": "# flies in your cart.",
-            "cart_item": "# item in your cart.",
-            "cart_items": "# items in your cart.",
-            "view_cart": "View cart",
-            "error": "That didn't go in your cart. Try again.",
-            "option_error": "We couldn't check that choice. Try again.",
-            "no_size": "No size chosen",
-            "size_and": "Size {size}, {flies}",
-            "one_fly": "# fly",
-            "many_flies": "# flies",
-            "quantity": "Quantity #",
-            "quantity_label": "Quantity",
-            "preview_heading": "Added to cart. Your cart now has {count, plural, one {# item} other {# items}}."
-        },
-
-        "product": {
-            "_slot": "",
-            "ship_free": "Free standard shipping in Canada on fly orders over ${threshold}. Fly boxes and gear not included.",
-            "ship_rate": "Standard shipping in Canada ${rate}, free on fly orders over ${threshold} (fly boxes and gear not included).",
-            "ship_expedited": "Tracked Expedited from ${amount}.",
-            "promise": "We stand behind every fly we sell.",
-            "wishlist": "Save to wish list",
-            "about": "About this fly",
-            "shipping": "Shipping and delivery",
-            "shipping_free": "Free standard shipping in Canada on fly orders over ${threshold} (fly boxes and gear not included).",
-            "shipping_standard": "Standard Canada Post is untracked and generally takes 2 to 14 business days.",
-            "shipping_expedited": "Tracked Expedited Parcel generally takes 1 to 7 business days. Orders from outside Canada go through ReelFlies.com.",
-            "hooks": "Hooks and tying",
-            "hooks_body": "Tied by hand on a branded hook from makers such as Mustad, Daiichi, Dai-Riki or Kamasan.",
-            "hooks_chart": "A bigger hook number means a smaller hook.",
-            "hooks_chart_link": "See the hook size chart",
-            "related": "Related patterns"
-        },
-
-        "reviews": {
-            "_slot": "",
-            "store_shipping_name": "Free standard shipping in Canada",
-            "store_shipping_description": "Free standard shipping in Canada on fly orders over ${amount}. Fly boxes and gear not included.",
-            "heading": "Reviews ({total})",
-            "count": "{total, plural, one {# review} other {# reviews}}",
-            "rated": "Rated {rating} out of 5",
-            "write": "Write a review",
-            "none_fly": "No reviews yet for this fly.",
-            "none": "No reviews yet."
-        },
-
-        "cart": {
-            "_slot": "",
-            "heading": "Your cart",
-            "count_flies": "{units, plural, one {# fly} other {# flies}}, {products, plural, one {# pattern} other {# patterns}}",
-            "count_items": "{units, plural, one {# item} other {# items}}, {products, plural, one {# product} other {# products}}",
-            "size": "Size {size}",
-            "each": "{price} each",
-            "remove": "Remove {name}, size {size}",
-            "remove_line": "Remove {name}",
-            "quantity": "Quantity of {name}, size {size}",
-            "quantity_line": "Quantity of {name}",
-            "decrease": "Decrease the quantity of {name}, size {size}",
-            "increase": "Increase the quantity of {name}, size {size}",
-            "coupon_link": "Have a coupon code?",
-            "promise": "We stand behind every fly we sell.",
-            "summary": "Order summary",
-            "bar_flies": "for {units, plural, one {# fly} other {# flies}}",
-            "bar_items": "for {units, plural, one {# item} other {# items}}",
-            "error": "Something went wrong. Try again."
-        },
-
-        "cart_state": {
-            "_slot": "",
-            "pill": "({count} in cart)",
-            "line": "In your cart: {sizes}.",
-            "size": "{count} × size {size}",
-            "and": "and",
-            "card": "{count} in cart",
-            "card_of": "of {name}"
-        },
-
-        "quick_add": {
-            "_slot": "",
-            "add": "Add",
-            "close": "Close",
-            "load_failed": "We couldn't load the sizes.",
-            "product_page": "Go to the product page",
-            "cart_empty": "Your cart is empty.",
-            "dialog": "Choose sizes of {name}",
-            "view": "View"
-        },
-
-        "home": {
-            "_slot": ""
-        },
-
-        "footer": {
-            "_slot": "",
-            "shop": "Shop",
-            "help": "Help",
-            "contact": "Contact",
-            "newsletter": "Newsletter",
-            "hook_chart": "Hook size chart",
-            "articles": "Fly fishing articles",
-            "walk_ins": "Walk-ins by appointment",
-            "newsletter_line": "A few emails a year about new patterns and ReelFlies sales.",
-            "email_label": "Email address",
-            "subscribe": "Subscribe",
-            "newsletter_consent": "By subscribing you agree to receive email from ReelFlies. You can unsubscribe at any time.",
-            "promise": "We stand behind every fly we sell.",
-            "copyright": "© {year} ReelFlies.ca. ReelFlies® is a registered trademark of Digital Barn Ltd.",
-            "outside_canada": "Ordering from outside Canada?",
-            "outside_canada_link": "Shop at ReelFlies.com",
-            "gift_certificates": "Gift Certificates"
-        },
-
-        "not_found": {
-            "_slot": "",
-            "heading": "Sorry, we can't find that page",
-            "message": "It may have moved, or the address may be out of date. Search for a fly, or start from a fly type.",
-            "links_label": "Shop flies"
-        },
-
-        "cart_empty": {
-            "_slot": "",
-            "message": "Your cart is empty.",
-            "lead": "Most orders start with a dozen dry flies or nymphs in two or three sizes.",
-            "shop": "Shop dry flies",
-            "continue": "Continue shopping"
-        },
-
-        "search_empty": {
-            "_slot": "",
-            "no_match": "No flies match “{query}”.",
-            "tip": "Check the spelling, or search by fly type, like “caddis” or “nymph”."
-        },
-
-        "region": {
-            "_slot": ""
-        }
     },
     "consent_manager": {
         "data_collection_warning": "We use cookies (and other similar technologies) to collect data to improve your shopping experience.",

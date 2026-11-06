@@ -1,6 +1,6 @@
 <div class="modal-header">
     <h1 id="modal-header-title" class="modal-header-title">
-        {{lang 'reelflies.add_flow.preview_heading' count=cart.quantity}}{{!-- ReelFlies hook (ticket 38; CUSTOMIZATIONS.md): stock said the whole cart was added --}}
+        {{lang 'cart.added_to_cart.what_next' num_products=cart.quantity}}
     </h1>
 </div>
 
@@ -43,7 +43,7 @@
                 {{lang 'cart.added_to_cart.your_cart_contains' num_products=cart.quantity}}
             </p>
 
-            <a href="#" class="button" role="button" data-reveal-close>{{!-- ReelFlies hook (ticket 38; CUSTOMIZATIONS.md): Continue shopping is the secondary button --}}
+            <a href="#" class="button button--primary" role="button" data-reveal-close>
                 {{lang 'cart.added_to_cart.continue_shopping'}}
             </a>
 

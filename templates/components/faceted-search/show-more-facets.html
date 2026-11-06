@@ -9,8 +9,7 @@
     <div class="form-field" id="facetedSearch-filterItems">
         <input class="form-input" type="search" placeholder="{{lang 'forms.search.search'}}">
     </div>
-    {{!-- ReelFlies hook (ticket 33; CUSTOMIZATIONS.md): data-facet names the list, as the sidebar's has it, so size-filter.js can put the Fly Sizes values in hook order --}}
-    <ul class="navList facetedSearch-optionColumns" data-facet="{{all_facets}}">
+    <ul class="navList facetedSearch-optionColumns">
         {{#each facets}}
             {{#if facet '===' ../all_facets}}
                 {{#each items}}

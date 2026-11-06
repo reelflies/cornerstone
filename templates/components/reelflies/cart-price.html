@@ -1,6 +1,0 @@
-{{!--
-    A cart line's unit price, "$1.25 each" (ticket 41), with the line as its context: the group's
-    head (cart-lines.html) and a row whose pattern's sizes are priced differently (cart-row.html).
-    A discounted price shows as stock's cart did: the list price struck through, then the price.
---}}
-{{#if price_discounted}}<span class="price--discounted">{{price.formatted}}</span> {{lang 'reelflies.cart.each' price=price_discounted.formatted}}{{else}}{{lang 'reelflies.cart.each' price=price.formatted}}{{/if}}
