@@ -1,0 +1,42 @@
+{
+  "hook": {
+    "enabled": true,
+    "limits": {
+      "maxFindings": 5,
+      "maxChars": 8000
+    }
+  },
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "archivo expanded",
+        "createdAt": "2026-11-05T22:47:16.516Z",
+        "reason": "declared in DESIGN.md (refreshed from the v2 home build, 2026-11-06); kept because the detector misreads the font shorthand with clamp() and reports the family as e.g. '68px)/0.98 \"archivo expanded\"'"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "archivo condensed",
+        "createdAt": "2026-11-05T22:47:16.539Z",
+        "reason": "declared in DESIGN.md (refreshed from the v2 home build, 2026-11-06); kept because the detector misreads the font shorthand with clamp() and reports the family as e.g. '68px)/0.98 \"archivo expanded\"'"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "kalam",
+        "createdAt": "2026-11-05T22:47:16.561Z",
+        "reason": "declared in DESIGN.md (refreshed from the v2 home build, 2026-11-06); kept because the detector misreads the font shorthand with clamp() and reports the family as e.g. '68px)/0.98 \"archivo expanded\"'"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          "prototype/home/styles.css"
+        ],
+        "createdAt": "2026-11-06T19:13:57.844Z",
+        "reason": "v1 home prototype is the retired cool-slate world, kept unchanged only for comparison; DESIGN.md now describes the v2 warmed world, so v1's Archivo Fallback face will never match it"
+      }
+    ]
+  }
+}

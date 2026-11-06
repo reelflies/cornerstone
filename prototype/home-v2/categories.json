@@ -1,0 +1,291 @@
+{
+ "flyTypes": [
+  {
+   "name": "Dry Flies",
+   "url": "/dry-flies/",
+   "count": 436,
+   "children": [
+    {
+     "name": "Mayfly Dry Flies",
+     "url": "/dry-flies/mayfly-dry-flies/",
+     "count": 141
+    },
+    {
+     "name": "Attractor Dry Flies",
+     "url": "/dry-flies/attractor-dry-flies/",
+     "count": 77
+    },
+    {
+     "name": "Hoppers & Terrestrials",
+     "url": "/dry-flies/hoppers-terrestrials/",
+     "count": 114
+    },
+    {
+     "name": "Parachute Dry Flies",
+     "url": "/dry-flies/parachute-dry-flies/",
+     "count": 46
+    },
+    {
+     "name": "Caddis Dry Flies",
+     "url": "/dry-flies/caddis-dry-flies/",
+     "count": 56
+    },
+    {
+     "name": "Stonefly Dry Flies",
+     "url": "/dry-flies/stonefly-dry-flies/",
+     "count": 34
+    },
+    {
+     "name": "Midge Dry Flies",
+     "url": "/dry-flies/midge-dry-flies/",
+     "count": 22
+    },
+    {
+     "name": "Emergers & Cripples",
+     "url": "/dry-flies/emergers-cripples/",
+     "count": 24
+    }
+   ]
+  },
+  {
+   "name": "Nymphs",
+   "url": "/nymphs/",
+   "count": 601,
+   "children": [
+    {
+     "name": "Mayfly Nymphs",
+     "url": "/nymphs/mayfly-nymphs/",
+     "count": 131
+    },
+    {
+     "name": "Attractor & Searching Nymphs",
+     "url": "/nymphs/searching-nymphs/",
+     "count": 171
+    },
+    {
+     "name": "Chironomids & Midge Nymphs",
+     "url": "/nymphs/chironomids/",
+     "count": 62
+    },
+    {
+     "name": "Stonefly Nymphs",
+     "url": "/nymphs/stonefly-nymphs/",
+     "count": 100
+    },
+    {
+     "name": "Euro Nymphs",
+     "url": "/nymphs/euro-nymphs/",
+     "count": 22
+    },
+    {
+     "name": "Hare's Ear Nymphs",
+     "url": "/nymphs/hares-ear-nymphs/",
+     "count": 47
+    },
+    {
+     "name": "Scuds & Sow Bugs",
+     "url": "/nymphs/scuds-sow-bugs/",
+     "count": 50
+    },
+    {
+     "name": "Wet Flies & Soft Hackles",
+     "url": "/nymphs/wet-flies-soft-hackles/",
+     "count": 86
+    },
+    {
+     "name": "Caddis Nymphs",
+     "url": "/nymphs/caddis-nymphs/",
+     "count": 56
+    },
+    {
+     "name": "Damsel & Dragonfly Nymphs",
+     "url": "/nymphs/damsel-dragonfly-nymphs/",
+     "count": 34
+    }
+   ]
+  },
+  {
+   "name": "Streamers",
+   "url": "/streamers/",
+   "count": 444,
+   "children": [
+    {
+     "name": "Woolly Buggers & Leeches",
+     "url": "/streamers/woolly-buggers-leeches/",
+     "count": 222
+    },
+    {
+     "name": "Muddler Minnows & Sculpins",
+     "url": "/streamers/muddlers-sculpins/",
+     "count": 97
+    },
+    {
+     "name": "Baitfish & Minnows",
+     "url": "/streamers/baitfish-minnows/",
+     "count": 132
+    },
+    {
+     "name": "Zonkers & Zuddlers",
+     "url": "/streamers/zonkers-zuddlers/",
+     "count": 84
+    },
+    {
+     "name": "Articulated Streamers",
+     "url": "/streamers/articulated-streamers/",
+     "count": 42
+    }
+   ]
+  },
+  {
+   "name": "Eggs & Worms",
+   "url": "/eggs-worms/",
+   "count": 184,
+   "children": [
+    {
+     "name": "San Juan & Squirmy Worms",
+     "url": "/eggs-worms/san-juan-squirmy-worms/",
+     "count": 61
+    },
+    {
+     "name": "Egg Flies",
+     "url": "/eggs-worms/egg-flies/",
+     "count": 115
+    }
+   ]
+  },
+  {
+   "name": "Warmwater Flies",
+   "url": "/warmwater-flies/",
+   "count": 189,
+   "children": [
+    {
+     "name": "Warmwater Streamers",
+     "url": "/warmwater-flies/warmwater-streamers/",
+     "count": 139
+    },
+    {
+     "name": "Poppers & Topwater Flies",
+     "url": "/warmwater-flies/poppers-topwater-flies/",
+     "count": 43
+    }
+   ]
+  },
+  {
+   "name": "Saltwater Flies",
+   "url": "/saltwater-flies/",
+   "count": 136,
+   "children": [
+    {
+     "name": "Saltwater Baitfish Flies",
+     "url": "/saltwater-flies/saltwater-baitfish-flies/",
+     "count": 74
+    },
+    {
+     "name": "Shrimp & Crab Flies",
+     "url": "/saltwater-flies/shrimp-crab-flies/",
+     "count": 89
+    }
+   ]
+  }
+ ],
+ "species": [
+  {
+   "name": "Trout Flies",
+   "url": "/trout-flies/",
+   "approx_live_products": 1600
+  },
+  {
+   "name": "Steelhead Flies",
+   "url": "/steelhead-flies/",
+   "approx_live_products": 737
+  },
+  {
+   "name": "Atlantic Salmon Flies",
+   "url": "/atlantic-salmon-flies/",
+   "approx_live_products": 205
+  },
+  {
+   "name": "Bass Flies",
+   "url": "/bass-flies/",
+   "approx_live_products": 280
+  },
+  {
+   "name": "Pike & Muskie Flies",
+   "url": "/pike-muskie-flies/",
+   "approx_live_products": 132
+  },
+  {
+   "name": "Panfish Flies",
+   "url": "/panfish-flies/",
+   "approx_live_products": 54
+  },
+  {
+   "name": "Carp Flies",
+   "url": "/carp-flies/",
+   "approx_live_products": 51
+  },
+  {
+   "name": "Bonefish Flies",
+   "url": "/bonefish-flies/",
+   "approx_live_products": 112
+  },
+  {
+   "name": "Permit Flies",
+   "url": "/permit-flies/",
+   "approx_live_products": 96
+  },
+  {
+   "name": "Tarpon, Snook & Redfish Flies",
+   "url": "/tarpon-snook-redfish-flies/",
+   "approx_live_products": 46
+  },
+  {
+   "name": "Barracuda Flies",
+   "url": "/barracuda-flies/",
+   "approx_live_products": 25
+  }
+ ],
+ "more": [
+  {
+   "name": "Fly Selections & Assortments",
+   "url": "/fly-selections-assortments/",
+   "approx_live_products": 58,
+   "children": [
+    "Bulk Fly Selections",
+    "Mini Fly Selections"
+   ]
+  },
+  {
+   "name": "ReelFlies Signature Flies",
+   "url": "/reelflies-signature-flies/",
+   "approx_live_products": 355,
+   "children": []
+  },
+  {
+   "name": "Realistic Trout Flies",
+   "url": "/realistic-trout-flies/",
+   "approx_live_products": 78,
+   "children": [
+    "Realistic Dry Flies",
+    "Realistic Nymphs & Scuds"
+   ]
+  },
+  {
+   "name": "Fly Gear",
+   "url": "/fly-gear/",
+   "approx_live_products": 144,
+   "children": [
+    "Fly Fishing Accessories",
+    "Fly Boxes",
+    "Fly Tying Materials",
+    "Fly Tying Hooks"
+   ]
+  },
+  {
+   "name": "Clearance Flies",
+   "url": "/clearance-flies/",
+   "approx_live_products": 119,
+   "children": []
+  }
+ ]
+}

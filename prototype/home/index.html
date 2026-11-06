@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="en-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReelFlies.ca: nearly 2,000 hand-tied fly patterns, sold by the fly</title>
+<meta name="description" content="Hand-tied fly fishing flies from a family fly shop in Tillsonburg, Ontario. Nearly 2,000 patterns, priced per fly, by fly type or by the fish you're after.">
+<meta name="theme-color" content="#21282D">
+<link rel="preload" href="fonts/archivo-latin-wdth-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" as="image" href="img/stone/hero-stone-1600.jpg" media="(min-width: 1040px)" fetchpriority="high">
+<link rel="preload" as="image" href="img/stone/hero-stone-portrait.jpg" media="(max-width: 1039px)" fetchpriority="high">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m15.5 15.5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.75" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 20c1.2-3.6 4-5.5 7.5-5.5s6.3 1.9 7.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 11h18M9 7V5h6v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h13m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M6.6 3.5h2.6l1.4 4-2 1.4a11 11 0 0 0 6.5 6.5l1.4-2 4 1.4v2.6a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.6 5.7a2 2 0 0 1 2-2.2Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-hook" viewBox="0 0 34 60"><circle cx="26" cy="6" r="3.6" fill="none" stroke="currentColor" stroke-width="2.4" vector-effect="non-scaling-stroke"/><path d="M26 9.6V42a11 11 0 0 1-22 0v-9l4.5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></symbol>
+</svg>
+<a class="skip" href="#main">Skip to content</a>
+
+<!-- Stencil: components/header (logo, Shop flies menu from the category tree, quick search, account, cart count from the Cart API) -->
+<header class="masthead">
+  <div class="masthead__bar">
+    <a class="brand" href="/"><img src="img/brand/reelflies-logo.png" width="133" height="95" alt="ReelFlies home"></a>
+    <button class="shop-btn" type="button" aria-expanded="false" aria-controls="shop-menu" data-menu-btn><span class="shop-btn__wide">Shop flies</span><span class="shop-btn__narrow">Menu</span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-chevron"/></svg></button>
+    <form class="search" role="search" action="/search.php" method="get" data-search>
+      <label class="visually-hidden" for="q">Search flies</label>
+      <input id="q" name="search_query" type="search" placeholder="Search patterns, like caddis or size 16" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="q-list" aria-autocomplete="list">
+      <button class="search__go" type="submit"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-search"/></svg><span class="visually-hidden">Search</span></button>
+      <div class="suggest" data-suggest hidden>
+        <ul class="suggest__list" id="q-list" role="listbox" aria-label="Suggestions"></ul>
+        <a class="suggest__all" href="/search.php" data-suggest-all>See all results</a>
+      </div>
+    </form>
+    <a class="masthead__link" href="/account.php"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-user"/></svg><span class="masthead__label">Account</span></a>
+    <button class="cart-btn" type="button" aria-controls="box" aria-expanded="false" data-box-btn><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-box"/></svg><span class="masthead__label">Box</span><span class="cart-btn__count num" data-count>0</span><span class="visually-hidden" data-count-label>flies in your box</span></button>
+  </div>
+  <nav class="menu" id="shop-menu" aria-label="Shop flies" hidden data-menu>
+    <div class="menu__inner"><div class="menu__group"><h2 class="menu__title">Fly types</h2><ul><li><a href="/dry-flies/">Dry Flies</a> <span class="num">436</span></li><li><a href="/nymphs/">Nymphs</a> <span class="num">601</span></li><li><a href="/streamers/">Streamers</a> <span class="num">444</span></li><li><a href="/eggs-worms/">Eggs &amp; Worms</a> <span class="num">184</span></li><li><a href="/warmwater-flies/">Warmwater Flies</a> <span class="num">189</span></li><li><a href="/saltwater-flies/">Saltwater Flies</a> <span class="num">136</span></li></ul></div><div class="menu__group"><h2 class="menu__title">Flies by species</h2><ul><li><a href="/trout-flies/">Trout Flies</a> <span class="num">1,600</span></li><li><a href="/steelhead-flies/">Steelhead Flies</a> <span class="num">737</span></li><li><a href="/atlantic-salmon-flies/">Atlantic Salmon Flies</a> <span class="num">205</span></li><li><a href="/bass-flies/">Bass Flies</a> <span class="num">280</span></li><li><a href="/pike-muskie-flies/">Pike &amp; Muskie Flies</a> <span class="num">132</span></li><li><a href="/panfish-flies/">Panfish Flies</a> <span class="num">54</span></li><li><a href="/carp-flies/">Carp Flies</a> <span class="num">51</span></li><li><a href="/bonefish-flies/">Bonefish Flies</a> <span class="num">112</span></li><li><a href="/permit-flies/">Permit Flies</a> <span class="num">96</span></li><li><a href="/tarpon-snook-redfish-flies/">Tarpon, Snook &amp; Redfish Flies</a> <span class="num">46</span></li><li><a href="/barracuda-flies/">Barracuda Flies</a> <span class="num">25</span></li></ul></div><div class="menu__group"><h2 class="menu__title">More from ReelFlies</h2><ul><li><a href="/fly-selections-assortments/">Fly Selections &amp; Assortments</a> <span class="num">58</span></li><li><a href="/reelflies-signature-flies/">ReelFlies Signature Flies</a> <span class="num">355</span></li><li><a href="/realistic-trout-flies/">Realistic Trout Flies</a> <span class="num">78</span></li><li><a href="/fly-gear/">Fly Gear</a> <span class="num">144</span></li><li><a href="/clearance-flies/">Clearance Flies</a> <span class="num">119</span></li></ul></div></div>
+  </nav>
+</header>
+
+<main id="main">
+
+  <!-- Stencil: pages/home.html region "home_stone": a Page Builder image (the commissioned riverbank stone) under a theme section; best sellers from front matter products.top_sellers -->
+  <section class="stone" aria-labelledby="stone-title">
+    <picture class="stone__photo">
+      <source media="(max-width: 1039px)" srcset="img/stone/hero-stone-portrait.jpg" width="700" height="1600">
+      <img src="img/stone/hero-stone-1600.jpg" width="1600" height="700" alt="" fetchpriority="high" decoding="async">
+    </picture>
+    <div class="stone__inner">
+      <div class="stone__lead">
+        <h1 id="stone-title">Nearly 2,000 patterns, sold by the fly.</h1>
+        <p class="stone__line">Hand-tied flies from <span class="num">$0.75</span> each, so you buy exactly the sizes you fish.<span class="stone__more"> Many are tied right here in Canada, on Mustad, Daiichi and other branded hooks.</span></p>
+        <div class="ways">
+          <div class="ways__group">
+            <h2 class="ways__title">What it is</h2>
+            <ul class="ways__list"><li><a class="way" href="/dry-flies/" data-way="type:dry-flies" data-way-name="Dry Flies" data-way-count="436">Dry Flies <span class="way__n num">436</span></a></li><li><a class="way" href="/nymphs/" data-way="type:nymphs" data-way-name="Nymphs" data-way-count="601">Nymphs <span class="way__n num">601</span></a></li><li><a class="way" href="/streamers/" data-way="type:streamers" data-way-name="Streamers" data-way-count="444">Streamers <span class="way__n num">444</span></a></li><li><a class="way" href="/eggs-worms/" data-way="type:eggs-worms" data-way-name="Eggs &amp; Worms" data-way-count="184">Eggs &amp; Worms <span class="way__n num">184</span></a></li><li><a class="way" href="/warmwater-flies/" data-way="type:warmwater-flies" data-way-name="Warmwater Flies" data-way-count="189">Warmwater <span class="way__n num">189</span></a></li><li><a class="way" href="/saltwater-flies/" data-way="type:saltwater-flies" data-way-name="Saltwater Flies" data-way-count="136">Saltwater <span class="way__n num">136</span></a></li></ul>
+          </div>
+          <div class="ways__group">
+            <h2 class="ways__title">What it catches</h2>
+            <ul class="ways__list"><li><a class="way" href="/trout-flies/" data-way="species:trout" data-way-name="Trout Flies" data-way-count="1600">Trout <span class="way__n num">1,600</span></a></li><li><a class="way" href="/steelhead-flies/" data-way="species:steelhead" data-way-name="Steelhead Flies" data-way-count="737">Steelhead <span class="way__n num">737</span></a></li><li><a class="way" href="/bass-flies/" data-way="species:bass" data-way-name="Bass Flies" data-way-count="280">Bass <span class="way__n num">280</span></a></li><li><a class="way" href="/pike-muskie-flies/" data-way="species:pike-muskie" data-way-name="Pike &amp; Muskie Flies" data-way-count="132">Pike &amp; Muskie <span class="way__n num">132</span></a></li><li><a class="way" href="/atlantic-salmon-flies/" data-way="species:atlantic-salmon" data-way-name="Atlantic Salmon Flies" data-way-count="205">Atlantic Salmon <span class="way__n num">205</span></a></li><li><a class="way" href="/bonefish-flies/" data-way="species:bonefish" data-way-name="Bonefish Flies" data-way-count="112">Bonefish <span class="way__n num">112</span></a></li><li><a class="way way--all" href="/species/">All 11 species</a></li></ul>
+          </div>
+        </div>
+      </div>
+      <div class="stone__lay">
+        <div class="lay__head">
+          <h2 class="lay__title" data-lay-title>Best sellers</h2>
+          <a class="lay__all" href="/best-sellers/" data-lay-all>See all<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a>
+        </div>
+        <ul class="flies flies--stone" data-lay><li class="fly fly--sm" data-id="4877">
+  <article class="fly__card">
+    <a class="fly__photo" href="/adams-parachute-dry-fly/" tabindex="-1" aria-hidden="true"><img src="img/products/4877-adams-parachute-dry-fly.jpg" width="720" height="480" alt="" fetchpriority="high" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/adams-parachute-dry-fly/">Adams Parachute Dry Fly</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$0.95</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Sizes 8–20</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">+ Add<span class="visually-hidden">: Adams Parachute Dry Fly</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li><li class="fly fly--sm" data-id="4507">
+  <article class="fly__card">
+    <a class="fly__photo" href="/beadhead-prince-nymph/" tabindex="-1" aria-hidden="true"><img src="img/products/4507-beadhead-prince-nymph.jpg" width="720" height="480" alt="" fetchpriority="high" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/beadhead-prince-nymph/">Beadhead Prince Nymph</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$0.95</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Sizes 8–18</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">+ Add<span class="visually-hidden">: Beadhead Prince Nymph</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li><li class="fly fly--sm" data-id="5835">
+  <article class="fly__card">
+    <a class="fly__photo" href="/elk-hair-caddis-tan/" tabindex="-1" aria-hidden="true"><img src="img/products/5835-elk-hair-caddis-tan.jpg" width="720" height="480" alt="" fetchpriority="high" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/elk-hair-caddis-tan/">Elk Hair Caddis Tan</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$0.95</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Sizes 10–20</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">+ Add<span class="visually-hidden">: Elk Hair Caddis Tan</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li><li class="fly fly--sm" data-id="4754">
+  <article class="fly__card">
+    <a class="fly__photo" href="/beadhead-pheasant-tail/" tabindex="-1" aria-hidden="true"><img src="img/products/4754-beadhead-pheasant-tail.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/beadhead-pheasant-tail/">Beadhead Pheasant Tail</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$0.95</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Sizes 10–18</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">+ Add<span class="visually-hidden">: Beadhead Pheasant Tail</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li><li class="fly fly--sm" data-id="4979">
+  <article class="fly__card">
+    <a class="fly__photo" href="/royal-wulff-dry-fly/" tabindex="-1" aria-hidden="true"><img src="img/products/4979-royal-wulff-dry-fly.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/royal-wulff-dry-fly/">Royal Wulff Dry Fly</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$0.95</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Sizes 4–22</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">+ Add<span class="visually-hidden">: Royal Wulff Dry Fly</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li><li class="fly fly--sm" data-id="5865">
+  <article class="fly__card">
+    <a class="fly__photo" href="/beadhead-copper-john-copper/" tabindex="-1" aria-hidden="true"><img src="img/products/5865-beadhead-copper-john-copper.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/beadhead-copper-john-copper/">Beadhead Copper John Copper</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$1.25</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Sizes 8–18</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">+ Add<span class="visually-hidden">: Beadhead Copper John Copper</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stencil: the category tree, rendered server-side (every link crawlable) -->
+  <section class="twoways" aria-labelledby="twoways-title">
+    <div class="wrap">
+      <header class="sec-head">
+        <h2 id="twoways-title">Every fly, two ways in</h2>
+        <p>By what the fly is and how it fishes, or by the fish you're after.</p>
+      </header>
+      <div class="twoways__grid">
+        <div class="twoways__types">
+          <h3 class="twoways__sub">Fly types</h3>
+          <ul class="plates"><li class="plate">
+            <a class="plate__photo" href="/dry-flies/">
+              <img src="img/stone/fly-type-dry-flies-800.jpg" srcset="img/stone/fly-type-dry-flies-800.jpg 800w, img/stone/fly-type-dry-flies-1600.jpg 1600w" sizes="(min-width: 1100px) 300px, (min-width: 640px) 33vw, 100vw" width="1600" height="700" alt="" loading="lazy" decoding="async">
+              <span class="plate__name">Dry Flies</span>
+              <span class="plate__n"><span class="num">436</span> patterns</span>
+            </a>
+            <ul class="plate__kids"><li><a href="/dry-flies/mayfly-dry-flies/">Mayfly Dry Flies</a></li><li><a href="/dry-flies/hoppers-terrestrials/">Hoppers &amp; Terrestrials</a></li><li><a href="/dry-flies/attractor-dry-flies/">Attractor Dry Flies</a></li><li><a href="/dry-flies/caddis-dry-flies/">Caddis Dry Flies</a></li><li><a href="/dry-flies/">All dry flies</a></li></ul>
+          </li><li class="plate">
+            <a class="plate__photo" href="/nymphs/">
+              <img src="img/stone/fly-type-nymphs-sub-surface-800.jpg" srcset="img/stone/fly-type-nymphs-sub-surface-800.jpg 800w, img/stone/fly-type-nymphs-sub-surface-1600.jpg 1600w" sizes="(min-width: 1100px) 300px, (min-width: 640px) 33vw, 100vw" width="1600" height="700" alt="" loading="lazy" decoding="async">
+              <span class="plate__name">Nymphs</span>
+              <span class="plate__n"><span class="num">601</span> patterns</span>
+            </a>
+            <ul class="plate__kids"><li><a href="/nymphs/searching-nymphs/">Attractor &amp; Searching Nymphs</a></li><li><a href="/nymphs/mayfly-nymphs/">Mayfly Nymphs</a></li><li><a href="/nymphs/stonefly-nymphs/">Stonefly Nymphs</a></li><li><a href="/nymphs/wet-flies-soft-hackles/">Wet Flies &amp; Soft Hackles</a></li><li><a href="/nymphs/">All nymphs</a></li></ul>
+          </li><li class="plate">
+            <a class="plate__photo" href="/streamers/">
+              <img src="img/stone/fly-type-streamers-buggers-800.jpg" srcset="img/stone/fly-type-streamers-buggers-800.jpg 800w, img/stone/fly-type-streamers-buggers-1600.jpg 1600w" sizes="(min-width: 1100px) 300px, (min-width: 640px) 33vw, 100vw" width="1600" height="700" alt="" loading="lazy" decoding="async">
+              <span class="plate__name">Streamers</span>
+              <span class="plate__n"><span class="num">444</span> patterns</span>
+            </a>
+            <ul class="plate__kids"><li><a href="/streamers/woolly-buggers-leeches/">Woolly Buggers &amp; Leeches</a></li><li><a href="/streamers/baitfish-minnows/">Baitfish &amp; Minnows</a></li><li><a href="/streamers/muddlers-sculpins/">Muddler Minnows &amp; Sculpins</a></li><li><a href="/streamers/zonkers-zuddlers/">Zonkers &amp; Zuddlers</a></li><li><a href="/streamers/">All streamers</a></li></ul>
+          </li></ul>
+          <ul class="row-plates"><li class="row-plate">
+            <a class="row-plate__link" href="/eggs-worms/"><span class="row-plate__thumb"><span class="row-plate__specimen"><img src="img/products/5101-glo-bug-pink.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></span></span><span class="row-plate__name">Eggs &amp; Worms</span><span class="row-plate__n"><span class="num">184</span> patterns</span></a>
+            <ul class="row-plate__kids"><li><a href="/eggs-worms/egg-flies/">Egg Flies</a></li><li><a href="/eggs-worms/san-juan-squirmy-worms/">San Juan &amp; Squirmy Worms</a></li></ul>
+          </li><li class="row-plate">
+            <a class="row-plate__link" href="/warmwater-flies/"><span class="row-plate__thumb"><img src="img/stone/species-bass-panfish-800.jpg" width="800" height="350" alt="" loading="lazy" decoding="async"></span><span class="row-plate__name">Warmwater Flies</span><span class="row-plate__n"><span class="num">189</span> patterns</span></a>
+            <ul class="row-plate__kids"><li><a href="/warmwater-flies/warmwater-streamers/">Warmwater Streamers</a></li><li><a href="/warmwater-flies/poppers-topwater-flies/">Poppers &amp; Topwater Flies</a></li></ul>
+          </li><li class="row-plate">
+            <a class="row-plate__link" href="/saltwater-flies/"><span class="row-plate__thumb"><img src="img/stone/species-bonefish-permit-800.jpg" width="800" height="350" alt="" loading="lazy" decoding="async"></span><span class="row-plate__name">Saltwater Flies</span><span class="row-plate__n"><span class="num">136</span> patterns</span></a>
+            <ul class="row-plate__kids"><li><a href="/saltwater-flies/shrimp-crab-flies/">Shrimp &amp; Crab Flies</a></li><li><a href="/saltwater-flies/saltwater-baitfish-flies/">Saltwater Baitfish Flies</a></li></ul>
+          </li></ul>
+        </div>
+        <div class="twoways__species">
+          <h3 class="twoways__sub">Species</h3>
+          <ul class="sp-list"><li><a class="sp" href="/trout-flies/"><span class="sp__name">Trout</span><span class="sp__n"><span class="num">1,600</span> patterns</span><svg class="icon sp__go" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a></li><li><a class="sp" href="/steelhead-flies/"><span class="sp__name">Steelhead</span><span class="sp__n"><span class="num">737</span> patterns</span><svg class="icon sp__go" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a></li><li><a class="sp" href="/atlantic-salmon-flies/"><span class="sp__name">Atlantic Salmon</span><span class="sp__n"><span class="num">205</span> patterns</span><svg class="icon sp__go" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a></li><li><a class="sp" href="/bass-flies/"><span class="sp__name">Bass</span><span class="sp__n"><span class="num">280</span> patterns</span><svg class="icon sp__go" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a></li><li><a class="sp" href="/pike-muskie-flies/"><span class="sp__name">Pike &amp; Muskie</span><span class="sp__n"><span class="num">132</span> patterns</span><svg class="icon sp__go" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a></li><li><a class="sp" href="/panfish-flies/"><span class="sp__name">Panfish</span><span class="sp__n"><span class="num">54</span> patterns</span><svg class="icon sp__go" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a></li><li><a class="sp" href="/carp-flies/"><span class="sp__name">Carp</span><span class="sp__n"><span class="num">51</span> patterns</span><svg class="icon sp__go" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a></li><li><a class="sp" href="/bonefish-flies/"><span class="sp__name">Bonefish</span><span class="sp__n"><span class="num">112</span> patterns</span><svg class="icon sp__go" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a></li><li><a class="sp" href="/permit-flies/"><span class="sp__name">Permit</span><span class="sp__n"><span class="num">96</span> patterns</span><svg class="icon sp__go" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a></li><li><a class="sp" href="/tarpon-snook-redfish-flies/"><span class="sp__name">Tarpon, Snook &amp; Redfish</span><span class="sp__n"><span class="num">46</span> patterns</span><svg class="icon sp__go" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a></li><li><a class="sp" href="/barracuda-flies/"><span class="sp__name">Barracuda</span><span class="sp__n"><span class="num">25</span> patterns</span><svg class="icon sp__go" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a></li></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stencil: a Resource Web Page's chart, placed by a Page Builder widget; matching flies by product id through the Storefront GraphQL API -->
+  <section class="hatch" aria-labelledby="hatch-title">
+    <div class="wrap">
+      <header class="sec-head sec-head--split">
+        <h2 id="hatch-title">On the water in <span data-now-month>November</span></h2>
+        <p>General timing for Ontario trout streams. Every river keeps its own clock, so treat it as a starting point and match what you see.</p>
+      </header>
+      <div class="hatch__chart">
+        <div class="months" aria-hidden="true"><span class="months__pad"></span><span class="months__m" data-m="0"><abbr title="January">Jan</abbr></span><span class="months__m" data-m="1"><abbr title="February">Feb</abbr></span><span class="months__m" data-m="2"><abbr title="March">Mar</abbr></span><span class="months__m" data-m="3"><abbr title="April">Apr</abbr></span><span class="months__m" data-m="4"><abbr title="May">May</abbr></span><span class="months__m" data-m="5"><abbr title="June">Jun</abbr></span><span class="months__m" data-m="6"><abbr title="July">Jul</abbr></span><span class="months__m" data-m="7"><abbr title="August">Aug</abbr></span><span class="months__m" data-m="8"><abbr title="September">Sep</abbr></span><span class="months__m" data-m="9"><abbr title="October">Oct</abbr></span><span class="months__m is-now" data-m="10"><abbr title="November">Nov</abbr></span><span class="months__m" data-m="11"><abbr title="December">Dec</abbr></span><span class="months__pad"></span></div>
+        <ol class="hatch__rows"><li class="hatch__row is-now" data-months="0-11">
+            <div class="hatch__name"><h3>Midges</h3><p class="hatch__latin" lang="la">Chironomidae</p></div>
+            <p class="hatch__sizes"><span class="hatch__sizes-label">Hooks</span> <span class="num">18–24</span></p>
+            <div class="track" role="img" aria-label="Midges: all year"><span class="track__m is-on" data-m="0" data-label="J"></span><span class="track__m is-on" data-m="1" data-label="F"></span><span class="track__m is-on" data-m="2" data-label="M"></span><span class="track__m is-on" data-m="3" data-label="A"></span><span class="track__m is-on" data-m="4" data-label="M"></span><span class="track__m is-on" data-m="5" data-label="J"></span><span class="track__m is-on" data-m="6" data-label="J"></span><span class="track__m is-on" data-m="7" data-label="A"></span><span class="track__m is-on" data-m="8" data-label="S"></span><span class="track__m is-on" data-m="9" data-label="O"></span><span class="track__m is-on is-now" data-m="10" data-label="N"></span><span class="track__m is-on" data-m="11" data-label="D"></span></div>
+            <div class="hatch__act"><button class="hatch__toggle" type="button" aria-expanded="true" aria-controls="hatch-flies-0" data-hatch-toggle>Match it <span class="num">(2)</span><svg class="icon hatch__chev" aria-hidden="true" focusable="false"><use href="#i-chevron"/></svg></button></div>
+            <div class="hatch__flies" id="hatch-flies-0" ><ul class="flies flies--row"><li class="fly fly--sm" data-id="4001">
+  <article class="fly__card">
+    <a class="fly__photo" href="/mosquito/" tabindex="-1" aria-hidden="true"><img src="img/products/4001-mosquito.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/mosquito/">Mosquito</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$0.95</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Sizes 10–18</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">+ Add<span class="visually-hidden">: Mosquito</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li><li class="fly fly--sm" data-id="5118">
+  <article class="fly__card">
+    <a class="fly__photo" href="/bh-titanium-red-chironomid/" tabindex="-1" aria-hidden="true"><img src="img/products/5118-bh-titanium-red-chironomid.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/bh-titanium-red-chironomid/">BH Titanium Red Chironomid</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$1.25</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Sizes 8–16</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">+ Add<span class="visually-hidden">: BH Titanium Red Chironomid</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li></ul><a class="more" href="/dry-flies/midge-dry-flies/">More to match it</a></div>
+          </li><li class="hatch__row" data-months="1-3">
+            <div class="hatch__name"><h3>Little black stonefly</h3><p class="hatch__latin" lang="la">Capniidae</p></div>
+            <p class="hatch__sizes"><span class="hatch__sizes-label">Hooks</span> <span class="num">14–18</span></p>
+            <div class="track" role="img" aria-label="Little black stonefly: February to April"><span class="track__m" data-m="0" data-label="J"></span><span class="track__m is-on" data-m="1" data-label="F"></span><span class="track__m is-on" data-m="2" data-label="M"></span><span class="track__m is-on" data-m="3" data-label="A"></span><span class="track__m" data-m="4" data-label="M"></span><span class="track__m" data-m="5" data-label="J"></span><span class="track__m" data-m="6" data-label="J"></span><span class="track__m" data-m="7" data-label="A"></span><span class="track__m" data-m="8" data-label="S"></span><span class="track__m" data-m="9" data-label="O"></span><span class="track__m is-now" data-m="10" data-label="N"></span><span class="track__m" data-m="11" data-label="D"></span></div>
+            <div class="hatch__act"><a class="hatch__link" href="/nymphs/stonefly-nymphs/">Shop to match it<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a></div>
+            
+          </li><li class="hatch__row is-now" data-months="3-5,8-10">
+            <div class="hatch__name"><h3>Blue-winged olive</h3><p class="hatch__latin" lang="la">Baetis</p></div>
+            <p class="hatch__sizes"><span class="hatch__sizes-label">Hooks</span> <span class="num">16–20</span></p>
+            <div class="track" role="img" aria-label="Blue-winged olive: April to June and September to November"><span class="track__m" data-m="0" data-label="J"></span><span class="track__m" data-m="1" data-label="F"></span><span class="track__m" data-m="2" data-label="M"></span><span class="track__m is-on" data-m="3" data-label="A"></span><span class="track__m is-on" data-m="4" data-label="M"></span><span class="track__m is-on" data-m="5" data-label="J"></span><span class="track__m" data-m="6" data-label="J"></span><span class="track__m" data-m="7" data-label="A"></span><span class="track__m is-on" data-m="8" data-label="S"></span><span class="track__m is-on" data-m="9" data-label="O"></span><span class="track__m is-on is-now" data-m="10" data-label="N"></span><span class="track__m" data-m="11" data-label="D"></span></div>
+            <div class="hatch__act"><button class="hatch__toggle" type="button" aria-expanded="true" aria-controls="hatch-flies-2" data-hatch-toggle>Match it <span class="num">(2)</span><svg class="icon hatch__chev" aria-hidden="true" focusable="false"><use href="#i-chevron"/></svg></button></div>
+            <div class="hatch__flies" id="hatch-flies-2" ><ul class="flies flies--row"><li class="fly fly--sm" data-id="4333">
+  <article class="fly__card">
+    <a class="fly__photo" href="/blue-wing-olive-parachute-dry/" tabindex="-1" aria-hidden="true"><img src="img/products/4333-blue-wing-olive-parachute-dry.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/blue-wing-olive-parachute-dry/">Blue Wing Olive Parachute Dry</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$0.95</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Sizes 12–20</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">+ Add<span class="visually-hidden">: Blue Wing Olive Parachute Dry</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li><li class="fly fly--sm" data-id="4754">
+  <article class="fly__card">
+    <a class="fly__photo" href="/beadhead-pheasant-tail/" tabindex="-1" aria-hidden="true"><img src="img/products/4754-beadhead-pheasant-tail.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/beadhead-pheasant-tail/">Beadhead Pheasant Tail</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$0.95</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Sizes 10–18</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">+ Add<span class="visually-hidden">: Beadhead Pheasant Tail</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li></ul><a class="more" href="/dry-flies/mayfly-dry-flies/">More to match it</a></div>
+          </li><li class="hatch__row" data-months="3-4">
+            <div class="hatch__name"><h3>Hendrickson</h3><p class="hatch__latin" lang="la">Ephemerella subvaria</p></div>
+            <p class="hatch__sizes"><span class="hatch__sizes-label">Hooks</span> <span class="num">12–14</span></p>
+            <div class="track" role="img" aria-label="Hendrickson: April to May"><span class="track__m" data-m="0" data-label="J"></span><span class="track__m" data-m="1" data-label="F"></span><span class="track__m" data-m="2" data-label="M"></span><span class="track__m is-on" data-m="3" data-label="A"></span><span class="track__m is-on" data-m="4" data-label="M"></span><span class="track__m" data-m="5" data-label="J"></span><span class="track__m" data-m="6" data-label="J"></span><span class="track__m" data-m="7" data-label="A"></span><span class="track__m" data-m="8" data-label="S"></span><span class="track__m" data-m="9" data-label="O"></span><span class="track__m is-now" data-m="10" data-label="N"></span><span class="track__m" data-m="11" data-label="D"></span></div>
+            <div class="hatch__act"><button class="hatch__toggle" type="button" aria-expanded="false" aria-controls="hatch-flies-3" data-hatch-toggle>Match it <span class="num">(2)</span><svg class="icon hatch__chev" aria-hidden="true" focusable="false"><use href="#i-chevron"/></svg></button></div>
+            <div class="hatch__flies" id="hatch-flies-3" hidden><ul class="flies flies--row"><li class="fly fly--sm" data-id="4675">
+  <article class="fly__card">
+    <a class="fly__photo" href="/adams-dry-fly/" tabindex="-1" aria-hidden="true"><img src="img/products/4675-adams-dry-fly.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/adams-dry-fly/">Adams Dry Fly</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$0.95</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Sizes 10–20</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">+ Add<span class="visually-hidden">: Adams Dry Fly</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li><li class="fly fly--sm" data-id="4877">
+  <article class="fly__card">
+    <a class="fly__photo" href="/adams-parachute-dry-fly/" tabindex="-1" aria-hidden="true"><img src="img/products/4877-adams-parachute-dry-fly.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/adams-parachute-dry-fly/">Adams Parachute Dry Fly</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$0.95</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Sizes 8–20</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">+ Add<span class="visually-hidden">: Adams Parachute Dry Fly</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li></ul><a class="more" href="/dry-flies/mayfly-dry-flies/">More to match it</a></div>
+          </li><li class="hatch__row" data-months="4-8">
+            <div class="hatch__name"><h3>Caddis</h3><p class="hatch__latin" lang="la">Brachycentrus, Hydropsyche</p></div>
+            <p class="hatch__sizes"><span class="hatch__sizes-label">Hooks</span> <span class="num">14–18</span></p>
+            <div class="track" role="img" aria-label="Caddis: May to September"><span class="track__m" data-m="0" data-label="J"></span><span class="track__m" data-m="1" data-label="F"></span><span class="track__m" data-m="2" data-label="M"></span><span class="track__m" data-m="3" data-label="A"></span><span class="track__m is-on" data-m="4" data-label="M"></span><span class="track__m is-on" data-m="5" data-label="J"></span><span class="track__m is-on" data-m="6" data-label="J"></span><span class="track__m is-on" data-m="7" data-label="A"></span><span class="track__m is-on" data-m="8" data-label="S"></span><span class="track__m" data-m="9" data-label="O"></span><span class="track__m is-now" data-m="10" data-label="N"></span><span class="track__m" data-m="11" data-label="D"></span></div>
+            <div class="hatch__act"><button class="hatch__toggle" type="button" aria-expanded="false" aria-controls="hatch-flies-4" data-hatch-toggle>Match it <span class="num">(4)</span><svg class="icon hatch__chev" aria-hidden="true" focusable="false"><use href="#i-chevron"/></svg></button></div>
+            <div class="hatch__flies" id="hatch-flies-4" hidden><ul class="flies flies--row"><li class="fly fly--sm" data-id="5835">
+  <article class="fly__card">
+    <a class="fly__photo" href="/elk-hair-caddis-tan/" tabindex="-1" aria-hidden="true"><img src="img/products/5835-elk-hair-caddis-tan.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/elk-hair-caddis-tan/">Elk Hair Caddis Tan</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$0.95</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Sizes 10–20</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">+ Add<span class="visually-hidden">: Elk Hair Caddis Tan</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li><li class="fly fly--sm" data-id="4941">
+  <article class="fly__card">
+    <a class="fly__photo" href="/elk-hair-caddis-black/" tabindex="-1" aria-hidden="true"><img src="img/products/4941-elk-hair-caddis-black.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/elk-hair-caddis-black/">Elk Hair Caddis Black</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$0.95</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Sizes 8–18</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">+ Add<span class="visually-hidden">: Elk Hair Caddis Black</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li><li class="fly fly--sm" data-id="5558">
+  <article class="fly__card">
+    <a class="fly__photo" href="/goddard-caddis/" tabindex="-1" aria-hidden="true"><img src="img/products/5558-goddard-caddis.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/goddard-caddis/">Goddard Caddis</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$0.95</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Sizes 8–18</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">+ Add<span class="visually-hidden">: Goddard Caddis</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li><li class="fly fly--sm" data-id="3899">
+  <article class="fly__card">
+    <a class="fly__photo" href="/reelflies-psycho-caddis/" tabindex="-1" aria-hidden="true"><img src="img/products/3899-reelflies-psycho-caddis.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/reelflies-psycho-caddis/">Psycho Caddis</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$1.45</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Sizes 6–18</p><p class="fly__sig">ReelFlies Signature</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">+ Add<span class="visually-hidden">: Psycho Caddis</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li></ul><a class="more" href="/dry-flies/caddis-dry-flies/">More to match it</a></div>
+          </li><li class="hatch__row" data-months="4-5">
+            <div class="hatch__name"><h3>March brown</h3><p class="hatch__latin" lang="la">Maccaffertium vicarium</p></div>
+            <p class="hatch__sizes"><span class="hatch__sizes-label">Hooks</span> <span class="num">10–12</span></p>
+            <div class="track" role="img" aria-label="March brown: May to June"><span class="track__m" data-m="0" data-label="J"></span><span class="track__m" data-m="1" data-label="F"></span><span class="track__m" data-m="2" data-label="M"></span><span class="track__m" data-m="3" data-label="A"></span><span class="track__m is-on" data-m="4" data-label="M"></span><span class="track__m is-on" data-m="5" data-label="J"></span><span class="track__m" data-m="6" data-label="J"></span><span class="track__m" data-m="7" data-label="A"></span><span class="track__m" data-m="8" data-label="S"></span><span class="track__m" data-m="9" data-label="O"></span><span class="track__m is-now" data-m="10" data-label="N"></span><span class="track__m" data-m="11" data-label="D"></span></div>
+            <div class="hatch__act"><button class="hatch__toggle" type="button" aria-expanded="false" aria-controls="hatch-flies-5" data-hatch-toggle>Match it <span class="num">(2)</span><svg class="icon hatch__chev" aria-hidden="true" focusable="false"><use href="#i-chevron"/></svg></button></div>
+            <div class="hatch__flies" id="hatch-flies-5" hidden><ul class="flies flies--row"><li class="fly fly--sm" data-id="4368">
+  <article class="fly__card">
+    <a class="fly__photo" href="/adams-irresistible/" tabindex="-1" aria-hidden="true"><img src="img/products/4368-adams-irresistible.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/adams-irresistible/">Adams Irresistible</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$0.95</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Sizes 10–20</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">+ Add<span class="visually-hidden">: Adams Irresistible</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li><li class="fly fly--sm" data-id="4675">
+  <article class="fly__card">
+    <a class="fly__photo" href="/adams-dry-fly/" tabindex="-1" aria-hidden="true"><img src="img/products/4675-adams-dry-fly.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/adams-dry-fly/">Adams Dry Fly</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$0.95</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Sizes 10–20</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">+ Add<span class="visually-hidden">: Adams Dry Fly</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li></ul><a class="more" href="/dry-flies/mayfly-dry-flies/">More to match it</a></div>
+          </li><li class="hatch__row" data-months="4-6">
+            <div class="hatch__name"><h3>Sulphur</h3><p class="hatch__latin" lang="la">Ephemerella invaria</p></div>
+            <p class="hatch__sizes"><span class="hatch__sizes-label">Hooks</span> <span class="num">14–18</span></p>
+            <div class="track" role="img" aria-label="Sulphur: May to July"><span class="track__m" data-m="0" data-label="J"></span><span class="track__m" data-m="1" data-label="F"></span><span class="track__m" data-m="2" data-label="M"></span><span class="track__m" data-m="3" data-label="A"></span><span class="track__m is-on" data-m="4" data-label="M"></span><span class="track__m is-on" data-m="5" data-label="J"></span><span class="track__m is-on" data-m="6" data-label="J"></span><span class="track__m" data-m="7" data-label="A"></span><span class="track__m" data-m="8" data-label="S"></span><span class="track__m" data-m="9" data-label="O"></span><span class="track__m is-now" data-m="10" data-label="N"></span><span class="track__m" data-m="11" data-label="D"></span></div>
+            <div class="hatch__act"><a class="hatch__link" href="/dry-flies/mayfly-dry-flies/">Shop to match it<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a></div>
+            
+          </li><li class="hatch__row" data-months="5-6">
+            <div class="hatch__name"><h3>Hex</h3><p class="hatch__latin" lang="la">Hexagenia limbata</p></div>
+            <p class="hatch__sizes"><span class="hatch__sizes-label">Hooks</span> <span class="num">6–8</span></p>
+            <div class="track" role="img" aria-label="Hex: June to July"><span class="track__m" data-m="0" data-label="J"></span><span class="track__m" data-m="1" data-label="F"></span><span class="track__m" data-m="2" data-label="M"></span><span class="track__m" data-m="3" data-label="A"></span><span class="track__m" data-m="4" data-label="M"></span><span class="track__m is-on" data-m="5" data-label="J"></span><span class="track__m is-on" data-m="6" data-label="J"></span><span class="track__m" data-m="7" data-label="A"></span><span class="track__m" data-m="8" data-label="S"></span><span class="track__m" data-m="9" data-label="O"></span><span class="track__m is-now" data-m="10" data-label="N"></span><span class="track__m" data-m="11" data-label="D"></span></div>
+            <div class="hatch__act"><a class="hatch__link" href="/dry-flies/mayfly-dry-flies/">Shop to match it<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a></div>
+            
+          </li><li class="hatch__row" data-months="6-8">
+            <div class="hatch__name"><h3>Trico</h3><p class="hatch__latin" lang="la">Tricorythodes</p></div>
+            <p class="hatch__sizes"><span class="hatch__sizes-label">Hooks</span> <span class="num">20–24</span></p>
+            <div class="track" role="img" aria-label="Trico: July to September"><span class="track__m" data-m="0" data-label="J"></span><span class="track__m" data-m="1" data-label="F"></span><span class="track__m" data-m="2" data-label="M"></span><span class="track__m" data-m="3" data-label="A"></span><span class="track__m" data-m="4" data-label="M"></span><span class="track__m" data-m="5" data-label="J"></span><span class="track__m is-on" data-m="6" data-label="J"></span><span class="track__m is-on" data-m="7" data-label="A"></span><span class="track__m is-on" data-m="8" data-label="S"></span><span class="track__m" data-m="9" data-label="O"></span><span class="track__m is-now" data-m="10" data-label="N"></span><span class="track__m" data-m="11" data-label="D"></span></div>
+            <div class="hatch__act"><a class="hatch__link" href="/dry-flies/mayfly-dry-flies/">Shop to match it<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a></div>
+            
+          </li><li class="hatch__row" data-months="6-8">
+            <div class="hatch__name"><h3>Hoppers &amp; terrestrials</h3><p class="hatch__latin" lang="la">grasshoppers, ants, beetles</p></div>
+            <p class="hatch__sizes"><span class="hatch__sizes-label">Hooks</span> <span class="num">8–14</span></p>
+            <div class="track" role="img" aria-label="Hoppers &amp; terrestrials: July to September"><span class="track__m" data-m="0" data-label="J"></span><span class="track__m" data-m="1" data-label="F"></span><span class="track__m" data-m="2" data-label="M"></span><span class="track__m" data-m="3" data-label="A"></span><span class="track__m" data-m="4" data-label="M"></span><span class="track__m" data-m="5" data-label="J"></span><span class="track__m is-on" data-m="6" data-label="J"></span><span class="track__m is-on" data-m="7" data-label="A"></span><span class="track__m is-on" data-m="8" data-label="S"></span><span class="track__m" data-m="9" data-label="O"></span><span class="track__m is-now" data-m="10" data-label="N"></span><span class="track__m" data-m="11" data-label="D"></span></div>
+            <div class="hatch__act"><button class="hatch__toggle" type="button" aria-expanded="false" aria-controls="hatch-flies-9" data-hatch-toggle>Match it <span class="num">(2)</span><svg class="icon hatch__chev" aria-hidden="true" focusable="false"><use href="#i-chevron"/></svg></button></div>
+            <div class="hatch__flies" id="hatch-flies-9" hidden><ul class="flies flies--row"><li class="fly fly--sm" data-id="5663">
+  <article class="fly__card">
+    <a class="fly__photo" href="/fat-albert/" tabindex="-1" aria-hidden="true"><img src="img/products/5663-fat-albert.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/fat-albert/">Fat Albert</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$1.75</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Sizes 4–14</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">+ Add<span class="visually-hidden">: Fat Albert</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li><li class="fly fly--sm" data-id="6178">
+  <article class="fly__card">
+    <a class="fly__photo" href="/realistic-flying-hot-butt-hopper-brown/" tabindex="-1" aria-hidden="true"><img src="img/products/6178-realistic-flying-hot-butt-hopper-brown.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/realistic-flying-hot-butt-hopper-brown/">Realistic Flying Hot Butt Hopper Brown</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$4.25</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Size 8</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">Add 1<span class="visually-hidden">: Realistic Flying Hot Butt Hopper Brown</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li></ul><a class="more" href="/dry-flies/hoppers-terrestrials/">More to match it</a></div>
+          </li></ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="hooks" aria-labelledby="hooks-title">
+    <div class="wrap hooks__grid">
+      <div class="hooks__text">
+        <h2 id="hooks-title">Bigger number, smaller hook.</h2>
+        <p>Hook sizes run backwards: a size 18 midge is tiny, a size 2 streamer is big, and the aughts (1/0, 2/0) go bigger still. Most trout flies sit between 10 and 20.</p>
+        <a class="more" href="/fly-hook-size-chart/">Hook size chart<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a>
+      </div>
+      <ol class="hookstep"><li><a href="/fly-hook-size-chart/#size-2-0" style="--h:76px"><svg class="hook" viewBox="0 0 34 60" aria-hidden="true" focusable="false"><use href="#i-hook"/></svg><span class="num">2/0</span><span class="visually-hidden"> hook size</span></a></li><li><a href="/fly-hook-size-chart/#size-1-0" style="--h:71px"><svg class="hook" viewBox="0 0 34 60" aria-hidden="true" focusable="false"><use href="#i-hook"/></svg><span class="num">1/0</span><span class="visually-hidden"> hook size</span></a></li><li><a href="/fly-hook-size-chart/#size-2" style="--h:66px"><svg class="hook" viewBox="0 0 34 60" aria-hidden="true" focusable="false"><use href="#i-hook"/></svg><span class="num">2</span><span class="visually-hidden"> hook size</span></a></li><li><a href="/fly-hook-size-chart/#size-4" style="--h:62px"><svg class="hook" viewBox="0 0 34 60" aria-hidden="true" focusable="false"><use href="#i-hook"/></svg><span class="num">4</span><span class="visually-hidden"> hook size</span></a></li><li><a href="/fly-hook-size-chart/#size-6" style="--h:57px"><svg class="hook" viewBox="0 0 34 60" aria-hidden="true" focusable="false"><use href="#i-hook"/></svg><span class="num">6</span><span class="visually-hidden"> hook size</span></a></li><li><a href="/fly-hook-size-chart/#size-8" style="--h:52px"><svg class="hook" viewBox="0 0 34 60" aria-hidden="true" focusable="false"><use href="#i-hook"/></svg><span class="num">8</span><span class="visually-hidden"> hook size</span></a></li><li><a href="/fly-hook-size-chart/#size-10" style="--h:47px"><svg class="hook" viewBox="0 0 34 60" aria-hidden="true" focusable="false"><use href="#i-hook"/></svg><span class="num">10</span><span class="visually-hidden"> hook size</span></a></li><li><a href="/fly-hook-size-chart/#size-12" style="--h:43px"><svg class="hook" viewBox="0 0 34 60" aria-hidden="true" focusable="false"><use href="#i-hook"/></svg><span class="num">12</span><span class="visually-hidden"> hook size</span></a></li><li><a href="/fly-hook-size-chart/#size-14" style="--h:38px"><svg class="hook" viewBox="0 0 34 60" aria-hidden="true" focusable="false"><use href="#i-hook"/></svg><span class="num">14</span><span class="visually-hidden"> hook size</span></a></li><li><a href="/fly-hook-size-chart/#size-16" style="--h:33px"><svg class="hook" viewBox="0 0 34 60" aria-hidden="true" focusable="false"><use href="#i-hook"/></svg><span class="num">16</span><span class="visually-hidden"> hook size</span></a></li><li><a href="/fly-hook-size-chart/#size-18" style="--h:28px"><svg class="hook" viewBox="0 0 34 60" aria-hidden="true" focusable="false"><use href="#i-hook"/></svg><span class="num">18</span><span class="visually-hidden"> hook size</span></a></li><li><a href="/fly-hook-size-chart/#size-20" style="--h:24px"><svg class="hook" viewBox="0 0 34 60" aria-hidden="true" focusable="false"><use href="#i-hook"/></svg><span class="num">20</span><span class="visually-hidden"> hook size</span></a></li><li><a href="/fly-hook-size-chart/#size-22" style="--h:19px"><svg class="hook" viewBox="0 0 34 60" aria-hidden="true" focusable="false"><use href="#i-hook"/></svg><span class="num">22</span><span class="visually-hidden"> hook size</span></a></li><li><a href="/fly-hook-size-chart/#size-24" style="--h:14px"><svg class="hook" viewBox="0 0 34 60" aria-hidden="true" focusable="false"><use href="#i-hook"/></svg><span class="num">24</span><span class="visually-hidden"> hook size</span></a></li></ol>
+    </div>
+  </section>
+
+  <section class="signature" aria-labelledby="sig-title">
+    <div class="wrap signature__grid">
+      <div class="signature__text">
+        <h2 id="sig-title">Tied for ReelFlies</h2>
+        <p>355 Signature patterns of our own, each one also filed under its fly type. The Psycho Caddis is one of them: our take on the elk hair caddis, with black hackle and orange rubber legs.</p>
+        <a class="more more--on-dark" href="/reelflies-signature-flies/">All Signature flies<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a>
+      </div>
+      <ul class="flies flies--feature"><li class="fly fly--lg" data-id="3899">
+  <article class="fly__card">
+    <a class="fly__photo" href="/reelflies-psycho-caddis/" tabindex="-1" aria-hidden="true"><img src="img/products/3899-reelflies-psycho-caddis.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/reelflies-psycho-caddis/">Psycho Caddis</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$1.45</span> <span class="fly__unit">/ fly</span></p><p class="fly__sizes">Sizes 6–18</p><p class="fly__sig">ReelFlies Signature</p></div>
+        <button class="add" type="button" data-add aria-expanded="false">+ Add<span class="visually-hidden">: Psycho Caddis</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li></ul>
+    </div>
+  </section>
+
+  <section class="selections" aria-labelledby="sel-title">
+    <div class="wrap">
+      <header class="sec-head sec-head--split">
+        <h2 id="sel-title">Selections: a mix of patterns, one price</h2>
+        <p>Ready-made sets for a day on the water or a box that needs filling. The flies ship loose; the fly box in a photo isn't included.</p>
+      </header>
+      <ul class="flies flies--grid"><li class="fly fly--md" data-id="3886">
+  <article class="fly__card">
+    <a class="fly__photo" href="/42-mayfly-assortment/" tabindex="-1" aria-hidden="true"><img src="img/products/3886-42-mayfly-assortment.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/42-mayfly-assortment/">42 Mayfly Assortment</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$34.95</span> <span class="fly__unit">/ set</span></p></div>
+        <button class="add" type="button" data-add aria-expanded="false">Add 1<span class="visually-hidden">: 42 Mayfly Assortment</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li><li class="fly fly--md" data-id="5445">
+  <article class="fly__card">
+    <a class="fly__photo" href="/30-nymphs-sub-surface-fly-selection/" tabindex="-1" aria-hidden="true"><img src="img/products/5445-30-nymphs-sub-surface-fly-selection.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/30-nymphs-sub-surface-fly-selection/">30 Nymphs &amp; Sub Surface Fly Selection</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$26.95</span> <span class="fly__unit">/ set</span></p></div>
+        <button class="add" type="button" data-add aria-expanded="false">Add 1<span class="visually-hidden">: 30 Nymphs &amp; Sub Surface Fly Selection</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li><li class="fly fly--md" data-id="3870">
+  <article class="fly__card">
+    <a class="fly__photo" href="/best-sellers-selection-12-flies/" tabindex="-1" aria-hidden="true"><img src="img/products/3870-best-sellers-selection.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/best-sellers-selection-12-flies/">Best Sellers Selection, 12 Flies</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$9.95</span> <span class="fly__unit">/ set</span></p></div>
+        <button class="add" type="button" data-add aria-expanded="false">Add 1<span class="visually-hidden">: Best Sellers Selection, 12 Flies</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li><li class="fly fly--md" data-id="4251">
+  <article class="fly__card">
+    <a class="fly__photo" href="/the-adams-family-selection-12-flies/" tabindex="-1" aria-hidden="true"><img src="img/products/4251-adams-family-selection.jpg" width="720" height="480" alt="" loading="lazy" decoding="async"></a>
+    <div class="fly__body">
+      <h3 class="fly__name"><a href="/the-adams-family-selection-12-flies/">The Adams Family Selection, 12 Flies</a></h3>
+      <div class="fly__buy">
+        <div class="fly__meta"><p class="fly__price"><span class="num">$10.95</span> <span class="fly__unit">/ set</span></p></div>
+        <button class="add" type="button" data-add aria-expanded="false">Add 1<span class="visually-hidden">: The Adams Family Selection, 12 Flies</span></button>
+      </div>
+      <p class="fly__inbox" data-inbox hidden></p>
+    </div>
+    <div class="fly__sizes-panel" data-sizes hidden></div>
+  </article>
+</li></ul>
+      <a class="more" href="/fly-selections-assortments/">All 58 selections<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a>
+    </div>
+  </section>
+
+  <section class="shop" aria-labelledby="shop-title">
+    <div class="wrap shop__grid">
+      <figure class="shop__photo">
+        <img src="img/brand/shop-front.jpg" width="600" height="450" alt="The ReelFlies shop on Broadway in Tillsonburg, Ontario: a dark painted storefront with the trout logo in the window" loading="lazy" decoding="async">
+      </figure>
+      <div class="shop__text">
+        <h2 id="shop-title">A family fly shop on Broadway in Tillsonburg</h2>
+        <p>ReelFlies has been 100% Canadian and family-run since 2003. We're led by fly fishers and headed by Steve B, who has over 40 years of fly fishing behind him.</p>
+        <ul class="facts">
+          <li><span class="facts__k">Range</span> Nearly 2,000 hand-tied patterns, with new ones added all the time.</li>
+          <li><span class="facts__k">Hooks</span> Many tied locally, on hooks from Mustad, Daiichi, Maruto, Dai-Riki, Kamasan and VMC.</li>
+          <li><span class="facts__k">Trade</span> We wholesale flies to many well-known tackle shops in Canada.</li>
+        </ul>
+        <p class="promise">We stand behind every fly we sell.</p>
+        <p class="shop__call"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-phone"/></svg><span>Questions about flies, sizes or an order? Call us toll free at <a href="tel:+18662504071">1 866 250 4071</a>. Walk-ins by appointment.</span></p>
+        <p class="signoff">Tight lines from us all at ReelFlies®.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Stencil: components/footer -->
+<footer class="foot">
+  <div class="wrap foot__grid">
+    <nav aria-labelledby="f-types"><h2 id="f-types">Fly types</h2><ul>
+      <li><a href="/dry-flies/">Dry Flies</a></li><li><a href="/nymphs/">Nymphs</a></li><li><a href="/streamers/">Streamers</a></li><li><a href="/eggs-worms/">Eggs &amp; Worms</a></li><li><a href="/warmwater-flies/">Warmwater Flies</a></li><li><a href="/saltwater-flies/">Saltwater Flies</a></li><li><a href="/species/">Flies by species</a></li>
+    </ul></nav>
+    <nav aria-labelledby="f-more"><h2 id="f-more">More</h2><ul>
+      <li><a href="/fly-selections-assortments/">Selections &amp; Assortments</a></li><li><a href="/reelflies-signature-flies/">Signature Flies</a></li><li><a href="/fly-gear/">Fly Gear</a></li><li><a href="/clearance-flies/">Clearance</a></li><li><a href="/fly-hook-size-chart/">Hook size chart</a></li><li><a href="/learn/">Learn</a></li>
+    </ul></nav>
+    <nav aria-labelledby="f-help"><h2 id="f-help">Help</h2><ul>
+      <li><a href="/shipping-returns/">Shipping &amp; Returns</a></li><li><a href="/help/">Help &amp; FAQ</a></li><li><a href="/contact-us/">Contact us</a></li><li><a href="/about-us/">About ReelFlies</a></li><li><a href="/privacy-policy/">Privacy</a></li>
+    </ul></nav>
+    <div class="foot__contact"><h2>Visit or call</h2>
+      <address>ReelFlies, Digital Barn Ltd.<br>93 Broadway St<br>Tillsonburg, ON N4G 3P5</address>
+      <p><a href="tel:+18662504071">1 866 250 4071</a> toll free<br>Walk-ins by appointment</p>
+    </div>
+    <form class="news" action="/subscribe.php" method="post" data-news>
+      <h2>Newsletter</h2>
+      <p>A few emails a year about new patterns and ReelFlies sales.</p>
+      <label class="visually-hidden" for="news-email">Email address</label>
+      <div class="news__row"><input id="news-email" name="nl_email" type="email" autocomplete="email" placeholder="you@example.com" required><button type="submit">Subscribe</button></div>
+      <p class="news__fine">By subscribing you agree to receive email from ReelFlies. You can unsubscribe at any time.</p>
+    </form>
+  </div>
+  <div class="wrap foot__base">
+    <p>© 2026 Digital Barn Ltd. ReelFlies® is a registered trademark of Digital Barn Ltd.</p>
+    <p><a href="https://reelflies.com/">Ordering from outside Canada? Shop ReelFlies.com in US dollars</a></p>
+  </div>
+</footer>
+
+<!-- Stencil: theme layer over the Cart API (/api/storefront/carts); the box sheet is the cart preview -->
+<aside class="orderline" aria-label="Your box" data-orderline>
+  <div class="box" id="box" hidden data-box>
+    <div class="box__head"><h2>Your box</h2><button class="box__close" type="button" data-box-close><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-close"/></svg><span class="visually-hidden">Close your box</span></button></div>
+    <div class="box__body" data-box-body></div>
+  </div>
+  <div class="orderline__bar">
+    <button class="orderline__toggle" type="button" aria-expanded="false" aria-controls="box" data-box-btn>
+      <span class="orderline__thumbs" data-thumbs aria-hidden="true"></span>
+      <span class="orderline__sum" data-sum>Your box is empty</span>
+    </button>
+    <p class="orderline__ship" data-ship>Free standard shipping in Canada on fly orders over <span class="num">$60</span>.</p>
+    <a class="buy orderline__checkout" href="/checkout" data-checkout aria-disabled="true">Check out <span class="num" data-total></span></a>
+  </div>
+</aside>
+<p class="visually-hidden" role="status" aria-live="polite" data-status></p>
+
+<script type="application/json" id="catalogue">{"products":[{"id":"6178","name":"Realistic Flying Hot Butt Hopper Brown","price":4.25,"sizes":["8"],"soldOut":[],"types":["dry-flies"],"species":["trout"],"signature":false,"rank":996,"img":"6178-realistic-flying-hot-butt-hopper-brown.jpg","alt":"Realistic Flying Hot Butt Hopper in brown: a lifelike foam grasshopper with a veined translucent wing, orange hot-spot butt and jointed legs, on white","url":"/realistic-flying-hot-butt-hopper-brown/","unit":"fly"},{"id":"5663","name":"Fat Albert","price":1.75,"sizes":["4","6","8","10","12","14"],"soldOut":["12","14"],"types":["dry-flies"],"species":["trout"],"signature":false,"rank":11,"img":"5663-fat-albert.jpg","alt":"Fat Albert foam hopper in tan: stacked tan and brown foam body segments, white wing and black-barred rubber legs, on white","url":"/fat-albert/","unit":"fly"},{"id":"3899","name":"Psycho Caddis","price":1.45,"sizes":["6","8","10","12","14","16","18"],"soldOut":["18"],"types":["dry-flies"],"species":["trout"],"signature":true,"rank":53,"img":"3899-reelflies-psycho-caddis.jpg","alt":"Psycho Caddis dry fly: tan elk-hair wing over black palmered hackle with orange black-barred rubber legs, on white","url":"/reelflies-psycho-caddis/","unit":"fly"},{"id":"5835","name":"Elk Hair Caddis Tan","price":0.95,"sizes":["10","12","14","16","18","20"],"soldOut":["20"],"types":["dry-flies"],"species":["trout"],"signature":false,"rank":3,"img":"5835-elk-hair-caddis-tan.jpg","alt":"Elk Hair Caddis Tan dry fly: tan elk-hair wing over a ribbed tan body with brown palmered hackle, on white","url":"/elk-hair-caddis-tan/","unit":"fly"},{"id":"4675","name":"Adams Dry Fly","price":0.95,"sizes":["10","12","14","16","18","20"],"soldOut":[],"types":["dry-flies"],"species":["trout"],"signature":false,"rank":5,"img":"4675-adams-dry-fly.jpg","alt":"Adams dry fly: grey dubbed body, mixed brown and grizzly hackle and grizzly hackle-tip wings, on white","url":"/adams-dry-fly/","unit":"fly"},{"id":"4368","name":"Adams Irresistible","price":0.95,"sizes":["10","12","14","16","18","20"],"soldOut":[],"types":["dry-flies"],"species":["trout"],"signature":false,"rank":6,"img":"4368-adams-irresistible.jpg","alt":"Adams Irresistible dry fly: clipped deer-hair body with brown and grizzly hackle and upright grizzly wings, on white","url":"/adams-irresistible/","unit":"fly"},{"id":"4979","name":"Royal Wulff Dry Fly","price":0.95,"sizes":["4","6","8","10","12","14","16","18","20","22"],"soldOut":["8","10","12","14","16","18","22"],"types":["dry-flies"],"species":["trout"],"signature":false,"rank":7,"img":"4979-royal-wulff-dry-fly.jpg","alt":"Royal Wulff dry fly: peacock herl and red floss body, white calf-hair wings, brown hackle and moose-hair tail, on white","url":"/royal-wulff-dry-fly/","unit":"fly"},{"id":"4001","name":"Mosquito","price":0.95,"sizes":["10","12","14","16","18"],"soldOut":["10"],"types":["dry-flies"],"species":["trout"],"signature":false,"rank":12,"img":"4001-mosquito.jpg","alt":"Mosquito dry fly: black and white striped body, grizzly hackle and grizzly hackle-tip wings, on white","url":"/mosquito/","unit":"fly"},{"id":"4333","name":"Blue Wing Olive Parachute Dry","price":0.95,"sizes":["12","14","16","18","20"],"soldOut":["20"],"types":["dry-flies"],"species":["trout"],"signature":false,"rank":19,"img":"4333-blue-wing-olive-parachute-dry.jpg","alt":"Blue Wing Olive Parachute dry fly: olive dubbed body, blue-dun parachute hackle and white post, on white","url":"/blue-wing-olive-parachute-dry/","unit":"fly"},{"id":"4289","name":"Purple Haze Parachute","price":1.25,"sizes":["10","12","14","16"],"soldOut":["10"],"types":["dry-flies"],"species":["trout"],"signature":false,"rank":21,"img":"4289-purple-haze-parachute.jpg","alt":"Purple Haze Parachute dry fly: sparkling purple body, brown parachute hackle and white post, on white","url":"/purple-haze-parachute/","unit":"fly"},{"id":"5558","name":"Goddard Caddis","price":0.95,"sizes":["8","10","12","14","16","18"],"soldOut":["18"],"types":["dry-flies"],"species":["trout"],"signature":false,"rank":24,"img":"5558-goddard-caddis.jpg","alt":"Goddard Caddis dry fly: clipped grey deer-hair body, brown hackle and long antennae, on white","url":"/goddard-caddis/","unit":"fly"},{"id":"4507","name":"Beadhead Prince Nymph","price":0.95,"sizes":["8","10","12","14","16","18"],"soldOut":["8","16","18"],"types":["nymphs"],"species":["trout","steelhead"],"signature":false,"rank":2,"img":"4507-beadhead-prince-nymph.jpg","alt":"Beadhead Prince Nymph: gold bead, peacock herl body with gold rib, white biot wings and brown biot tail, on white","url":"/beadhead-prince-nymph/","unit":"fly"},{"id":"4754","name":"Beadhead Pheasant Tail","price":0.95,"sizes":["10","12","14","16","18"],"soldOut":[],"types":["nymphs"],"species":["trout","steelhead"],"signature":false,"rank":4,"img":"4754-beadhead-pheasant-tail.jpg","alt":"Beadhead Pheasant Tail nymph: gold bead, pheasant-tail fibre body with copper rib and peacock thorax, on white","url":"/beadhead-pheasant-tail/","unit":"fly"},{"id":"5865","name":"Beadhead Copper John Copper","price":1.25,"sizes":["8","10","12","14","16","18"],"soldOut":["14","16"],"types":["nymphs"],"species":["trout","steelhead"],"signature":false,"rank":8,"img":"5865-beadhead-copper-john-copper.jpg","alt":"Beadhead Copper John in copper: gold bead, copper-wire body, pearl wing case and brown biot tail, on white","url":"/beadhead-copper-john-copper/","unit":"fly"},{"id":"5745","name":"Beadhead Hare's Ear Gold Ribbed","price":0.95,"sizes":["10","12","14","16","18"],"soldOut":["14","18"],"types":["nymphs"],"species":["trout","steelhead"],"signature":false,"rank":20,"img":"5745-beadhead-hare-s-ear-gold-ribbed.jpg","alt":"Beadhead Hare's Ear Gold Ribbed nymph: gold bead, buggy grey hare's-ear body with gold rib and dark wing case, on white","url":"/beadhead-hare-s-ear-gold-ribbed/","unit":"fly"},{"id":"4904","name":"Beadhead Krystal Bugger Black","price":0.95,"sizes":["2","4","6","8","10","12","14"],"soldOut":[],"types":["streamers","warmwater-flies"],"species":["trout","steelhead","bass"],"signature":false,"rank":14,"img":"4904-beadhead-krystal-bugger-black.jpg","alt":"Beadhead Krystal Bugger in black: gold bead, black marabou tail and palmered black hackle with green flash, on white","url":"/beadhead-krystal-bugger-black/","unit":"fly"},{"id":"4695","name":"Pumpkin Head","price":1.25,"sizes":["2","4","6","8","10"],"soldOut":[],"types":["streamers"],"species":["trout","steelhead"],"signature":false,"rank":29,"img":"4695-pumpkin-head.jpg","alt":"Pumpkin Head streamer: orange bead, olive marabou tail and brown palmered hackle, on white","url":"/pumpkin-head/","unit":"fly"},{"id":"4377","name":"BH Krystal Bugger Pink","price":0.95,"sizes":["2","4","6","8","10","12"],"soldOut":[],"types":["streamers","warmwater-flies"],"species":["trout","steelhead","bass"],"signature":false,"rank":41,"img":"4377-bh-krystal-bugger-pink.jpg","alt":"Beadhead Krystal Bugger in pink: gold bead, hot-pink marabou tail and pink palmered hackle with flash, on white","url":"/bh-krystal-bugger-pink/","unit":"fly"},{"id":"6186","name":"Tungsten Jig Bugger Olive","price":2.45,"sizes":["6","8","10"],"soldOut":[],"types":["streamers"],"species":["trout"],"signature":false,"rank":84,"img":"6186-tungsten-jig-bugger-olive.jpg","alt":"Tungsten Jig Bugger in olive: gold tungsten bead on a jig hook, olive marabou tail and olive hackle with flash, on white","url":"/tungsten-jig-bugger-olive/","unit":"fly"},{"id":"4616","name":"Beadhead Copper John Red","price":1.25,"sizes":["10","12","14","16","18"],"soldOut":["14"],"types":["nymphs"],"species":["trout","steelhead"],"signature":false,"rank":39,"img":"4616-beadhead-copper-john-red.jpg","alt":"Beadhead Copper John in red: gold bead, red-wire body, pearl wing case and brown biot tail, on white","url":"/beadhead-copper-john-red/","unit":"fly"},{"id":"4797","name":"Black Reel Egg Sucking Leech","price":1.75,"sizes":["4","6","8"],"soldOut":[],"types":["streamers"],"species":["steelhead","trout"],"signature":false,"rank":88,"img":"4797-black-reel-egg-sucking-leech.jpg","alt":"Black Reel Egg Sucking Leech: orange egg head and long black rabbit-strip body and tail, on white","url":"/black-reel-egg-sucking-leech/","unit":"fly"},{"id":"5490","name":"Green Machine","price":1.95,"sizes":["4","6","8","10","12"],"soldOut":["8"],"types":[],"species":["atlantic-salmon","steelhead"],"signature":false,"rank":122,"img":"5490-green-machine.jpg","alt":"Green Machine salmon fly: green deer-hair body with brown palmered hackle and a fluorescent green butt on a black salmon hook, on white","url":"/green-machine/","unit":"fly"},{"id":"5837","name":"ReelCray Orange Crayfish","price":1.95,"sizes":["6","8"],"soldOut":["8"],"types":["streamers","warmwater-flies"],"species":["bass"],"signature":false,"rank":865,"img":"5837-reelcray-orange-crayfish.jpg","alt":"ReelCray Orange Crayfish: orange rabbit claws, tan segmented body, long feelers and dumbbell eyes, on white","url":"/reelcray-orange-crayfish/","unit":"fly"},{"id":"5300","name":"Monster Streamer Steelhead Pike Fly","price":4.95,"sizes":["4/0","2/0"],"soldOut":["4/0"],"types":["warmwater-flies"],"species":["pike-muskie","steelhead"],"signature":false,"rank":1081,"img":"5300-monster-streamer-steelhead-pike-fly.jpg","alt":"Monster Streamer pike fly: long white and red synthetic body with black bars, multicolour flash and a spotted head, on white","url":"/monster-streamer-steelhead-pike-fly/","unit":"fly"},{"id":"3857","name":"Crazy Charlie Pink","price":1.65,"sizes":["4","6","8"],"soldOut":["6","8"],"types":["saltwater-flies"],"species":["bonefish"],"signature":false,"rank":198,"img":"3857-crazy-charlie-pink.jpg","alt":"Crazy Charlie bonefish fly in pink: pink flash wing, ribbed pink body and silver bead-chain eyes on an upturned hook, on white","url":"/crazy-charlie-pink/","unit":"fly"},{"id":"4877","name":"Adams Parachute Dry Fly","price":0.95,"sizes":["8","10","12","14","16","18","20"],"soldOut":["8"],"types":["dry-flies"],"species":["trout"],"signature":false,"rank":1,"img":"4877-adams-parachute-dry-fly.jpg","alt":"Adams Parachute dry fly: grey dubbed body, brown and grizzly parachute hackle, white post and mixed tail, on white","url":"/adams-parachute-dry-fly/","unit":"fly"},{"id":"4941","name":"Elk Hair Caddis Black","price":0.95,"sizes":["8","10","12","14","16","18"],"soldOut":[],"types":["dry-flies"],"species":["trout"],"signature":false,"rank":16,"img":"4941-elk-hair-caddis-black.jpg","alt":"Elk Hair Caddis Black dry fly: tan elk-hair wing over a black body with black palmered hackle, on white","url":"/elk-hair-caddis-black/","unit":"fly"},{"id":"5608","name":"Parachute HiViz Adams","price":0.95,"sizes":["10","12","14","16","18","20"],"soldOut":["10","16","20"],"types":["dry-flies"],"species":["trout"],"signature":false,"rank":48,"img":"5608-parachute-hiviz-adams.jpg","alt":"Parachute HiViz Adams dry fly: grey body, brown and grizzly parachute hackle and a bright red post, on white","url":"/parachute-hiviz-adams/","unit":"fly"},{"id":"5118","name":"BH Titanium Red Chironomid","price":1.25,"sizes":["8","10","12","14","16"],"soldOut":[],"types":["nymphs"],"species":["trout"],"signature":false,"rank":75,"img":"5118-bh-titanium-red-chironomid.jpg","alt":"BH Titanium Red Chironomid: gold bead, peacock collar and a curved white body with red rib, on white","url":"/bh-titanium-red-chironomid/","unit":"fly"},{"id":"3886","name":"42 Mayfly Assortment","price":34.95,"sizes":[],"soldOut":[],"types":["selections"],"species":["trout"],"signature":false,"rank":414,"img":"3886-42-mayfly-assortment.jpg","alt":"42 Mayfly Assortment: rows of mayfly dry flies in an open clear fly box (box not included), on white","url":"/42-mayfly-assortment/","unit":"set"},{"id":"5445","name":"30 Nymphs & Sub Surface Fly Selection","price":26.95,"sizes":[],"soldOut":[],"types":["selections"],"species":["trout"],"signature":false,"rank":375,"img":"5445-30-nymphs-sub-surface-fly-selection.jpg","alt":"30 Nymphs & Sub Surface Fly Selection: rows of nymphs and buggers in an open yellow fly box (box not included), on white","url":"/30-nymphs-sub-surface-fly-selection/","unit":"set"},{"id":"4576","name":"Reel Egg Nuke","price":1.95,"sizes":["8","10","12"],"soldOut":[],"types":["eggs-worms"],"species":["steelhead","trout"],"signature":false,"rank":9999,"img":"4576-reel-egg-nuke.jpg","alt":"Reel Egg Nuke: an orange egg under a white veil, with a long white tail and a red thread head, on white","url":"/reel-egg-nuke/","unit":"fly"},{"id":"5101","name":"Glo Bug Pink","price":0.95,"sizes":["8","10","12","14","18"],"soldOut":["8","18"],"types":["eggs-worms"],"species":["steelhead","trout"],"signature":false,"rank":9999,"img":"5101-glo-bug-pink.jpg","alt":"Glo Bug in pink: a round, fuzzy pink yarn egg on a short gold hook, on white","url":"/glo-bug-pink/","unit":"fly"},{"id":"3870","name":"Best Sellers Selection, 12 Flies","price":9.95,"sizes":[],"soldOut":[],"types":["selections"],"species":["trout"],"signature":false,"rank":9999,"img":"3870-best-sellers-selection.jpg","alt":"Best Sellers Selection: twelve assorted dry flies, nymphs and streamers seated in a clear fly box","url":"/best-sellers-selection-12-flies/","unit":"set"},{"id":"4251","name":"The Adams Family Selection, 12 Flies","price":10.95,"sizes":[],"soldOut":[],"types":["selections"],"species":["trout"],"signature":false,"rank":9999,"img":"4251-adams-family-selection.jpg","alt":"The Adams Family Selection: twelve Adams-style dry flies seated in a clear fly box","url":"/the-adams-family-selection-12-flies/","unit":"set"}],"flyTypes":[{"name":"Dry Flies","slug":"dry-flies","url":"/dry-flies/","count":436,"children":[{"name":"Mayfly Dry Flies","url":"/dry-flies/mayfly-dry-flies/","count":141},{"name":"Attractor Dry Flies","url":"/dry-flies/attractor-dry-flies/","count":77},{"name":"Hoppers & Terrestrials","url":"/dry-flies/hoppers-terrestrials/","count":114},{"name":"Parachute Dry Flies","url":"/dry-flies/parachute-dry-flies/","count":46},{"name":"Caddis Dry Flies","url":"/dry-flies/caddis-dry-flies/","count":56},{"name":"Stonefly Dry Flies","url":"/dry-flies/stonefly-dry-flies/","count":34},{"name":"Midge Dry Flies","url":"/dry-flies/midge-dry-flies/","count":22},{"name":"Emergers & Cripples","url":"/dry-flies/emergers-cripples/","count":24}]},{"name":"Nymphs","slug":"nymphs","url":"/nymphs/","count":601,"children":[{"name":"Mayfly Nymphs","url":"/nymphs/mayfly-nymphs/","count":131},{"name":"Attractor & Searching Nymphs","url":"/nymphs/searching-nymphs/","count":171},{"name":"Chironomids & Midge Nymphs","url":"/nymphs/chironomids/","count":62},{"name":"Stonefly Nymphs","url":"/nymphs/stonefly-nymphs/","count":100},{"name":"Euro Nymphs","url":"/nymphs/euro-nymphs/","count":22},{"name":"Hare's Ear Nymphs","url":"/nymphs/hares-ear-nymphs/","count":47},{"name":"Scuds & Sow Bugs","url":"/nymphs/scuds-sow-bugs/","count":50},{"name":"Wet Flies & Soft Hackles","url":"/nymphs/wet-flies-soft-hackles/","count":86},{"name":"Caddis Nymphs","url":"/nymphs/caddis-nymphs/","count":56},{"name":"Damsel & Dragonfly Nymphs","url":"/nymphs/damsel-dragonfly-nymphs/","count":34}]},{"name":"Streamers","slug":"streamers","url":"/streamers/","count":444,"children":[{"name":"Woolly Buggers & Leeches","url":"/streamers/woolly-buggers-leeches/","count":222},{"name":"Muddler Minnows & Sculpins","url":"/streamers/muddlers-sculpins/","count":97},{"name":"Baitfish & Minnows","url":"/streamers/baitfish-minnows/","count":132},{"name":"Zonkers & Zuddlers","url":"/streamers/zonkers-zuddlers/","count":84},{"name":"Articulated Streamers","url":"/streamers/articulated-streamers/","count":42}]},{"name":"Eggs & Worms","slug":"eggs-worms","url":"/eggs-worms/","count":184,"children":[{"name":"San Juan & Squirmy Worms","url":"/eggs-worms/san-juan-squirmy-worms/","count":61},{"name":"Egg Flies","url":"/eggs-worms/egg-flies/","count":115}]},{"name":"Warmwater Flies","slug":"warmwater-flies","url":"/warmwater-flies/","count":189,"children":[{"name":"Warmwater Streamers","url":"/warmwater-flies/warmwater-streamers/","count":139},{"name":"Poppers & Topwater Flies","url":"/warmwater-flies/poppers-topwater-flies/","count":43}]},{"name":"Saltwater Flies","slug":"saltwater-flies","url":"/saltwater-flies/","count":136,"children":[{"name":"Saltwater Baitfish Flies","url":"/saltwater-flies/saltwater-baitfish-flies/","count":74},{"name":"Shrimp & Crab Flies","url":"/saltwater-flies/shrimp-crab-flies/","count":89}]}],"species":[{"name":"Trout Flies","url":"/trout-flies/","approx_live_products":1600},{"name":"Steelhead Flies","url":"/steelhead-flies/","approx_live_products":737},{"name":"Atlantic Salmon Flies","url":"/atlantic-salmon-flies/","approx_live_products":205},{"name":"Bass Flies","url":"/bass-flies/","approx_live_products":280},{"name":"Pike & Muskie Flies","url":"/pike-muskie-flies/","approx_live_products":132},{"name":"Panfish Flies","url":"/panfish-flies/","approx_live_products":54},{"name":"Carp Flies","url":"/carp-flies/","approx_live_products":51},{"name":"Bonefish Flies","url":"/bonefish-flies/","approx_live_products":112},{"name":"Permit Flies","url":"/permit-flies/","approx_live_products":96},{"name":"Tarpon, Snook & Redfish Flies","url":"/tarpon-snook-redfish-flies/","approx_live_products":46},{"name":"Barracuda Flies","url":"/barracuda-flies/","approx_live_products":25}],"more":[{"name":"Fly Selections & Assortments","url":"/fly-selections-assortments/","approx_live_products":58,"children":["Bulk Fly Selections","Mini Fly Selections"]},{"name":"ReelFlies Signature Flies","url":"/reelflies-signature-flies/","approx_live_products":355,"children":[]},{"name":"Realistic Trout Flies","url":"/realistic-trout-flies/","approx_live_products":78,"children":["Realistic Dry Flies","Realistic Nymphs & Scuds"]},{"name":"Fly Gear","url":"/fly-gear/","approx_live_products":144,"children":["Fly Fishing Accessories","Fly Boxes","Fly Tying Materials","Fly Tying Hooks"]},{"name":"Clearance Flies","url":"/clearance-flies/","approx_live_products":119,"children":[]}],"best":["4877","4507","5835","4754","4979","5865"]}</script>
+<script src="app.js" defer></script>
+</body>
+</html>

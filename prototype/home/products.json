@@ -1,0 +1,924 @@
+[
+ {
+  "id": "6178",
+  "name": "Realistic Flying Hot Butt Hopper Brown",
+  "price": 4.25,
+  "sizes": [
+   "8"
+  ],
+  "soldOut": [],
+  "types": [
+   "dry-flies"
+  ],
+  "species": [
+   "trout"
+  ],
+  "signature": false,
+  "rank": 996,
+  "img": "6178-realistic-flying-hot-butt-hopper-brown.jpg",
+  "alt": "Realistic Flying Hot Butt Hopper in brown: a lifelike foam grasshopper with a veined translucent wing, orange hot-spot butt and jointed legs, on white",
+  "url": "/realistic-flying-hot-butt-hopper-brown/",
+  "unit": "fly"
+ },
+ {
+  "id": "5663",
+  "name": "Fat Albert",
+  "price": 1.75,
+  "sizes": [
+   "4",
+   "6",
+   "8",
+   "10",
+   "12",
+   "14"
+  ],
+  "soldOut": [
+   "12",
+   "14"
+  ],
+  "types": [
+   "dry-flies"
+  ],
+  "species": [
+   "trout"
+  ],
+  "signature": false,
+  "rank": 11,
+  "img": "5663-fat-albert.jpg",
+  "alt": "Fat Albert foam hopper in tan: stacked tan and brown foam body segments, white wing and black-barred rubber legs, on white",
+  "url": "/fat-albert/",
+  "unit": "fly"
+ },
+ {
+  "id": "3899",
+  "name": "Psycho Caddis",
+  "price": 1.45,
+  "sizes": [
+   "6",
+   "8",
+   "10",
+   "12",
+   "14",
+   "16",
+   "18"
+  ],
+  "soldOut": [
+   "18"
+  ],
+  "types": [
+   "dry-flies"
+  ],
+  "species": [
+   "trout"
+  ],
+  "signature": true,
+  "rank": 53,
+  "img": "3899-reelflies-psycho-caddis.jpg",
+  "alt": "Psycho Caddis dry fly: tan elk-hair wing over black palmered hackle with orange black-barred rubber legs, on white",
+  "url": "/reelflies-psycho-caddis/",
+  "unit": "fly"
+ },
+ {
+  "id": "5835",
+  "name": "Elk Hair Caddis Tan",
+  "price": 0.95,
+  "sizes": [
+   "10",
+   "12",
+   "14",
+   "16",
+   "18",
+   "20"
+  ],
+  "soldOut": [
+   "20"
+  ],
+  "types": [
+   "dry-flies"
+  ],
+  "species": [
+   "trout"
+  ],
+  "signature": false,
+  "rank": 3,
+  "img": "5835-elk-hair-caddis-tan.jpg",
+  "alt": "Elk Hair Caddis Tan dry fly: tan elk-hair wing over a ribbed tan body with brown palmered hackle, on white",
+  "url": "/elk-hair-caddis-tan/",
+  "unit": "fly"
+ },
+ {
+  "id": "4675",
+  "name": "Adams Dry Fly",
+  "price": 0.95,
+  "sizes": [
+   "10",
+   "12",
+   "14",
+   "16",
+   "18",
+   "20"
+  ],
+  "soldOut": [],
+  "types": [
+   "dry-flies"
+  ],
+  "species": [
+   "trout"
+  ],
+  "signature": false,
+  "rank": 5,
+  "img": "4675-adams-dry-fly.jpg",
+  "alt": "Adams dry fly: grey dubbed body, mixed brown and grizzly hackle and grizzly hackle-tip wings, on white",
+  "url": "/adams-dry-fly/",
+  "unit": "fly"
+ },
+ {
+  "id": "4368",
+  "name": "Adams Irresistible",
+  "price": 0.95,
+  "sizes": [
+   "10",
+   "12",
+   "14",
+   "16",
+   "18",
+   "20"
+  ],
+  "soldOut": [],
+  "types": [
+   "dry-flies"
+  ],
+  "species": [
+   "trout"
+  ],
+  "signature": false,
+  "rank": 6,
+  "img": "4368-adams-irresistible.jpg",
+  "alt": "Adams Irresistible dry fly: clipped deer-hair body with brown and grizzly hackle and upright grizzly wings, on white",
+  "url": "/adams-irresistible/",
+  "unit": "fly"
+ },
+ {
+  "id": "4979",
+  "name": "Royal Wulff Dry Fly",
+  "price": 0.95,
+  "sizes": [
+   "4",
+   "6",
+   "8",
+   "10",
+   "12",
+   "14",
+   "16",
+   "18",
+   "20",
+   "22"
+  ],
+  "soldOut": [
+   "8",
+   "10",
+   "12",
+   "14",
+   "16",
+   "18",
+   "22"
+  ],
+  "types": [
+   "dry-flies"
+  ],
+  "species": [
+   "trout"
+  ],
+  "signature": false,
+  "rank": 7,
+  "img": "4979-royal-wulff-dry-fly.jpg",
+  "alt": "Royal Wulff dry fly: peacock herl and red floss body, white calf-hair wings, brown hackle and moose-hair tail, on white",
+  "url": "/royal-wulff-dry-fly/",
+  "unit": "fly"
+ },
+ {
+  "id": "4001",
+  "name": "Mosquito",
+  "price": 0.95,
+  "sizes": [
+   "10",
+   "12",
+   "14",
+   "16",
+   "18"
+  ],
+  "soldOut": [
+   "10"
+  ],
+  "types": [
+   "dry-flies"
+  ],
+  "species": [
+   "trout"
+  ],
+  "signature": false,
+  "rank": 12,
+  "img": "4001-mosquito.jpg",
+  "alt": "Mosquito dry fly: black and white striped body, grizzly hackle and grizzly hackle-tip wings, on white",
+  "url": "/mosquito/",
+  "unit": "fly"
+ },
+ {
+  "id": "4333",
+  "name": "Blue Wing Olive Parachute Dry",
+  "price": 0.95,
+  "sizes": [
+   "12",
+   "14",
+   "16",
+   "18",
+   "20"
+  ],
+  "soldOut": [
+   "20"
+  ],
+  "types": [
+   "dry-flies"
+  ],
+  "species": [
+   "trout"
+  ],
+  "signature": false,
+  "rank": 19,
+  "img": "4333-blue-wing-olive-parachute-dry.jpg",
+  "alt": "Blue Wing Olive Parachute dry fly: olive dubbed body, blue-dun parachute hackle and white post, on white",
+  "url": "/blue-wing-olive-parachute-dry/",
+  "unit": "fly"
+ },
+ {
+  "id": "4289",
+  "name": "Purple Haze Parachute",
+  "price": 1.25,
+  "sizes": [
+   "10",
+   "12",
+   "14",
+   "16"
+  ],
+  "soldOut": [
+   "10"
+  ],
+  "types": [
+   "dry-flies"
+  ],
+  "species": [
+   "trout"
+  ],
+  "signature": false,
+  "rank": 21,
+  "img": "4289-purple-haze-parachute.jpg",
+  "alt": "Purple Haze Parachute dry fly: sparkling purple body, brown parachute hackle and white post, on white",
+  "url": "/purple-haze-parachute/",
+  "unit": "fly"
+ },
+ {
+  "id": "5558",
+  "name": "Goddard Caddis",
+  "price": 0.95,
+  "sizes": [
+   "8",
+   "10",
+   "12",
+   "14",
+   "16",
+   "18"
+  ],
+  "soldOut": [
+   "18"
+  ],
+  "types": [
+   "dry-flies"
+  ],
+  "species": [
+   "trout"
+  ],
+  "signature": false,
+  "rank": 24,
+  "img": "5558-goddard-caddis.jpg",
+  "alt": "Goddard Caddis dry fly: clipped grey deer-hair body, brown hackle and long antennae, on white",
+  "url": "/goddard-caddis/",
+  "unit": "fly"
+ },
+ {
+  "id": "4507",
+  "name": "Beadhead Prince Nymph",
+  "price": 0.95,
+  "sizes": [
+   "8",
+   "10",
+   "12",
+   "14",
+   "16",
+   "18"
+  ],
+  "soldOut": [
+   "8",
+   "16",
+   "18"
+  ],
+  "types": [
+   "nymphs"
+  ],
+  "species": [
+   "trout",
+   "steelhead"
+  ],
+  "signature": false,
+  "rank": 2,
+  "img": "4507-beadhead-prince-nymph.jpg",
+  "alt": "Beadhead Prince Nymph: gold bead, peacock herl body with gold rib, white biot wings and brown biot tail, on white",
+  "url": "/beadhead-prince-nymph/",
+  "unit": "fly"
+ },
+ {
+  "id": "4754",
+  "name": "Beadhead Pheasant Tail",
+  "price": 0.95,
+  "sizes": [
+   "10",
+   "12",
+   "14",
+   "16",
+   "18"
+  ],
+  "soldOut": [],
+  "types": [
+   "nymphs"
+  ],
+  "species": [
+   "trout",
+   "steelhead"
+  ],
+  "signature": false,
+  "rank": 4,
+  "img": "4754-beadhead-pheasant-tail.jpg",
+  "alt": "Beadhead Pheasant Tail nymph: gold bead, pheasant-tail fibre body with copper rib and peacock thorax, on white",
+  "url": "/beadhead-pheasant-tail/",
+  "unit": "fly"
+ },
+ {
+  "id": "5865",
+  "name": "Beadhead Copper John Copper",
+  "price": 1.25,
+  "sizes": [
+   "8",
+   "10",
+   "12",
+   "14",
+   "16",
+   "18"
+  ],
+  "soldOut": [
+   "14",
+   "16"
+  ],
+  "types": [
+   "nymphs"
+  ],
+  "species": [
+   "trout",
+   "steelhead"
+  ],
+  "signature": false,
+  "rank": 8,
+  "img": "5865-beadhead-copper-john-copper.jpg",
+  "alt": "Beadhead Copper John in copper: gold bead, copper-wire body, pearl wing case and brown biot tail, on white",
+  "url": "/beadhead-copper-john-copper/",
+  "unit": "fly"
+ },
+ {
+  "id": "5745",
+  "name": "Beadhead Hare's Ear Gold Ribbed",
+  "price": 0.95,
+  "sizes": [
+   "10",
+   "12",
+   "14",
+   "16",
+   "18"
+  ],
+  "soldOut": [
+   "14",
+   "18"
+  ],
+  "types": [
+   "nymphs"
+  ],
+  "species": [
+   "trout",
+   "steelhead"
+  ],
+  "signature": false,
+  "rank": 20,
+  "img": "5745-beadhead-hare-s-ear-gold-ribbed.jpg",
+  "alt": "Beadhead Hare's Ear Gold Ribbed nymph: gold bead, buggy grey hare's-ear body with gold rib and dark wing case, on white",
+  "url": "/beadhead-hare-s-ear-gold-ribbed/",
+  "unit": "fly"
+ },
+ {
+  "id": "4904",
+  "name": "Beadhead Krystal Bugger Black",
+  "price": 0.95,
+  "sizes": [
+   "2",
+   "4",
+   "6",
+   "8",
+   "10",
+   "12",
+   "14"
+  ],
+  "soldOut": [],
+  "types": [
+   "streamers",
+   "warmwater-flies"
+  ],
+  "species": [
+   "trout",
+   "steelhead",
+   "bass"
+  ],
+  "signature": false,
+  "rank": 14,
+  "img": "4904-beadhead-krystal-bugger-black.jpg",
+  "alt": "Beadhead Krystal Bugger in black: gold bead, black marabou tail and palmered black hackle with green flash, on white",
+  "url": "/beadhead-krystal-bugger-black/",
+  "unit": "fly"
+ },
+ {
+  "id": "4695",
+  "name": "Pumpkin Head",
+  "price": 1.25,
+  "sizes": [
+   "2",
+   "4",
+   "6",
+   "8",
+   "10"
+  ],
+  "soldOut": [],
+  "types": [
+   "streamers"
+  ],
+  "species": [
+   "trout",
+   "steelhead"
+  ],
+  "signature": false,
+  "rank": 29,
+  "img": "4695-pumpkin-head.jpg",
+  "alt": "Pumpkin Head streamer: orange bead, olive marabou tail and brown palmered hackle, on white",
+  "url": "/pumpkin-head/",
+  "unit": "fly"
+ },
+ {
+  "id": "4377",
+  "name": "BH Krystal Bugger Pink",
+  "price": 0.95,
+  "sizes": [
+   "2",
+   "4",
+   "6",
+   "8",
+   "10",
+   "12"
+  ],
+  "soldOut": [],
+  "types": [
+   "streamers",
+   "warmwater-flies"
+  ],
+  "species": [
+   "trout",
+   "steelhead",
+   "bass"
+  ],
+  "signature": false,
+  "rank": 41,
+  "img": "4377-bh-krystal-bugger-pink.jpg",
+  "alt": "Beadhead Krystal Bugger in pink: gold bead, hot-pink marabou tail and pink palmered hackle with flash, on white",
+  "url": "/bh-krystal-bugger-pink/",
+  "unit": "fly"
+ },
+ {
+  "id": "6186",
+  "name": "Tungsten Jig Bugger Olive",
+  "price": 2.45,
+  "sizes": [
+   "6",
+   "8",
+   "10"
+  ],
+  "soldOut": [],
+  "types": [
+   "streamers"
+  ],
+  "species": [
+   "trout"
+  ],
+  "signature": false,
+  "rank": 84,
+  "img": "6186-tungsten-jig-bugger-olive.jpg",
+  "alt": "Tungsten Jig Bugger in olive: gold tungsten bead on a jig hook, olive marabou tail and olive hackle with flash, on white",
+  "url": "/tungsten-jig-bugger-olive/",
+  "unit": "fly"
+ },
+ {
+  "id": "4616",
+  "name": "Beadhead Copper John Red",
+  "price": 1.25,
+  "sizes": [
+   "10",
+   "12",
+   "14",
+   "16",
+   "18"
+  ],
+  "soldOut": [
+   "14"
+  ],
+  "types": [
+   "nymphs"
+  ],
+  "species": [
+   "trout",
+   "steelhead"
+  ],
+  "signature": false,
+  "rank": 39,
+  "img": "4616-beadhead-copper-john-red.jpg",
+  "alt": "Beadhead Copper John in red: gold bead, red-wire body, pearl wing case and brown biot tail, on white",
+  "url": "/beadhead-copper-john-red/",
+  "unit": "fly"
+ },
+ {
+  "id": "4797",
+  "name": "Black Reel Egg Sucking Leech",
+  "price": 1.75,
+  "sizes": [
+   "4",
+   "6",
+   "8"
+  ],
+  "soldOut": [],
+  "types": [
+   "streamers"
+  ],
+  "species": [
+   "steelhead",
+   "trout"
+  ],
+  "signature": false,
+  "rank": 88,
+  "img": "4797-black-reel-egg-sucking-leech.jpg",
+  "alt": "Black Reel Egg Sucking Leech: orange egg head and long black rabbit-strip body and tail, on white",
+  "url": "/black-reel-egg-sucking-leech/",
+  "unit": "fly"
+ },
+ {
+  "id": "5490",
+  "name": "Green Machine",
+  "price": 1.95,
+  "sizes": [
+   "4",
+   "6",
+   "8",
+   "10",
+   "12"
+  ],
+  "soldOut": [
+   "8"
+  ],
+  "types": [],
+  "species": [
+   "atlantic-salmon",
+   "steelhead"
+  ],
+  "signature": false,
+  "rank": 122,
+  "img": "5490-green-machine.jpg",
+  "alt": "Green Machine salmon fly: green deer-hair body with brown palmered hackle and a fluorescent green butt on a black salmon hook, on white",
+  "url": "/green-machine/",
+  "unit": "fly"
+ },
+ {
+  "id": "5837",
+  "name": "ReelCray Orange Crayfish",
+  "price": 1.95,
+  "sizes": [
+   "6",
+   "8"
+  ],
+  "soldOut": [
+   "8"
+  ],
+  "types": [
+   "streamers",
+   "warmwater-flies"
+  ],
+  "species": [
+   "bass"
+  ],
+  "signature": false,
+  "rank": 865,
+  "img": "5837-reelcray-orange-crayfish.jpg",
+  "alt": "ReelCray Orange Crayfish: orange rabbit claws, tan segmented body, long feelers and dumbbell eyes, on white",
+  "url": "/reelcray-orange-crayfish/",
+  "unit": "fly"
+ },
+ {
+  "id": "5300",
+  "name": "Monster Streamer Steelhead Pike Fly",
+  "price": 4.95,
+  "sizes": [
+   "4/0",
+   "2/0"
+  ],
+  "soldOut": [
+   "4/0"
+  ],
+  "types": [
+   "warmwater-flies"
+  ],
+  "species": [
+   "pike-muskie",
+   "steelhead"
+  ],
+  "signature": false,
+  "rank": 1081,
+  "img": "5300-monster-streamer-steelhead-pike-fly.jpg",
+  "alt": "Monster Streamer pike fly: long white and red synthetic body with black bars, multicolour flash and a spotted head, on white",
+  "url": "/monster-streamer-steelhead-pike-fly/",
+  "unit": "fly"
+ },
+ {
+  "id": "3857",
+  "name": "Crazy Charlie Pink",
+  "price": 1.65,
+  "sizes": [
+   "4",
+   "6",
+   "8"
+  ],
+  "soldOut": [
+   "6",
+   "8"
+  ],
+  "types": [
+   "saltwater-flies"
+  ],
+  "species": [
+   "bonefish"
+  ],
+  "signature": false,
+  "rank": 198,
+  "img": "3857-crazy-charlie-pink.jpg",
+  "alt": "Crazy Charlie bonefish fly in pink: pink flash wing, ribbed pink body and silver bead-chain eyes on an upturned hook, on white",
+  "url": "/crazy-charlie-pink/",
+  "unit": "fly"
+ },
+ {
+  "id": "4877",
+  "name": "Adams Parachute Dry Fly",
+  "price": 0.95,
+  "sizes": [
+   "8",
+   "10",
+   "12",
+   "14",
+   "16",
+   "18",
+   "20"
+  ],
+  "soldOut": [
+   "8"
+  ],
+  "types": [
+   "dry-flies"
+  ],
+  "species": [
+   "trout"
+  ],
+  "signature": false,
+  "rank": 1,
+  "img": "4877-adams-parachute-dry-fly.jpg",
+  "alt": "Adams Parachute dry fly: grey dubbed body, brown and grizzly parachute hackle, white post and mixed tail, on white",
+  "url": "/adams-parachute-dry-fly/",
+  "unit": "fly"
+ },
+ {
+  "id": "4941",
+  "name": "Elk Hair Caddis Black",
+  "price": 0.95,
+  "sizes": [
+   "8",
+   "10",
+   "12",
+   "14",
+   "16",
+   "18"
+  ],
+  "soldOut": [],
+  "types": [
+   "dry-flies"
+  ],
+  "species": [
+   "trout"
+  ],
+  "signature": false,
+  "rank": 16,
+  "img": "4941-elk-hair-caddis-black.jpg",
+  "alt": "Elk Hair Caddis Black dry fly: tan elk-hair wing over a black body with black palmered hackle, on white",
+  "url": "/elk-hair-caddis-black/",
+  "unit": "fly"
+ },
+ {
+  "id": "5608",
+  "name": "Parachute HiViz Adams",
+  "price": 0.95,
+  "sizes": [
+   "10",
+   "12",
+   "14",
+   "16",
+   "18",
+   "20"
+  ],
+  "soldOut": [
+   "10",
+   "16",
+   "20"
+  ],
+  "types": [
+   "dry-flies"
+  ],
+  "species": [
+   "trout"
+  ],
+  "signature": false,
+  "rank": 48,
+  "img": "5608-parachute-hiviz-adams.jpg",
+  "alt": "Parachute HiViz Adams dry fly: grey body, brown and grizzly parachute hackle and a bright red post, on white",
+  "url": "/parachute-hiviz-adams/",
+  "unit": "fly"
+ },
+ {
+  "id": "5118",
+  "name": "BH Titanium Red Chironomid",
+  "price": 1.25,
+  "sizes": [
+   "8",
+   "10",
+   "12",
+   "14",
+   "16"
+  ],
+  "soldOut": [],
+  "types": [
+   "nymphs"
+  ],
+  "species": [
+   "trout"
+  ],
+  "signature": false,
+  "rank": 75,
+  "img": "5118-bh-titanium-red-chironomid.jpg",
+  "alt": "BH Titanium Red Chironomid: gold bead, peacock collar and a curved white body with red rib, on white",
+  "url": "/bh-titanium-red-chironomid/",
+  "unit": "fly"
+ },
+ {
+  "id": "3886",
+  "name": "42 Mayfly Assortment",
+  "price": 34.95,
+  "sizes": [],
+  "soldOut": [],
+  "types": [
+   "selections"
+  ],
+  "species": [
+   "trout"
+  ],
+  "signature": false,
+  "rank": 414,
+  "img": "3886-42-mayfly-assortment.jpg",
+  "alt": "42 Mayfly Assortment: rows of mayfly dry flies in an open clear fly box (box not included), on white",
+  "url": "/42-mayfly-assortment/",
+  "unit": "set"
+ },
+ {
+  "id": "5445",
+  "name": "30 Nymphs & Sub Surface Fly Selection",
+  "price": 26.95,
+  "sizes": [],
+  "soldOut": [],
+  "types": [
+   "selections"
+  ],
+  "species": [
+   "trout"
+  ],
+  "signature": false,
+  "rank": 375,
+  "img": "5445-30-nymphs-sub-surface-fly-selection.jpg",
+  "alt": "30 Nymphs & Sub Surface Fly Selection: rows of nymphs and buggers in an open yellow fly box (box not included), on white",
+  "url": "/30-nymphs-sub-surface-fly-selection/",
+  "unit": "set"
+ },
+ {
+  "id": "4576",
+  "name": "Reel Egg Nuke",
+  "price": 1.95,
+  "sizes": [
+   "8",
+   "10",
+   "12"
+  ],
+  "soldOut": [],
+  "types": [
+   "eggs-worms"
+  ],
+  "species": [
+   "steelhead",
+   "trout"
+  ],
+  "signature": false,
+  "rank": 9999,
+  "img": "4576-reel-egg-nuke.jpg",
+  "alt": "Reel Egg Nuke: an orange egg under a white veil, with a long white tail and a red thread head, on white",
+  "url": "/reel-egg-nuke/",
+  "unit": "fly"
+ },
+ {
+  "id": "5101",
+  "name": "Glo Bug Pink",
+  "price": 0.95,
+  "sizes": [
+   "8",
+   "10",
+   "12",
+   "14",
+   "18"
+  ],
+  "soldOut": [
+   "8",
+   "18"
+  ],
+  "types": [
+   "eggs-worms"
+  ],
+  "species": [
+   "steelhead",
+   "trout"
+  ],
+  "signature": false,
+  "rank": 9999,
+  "img": "5101-glo-bug-pink.jpg",
+  "alt": "Glo Bug in pink: a round, fuzzy pink yarn egg on a short gold hook, on white",
+  "url": "/glo-bug-pink/",
+  "unit": "fly"
+ },
+ {
+  "id": "3870",
+  "name": "Best Sellers Selection, 12 Flies",
+  "price": 9.95,
+  "sizes": [],
+  "soldOut": [],
+  "types": [
+   "selections"
+  ],
+  "species": [
+   "trout"
+  ],
+  "signature": false,
+  "rank": 9999,
+  "img": "3870-best-sellers-selection.jpg",
+  "alt": "Best Sellers Selection: twelve assorted dry flies, nymphs and streamers seated in a clear fly box",
+  "url": "/best-sellers-selection-12-flies/",
+  "unit": "set"
+ },
+ {
+  "id": "4251",
+  "name": "The Adams Family Selection, 12 Flies",
+  "price": 10.95,
+  "sizes": [],
+  "soldOut": [],
+  "types": [
+   "selections"
+  ],
+  "species": [
+   "trout"
+  ],
+  "signature": false,
+  "rank": 9999,
+  "img": "4251-adams-family-selection.jpg",
+  "alt": "The Adams Family Selection: twelve Adams-style dry flies seated in a clear fly box",
+  "url": "/the-adams-family-selection-12-flies/",
+  "unit": "set"
+ }
+]
