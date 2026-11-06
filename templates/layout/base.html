@@ -26,9 +26,9 @@
         </script>
         <script nonce="{{nonce}}" async src="{{cdn 'assets/dist/theme-bundle.head_async.js' resourceHint='preload' as='script'}}"></script>
         
-        {{getFontsCollection font-display='block'}}
+        {{getFontsCollection font-display='swap'}}{{!-- ReelFlies hook: swap, not block --}}
         
-        <script nonce="{{nonce}}" async src="{{cdn 'assets/dist/theme-bundle.font.js' resourceHint='preload' as='script'}}"></script>
+        {{> components/reelflies/head}}{{!-- ReelFlies hook: the content language and Archivo's preload, in place of theme-bundle.font.js (Google fonts only) --}}
 
         {{{stylesheet '/assets/css/theme.css'}}}
 

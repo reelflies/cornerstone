@@ -1,0 +1,15 @@
+// =============================================================================
+// REELFLIES (Streamside Stone)
+// =============================================================================
+//
+// The ReelFlies style layer (ADR 0001), imported at the end of theme.scss so it builds on every
+// stock rule. Settings, tokens and mixins are in _settings.scss, which theme.scss imports after
+// the stock settings. DESIGN.md is the source for every value.
+//
+// The foundation comes first; each page's partial joins below it as that page is rebuilt (home,
+// header and footer first, then category, product, search and cart). The whole layer is reported
+// against the performance budget by scripts/check-bundle.mjs.
+//
+// -----------------------------------------------------------------------------
+
+@import "foundation"; // tokens, grounds, fonts, type, browser surfaces, focus, reduced motion

@@ -2,6 +2,15 @@
 
 This repo is Cornerstone (`upstream`, bigcommerce/cornerstone) plus ReelFlies code. The rules come from [ADR 0001](docs/adr/0001-scoped-theme-code.md). This file is the register of every upstream file ReelFlies has changed. Update it in the same PR as the change.
 
+## The Streamside Stone rebuild (branch `redesign/streamside-stone`)
+
+The owner chose a clean fork for the redesign (2026-11-06). On this branch the bundled theme (`assets`, `templates`, `lang`, `meta`, `config.json`, `schema.json`, `schemaTranslations.json`) went back to untouched Cornerstone 6.22.0, and the new look is built on it from DESIGN.md, page by page. The rules of ADR 0001 still hold.
+
+- **[Upstream files changed](#upstream-files-changed)** lists only what this branch has hooked so far.
+- **[On master, to carry back](#on-master-to-carry-back)** is master's register as it stood at the fork (62e7afe5). Each feature comes back with the page it belongs to, redrawn in the new look wherever it draws anything, and its rows move up when it lands. Decisions the redesign replaced (the sage buy colour, Onest, the Hook Gauge tiles, bands and footer) don't come back.
+- **The slots** in the next sections (`page-modules.js`, `global.js`, `js-settings.html`, the `rf_*` settings groups) return with the first module that needs them.
+- **`npm run test:scripts`** fails on this branch until then: 515 of 2,967 tests assert features or values from master's skin (2026-11-06). Each module's tests return or are rewritten with it. Don't release from this branch before they pass.
+
 ## Where ReelFlies code goes
 
 | What | Folder |
@@ -11,7 +20,7 @@ This repo is Cornerstone (`upstream`, bigcommerce/cornerstone) plus ReelFlies co
 | Template partials | `templates/components/reelflies/` |
 | Custom page templates (for example the Species hub) | `templates/pages/custom/` |
 | Styles | `assets/scss/reelflies/`: `_settings.scss` is imported after the settings in `theme.scss`, and `_index.scss` at the end of it |
-| Fonts and images | `assets/fonts/` (Onest, self-hosted, with its licence `OFL.txt`) and `assets/img/reelflies/` (the default product, brand and share images) |
+| Fonts and images | `assets/fonts/` (Archivo and Kalam, self-hosted, with their licences `OFL-Archivo.txt` and `OFL-Kalam.txt`) and `assets/img/reelflies/` (the default product, brand and share images, once the new look has them) |
 | Icons | SVG partials in `templates/components/reelflies/icons/`. Don't add to `assets/icons/`, because that regenerates `assets/img/icon-sprite.svg`. |
 | Widgets API templates, schemas and per-channel files (stored in BigCommerce), synced by `scripts/widgets-sync.mjs` ([widgets](docs/widgets.md)) | `widgets/` |
 | Web Page sources: the Policy, Help and Brand pages of one channel (stored in BigCommerce, written through `scripts/store/`; never bundled), and `newsletter.json`, the source of record for the CASL newsletter wording that tickets 24 and 50 copy and pin with a test | `content/pages/<channel>/` ([ticket 22](content/pages/1895766/README.md)) |
@@ -101,6 +110,27 @@ The Species root, "Flies by Species" at `/species/`, renders with the custom cat
 - **Locally,** `scripts/qa/custom-layouts.json` maps it to channel 1's `species-hub` pin (Saltwater, Warmwater & Salmon, a stand-in until wave R2 pins `/species/` on 1895766, once refactor 14 has placed the products), and the `species-hub` raw-HTML assertion holds the page. The shipping strip lists it in its `template_files` ([widgets](docs/widgets.md)).
 
 ## Upstream files changed
+
+On `redesign/streamside-stone`. Kept from master unchanged, because the reset covered only the bundled folders: `.gitignore` (01), `webpack.common.js` (01), `package.json` and `package-lock.json` (01, 05, 16, 17, 46, 54), `jest.config.js` (15), `babel.config.js` (41) and `.github/` (06); their rows are in the master register below.
+
+| File | Change | Why | Ticket |
+|---|---|---|---|
+| `config.json` | `name` "ReelFlies"; `variations` "ReelFlies CA", "ReelFlies US" and "ReelFlies CA channel 1", in that order, with master's meta and empty `settings` | Releases push and activate by name; the `rf_*` values return with their modules | 04, 05, 53 |
+| `templates/layout/base.html` | Line 2: `lang="en-CA"` | Canadian English on every page | 25 |
+| `templates/components/common/body.html` | `<main>` on the templates that have none (`rf_main_templates`) | One main landmark on every page (axe) | 25 |
+| `templates/components/common/forms/text.html`, `select.html`, `selectortext.html`, `password.html`; `templates/pages/auth/login.html` | The autocomplete token include (`components/reelflies/autocomplete`), and the sign-in form's two tokens | WCAG 1.3.5 and 3.3.8 | 25 |
+| `assets/js/theme/global.js` | Imports and starts `reelflies/lazy-quick-view` in place of `global/quick-view` | Quick view loads on the first click; main.js stays under 300 KiB | 16 |
+| `lang/en.json` | Canadian terms in 12 stock keys (province, postal code, city) | Canadian terms in shopper-facing strings | 25 |
+| `assets/scss/theme.scss` | `@import "reelflies/settings"` after `settings/layouts/layouts`, and `@import "reelflies/index"` at the end | The Streamside Stone layer: tokens, fonts, grounds, type on the stock selectors, browser surfaces, focus ring, reduced motion | redesign |
+| `assets/scss/optimized-checkout.scss` | `@import "reelflies/fonts"` after the disclaimer | The checkout's font keys name the self-hosted Archivo | redesign |
+| `templates/layout/base.html` | `getFontsCollection` with `font-display='swap'`; `theme-bundle.font.js` replaced by an include of `components/reelflies/head` (content language, Archivo's preload) | The fonts are self-hosted, so `getFontsCollection` and font.js, which load Google fonts only, have nothing to load | redesign |
+| `config.json` | `settings` values only, no key added or removed: 179 colour keys on the DESIGN.md palette (`color-black` stays stock), `body-font` `Archivo_400`, `headings-font` and the checkout headings `Archivo+Expanded_780`, the other checkout fonts `Archivo_400` and `Archivo_650`, `fontSize-root` 16, `fontSize-h1` to `-h6` 36, 28, 24, 20, 16, 15 | The new look as Theme Styles defaults for stock components, on limestone with a shale footer. `button--primary` is ink, because copper is for buying only (DESIGN.md); the checkout's primary button and the cart count are copper. `scripts/check-contrast.mjs` passes all 63 pairs | redesign |
+| `schema.json` | Four options at the start of each of the nine font pickers: Archivo, Archivo Medium, Archivo SemiBold and Archivo Expanded ExtraBold (`Archivo_400`, `_500`, `_650`, `Archivo+Expanded_780`). No stock line changed | Theme Styles shows the fonts the settings name | redesign |
+| `schemaTranslations.json` | `i18n.RfArchivo`, `RfArchivoMedium`, `RfArchivoSemiBold` and `RfArchivoExpanded`, before the last stock key | Their labels | redesign |
+
+## On master, to carry back
+
+Master's register at the fork (62e7afe5), unchanged. A row moves up into the table above when its feature lands on this branch.
 
 | File | Change | Why | Ticket |
 |---|---|---|---|

@@ -1,0 +1,238 @@
+// =============================================================================
+// REELFLIES SETTINGS (Streamside Stone)
+// =============================================================================
+//
+// Imported in theme.scss right after the stock settings (ADR 0001). Settings, tokens and mixins
+// only: nothing here writes CSS until a partial includes it. The values are DESIGN.md's, the
+// warmed Streamside Stone world the owner approved on 2026-11-06 (brand chart "ReelFlies").
+// DESIGN.md is the source of truth: change a value there first, then here.
+//
+// config.json's Theme Styles keys carry the same palette for the stock components (buttons,
+// forms, alerts, checkout); scripts/check-contrast.mjs checks those pairs, and its test keeps its
+// ring and ground constants equal to the values below.
+//
+// -----------------------------------------------------------------------------
+
+
+// Palette
+// -----------------------------------------------------------------------------
+//
+// Three grounds (wet shale, dry limestone, moss), paper only under products, one copper held for
+// buying, one halo blue for water and season, one warm light.
+
+// Wet shale: the photographed stone, the utility strip, the footer, the order line
+$rf-shale-950:      #1c1916;
+$rf-shale-900:      #29241f;
+$rf-shale-800:      #38312a;
+$rf-shale-600:      #5c5349;
+$rf-shale-400:      #958a7d; // muted text on shale
+$rf-mist:           #ebe4d8; // text on shale
+
+// Dry limestone: the working ground
+$rf-limestone-300:  #cdc5b7; // rules and dividers
+$rf-limestone-200:  #ddd6ca;
+$rf-limestone-100:  #e9e4db; // the page ground
+$rf-paper:          #ffffff; // only under products and fields
+
+// Ink
+$rf-ink:            #1c1916;
+$rf-ink-muted:      #564d43;
+$rf-edge:           #776c60; // control borders, link underlines
+
+// Moss: the species band
+$rf-moss-700:       #3b4628;
+$rf-lichen:         #d7dbb4; // text selection, on-moss accents
+
+// Water and season, never decoration
+$rf-halo:           #2e6385;
+
+// Buying, and nothing else: + Add, Add to cart, Check out, the box count, the in-box line
+$rf-copper:         #9c4a22;
+$rf-copper-deep:    #833d1b; // hover and press of copper fills
+$rf-copper-lit:     #e39a6c; // copper seen on shale or as light: the in-box ring, buy figures on the order line
+$rf-on-copper:      #ffffff;
+
+// The one light, low and warm from the upper left
+$rf-light-warm:     #ffe9c9;
+
+// States the brand chart leaves to the system
+$rf-error:          #a3262a;
+$rf-success:        $rf-moss-700;
+
+
+// Type
+// -----------------------------------------------------------------------------
+//
+// Archivo in three cuts from one variable file (_fonts.scss): Expanded for headings, Archivo for
+// text and controls, Condensed with tabular figures for every number. Kalam is the fly tier's
+// hand, at most once per region. Each stack ends in its measured, size-matched fallback, so the
+// text laid out before the font arrives takes the same room (CLS).
+
+$rf-font-text:      "Archivo", "Archivo Fallback", Arial, sans-serif;
+$rf-font-display:   "Archivo Expanded", "Archivo Expanded Fallback", "Arial Black", Arial, sans-serif;
+$rf-font-numerals:  "Archivo Condensed", "Archivo Condensed Fallback", "Arial Narrow", Arial, sans-serif;
+$rf-font-hand:      "Kalam", "Bradley Hand", cursive;
+
+
+// Space, shape, depth and motion
+// -----------------------------------------------------------------------------
+
+$rf-space: (1: 4px, 2: 8px, 3: 12px, 4: 16px, 6: 24px, 8: 32px, 12: 48px, 16: 64px, 24: 96px);
+
+$rf-radius-sm:      2px;  // photo plates, the search button
+$rf-radius-md:      4px;  // cards, buttons, fields: small, honest corners
+$rf-radius-pill:    999px; // ways in, toggles and counts only
+
+$rf-column-max:     1344px;
+$rf-tap-min:        44px;
+
+// Light, not colour, carries state: seated at rest, lifted on point, raked in hand
+$rf-shadow-seat:    0 18px 30px rgba(18, 14, 10, 0.38), 0 2px 4px rgba(18, 14, 10, 0.3);
+$rf-shadow-lift:    0 24px 40px rgba(18, 14, 10, 0.44), 0 4px 8px rgba(18, 14, 10, 0.3);
+$rf-shadow-rake:    26px 34px 44px rgba(18, 14, 10, 0.5), 8px 10px 12px rgba(18, 14, 10, 0.28);
+$rf-shadow-light-edge: -4px -4px 0 0 $rf-light-warm, -12px -14px 30px -4px rgba(255, 228, 192, 0.6);
+$rf-shadow-plain:   0 1px 2px rgba(28, 25, 22, 0.12);
+$rf-shadow-drop:    0 22px 40px -12px rgba(18, 14, 10, 0.32), 0 2px 6px rgba(18, 14, 10, 0.1);
+$rf-shadow-float:   0 -8px 28px rgba(18, 14, 10, 0.24);
+
+// One settle for shade, light, lift, underlines and chevrons; one drop for a fly travelling to the box
+$rf-ease:           cubic-bezier(0.16, 1, 0.3, 1);
+$rf-settle:         220ms $rf-ease;
+$rf-arrive:         380ms;
+$rf-drop:           420ms;
+$rf-drawer:         260ms;
+
+// The page gutter steps up at the prototype's breakpoints
+$rf-bp-tablet:      640px;
+$rf-bp-desktop:     1040px;
+
+
+// Type roles (DESIGN.md "typography")
+// -----------------------------------------------------------------------------
+//
+// One mixin per role, so a partial says which role it sets rather than repeating a size, weight
+// and line height. Numbers always take rf-numerals.
+
+@mixin rf-type-display {
+    font: 820 clamp(38px, 3.4vw + 19px, 68px) / 0.98 var(--rf-font-display);
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+}
+
+@mixin rf-type-headline {
+    font: 780 clamp(28px, 1.9vw + 13px, 44px) / 1.04 var(--rf-font-display);
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+}
+
+@mixin rf-type-title {
+    font: 760 24px / 1.15 var(--rf-font-display);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+}
+
+@mixin rf-type-lead {
+    font: 400 18px / 1.5 var(--rf-font-text);
+}
+
+@mixin rf-type-body {
+    font: 400 16px / 1.55 var(--rf-font-text);
+}
+
+@mixin rf-type-label {
+    font: 650 15px / 1.25 var(--rf-font-text);
+}
+
+@mixin rf-type-caption {
+    font: 400 13px / 1.4 var(--rf-font-text);
+}
+
+@mixin rf-numerals {
+    font-family: var(--rf-font-numerals);
+    font-variant-numeric: tabular-nums lining-nums;
+}
+
+@mixin rf-type-price {
+    @include rf-numerals;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+@mixin rf-type-size {
+    @include rf-numerals;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+@mixin rf-type-count {
+    @include rf-numerals;
+    font-size: 14px;
+    font-weight: 650;
+    line-height: 1.2;
+}
+
+// The tier's hand: at most once per region, never for prices, buttons, sizes or headings
+@mixin rf-type-note {
+    font: 700 22px / 1.1 var(--rf-font-hand);
+}
+
+@mixin rf-type-signoff {
+    font: 400 26px / 1.2 var(--rf-font-hand);
+}
+
+
+// Shared pieces
+// -----------------------------------------------------------------------------
+
+// The focus ring: ink on light grounds, mist on shale and moss (set by the ground's --rf-ring)
+@mixin rf-focus-ring {
+    outline: 2px solid var(--rf-ring, var(--rf-ink)) !important;
+    outline-offset: 3px !important;
+}
+
+// The buy button: the one copper control (DESIGN.md "button-buy")
+@mixin rf-button-buy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: var(--rf-radius-md);
+    background: var(--rf-copper);
+    color: var(--rf-on-copper);
+    font: 700 15px / 1 var(--rf-font-text);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color var(--rf-settle), transform 120ms ease;
+
+    &:hover {
+        background: var(--rf-copper-deep);
+        color: var(--rf-on-copper);
+    }
+
+    &:active {
+        transform: translateY(1px);
+    }
+}
+
+// A text link that leads on: underlined in edge, the arrow moves with the settle
+@mixin rf-link-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: var(--rf-tap-min);
+    font-weight: 650;
+    text-decoration: underline;
+    text-decoration-color: var(--rf-edge);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.25em;
+    transition: text-decoration-color var(--rf-settle);
+
+    &:hover {
+        text-decoration-color: currentColor;
+    }
+}

@@ -1,0 +1,364 @@
+// =============================================================================
+// REELFLIES FOUNDATION (Streamside Stone)
+// =============================================================================
+//
+// What every page stands on: the --rf-* tokens, the three grounds, Archivo on the stock type, the
+// browser's own surfaces (selection, caret, scrollbar, focus ring) and the reduced-motion reset.
+// Nothing here lays out a page; each page's partial does that from these tokens. Stock components
+// take the palette from config.json's Theme Styles keys; this file adds what Theme Styles has no
+// key for.
+//
+// -----------------------------------------------------------------------------
+
+@import "fonts";
+
+
+// Tokens
+// -----------------------------------------------------------------------------
+
+:root {
+    // Palette (_settings.scss, from DESIGN.md)
+    --rf-shale-950: #{$rf-shale-950};
+    --rf-shale-900: #{$rf-shale-900};
+    --rf-shale-800: #{$rf-shale-800};
+    --rf-shale-600: #{$rf-shale-600};
+    --rf-shale-400: #{$rf-shale-400};
+    --rf-mist: #{$rf-mist};
+    --rf-limestone-300: #{$rf-limestone-300};
+    --rf-limestone-200: #{$rf-limestone-200};
+    --rf-limestone-100: #{$rf-limestone-100};
+    --rf-paper: #{$rf-paper};
+    --rf-ink: #{$rf-ink};
+    --rf-ink-muted: #{$rf-ink-muted};
+    --rf-edge: #{$rf-edge};
+    --rf-moss-700: #{$rf-moss-700};
+    --rf-lichen: #{$rf-lichen};
+    --rf-halo: #{$rf-halo};
+    --rf-copper: #{$rf-copper};
+    --rf-copper-deep: #{$rf-copper-deep};
+    --rf-copper-lit: #{$rf-copper-lit};
+    --rf-on-copper: #{$rf-on-copper};
+    --rf-light-warm: #{$rf-light-warm};
+    --rf-error: #{$rf-error};
+    --rf-success: #{$rf-success};
+
+    // Type
+    --rf-font-text: #{$rf-font-text};
+    --rf-font-display: #{$rf-font-display};
+    --rf-font-numerals: #{$rf-font-numerals};
+    --rf-font-hand: #{$rf-font-hand};
+
+    // Space
+    @each $step, $value in $rf-space {
+        --rf-space-#{$step}: #{$value};
+    }
+
+    // Shape and measure
+    --rf-radius-sm: #{$rf-radius-sm};
+    --rf-radius-md: #{$rf-radius-md};
+    --rf-radius-pill: #{$rf-radius-pill};
+    --rf-column-max: #{$rf-column-max};
+    --rf-tap-min: #{$rf-tap-min};
+    --rf-gutter: var(--rf-space-4);
+
+    // Depth: light carries state
+    --rf-shadow-seat: #{$rf-shadow-seat};
+    --rf-shadow-lift: #{$rf-shadow-lift};
+    --rf-shadow-rake: #{$rf-shadow-rake};
+    --rf-shadow-light-edge: #{$rf-shadow-light-edge};
+    --rf-shadow-plain: #{$rf-shadow-plain};
+    --rf-shadow-drop: #{$rf-shadow-drop};
+    --rf-shadow-float: #{$rf-shadow-float};
+
+    // Motion
+    --rf-ease: #{$rf-ease};
+    --rf-settle: #{$rf-settle};
+    --rf-arrive: #{$rf-arrive};
+    --rf-drop: #{$rf-drop};
+    --rf-drawer: #{$rf-drawer};
+
+    @media (min-width: $rf-bp-tablet) {
+        --rf-gutter: var(--rf-space-6);
+    }
+
+    @media (min-width: $rf-bp-desktop) {
+        --rf-gutter: var(--rf-space-12);
+    }
+}
+
+
+// Grounds
+// -----------------------------------------------------------------------------
+//
+// Each ground sets the colours of what is drawn on it: text, muted text, rules, and the focus
+// ring (--rf-ring, read by rf-focus-ring). Limestone is the page itself. The stock footer stands
+// on shale until its own partial replaces it.
+
+.rf-ground--limestone {
+    --rf-ring: var(--rf-ink);
+    background-color: var(--rf-limestone-100);
+    color: var(--rf-ink);
+}
+
+.rf-ground--shale,
+.footer {
+    --rf-ring: var(--rf-mist);
+    --rf-on-ground-muted: var(--rf-shale-400);
+    --rf-on-ground-rule: var(--rf-shale-800);
+    background-color: var(--rf-shale-950);
+    color: var(--rf-mist);
+}
+
+.rf-ground--moss {
+    --rf-ring: var(--rf-mist);
+    --rf-on-ground-muted: var(--rf-lichen);
+    --rf-on-ground-rule: rgba(215, 219, 180, 0.28);
+    background-color: var(--rf-moss-700);
+    color: var(--rf-mist);
+}
+
+// The stock footer's text, which stock draws in the body's secondary ink
+.footer {
+    border-top: 0;
+
+    .footer-info-col,
+    .footer-info-list a,
+    .footer-copyright .powered-by,
+    .footer-copyright a {
+        color: var(--rf-mist);
+    }
+
+    .footer-info-list a,
+    .footer-copyright a {
+        text-decoration-color: var(--rf-shale-600);
+        text-underline-offset: 0.2em;
+
+        &:hover {
+            color: var(--rf-mist);
+            text-decoration: underline;
+        }
+    }
+
+    .footer-info-heading {
+        color: var(--rf-shale-400);
+        font: 650 14px / 1.3 var(--rf-font-text);
+    }
+
+    .footer-payment-icons svg,
+    .socialLinks .icon svg {
+        fill: var(--rf-limestone-300);
+    }
+
+    // The newsletter's Subscribe: mist with a shale label, paper on hover (DESIGN.md
+    // "button-subscribe-on-shale"); stock's ink would vanish into the shale
+    .button--primary {
+        border-color: var(--rf-mist);
+        background-color: var(--rf-mist);
+        color: var(--rf-shale-950);
+
+        &:hover,
+        &:focus {
+            border-color: var(--rf-paper);
+            background-color: var(--rf-paper);
+            color: var(--rf-shale-950);
+        }
+    }
+}
+
+
+// Type
+// -----------------------------------------------------------------------------
+//
+// Stock names its families through the body-font and headings-font settings (Archivo, Archivo
+// Expanded), then Arial, and the accordion names Montserrat outright. These are the stock
+// selectors that set a family, at the same specificity and later, so the measured fallbacks take
+// Arial's place and nothing jumps when Archivo arrives. Form controls don't inherit a family, so
+// they get it here too.
+
+body,
+button,
+input,
+optgroup,
+select,
+textarea,
+.button,
+.accordion-title,
+.accordion-navigation > a,
+.form-label--alternate,
+.modal--alert,
+.paymentMethodForm-heading,
+.productView-picklist-backorder-item {
+    font-family: var(--rf-font-text);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.page-heading,
+.account-product-detail-heading,
+.compareTable-heading,
+.productView-title,
+.header-logo-text {
+    font-family: var(--rf-font-display);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+}
+
+h1,
+.page-heading,
+.productView-title {
+    font-weight: 780;
+}
+
+h2,
+h3 {
+    font-weight: 760;
+}
+
+h4,
+h5,
+h6 {
+    font-family: var(--rf-font-text);
+    font-weight: 650;
+    letter-spacing: 0;
+}
+
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+// Every price, count and total stock prints, in the numerals' cut with tabular figures
+.price,
+.price--withTax,
+.price--withoutTax,
+.price--rrp,
+.price--non-sale,
+.cart-total-value,
+.cart-item-value,
+.countPill,
+.form-increment .form-input--incrementTotal,
+.rf-num {
+    @include rf-numerals;
+}
+
+.price--withoutTax,
+.price--withTax,
+.cart-total-grandTotal {
+    font-weight: 700;
+}
+
+// Small, honest corners on stock controls
+.button,
+.form-input,
+.form-select,
+.form-textarea {
+    border-radius: var(--rf-radius-md);
+}
+
+.button {
+    font-weight: 650;
+}
+
+// Links in running text: underlined in edge, settled on hover
+.page-content a:not(.button),
+.productView-description a:not(.button) {
+    text-decoration: underline;
+    text-decoration-color: var(--rf-edge);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+    transition: text-decoration-color var(--rf-settle);
+
+    &:hover {
+        text-decoration-color: currentColor;
+    }
+}
+
+// The header sits on limestone with one rule under it
+.header {
+    border-bottom: 1px solid var(--rf-limestone-300);
+}
+
+
+// Browser surfaces
+// -----------------------------------------------------------------------------
+
+html {
+    scrollbar-color: var(--rf-shale-400) var(--rf-limestone-200);
+    -webkit-text-size-adjust: 100%;
+}
+
+::selection {
+    background: var(--rf-lichen);
+    color: var(--rf-ink);
+}
+
+input,
+textarea {
+    caret-color: var(--rf-halo);
+}
+
+.footer,
+.rf-ground--shale,
+.rf-ground--moss {
+    input,
+    textarea {
+        caret-color: var(--rf-mist);
+    }
+}
+
+
+// Focus ring
+// -----------------------------------------------------------------------------
+//
+// Stock draws a 2px #0f7fff ring on :focus with !important (tools/_theme_focus.scss), for the
+// mouse too. This draws the ReelFlies ring on :focus-visible only, at least as specific and later
+// in the cascade, and takes the stock ring away when focus came from a pointer. Its colour comes
+// from the ground (--rf-ring): ink on limestone and paper, mist on shale and moss.
+
+$rf-focusable: "input, button, textarea, select, details, summary, [href], [tabindex]:not([tabindex=\"-1\"]), [contenteditable=\"true\"]";
+
+#{$rf-focusable} {
+    &:focus:not(:focus-visible) {
+        outline: none !important;
+    }
+
+    &:focus-visible {
+        @include rf-focus-ring;
+    }
+}
+
+label {
+    input:focus:not(:focus-visible) + & {
+        outline: none !important;
+    }
+
+    input:focus-visible + & {
+        @include rf-focus-ring;
+    }
+}
+
+
+// Reduced motion
+// -----------------------------------------------------------------------------
+//
+// With reduced motion every state is simply there: transitions and animations finish at once
+// (0.01ms rather than none, so code waiting for transitionend still hears it), and smooth
+// scrolling jumps.
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-delay: 0s !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        transition-delay: 0s !important;
+        scroll-behavior: auto !important;
+    }
+}

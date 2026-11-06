@@ -45,6 +45,7 @@
 @import "settings/citadel/citadel"; // 4
 @import "settings/stencil/stencil"; // 4
 @import "settings/layouts/layouts"; // 4
+@import "reelflies/settings"; // ReelFlies hook: the Streamside Stone settings, tokens and mixins, after the stock ones
 
 
 // Utilities
@@ -77,3 +78,5 @@
 // -----------------------------------------------------------------------------
 
 @import "layouts/layouts"; // 1
+
+@import "reelflies/index"; // ReelFlies hook: the Streamside Stone layer, last

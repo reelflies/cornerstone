@@ -1,0 +1,135 @@
+// =============================================================================
+// REELFLIES FONTS (Streamside Stone)
+// =============================================================================
+//
+// Archivo, self-hosted: one latin variable woff2 with both axes, weight 100 to 900 and width 62
+// to 125 (90,104 B), from @fontsource-variable/archivo (archivo-latin-wdth-normal.woff2;
+// Omnibus-Type's Archivo 2.001, SIL Open Font License 1.1, assets/fonts/OFL-Archivo.txt). The
+// three cuts are three families over that one URL, so the browser downloads it once:
+//   Archivo            width 62-125, used at 100 (text and controls)
+//   Archivo Expanded   width fixed at 118 (headings)
+//   Archivo Condensed  width fixed at 76 (every number)
+// A face whose font-stretch descriptor is one value clamps the element's width to it, so the
+// family name alone picks the cut (measured identical to font-stretch: 118% in Chromium 147).
+//
+// Kalam 400 and 700, latin (Indian Type Foundry 2.001, OFL 1.1, assets/fonts/OFL-Kalam.txt): the
+// fly tier's hand, small and not preloaded; it swaps in where it appears.
+//
+// The theme settings name the fonts "Archivo_400" and "Archivo+Expanded_780", with no "Google_"
+// prefix, so getFontsCollection asks Google for nothing and every font comes from theme assets.
+// components/reelflies/head.html preloads the Archivo file. optimized-checkout.scss imports this
+// file too, for the checkout's font keys. URLs are relative to the compiled CSS
+// (css/theme-<id>.css), so they resolve to the {{cdn 'assets/fonts/…'}} files.
+//
+// The fallbacks are Arial faces sized to Archivo's measured widths, so text barely moves when
+// Archivo arrives (font-display: swap; CLS budget 0.05). Measured in Chromium 147 at 100px on
+// the home page's own copy (2026-11-06): Archivo 400 is 0.980 of Arial, Archivo 650 0.965 of
+// Arial Bold, Expanded 820 1.060 of Arial Black, Condensed 700 0.791 of Arial Bold and Condensed
+// 650 0.800 of Arial. Archivo's ascent and descent (878 and 210 units of 1000, no line gap) are
+// divided by the same factor, so line boxes match too.
+//
+// -----------------------------------------------------------------------------
+
+$rf-archivo-src: url("../fonts/archivo-latin-var.woff2") format("woff2");
+
+@font-face {
+    font-family: "Archivo";
+    font-style: normal;
+    font-weight: 100 900;
+    font-stretch: 62% 125%;
+    font-display: swap;
+    src: $rf-archivo-src;
+}
+
+@font-face {
+    font-family: "Archivo Expanded";
+    font-style: normal;
+    font-weight: 100 900;
+    font-stretch: 118%;
+    font-display: swap;
+    src: $rf-archivo-src;
+}
+
+@font-face {
+    font-family: "Archivo Condensed";
+    font-style: normal;
+    font-weight: 100 900;
+    font-stretch: 76%;
+    font-display: swap;
+    src: $rf-archivo-src;
+}
+
+@font-face {
+    font-family: "Kalam";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("../fonts/kalam-latin-400.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Kalam";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("../fonts/kalam-latin-700.woff2") format("woff2");
+}
+
+
+// Size-matched fallbacks
+// -----------------------------------------------------------------------------
+
+@font-face {
+    font-family: "Archivo Fallback";
+    font-style: normal;
+    font-weight: 100 500;
+    src: local("Arial"), local("ArialMT");
+    size-adjust: 98%;
+    ascent-override: 89.6%;
+    descent-override: 21.4%;
+    line-gap-override: 0%;
+}
+
+@font-face {
+    font-family: "Archivo Fallback";
+    font-style: normal;
+    font-weight: 600 900;
+    src: local("Arial Bold"), local("Arial-BoldMT");
+    size-adjust: 96.5%;
+    ascent-override: 91%;
+    descent-override: 21.8%;
+    line-gap-override: 0%;
+}
+
+@font-face {
+    font-family: "Archivo Expanded Fallback";
+    font-style: normal;
+    font-weight: 100 900;
+    src: local("Arial Black"), local("Arial-Black");
+    size-adjust: 106%;
+    ascent-override: 82.8%;
+    descent-override: 19.8%;
+    line-gap-override: 0%;
+}
+
+@font-face {
+    font-family: "Archivo Condensed Fallback";
+    font-style: normal;
+    font-weight: 100 600;
+    src: local("Arial"), local("ArialMT");
+    size-adjust: 80%;
+    ascent-override: 109.8%;
+    descent-override: 26.3%;
+    line-gap-override: 0%;
+}
+
+@font-face {
+    font-family: "Archivo Condensed Fallback";
+    font-style: normal;
+    font-weight: 650 900;
+    src: local("Arial Bold"), local("Arial-BoldMT");
+    size-adjust: 79.1%;
+    ascent-override: 111%;
+    descent-override: 26.5%;
+    line-gap-override: 0%;
+}

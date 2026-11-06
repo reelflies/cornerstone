@@ -1,0 +1,11 @@
+{{!--
+    What every page's <head> gets from ReelFlies, included once from layout/base.html:
+    - the content language, en-CA, beside <html lang="en-CA">. A theme can't set the HTTP
+      header, so it is the meta element.
+    - a preload of Archivo, the one file behind all three cuts (assets/scss/reelflies/_fonts.scss),
+      so it arrives with the CSS: the same URL as the @font-face, crossorigin because fonts are
+      always fetched in CORS mode. Kalam is small and appears once a region, so it isn't preloaded.
+    Stock's theme-bundle.font.js loads Google fonts only; the theme's fonts are all self-hosted.
+--}}
+<meta http-equiv="content-language" content="en-CA">
+<link rel="preload" href="{{cdn 'assets/fonts/archivo-latin-var.woff2'}}" as="font" type="font/woff2" crossorigin>

@@ -6079,6 +6079,18 @@
     "pl": "Masterpass",
     "ja": "Masterpass"
   },
+  "i18n.RfArchivo": {
+    "default": "Archivo"
+  },
+  "i18n.RfArchivoMedium": {
+    "default": "Archivo Medium"
+  },
+  "i18n.RfArchivoSemiBold": {
+    "default": "Archivo SemiBold"
+  },
+  "i18n.RfArchivoExpanded": {
+    "default": "Archivo Expanded ExtraBold"
+  },
   "i18n.BoltProviderSortingLabel": {
     "default": "Bolt",
     "fr": "Bolt",

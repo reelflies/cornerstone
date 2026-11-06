@@ -25,61 +25,61 @@ colors:
   light-warm: "#ffe9c9"
 typography:
   display:
-    fontFamily: "Archivo Expanded, Arial Black, Arial, sans-serif"
+    fontFamily: "Archivo Expanded, Archivo Expanded Fallback, Arial Black, Arial, sans-serif"
     fontSize: "clamp(38px, 3.4vw + 19px, 68px)"
     fontWeight: 820
     lineHeight: 0.98
     letterSpacing: "-0.025em"
   headline:
-    fontFamily: "Archivo Expanded, Arial Black, Arial, sans-serif"
+    fontFamily: "Archivo Expanded, Archivo Expanded Fallback, Arial Black, Arial, sans-serif"
     fontSize: "clamp(28px, 1.9vw + 13px, 44px)"
     fontWeight: 780
     lineHeight: 1.04
     letterSpacing: "-0.015em"
   title:
-    fontFamily: "Archivo Expanded, Arial Black, Arial, sans-serif"
+    fontFamily: "Archivo Expanded, Archivo Expanded Fallback, Arial Black, Arial, sans-serif"
     fontSize: "24px"
     fontWeight: 760
     lineHeight: 1.15
     letterSpacing: "-0.01em"
   lead:
-    fontFamily: "Archivo, Arial, sans-serif"
+    fontFamily: "Archivo, Archivo Fallback, Arial, sans-serif"
     fontSize: "18px"
     fontWeight: 400
     lineHeight: 1.5
     letterSpacing: "0em"
   body:
-    fontFamily: "Archivo, Arial, sans-serif"
+    fontFamily: "Archivo, Archivo Fallback, Arial, sans-serif"
     fontSize: "16px"
     fontWeight: 400
     lineHeight: 1.55
     letterSpacing: "0em"
   label:
-    fontFamily: "Archivo, Arial, sans-serif"
+    fontFamily: "Archivo, Archivo Fallback, Arial, sans-serif"
     fontSize: "15px"
     fontWeight: 650
     lineHeight: 1.25
     letterSpacing: "0em"
   caption:
-    fontFamily: "Archivo, Arial, sans-serif"
+    fontFamily: "Archivo, Archivo Fallback, Arial, sans-serif"
     fontSize: "13px"
     fontWeight: 400
     lineHeight: 1.4
     letterSpacing: "0em"
   price:
-    fontFamily: "Archivo Condensed, Arial Narrow, Arial, sans-serif"
+    fontFamily: "Archivo Condensed, Archivo Condensed Fallback, Arial Narrow, Arial, sans-serif"
     fontSize: "18px"
     fontWeight: 700
     lineHeight: 1.2
     fontFeature: "'tnum' 1, 'lnum' 1"
   size:
-    fontFamily: "Archivo Condensed, Arial Narrow, Arial, sans-serif"
+    fontFamily: "Archivo Condensed, Archivo Condensed Fallback, Arial Narrow, Arial, sans-serif"
     fontSize: "17px"
     fontWeight: 700
     lineHeight: 1
     fontFeature: "'tnum' 1, 'lnum' 1"
   count:
-    fontFamily: "Archivo Condensed, Arial Narrow, Arial, sans-serif"
+    fontFamily: "Archivo Condensed, Archivo Condensed Fallback, Arial Narrow, Arial, sans-serif"
     fontSize: "14px"
     fontWeight: 650
     lineHeight: 1.2
@@ -300,7 +300,7 @@ A warm mineral palette in three grounds (shale, limestone, moss) with paper for 
 **Body Font:** Archivo (with Arial)
 **Label/Mono Font:** Archivo Condensed with tabular lining figures (with Arial Narrow), for numerals; Kalam (with Bradley Hand, cursive) as the tier's hand
 
-**Character:** Four self-hosted OFL families shipped with the theme, three of them cuts of Archivo. Expanded and heavy it is broad and outdoorsy, like lettering on a tackle box; condensed it is a hook-size stamp; at normal width it simply reads. Kalam is a fly tier's marker on a bin.
+**Character:** Four self-hosted OFL families shipped with the theme, three of them cuts of Archivo from one variable file (weight 100–900, width 62–125): Expanded fixes the width at 118, Condensed at 76. Each Archivo stack starts its fallback with a size-matched Arial face (Archivo Fallback, Archivo Expanded Fallback, Archivo Condensed Fallback, measured in `assets/scss/reelflies/_fonts.scss`), so nothing moves when Archivo arrives. Expanded and heavy it is broad and outdoorsy, like lettering on a tackle box; condensed it is a hook-size stamp; at normal width it simply reads. Kalam is a fly tier's marker on a bin.
 
 ### Hierarchy
 - **Display** (820, fluid 38–68px, 0.98): the one page headline, held to about 13ch. On phones under 640px it steps down to 32px so the first two cards stay in view.

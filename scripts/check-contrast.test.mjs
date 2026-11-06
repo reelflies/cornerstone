@@ -1,5 +1,5 @@
-// Tests for scripts/check-contrast.mjs (ticket 06; ticket 25's skin; spec Testing Decisions,
-// seam 3). CI runs them through `npm run test:scripts`.
+// Tests for scripts/check-contrast.mjs (ticket 06; the Streamside Stone palette; spec Testing
+// Decisions, seam 3). CI runs them through `npm run test:scripts`.
 //
 //   node --test scripts/check-contrast.test.mjs
 
@@ -11,7 +11,7 @@ import { fileURLToPath } from 'url';
 import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    FOCUS_RING, FOCUS_RING_DARK, FOREST, FOREST_EDGE, FOREST_FIELD, FOREST_STRONG, FOREST_TEXT, KNOWN_FAILURES, PAIRS, checkContrast, contrast,
+    FOCUS_RING, FOCUS_RING_DARK, KNOWN_FAILURES, MOSS, PAIRS, SHALE, SHALE_MUTED, SHALE_TEXT, checkContrast, contrast,
 } from './check-contrast.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -41,7 +41,7 @@ const scssColour = name => {
     return match && match[1].toLowerCase();
 };
 
-describe('config.json on the ReelFlies palette (ticket 25)', () => {
+describe('config.json on the Streamside Stone palette', () => {
     it('passes every pair on every variation, with no allowances left', () => {
         assert.deepEqual(KNOWN_FAILURES, {});
         const result = run('config.json');
@@ -61,19 +61,21 @@ describe('config.json on the ReelFlies palette (ticket 25)', () => {
 });
 
 describe('the focus rings', () => {
-    it('checks the ReelFlies ring, the one _settings.scss draws, against the page', () => {
-        assert.equal(FOCUS_RING, scssColour('rf-focus-ring'), 'FOCUS_RING is _settings.scss\'s $rf-focus-ring');
+    it('checks the ink ring, the one _settings.scss draws on light grounds, against the page', () => {
+        assert.equal(FOCUS_RING, scssColour('rf-ink'), 'FOCUS_RING is _settings.scss\'s $rf-ink');
         assert.notEqual(FOCUS_RING, '#0f7fff', 'the stock ring is gone');
         const pair = PAIRS.find(([id]) => id === 'focus-ring');
         assert.deepEqual(pair.slice(1), [FOCUS_RING, 'body-bg', 3]);
     });
 
-    it('checks the gold bead ring against the forest ground it is drawn on', () => {
-        assert.equal(FOCUS_RING_DARK, scssColour('rf-focus-ring-dark'));
-        assert.equal(FOREST, scssColour('rf-forest'));
-        const pair = PAIRS.find(([id]) => id === 'focus-ring-on-forest');
-        assert.deepEqual(pair.slice(1), [FOCUS_RING_DARK, FOREST, 3]);
-        assert.ok(contrast(hex(FOCUS_RING_DARK), hex(FOREST)) >= 3);
+    it('checks the mist ring against the shale and moss grounds it is drawn on', () => {
+        assert.equal(FOCUS_RING_DARK, scssColour('rf-mist'));
+        assert.equal(SHALE, scssColour('rf-shale-900'));
+        assert.equal(MOSS, scssColour('rf-moss-700'));
+        for (const [id, ground] of [['focus-ring-on-shale', SHALE], ['focus-ring-on-moss', MOSS]]) {
+            assert.deepEqual(PAIRS.find(([pid]) => pid === id).slice(1), [FOCUS_RING_DARK, ground, 3]);
+            assert.ok(contrast(hex(FOCUS_RING_DARK), hex(ground)) >= 3, id);
+        }
     });
 });
 
@@ -82,10 +84,10 @@ describe('a failing pair', () => {
         const file = configWith({ 'navPages-color-hover': '#999999' });
         const result = run(file);
         assert.equal(result.status, 1);
-        assert.match(result.stdout, /FAIL {5}submenu-hover: #999999 on #f1f3f0/);
+        assert.match(result.stdout, /FAIL {5}submenu-hover: #999999 on #ffffff/);
     });
 
-    it('fails a buy button whose white label drops below AA, as the stock sage #7B8E7A would', () => {
+    it('fails a primary button whose white label drops below AA, as a mid-tone fill such as #7B8E7A would', () => {
         const file = configWith({ 'button--primary-backgroundColor': '#7b8e7a' });
         const result = run(file);
         assert.equal(result.status, 1);
@@ -98,7 +100,7 @@ describe('a failing pair', () => {
         console.log = () => {};
         try {
             const { variations } = JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
-            assert.deepEqual(checkContrast(file), { unexpected: 4 * variations.length, unreadable: 0 }); // body-text, quick-search-text and the footer's Subscribe button and its hover (ticket 50), on every variation
+            assert.deepEqual(checkContrast(file), { unexpected: 2 * variations.length, unreadable: 0 }); // body-text and quick-search-text, on every variation
         } finally {
             console.log = log;
         }
@@ -149,46 +151,45 @@ describe('the checkout pairs (ticket 24)', () => {
     });
 });
 
-describe('the footer pairs (ticket 50)', () => {
-    // The footer's text, links, field and button, each on the ground _footer.scss draws it on:
-    // footer-backgroundColor, the forest ground, or the newsletter field.
-    const FOOTER_PAIRS = [
-        ['footer-text', FOREST_TEXT, 'footer-backgroundColor', 4.5],
-        ['footer-heading', FOREST_STRONG, 'footer-backgroundColor', 4.5],
-        ['footer-input-text', FOREST_STRONG, FOREST_FIELD, 4.5],
-        ['footer-subscribe', 'color-textBase', FOREST_STRONG, 4.5],
-        ['footer-subscribe-hover', 'color-textBase', 'container-fill-dark', 4.5],
+describe('the dark grounds', () => {
+    // The footer, the stone bands and the species band, each colour on the ground
+    // _foundation.scss draws it on.
+    const GROUND_PAIRS = [
+        ['footer-text', SHALE_TEXT, 'footer-backgroundColor', 4.5],
+        ['footer-heading', SHALE_MUTED, 'footer-backgroundColor', 4.5],
+        ['footer-subscribe', 'footer-backgroundColor', SHALE_TEXT, 4.5],
+        ['footer-subscribe-hover', 'footer-backgroundColor', 'container-fill-base', 4.5],
+        ['shale-text', SHALE_TEXT, SHALE, 4.5],
+        ['shale-muted', SHALE_MUTED, SHALE, 4.5],
+        ['moss-text', SHALE_TEXT, MOSS, 4.5],
         ['focus-ring-on-footer', FOCUS_RING_DARK, 'footer-backgroundColor', 3],
-        ['footer-input-border', FOREST_EDGE, 'footer-backgroundColor', 3],
-        ['footer-input-border-on-field', FOREST_EDGE, FOREST_FIELD, 3],
+        ['footer-input-border', 'input-border-color', 'footer-backgroundColor', 3],
     ];
 
-    it('checks every footer colour pair, text at 4.5:1 and the ring and field border at 3:1', () => {
-        for (const pair of FOOTER_PAIRS) {
+    it('checks every pair on a dark ground, text at 4.5:1 and the ring and field border at 3:1', () => {
+        for (const pair of GROUND_PAIRS) {
             assert.deepEqual(PAIRS.find(([id]) => id === pair[0]), pair, `${pair[0]} is checked`);
         }
     });
 
-    it('checks the colours _settings.scss draws the footer with', () => {
-        assert.equal(FOREST_TEXT, scssColour('rf-forest-text'));
-        assert.equal(FOREST_STRONG, scssColour('rf-forest-strong'));
-        assert.equal(FOREST_FIELD, scssColour('rf-forest-field'));
-        assert.equal(FOREST_EDGE, scssColour('rf-forest-edge'));
+    it('checks the colours _settings.scss draws text on shale with', () => {
+        assert.equal(SHALE_TEXT, scssColour('rf-mist'));
+        assert.equal(SHALE_MUTED, scssColour('rf-shale-400'));
     });
 
-    it('puts the footer on the forest ground on every variation, the ground the bead is checked on', () => {
+    it('puts the footer on shale-950 on every variation', () => {
         const config = JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
         for (const variation of config.variations) {
             const settings = { ...config.settings, ...variation.settings };
-            assert.equal(settings['footer-backgroundColor'], FOREST, variation.name);
+            assert.equal(settings['footer-backgroundColor'], scssColour('rf-shale-950'), variation.name);
         }
     });
 
-    it('fails the footer\'s pale text once the footer goes back to stock white', () => {
+    it('fails the footer\'s mist text once the footer goes back to stock white', () => {
         const file = configWith({ 'footer-backgroundColor': '#ffffff' });
         const result = run(file);
         assert.equal(result.status, 1);
-        assert.match(result.stdout, /FAIL {5}footer-text: #d3d9d2 on #ffffff is 1\.44:1/);
-        assert.match(result.stdout, /FAIL {5}focus-ring-on-footer: #f2c14e on #ffffff/);
+        assert.match(result.stdout, /FAIL {5}footer-text: #ebe4d8 on #ffffff/);
+        assert.match(result.stdout, /FAIL {5}focus-ring-on-footer: #ebe4d8 on #ffffff/);
     });
 });

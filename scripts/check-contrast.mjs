@@ -19,21 +19,19 @@ import { isMain } from './lib/is-main.mjs';
 const TEXT = 4.5;
 const UI = 3;
 
-// The focus rings have no Theme Styles setting. The ReelFlies layer draws them from
-// assets/scss/reelflies/_settings.scss ($rf-focus-ring on light grounds, the gold bead
-// $rf-focus-ring-dark on the forest footer and bands), over the stock #0f7fff ring
-// (assets/scss/tools/_theme_focus.scss:7). check-contrast.test.mjs keeps these in step with it.
-export const FOCUS_RING = '#23272b';
-export const FOCUS_RING_DARK = '#f2c14e';
-// The forest ground ($rf-forest) of ticket 48's bands. The footer's is footer-backgroundColor, which
-// ticket 50 sets to the same forest, so the bead is checked on both.
-export const FOREST = '#2f382f';
-// The footer's colours on its forest ground, which Theme Styles has no keys for (ticket 50;
-// _settings.scss's $rf-forest-text, -strong, -field and -edge).
-export const FOREST_TEXT = '#d3d9d2';
-export const FOREST_STRONG = '#ffffff';
-export const FOREST_FIELD = '#273027';
-export const FOREST_EDGE = '#8c978b';
+// The Streamside Stone colours Theme Styles has no keys for, from assets/scss/reelflies/_settings.scss
+// (DESIGN.md); check-contrast.test.mjs keeps these in step with it. The focus ring is ink on the
+// light grounds and mist on shale and moss (_foundation.scss's --rf-ring), over the stock #0f7fff
+// ring (assets/scss/tools/_theme_focus.scss:7).
+export const FOCUS_RING = '#1c1916'; // $rf-ink
+export const FOCUS_RING_DARK = '#ebe4d8'; // $rf-mist
+// The dark grounds: shale-900, the lighter of the two shales the stone bands stand on (the footer's
+// is footer-backgroundColor, shale-950), and moss for the species band.
+export const SHALE = '#29241f'; // $rf-shale-900
+export const MOSS = '#3b4628'; // $rf-moss-700
+// Text on shale: mist for text and links, shale-400 for headings and fine print.
+export const SHALE_TEXT = '#ebe4d8'; // $rf-mist
+export const SHALE_MUTED = '#958a7d'; // $rf-shale-400
 
 // [id, foreground, background, minimum]. A value starting with # is a literal
 // colour; anything else is a config.json settings key.
@@ -84,17 +82,21 @@ export const PAIRS = [
     ['checkout-discount', 'optimizedCheckout-discountBanner-textColor', 'optimizedCheckout-discountBanner-backgroundColor', TEXT],
     ['checkout-toaster', 'optimizedCheckout-loadingToaster-textColor', 'optimizedCheckout-loadingToaster-backgroundColor', TEXT],
     ['checkout-link-hover', 'optimizedCheckout-link-hoverColor', 'optimizedCheckout-body-backgroundColor', TEXT],
-    // Ticket 50: the footer, each colour on the ground it is drawn on (_footer.scss).
-    ['footer-text', FOREST_TEXT, 'footer-backgroundColor', TEXT],
-    ['footer-heading', FOREST_STRONG, 'footer-backgroundColor', TEXT],
-    ['footer-input-text', FOREST_STRONG, FOREST_FIELD, TEXT],
-    ['footer-subscribe', 'color-textBase', FOREST_STRONG, TEXT],
-    ['footer-subscribe-hover', 'color-textBase', 'container-fill-dark', TEXT],
+    // The dark grounds (_foundation.scss): the footer on shale-950, the stone bands on shale-900,
+    // the species band on moss. The Subscribe button is mist with a shale-950 label, paper on hover.
+    ['footer-text', SHALE_TEXT, 'footer-backgroundColor', TEXT],
+    ['footer-heading', SHALE_MUTED, 'footer-backgroundColor', TEXT],
+    ['footer-subscribe', 'footer-backgroundColor', SHALE_TEXT, TEXT],
+    ['footer-subscribe-hover', 'footer-backgroundColor', 'container-fill-base', TEXT],
+    ['shale-text', SHALE_TEXT, SHALE, TEXT],
+    ['shale-muted', SHALE_MUTED, SHALE, TEXT],
+    ['moss-text', SHALE_TEXT, MOSS, TEXT],
     ['focus-ring', FOCUS_RING, 'body-bg', UI],
-    ['focus-ring-on-forest', FOCUS_RING_DARK, FOREST, UI],
+    ['focus-ring-on-paper', FOCUS_RING, 'container-fill-base', UI],
+    ['focus-ring-on-shale', FOCUS_RING_DARK, SHALE, UI],
+    ['focus-ring-on-moss', FOCUS_RING_DARK, MOSS, UI],
     ['focus-ring-on-footer', FOCUS_RING_DARK, 'footer-backgroundColor', UI],
-    ['footer-input-border', FOREST_EDGE, 'footer-backgroundColor', UI],
-    ['footer-input-border-on-field', FOREST_EDGE, FOREST_FIELD, UI],
+    ['footer-input-border', 'input-border-color', 'footer-backgroundColor', UI],
     ['checkout-focus', 'optimizedCheckout-colorFocus', 'optimizedCheckout-body-backgroundColor', UI],
     ['checkout-input-border', 'optimizedCheckout-formField-borderColor', 'optimizedCheckout-formField-backgroundColor', UI],
     ['checkout-control', 'optimizedCheckout-formField-inputControlColor', 'optimizedCheckout-formField-backgroundColor', UI],
@@ -104,8 +106,8 @@ export const PAIRS = [
 
 // Failures allowed for now, by variation name. They are reported but don't fail the check.
 // Remove an entry once the skin fixes it; a variation not listed here gets no allowances, so
-// every failure in it counts. Ticket 25's palette cleared Cornerstone Light's eight
-// (LIGHT_PLACEHOLDER_FAILURES, ticket 04), so neither ReelFlies variation has any.
+// every failure in it counts. The Streamside Stone palette clears every pair, so no
+// ReelFlies variation has any.
 export const KNOWN_FAILURES = {};
 
 function parseHex(value) {

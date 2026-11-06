@@ -414,32 +414,38 @@
     },
     "fonts": [
       {
-        "family": "Archivo Expanded",
-        "file": "fonts/ArchivoExpanded-Variable.woff2",
+        "family": "Archivo",
+        "file": "assets/fonts/archivo-latin-var.woff2",
         "weight": "100 900",
-        "role": "display",
-        "license": "OFL (fonts/Archivo-OFL.txt)"
+        "stretch": "62% 125%",
+        "role": "text and controls",
+        "license": "OFL (assets/fonts/OFL-Archivo.txt)",
+        "fallback": "Archivo Fallback: Arial 98%, Arial Bold 96.5%"
       },
       {
-        "family": "Archivo",
-        "file": "fonts/Archivo-Variable.woff2",
+        "family": "Archivo Expanded",
+        "file": "assets/fonts/archivo-latin-var.woff2",
         "weight": "100 900",
-        "role": "text",
-        "license": "OFL (fonts/Archivo-OFL.txt)"
+        "stretch": "118%",
+        "role": "display",
+        "license": "OFL (assets/fonts/OFL-Archivo.txt)",
+        "fallback": "Archivo Expanded Fallback: Arial Black 106%"
       },
       {
         "family": "Archivo Condensed",
-        "file": "fonts/ArchivoCondensed-Variable.woff2",
+        "file": "assets/fonts/archivo-latin-var.woff2",
         "weight": "100 900",
+        "stretch": "76%",
         "role": "numerals, tabular",
-        "license": "OFL (fonts/Archivo-OFL.txt)"
+        "license": "OFL (assets/fonts/OFL-Archivo.txt)",
+        "fallback": "Archivo Condensed Fallback: Arial 80%, Arial Bold 79.1%"
       },
       {
         "family": "Kalam",
-        "file": "fonts/Kalam-Regular.woff2, fonts/Kalam-Bold.woff2",
+        "file": "assets/fonts/kalam-latin-400.woff2, assets/fonts/kalam-latin-700.woff2",
         "weight": "400, 700",
         "role": "the tier's hand, at most once per region",
-        "license": "OFL (fonts/Kalam-OFL.txt)"
+        "license": "OFL (assets/fonts/OFL-Kalam.txt)"
       }
     ],
     "shadows": [
