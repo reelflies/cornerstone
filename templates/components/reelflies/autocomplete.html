@@ -1,0 +1,28 @@
+{{!--
+    The autocomplete token for a store form field, by its private_id (ticket 25; WCAG 1.3.5 and
+    3.3.8; accessibility item 9). The stock field partials (components/common/forms/text, password,
+    select and selectortext) include it inside their input or select tag, so every form built from
+    the store's fields gets it: create account, account details and the address book.
+
+        {{> components/reelflies/autocomplete}}                  the field's token, or nothing
+        {{> components/reelflies/autocomplete otherwise='off'}}  the field's token, or autocomplete="off"
+
+    A field the store adds itself (a custom field) has no private_id, so it gets nothing, or
+    `otherwise`.
+--}}
+{{#if private_id '===' 'EmailAddress'}} autocomplete="email"
+{{else if private_id '===' 'Password'}} autocomplete="new-password"
+{{else if private_id '===' 'ConfirmPassword'}} autocomplete="new-password"
+{{else if private_id '===' 'CurrentPassword'}} autocomplete="current-password"
+{{else if private_id '===' 'FirstName'}} autocomplete="given-name"
+{{else if private_id '===' 'LastName'}} autocomplete="family-name"
+{{else if private_id '===' 'CompanyName'}} autocomplete="organization"
+{{else if private_id '===' 'Phone'}} autocomplete="tel"
+{{else if private_id '===' 'AddressLine1'}} autocomplete="address-line1"
+{{else if private_id '===' 'AddressLine2'}} autocomplete="address-line2"
+{{else if private_id '===' 'City'}} autocomplete="address-level2"
+{{else if private_id '===' 'State'}} autocomplete="address-level1"
+{{else if private_id '===' 'Zip'}} autocomplete="postal-code"
+{{else if private_id '===' 'Country'}} autocomplete="country-name"
+{{else if otherwise}} autocomplete="{{otherwise}}"
+{{/if}}

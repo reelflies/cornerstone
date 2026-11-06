@@ -30,6 +30,7 @@
             data-label="{{label}}"
             data-input
             {{#if private_id}}data-field-type="{{private_id}}"{{/if}}
+            {{> components/reelflies/autocomplete}}{{!-- ReelFlies hook (ticket 25): the field's autocomplete token --}}
     >
         {{#if options}}
             <option value="">{{chooseprefix}}</option>

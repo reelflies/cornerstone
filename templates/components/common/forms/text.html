@@ -15,5 +15,6 @@
            {{#if maxlength}}maxlength="{{maxlength}}"{{/if}}
            {{#if placeholder}} placeholder="{{placeholder}}"{{/if}}
            {{#if private_id}}data-field-type="{{private_id}}"{{/if}}
+           {{> components/reelflies/autocomplete}}{{!-- ReelFlies hook (ticket 25): the field's autocomplete token --}}
     >
 </div>
