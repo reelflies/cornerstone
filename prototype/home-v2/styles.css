@@ -374,6 +374,8 @@ details[open] > summary .drawer__chev { transform: rotate(180deg); }
 .sz__btn:disabled { color: var(--shale-400); border-style: dashed; background: var(--limestone-100); text-decoration: line-through; cursor: not-allowed; }
 .sz__minus { min-height: 28px; border: 0; background: none; color: var(--ink-muted); font: 600 13px/1 var(--font-text); border-radius: var(--radius-sm); }
 .sz__minus:hover { color: var(--ink); background: var(--limestone-100); }
+/* every cell keeps room for its −1, so the strip never changes shape as flies go in */
+.sz__minus--none { display: block; visibility: hidden; }
 .sizes__foot { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); margin-top: var(--space-2); color: var(--ink-muted); font-size: 13px; }
 .sizes__done { min-height: 36px; padding: 0 12px; border: 1px solid var(--edge); border-radius: var(--radius-pill); background: none; font-weight: 650; font-size: 14px; }
 .sizes__done:hover { border-color: var(--ink); }

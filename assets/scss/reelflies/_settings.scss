@@ -114,13 +114,13 @@ $rf-bp-desktop:     1040px;
 // and line height. Numbers always take rf-numerals.
 
 @mixin rf-type-display {
-    font: 820 clamp(38px, 3.4vw + 19px, 68px) / 0.98 var(--rf-font-display);
+    font: #{"820 clamp(38px, 3.4vw + 19px, 68px) / 0.98 var(--rf-font-display)"};
     letter-spacing: -0.025em;
     text-wrap: balance;
 }
 
 @mixin rf-type-headline {
-    font: 780 clamp(28px, 1.9vw + 13px, 44px) / 1.04 var(--rf-font-display);
+    font: #{"780 clamp(28px, 1.9vw + 13px, 44px) / 1.04 var(--rf-font-display)"};
     letter-spacing: -0.015em;
     text-wrap: balance;
 }

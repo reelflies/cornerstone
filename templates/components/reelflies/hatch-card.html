@@ -1,0 +1,11 @@
+{{!--
+    The Species menu's hatch card (DESIGN.md "Mega menu"): this month and what's on the water,
+    from the hatch chart's data (hatches.html), linking to the chart on the home page. Rendered
+    inside the Species loops, so the home URL is the page variable rf_home_url.
+--}}
+{{~assignVar 'rf_hatch_n' 0}}{{> components/reelflies/hatches view='count'}}{{assignVar 'rf_hatch_i' 0~}}
+<a class="rf-mega__hatch" href="{{getVar 'rf_home_url'}}#hatch" data-rf-mega-close>
+    <span class="rf-mega__hatch-title">{{lang 'reelflies.hatch.on_water'}} <span data-rf-now-month>{{moment format="MMMM"}}</span></span>
+    <span class="rf-mega__hatch-line" data-rf-now-list>{{#if (getVar 'rf_hatch_n')}}{{> components/reelflies/hatches view='now'}}.{{else}}{{lang 'reelflies.hatch.quiet'}}{{/if}}</span>
+    <span class="rf-mega__hatch-go">{{lang 'reelflies.hatch.chart_link'}}{{> components/reelflies/icon name='arrow'}}</span>
+</a>

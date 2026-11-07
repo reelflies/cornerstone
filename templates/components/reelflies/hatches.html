@@ -1,0 +1,28 @@
+{{!--
+    The hatch chart's rows: general timing for Ontario trout streams, months 0 (January) to 11,
+    each run inclusive, a second run in a2-b2 where a hatch comes back (a2 and b2 are -1 where it
+    doesn't). Every row is drawn by hatch.html in one view:
+
+        {{> components/reelflies/hatches view='row' rf_products=gql.data.site.hatch.edges}}
+
+    - row: the chart's rows on the home page (rf_products: the flies, from home.html's GraphQL).
+    - count, then now: the hatches on the water this month, as a sentence ("Midges and
+      blue-winged olive"), for the chart's intro and the Species menu's card (hatch-card.html).
+
+    Each row's flies are a theme setting (Theme Styles, Hatch chart), product ids comma-separated,
+    so the owner swaps them without a push; its "More" link is a category id setting. A row whose
+    slug is in rf_hatch_to_try says "to try" rather than "to match it": its flies are placeholders.
+    The hoppers row's second line is English (latin_en), not a Latin name.
+    The timing, hook ranges and names change here, with a push. Read inside a page's
+    {{#partial}} block, so `theme_settings` and `categories` come from the caller's context.
+--}}
+{{> components/reelflies/hatch rf_view=view rf_products=rf_products rf_tree=categories slug='midges' name=(lang 'reelflies.hatch.midges') latin='Chironomidae' hooks='18–24' a1=0 b1=11 a2=-1 b2=-1 flies=theme_settings.rf_hatch_midges more=theme_settings.rf_hatch_midges_more}}
+{{> components/reelflies/hatch rf_view=view rf_products=rf_products rf_tree=categories slug='black-stone' name=(lang 'reelflies.hatch.black_stone') latin='Capniidae' hooks='14–18' a1=1 b1=3 a2=-1 b2=-1 flies=theme_settings.rf_hatch_black_stone more=theme_settings.rf_hatch_black_stone_more}}
+{{> components/reelflies/hatch rf_view=view rf_products=rf_products rf_tree=categories slug='bwo' name=(lang 'reelflies.hatch.bwo') latin='Baetis' hooks='16–20' a1=3 b1=5 a2=8 b2=10 flies=theme_settings.rf_hatch_bwo more=theme_settings.rf_hatch_bwo_more}}
+{{> components/reelflies/hatch rf_view=view rf_products=rf_products rf_tree=categories slug='hendrickson' name=(lang 'reelflies.hatch.hendrickson') latin='Ephemerella subvaria' hooks='12–14' a1=3 b1=4 a2=-1 b2=-1 flies=theme_settings.rf_hatch_hendrickson more=theme_settings.rf_hatch_hendrickson_more}}
+{{> components/reelflies/hatch rf_view=view rf_products=rf_products rf_tree=categories slug='caddis' name=(lang 'reelflies.hatch.caddis') latin='Brachycentrus, Hydropsyche' hooks='14–18' a1=4 b1=8 a2=-1 b2=-1 flies=theme_settings.rf_hatch_caddis more=theme_settings.rf_hatch_caddis_more}}
+{{> components/reelflies/hatch rf_view=view rf_products=rf_products rf_tree=categories slug='march-brown' name=(lang 'reelflies.hatch.march_brown') latin='Maccaffertium vicarium' hooks='10–12' a1=4 b1=5 a2=-1 b2=-1 flies=theme_settings.rf_hatch_march_brown more=theme_settings.rf_hatch_march_brown_more}}
+{{> components/reelflies/hatch rf_view=view rf_products=rf_products rf_tree=categories slug='sulphur' name=(lang 'reelflies.hatch.sulphur') latin='Ephemerella invaria' hooks='14–18' a1=4 b1=6 a2=-1 b2=-1 flies=theme_settings.rf_hatch_sulphur more=theme_settings.rf_hatch_sulphur_more}}
+{{> components/reelflies/hatch rf_view=view rf_products=rf_products rf_tree=categories slug='hex' name=(lang 'reelflies.hatch.hex') latin='Hexagenia limbata' hooks='6–8' a1=5 b1=6 a2=-1 b2=-1 flies=theme_settings.rf_hatch_hex more=theme_settings.rf_hatch_hex_more}}
+{{> components/reelflies/hatch rf_view=view rf_products=rf_products rf_tree=categories slug='trico' name=(lang 'reelflies.hatch.trico') latin='Tricorythodes' hooks='20–24' a1=6 b1=8 a2=-1 b2=-1 flies=theme_settings.rf_hatch_trico more=theme_settings.rf_hatch_trico_more}}
+{{> components/reelflies/hatch rf_view=view rf_products=rf_products rf_tree=categories slug='hoppers' name=(lang 'reelflies.hatch.hoppers') latin=(lang 'reelflies.hatch.hoppers_latin') latin_en=1 hooks='8–14' a1=6 b1=8 a2=-1 b2=-1 flies=theme_settings.rf_hatch_hoppers more=theme_settings.rf_hatch_hoppers_more}}

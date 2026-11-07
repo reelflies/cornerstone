@@ -1,0 +1,18 @@
+{{!--
+    The top-level categories the menus don't already cover, in the categories data's order, as
+    plain links in one view of cat-view.html (rf_view: nav, drawer-link or foot), for a channel
+    whose rf_menu_link_ids is empty. Left out: the Fly Types, any category holding one of them
+    (tree 1's Flies), the Species root, and the ids in rf_menu_exclude_ids. With no Fly Types
+    and no Species root set, that is every top-level category, as the stock menu lists them.
+    rf_tree is the page's categories data.
+--}}
+{{~#each rf_tree as |rfTop|~}}
+{{~assignVar 'rf_skip' 0~}}
+{{~#if rfTop.id '==' (getVar 'rf_species_root')}}{{assignVar 'rf_skip' 1}}{{/if~}}
+{{~#each (split (getVar 'rf_type_ids') ',') as |rfId|~}}
+{{~#if (trim rfId) '==' rfTop.id}}{{assignVar 'rf_skip' 1}}{{/if~}}
+{{~#each rfTop.children as |rfKid|}}{{#if (trim rfId) '==' rfKid.id}}{{assignVar 'rf_skip' 1}}{{/if}}{{/each~}}
+{{~/each~}}
+{{~#each (split (getVar 'rf_exclude_ids') ',') as |rfId|}}{{#if (trim rfId) '==' rfTop.id}}{{assignVar 'rf_skip' 1}}{{/if}}{{/each~}}
+{{~#unless (getVar 'rf_skip')}}{{> components/reelflies/cat-view rf_cat=rfTop rf_pos=99 rf_view=../rf_view}}{{/unless~}}
+{{~/each~}}

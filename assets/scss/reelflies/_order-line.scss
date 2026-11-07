@@ -1,0 +1,308 @@
+// =============================================================================
+// REELFLIES ORDER LINE (Streamside Stone)
+// =============================================================================
+//
+// The order line pinned at the foot and the box sheet above it (DESIGN.md "Order Line"), and the
+// fly that drops into it. Markup: components/reelflies/order-line.html. Behaviour: order-line.js.
+//
+// -----------------------------------------------------------------------------
+
+// Order line and box
+// -----------------------------------------------------------------------------
+
+body:has(.rf-orderline) {
+    padding-bottom: var(--rf-orderline-height);
+}
+
+.rf-orderline {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 70;
+}
+
+.rf-orderline__bar {
+    display: flex;
+    align-items: center;
+    gap: var(--rf-space-4);
+    height: var(--rf-orderline-height);
+    padding: 0 var(--rf-gutter);
+    background: var(--rf-shale-950);
+    color: var(--rf-mist);
+    box-shadow: var(--rf-shadow-float);
+}
+
+.rf-orderline__toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--rf-space-3);
+    min-height: var(--rf-tap-min);
+    padding: 0 var(--rf-space-2) 0 0;
+    border: 0;
+    background: none;
+    color: var(--rf-mist);
+}
+
+.rf-orderline__thumbs {
+    display: flex;
+    flex: none;
+}
+
+.rf-orderline__thumbs:empty::before {
+    content: "";
+    width: 44px;
+    height: 32px;
+    border: 1.5px dashed var(--rf-shale-600);
+    border-radius: var(--rf-radius-sm);
+}
+
+.rf-orderline__thumb {
+    width: 44px;
+    height: 32px;
+    margin-left: -10px;
+    overflow: hidden;
+    border-radius: var(--rf-radius-sm);
+    background: var(--rf-paper);
+    box-shadow: 0 0 0 2px var(--rf-shale-950);
+}
+
+.rf-orderline__thumb:first-child {
+    margin-left: 0;
+}
+
+.rf-orderline__thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.rf-orderline__thumb.is-new {
+    animation: rf-arrive 420ms var(--rf-settle);
+}
+
+.rf-orderline__sum {
+    font-weight: 650;
+    font-size: 15px;
+    white-space: nowrap;
+    text-decoration: underline;
+    text-decoration-color: var(--rf-shale-600);
+    text-underline-offset: 0.25em;
+}
+
+.rf-orderline__ship {
+    flex: 1;
+    min-width: 0;
+    color: var(--rf-shale-400);
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rf-orderline__ship strong {
+    color: var(--rf-copper-lit);
+    font-weight: 700;
+}
+
+.rf-orderline__checkout {
+    flex: none;
+    min-height: 44px;
+}
+
+@media (max-width: 639px) {
+    .rf-orderline__ship {
+        display: none;
+    }
+
+    .rf-orderline__toggle {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .rf-orderline__sum {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+}
+
+.rf-box {
+    position: absolute;
+    right: var(--rf-gutter);
+    bottom: calc(var(--rf-orderline-height) + var(--rf-space-2));
+    width: #{"min(420px, calc(100vw - 2 * var(--rf-gutter)))"};
+    max-height: calc(100vh - var(--rf-orderline-height) - 96px);
+    overflow-y: auto;
+    padding: var(--rf-space-4) var(--rf-space-4) var(--rf-space-6);
+    background: var(--rf-paper);
+    color: var(--rf-ink);
+    border-radius: var(--rf-radius-md);
+    box-shadow: var(--rf-shadow-lift);
+}
+
+.rf-box[hidden] {
+    display: none;
+}
+
+.rf-box__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--rf-space-3);
+}
+
+.rf-box__head h2 {
+    font: 760 20px/1.2 var(--rf-font-display);
+}
+
+.rf-box__close {
+    display: grid;
+    place-items: center;
+    width: var(--rf-tap-min);
+    height: var(--rf-tap-min);
+    border: 0;
+    background: none;
+    border-radius: var(--rf-radius-md);
+}
+
+.rf-box__close:hover {
+    background: var(--rf-limestone-100);
+}
+
+.rf-box__empty {
+    color: var(--rf-ink-muted);
+}
+
+.rf-box__pattern {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: var(--rf-space-3);
+    padding: var(--rf-space-3) 0;
+    border-top: 1px solid var(--rf-limestone-200);
+}
+
+.rf-box__pattern img {
+    width: 64px;
+    height: 43px;
+    object-fit: cover;
+    border-radius: var(--rf-radius-sm);
+}
+
+.rf-box__pname {
+    font-weight: 650;
+}
+
+.rf-box__line {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 64px;
+    align-items: center;
+    gap: var(--rf-space-2);
+    margin-top: var(--rf-space-2);
+    font-size: 14px;
+}
+
+.rf-box__size {
+    color: var(--rf-ink-muted);
+}
+
+.rf-box__lt {
+    text-align: right;
+}
+
+.rf-stepper {
+    display: inline-grid;
+    grid-template-columns: 36px 32px 36px;
+    align-items: center;
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-md);
+}
+
+.rf-stepper button {
+    height: 36px;
+    border: 0;
+    background: none;
+    font-size: 18px;
+}
+
+.rf-stepper button:hover {
+    background: var(--rf-limestone-100);
+}
+
+.rf-stepper output {
+    text-align: center;
+    font: 700 16px/1 var(--rf-font-numerals);
+}
+
+.rf-box__total {
+    display: flex;
+    justify-content: space-between;
+    margin-top: var(--rf-space-3);
+    padding-top: var(--rf-space-3);
+    border-top: 1px solid var(--rf-limestone-300);
+    font-weight: 700;
+}
+
+.rf-box__total .rf-num {
+    font-size: 20px;
+    color: var(--rf-copper);
+}
+
+.rf-box__meter {
+    height: 6px;
+    margin-top: var(--rf-space-3);
+    border-radius: var(--rf-radius-pill);
+    background: var(--rf-limestone-200);
+    overflow: hidden;
+}
+
+.rf-box__meter span {
+    display: block;
+    height: 100%;
+    background: var(--rf-copper);
+}
+
+.rf-box__ship {
+    margin-top: var(--rf-space-2);
+    color: var(--rf-ink-muted);
+    font-size: 14px;
+}
+
+.rf-box__ship strong {
+    color: var(--rf-ink);
+}
+
+.rf-box__go {
+    width: 100%;
+    min-height: 48px;
+    margin-top: var(--rf-space-4);
+    font-size: 16px;
+}
+
+.rf-flight {
+    position: fixed;
+    z-index: 90;
+    pointer-events: none;
+    overflow: hidden;
+    border-radius: var(--rf-radius-sm);
+    background: var(--rf-paper);
+    box-shadow: var(--rf-shadow-lift);
+    transition: transform 420ms cubic-bezier(0.5, 0, 0.3, 1), opacity 420ms ease-in;
+}
+
+.rf-flight img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+// The narrowest phones keep two thumbnails, so the count and Check out still fit at 320px
+@media (max-width: 399px) {
+    .rf-orderline__bar {
+        gap: var(--rf-space-3);
+    }
+
+    .rf-orderline__thumb:nth-child(n+3) {
+        display: none;
+    }
+}

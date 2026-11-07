@@ -91,8 +91,8 @@
 // -----------------------------------------------------------------------------
 //
 // Each ground sets the colours of what is drawn on it: text, muted text, rules, and the focus
-// ring (--rf-ring, read by rf-focus-ring). Limestone is the page itself. The stock footer stands
-// on shale until its own partial replaces it.
+// ring (--rf-ring, read by rf-focus-ring). Limestone is the page itself. The strip, footer and
+// order line set the same values on their own classes (_shell.scss).
 
 .rf-ground--limestone {
     --rf-ring: var(--rf-ink);
@@ -100,8 +100,7 @@
     color: var(--rf-ink);
 }
 
-.rf-ground--shale,
-.footer {
+.rf-ground--shale {
     --rf-ring: var(--rf-mist);
     --rf-on-ground-muted: var(--rf-shale-400);
     --rf-on-ground-rule: var(--rf-shale-800);
@@ -116,55 +115,6 @@
     background-color: var(--rf-moss-700);
     color: var(--rf-mist);
 }
-
-// The stock footer's text, which stock draws in the body's secondary ink
-.footer {
-    border-top: 0;
-
-    .footer-info-col,
-    .footer-info-list a,
-    .footer-copyright .powered-by,
-    .footer-copyright a {
-        color: var(--rf-mist);
-    }
-
-    .footer-info-list a,
-    .footer-copyright a {
-        text-decoration-color: var(--rf-shale-600);
-        text-underline-offset: 0.2em;
-
-        &:hover {
-            color: var(--rf-mist);
-            text-decoration: underline;
-        }
-    }
-
-    .footer-info-heading {
-        color: var(--rf-shale-400);
-        font: 650 14px / 1.3 var(--rf-font-text);
-    }
-
-    .footer-payment-icons svg,
-    .socialLinks .icon svg {
-        fill: var(--rf-limestone-300);
-    }
-
-    // The newsletter's Subscribe: mist with a shale label, paper on hover (DESIGN.md
-    // "button-subscribe-on-shale"); stock's ink would vanish into the shale
-    .button--primary {
-        border-color: var(--rf-mist);
-        background-color: var(--rf-mist);
-        color: var(--rf-shale-950);
-
-        &:hover,
-        &:focus {
-            border-color: var(--rf-paper);
-            background-color: var(--rf-paper);
-            color: var(--rf-shale-950);
-        }
-    }
-}
-
 
 // Type
 // -----------------------------------------------------------------------------
@@ -278,11 +228,6 @@ body {
     }
 }
 
-// The header sits on limestone with one rule under it
-.header {
-    border-bottom: 1px solid var(--rf-limestone-300);
-}
-
 
 // Browser surfaces
 // -----------------------------------------------------------------------------
@@ -302,9 +247,9 @@ textarea {
     caret-color: var(--rf-halo);
 }
 
-.footer,
 .rf-ground--shale,
-.rf-ground--moss {
+.rf-ground--moss,
+.rf-foot {
     input,
     textarea {
         caret-color: var(--rf-mist);

@@ -1,0 +1,79 @@
+{{!--
+    One hatch (hatches.html has the data and the params) in one view (rf_view):
+
+    - count: adds 1 to the page variable rf_hatch_n when the hatch is on the water this month.
+    - now: writes its name into the "on the water" sentence, which count has sized
+      (rf_hatch_n names, rf_hatch_i the next one's place): "Midges", ", sulphur", " and hex".
+    - row: the chart's row. A native disclosure whose summary is the whole row: name and Latin
+      name, hook range, the twelve-month track, and a cue (up to three thumbnails, the count and a
+      chevron). It opens on the hatch's flies (fly-gql.html) and a "More" link to its category.
+      A hatch on the water now renders open. With no flies the row is not a disclosure, and its
+      cue is a link to its category (or absent, with no category).
+
+    The month is the page variable rf_now (0-11, head.html), as the server renders the page;
+    home.js moves the light if the page was cached in another month.
+--}}
+{{~assignVar 'rf_on' 0~}}
+{{~#if (getVar 'rf_now') '>=' a1}}{{#if (getVar 'rf_now') '<=' b1}}{{assignVar 'rf_on' 1}}{{/if}}{{/if~}}
+{{~#if (getVar 'rf_now') '>=' a2}}{{#if (getVar 'rf_now') '<=' b2}}{{assignVar 'rf_on' 1}}{{/if}}{{/if~}}
+
+{{~#if rf_view '===' 'count'~}}
+{{~#if (getVar 'rf_on')}}{{assignVar 'rf_hatch_n' (add (getVar 'rf_hatch_n') 1)}}{{/if~}}
+{{~/if~}}
+
+{{~#if rf_view '===' 'now'~}}
+{{~#if (getVar 'rf_on')~}}
+{{~#if (getVar 'rf_hatch_i') '==' 0}}{{name}}{{else}}{{#if (getVar 'rf_hatch_i') '==' (subtract (getVar 'rf_hatch_n') 1)}} {{lang 'reelflies.hatch.and'}} {{else}}, {{/if}}{{toLowerCase name}}{{/if~}}
+{{~assignVar 'rf_hatch_i' (add (getVar 'rf_hatch_i') 1)~}}
+{{~/if~}}
+{{~/if~}}
+
+{{~#if rf_view '===' 'row'~}}
+{{~assignVar 'rf_hatch_found' 0~}}
+{{~#each (split flies ',') as |rfId|~}}{{~#each ../rf_products as |rfEdge|~}}{{~#if rfEdge.node.entityId '==' (trim rfId)}}{{assignVar 'rf_hatch_found' (add (getVar 'rf_hatch_found') 1)}}{{/if~}}{{~/each~}}{{~/each~}}
+{{~assignVar 'rf_hatch_try' 0~}}
+{{~#each (split (getVar 'rf_hatch_to_try') ',')}}{{#if (trim this) '===' ../slug}}{{assignVar 'rf_hatch_try' 1}}{{/if}}{{/each~}}
+{{~assignVar 'rf_a1' a1}}{{assignVar 'rf_b1' b1}}{{assignVar 'rf_a2' a2}}{{assignVar 'rf_b2' b2~}}
+<li class="rf-hatch__row{{#if (getVar 'rf_on')}} is-now{{/if}}" data-rf-runs="{{a1}}-{{b1}}{{#if a2 '>=' 0}},{{a2}}-{{b2}}{{/if}}">
+    {{#if (getVar 'rf_hatch_found')}}
+    <details class="rf-hatch__d"{{#if (getVar 'rf_on')}} open{{/if}}>
+        <summary class="rf-hatch__sum">
+    {{else}}
+        <div class="rf-hatch__sum rf-hatch__sum--plain">
+    {{/if}}
+            <span class="rf-hatch__name"><span class="rf-hatch__title">{{name}}</span><span class="rf-hatch__latin"{{#unless latin_en}} lang="la"{{/unless}}>{{latin}}</span></span>
+            <span class="rf-hatch__sizes"><span class="rf-hatch__k">{{lang 'reelflies.hatch.hooks'}}</span> <span class="rf-num">{{hooks}}</span></span>
+            <span class="rf-track" role="img" aria-label="{{#if a1 '==' 0}}{{#if b1 '==' 11}}{{lang 'reelflies.hatch.all_year'}}{{else}}{{lang 'reelflies.hatch.season' from=(lang (concat 'reelflies.months.m' a1)) to=(lang (concat 'reelflies.months.m' b1))}}{{/if}}{{else}}{{lang 'reelflies.hatch.season' from=(lang (concat 'reelflies.months.m' a1)) to=(lang (concat 'reelflies.months.m' b1))}}{{/if}}{{#if a2 '>=' 0}}{{lang 'reelflies.hatch.season_again' from=(lang (concat 'reelflies.months.m' a2)) to=(lang (concat 'reelflies.months.m' b2))}}{{/if}}">
+                {{~#for 0 11~}}
+                <span class="rf-track__m
+                    {{~#if $index '>=' (getVar 'rf_a1')}}{{#if $index '<=' (getVar 'rf_b1')}} is-on{{#if $index '==' (getVar 'rf_a1')}} is-start{{/if}}{{#if $index '==' (getVar 'rf_b1')}} is-end{{/if}}{{/if}}{{/if}}
+                    {{~#if $index '>=' (getVar 'rf_a2')}}{{#if $index '<=' (getVar 'rf_b2')}} is-on{{#if $index '==' (getVar 'rf_a2')}} is-start{{/if}}{{#if $index '==' (getVar 'rf_b2')}} is-end{{/if}}{{/if}}{{/if}}
+                    {{~#if $index '==' (getVar 'rf_now')}} is-now{{/if}}" data-rf-m="{{$index}}"></span>
+                {{~/for~}}
+            </span>
+    {{#if (getVar 'rf_hatch_found')}}
+            <span class="rf-hatch__cue">
+                <span class="rf-hatch__thumbs" aria-hidden="true">
+                    {{~assignVar 'rf_hatch_t' 0~}}
+                    {{~#each (split flies ',') as |rfId|~}}{{~#each ../rf_products as |rfEdge|~}}{{~#if rfEdge.node.entityId '==' (trim rfId)~}}
+                    {{~#if (getVar 'rf_hatch_t') '<' 3}}{{#if rfEdge.node.defaultImage}}<img src="{{rfEdge.node.defaultImage.small}}" width="80" height="53" alt="" loading="lazy" decoding="async">{{/if}}{{/if~}}
+                    {{~assignVar 'rf_hatch_t' (add (getVar 'rf_hatch_t') 1)~}}
+                    {{~/if~}}{{~/each~}}{{~/each~}}
+                </span>
+                <span class="rf-hatch__count">{{#if (getVar 'rf_hatch_found') '==' 1}}{{lang 'reelflies.hatch.one_fly'}}{{else}}<span class="rf-num">{{getVar 'rf_hatch_found'}}</span> {{lang 'reelflies.hatch.flies'}}{{/if}}<span class="rf-hatch__long"> {{#if (getVar 'rf_hatch_try')}}{{lang 'reelflies.hatch.to_try'}}{{else}}{{lang 'reelflies.hatch.to_match'}}{{/if}}</span></span>
+                {{> components/reelflies/icon name='chevron' class='rf-hatch__chev'}}
+            </span>
+        </summary>
+        <div class="rf-hatch__flies">
+            <ul class="rf-flies rf-flies--row">
+                {{~#each (split flies ',') as |rfId|~}}{{~#each ../rf_products as |rfEdge|~}}{{~#if rfEdge.node.entityId '==' (trim rfId)}}{{> components/reelflies/fly-gql rf_node=rfEdge.node rf_size='sm' rf_unit='fly'}}{{/if~}}{{~/each~}}{{~/each~}}
+            </ul>
+            {{#if (trim more)}}{{> components/reelflies/cats rf_tree=rf_tree ids=more view='hatch-more'}}{{/if}}
+        </div>
+    </details>
+    {{else}}
+            {{#if (trim more)}}<span class="rf-hatch__cue rf-hatch__cue--link">{{> components/reelflies/cats rf_tree=rf_tree ids=more view='hatch-link'}}</span>{{/if}}
+        </div>
+    {{/if}}
+</li>
+{{~/if~}}

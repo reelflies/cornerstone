@@ -1,0 +1,28 @@
+{{!--
+    A specimen card (fly.html) from a Storefront GraphQL product (rf_node, with home.html's RfFly
+    fragment): rf_size, rf_unit ('fly' or 'set'), rf_eager are passed through.
+
+    The size range comes from the product's first option, in the store's value order, which is
+    hook order for the Fly Sizes option: "Sizes 8–20", or "Size 14" for one value. A product with
+    no option values has no range and adds one with "Add 1".
+--}}
+{{~assignVar 'rf_sz_first' ''}}{{assignVar 'rf_sz_last' ''}}{{assignVar 'rf_sz_n' 0~}}
+{{~#each rf_node.productOptions.edges~}}{{~#if @first~}}{{~#each node.values.edges~}}
+{{~#if @first}}{{assignVar 'rf_sz_first' node.label}}{{/if}}{{#if @last}}{{assignVar 'rf_sz_last' node.label}}{{/if~}}
+{{~assignVar 'rf_sz_n' (add (getVar 'rf_sz_n') 1)~}}
+{{~/each~}}{{~/if~}}{{~/each~}}
+{{> components/reelflies/fly-range}}
+{{> components/reelflies/fly
+    rf_id=rf_node.entityId
+    rf_name=rf_node.name
+    rf_url=rf_node.path
+    rf_price=(concat (getVar 'rf_money') (toFixed rf_node.prices.price.value 2))
+    rf_unit=rf_unit
+    rf_src=rf_node.defaultImage.card
+    rf_srcset=(concat rf_node.defaultImage.card ' 360w, ' rf_node.defaultImage.large ' 720w')
+    rf_photo_sizes='(min-width: 1040px) 240px, (min-width: 640px) 30vw, 46vw'
+    rf_eager=rf_eager
+    rf_range=(getVar 'rf_range_text')
+    rf_multi=(getVar 'rf_multi')
+    rf_size=rf_size
+}}

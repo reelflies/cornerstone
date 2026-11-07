@@ -1,0 +1,36 @@
+{{!--
+    The specimen card (DESIGN.md "Cards"): one product on paper, photo as shot at 3:2, name,
+    price per unit, one reserved line, and the buy control. fly-gql.html and fly-stencil.html
+    turn their data into these params:
+
+    rf_id, rf_name, rf_url, rf_price (formatted), rf_unit ('fly', 'set' or empty), rf_src,
+    rf_srcset (optional), rf_photo_sizes, rf_eager (first viewport), rf_range (the size range
+    line, "Sizes 8–20", or empty), rf_multi (1 when the shopper picks a size), rf_size (sm, md
+    or lg).
+
+    - The reserved line holds the size range, and once the fly is in the box, what is in it
+      (quick-add.js writes it). It is always there, so adding never moves the layout.
+    - With rf_quick_add on, "+ Add" opens the size strip in [data-rf-sizes] (one size: "Add 1"
+      adds it). Off, a link takes the shopper to the product page to choose.
+    - Nothing is ever set over the photo: its bottom-left corner holds the baked-in logo.
+--}}
+<li class="rf-fly rf-fly--{{rf_size}}" data-rf-product="{{rf_id}}">
+    <article class="rf-fly__card">
+        <a class="rf-fly__photo" href="{{rf_url}}" tabindex="-1" aria-hidden="true">{{#if rf_src}}<img src="{{rf_src}}"{{#if rf_srcset}} srcset="{{rf_srcset}}" sizes="{{rf_photo_sizes}}"{{/if}} width="720" height="480" alt=""{{#unless rf_eager}} loading="lazy"{{/unless}} decoding="async">{{/if}}</a>
+        <div class="rf-fly__body">
+            <h3 class="rf-fly__name"><a href="{{rf_url}}">{{rf_name}}</a></h3>
+            <div class="rf-fly__buy">
+                <div class="rf-fly__meta">
+                    <p class="rf-fly__price"><span class="rf-num">{{rf_price}}</span>{{#if rf_unit}} <span class="rf-fly__unit">{{lang (concat 'reelflies.card.per_' rf_unit)}}</span>{{/if}}</p>
+                    <p class="rf-fly__line"><span class="rf-fly__sizes">{{rf_range}}</span><span class="rf-fly__inbox" data-rf-inbox hidden></span></p>
+                </div>
+                {{#if (getVar 'rf_quick_add')}}
+                <button class="rf-add" type="button" data-rf-add="{{#if rf_multi}}sizes{{else}}one{{/if}}" aria-expanded="false">{{#if rf_multi}}{{lang 'reelflies.card.add'}}{{else}}{{lang 'reelflies.card.add_one'}}{{/if}}<span class="is-srOnly">: {{rf_name}}</span></button>
+                {{else}}
+                <a class="rf-add rf-add--link" href="{{rf_url}}">{{#if rf_multi}}{{lang 'reelflies.card.choose'}}{{else}}{{lang 'reelflies.card.view'}}{{/if}}<span class="is-srOnly">: {{rf_name}}</span></a>
+                {{/if}}
+            </div>
+        </div>
+        {{#if (getVar 'rf_quick_add')}}<div class="rf-fly__sizes-panel" data-rf-sizes hidden></div>{{/if}}
+    </article>
+</li>

@@ -9,3 +9,33 @@
 --}}
 <meta http-equiv="content-language" content="en-CA">
 <link rel="preload" href="{{cdn 'assets/fonts/archivo-latin-var.woff2'}}" as="font" type="font/woff2" crossorigin>
+{{!--
+    Page variables the ReelFlies partials read from inside loops and a page's {{#partial}} block,
+    where @root and theme_settings can't be reached. The head renders before the page's blocks,
+    so they are set first. assignVar takes only strings and numbers, so a switch is 1 or 0.
+    Nothing here renders.
+--}}
+{{~#if theme_settings.rf_counts}}{{assignVar 'rf_counts' 1}}{{else}}{{assignVar 'rf_counts' 0}}{{/if~}}
+{{~#if theme_settings.rf_quick_add}}{{assignVar 'rf_quick_add' 1}}{{else}}{{assignVar 'rf_quick_add' 0}}{{/if~}}
+{{~assignVar 'rf_salt_ids' (trim theme_settings.rf_species_salt_ids)~}}
+{{~assignVar 'rf_species_root' (trim theme_settings.rf_menu_species_root_id)~}}
+{{~assignVar 'rf_type_ids' (trim theme_settings.rf_menu_type_ids)~}}
+{{~assignVar 'rf_exclude_ids' (trim theme_settings.rf_menu_exclude_ids)~}}
+{{~assignVar 'rf_hatch_to_try' theme_settings.rf_hatch_to_try~}}
+{{~assignVar 'rf_money' settings.money.currency_token~}}
+{{~assignVar 'rf_home_url' urls.home~}}
+{{~assignVar 'rf_hook_chart' (trim theme_settings.rf_hook_chart_url)~}}
+{{~assignVar 'rf_now' (subtract (moment format="M") 1)~}}
+{{!--
+    Values the ReelFlies JavaScript reads as context.<name>: the switches, the storefront's
+    GraphQL token (the public Storefront API token BigCommerce gives every storefront, for the
+    size data and the ways' re-lays) and the words the scripts write, from lang reelflies.js.
+--}}
+{{~inject 'rfQuickAdd' theme_settings.rf_quick_add}}
+{{~inject 'rfCartState' theme_settings.rf_cart_state}}
+{{~inject 'rfFlyBrands' theme_settings.rf_fly_brands}}
+{{~inject 'rfFreeShipping' theme_settings.rf_ship_free_threshold}}
+{{~inject 'rfMoney' settings.money.currency_token}}
+{{~inject 'rfStorefrontToken' settings.storefront_api.token}}
+{{~inject 'rfWords' (langJson 'reelflies.js')}}
+

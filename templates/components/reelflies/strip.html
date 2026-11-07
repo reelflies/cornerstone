@@ -1,0 +1,27 @@
+{{!--
+    The utility strip (DESIGN.md "Navigation"): riverbed shale above the header on every page, a
+    labelled region landmark so its words are inside one.
+    - Left: the free-shipping promise, from rf_ship_free_threshold; a storefront with no
+      threshold (ReelFlies US) shows the family line there instead.
+    - Middle, from 1040px: the family line.
+    - Right, from 900px: the store's phone number (Settings, Store profile), dialled from
+      rf_store_phone, and the other storefront (rf_alt_store_url and rf_alt_store_text).
+--}}
+<div class="rf-strip" role="region" aria-label="{{lang 'reelflies.strip.label'}}">
+    <div class="rf-strip__inner">
+        {{#if (trim theme_settings.rf_ship_free_threshold)}}
+        <p>{{lang 'reelflies.strip.ship'}} <span class="rf-num">{{settings.money.currency_token}}{{trim theme_settings.rf_ship_free_threshold}}</span></p>
+        <p class="rf-strip__mid">{{lang 'reelflies.strip.family_before'}} <span class="rf-num">{{lang 'reelflies.strip.family_year'}}</span></p>
+        {{else}}
+        <p>{{lang 'reelflies.strip.family_before'}} <span class="rf-num">{{lang 'reelflies.strip.family_year'}}</span></p>
+        {{/if}}
+        <p class="rf-strip__end">
+            {{#if settings.phone_number}}
+            <a href="tel:{{#if (trim theme_settings.rf_store_phone)}}{{trim theme_settings.rf_store_phone}}{{else}}{{settings.phone_number}}{{/if}}">{{> components/reelflies/icon name='phone'}}<span class="rf-num">{{settings.phone_number}}</span></a>
+            {{/if}}
+            {{#if (trim theme_settings.rf_alt_store_url)}}
+            <a href="{{trim theme_settings.rf_alt_store_url}}">{{theme_settings.rf_alt_store_text}}</a>
+            {{/if}}
+        </p>
+    </div>
+</div>

@@ -1,0 +1,1057 @@
+// =============================================================================
+// REELFLIES SHELL (Streamside Stone)
+// =============================================================================
+//
+// Every page's frame (DESIGN.md "Navigation"): the shared ground for the ReelFlies regions and
+// their shared pieces, then the utility strip, the header with its search, the nav row and its
+// mega menus, and the phone drawer. Markup: components/reelflies/strip.html, header.html,
+// drawer.html and the category views (cat-view.html, species-view.html). Behaviour: menu.js.
+// Ported from prototype/home-v2/styles.css with the rf- prefix and the --rf-* tokens.
+//
+// -----------------------------------------------------------------------------
+
+
+// The regions' own ground
+// -----------------------------------------------------------------------------
+//
+// Cornerstone's element rules (heading margins and colours, list indents, link colours) stop at
+// these regions. Each reset is a :where() (no weight) and an element, so it weighs the same as
+// Cornerstone's element selectors and wins by coming later, and loses to every rf- class.
+
+$rf-regions: ".rf-strip, .rf-head, .rf-mega-scrim, .rf-drawer, .rf-foot, .rf-orderline, .rf-stone, .rf-types, .rf-hatch, .rf-species, .rf-signature, .rf-selections, .rf-shop";
+
+:where(#{$rf-regions}) {
+    h1, h2, h3, h4, h5, h6, p, ul, ol, dl, dd, figure, address, blockquote {
+        margin: 0;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        color: inherit;
+        text-transform: none;
+    }
+
+    ul, ol {
+        padding: 0;
+        list-style: none;
+    }
+
+    // stock indents a list inside a list with two element selectors
+    ul ul, ul ol, ol ul, ol ol {
+        margin: 0;
+    }
+
+    img, svg {
+        display: block;
+        max-width: 100%;
+    }
+
+    img {
+        height: auto;
+    }
+
+    abbr[title] {
+        text-decoration: none;
+        border: 0;
+        font-size: inherit;
+        cursor: inherit;
+    }
+
+    button, input {
+        font: inherit;
+        color: inherit;
+    }
+
+    button {
+        cursor: pointer;
+    }
+
+    a,
+    a:hover {
+        color: inherit;
+    }
+}
+
+// A hidden ReelFlies element stays hidden whatever display its class sets
+[class*="rf-"][hidden] {
+    display: none !important;
+}
+
+:root {
+    --rf-head-top: 0px;
+    --rf-orderline-height: 64px;
+    color-scheme: light;
+
+    @media (min-width: $rf-bp-desktop) {
+        --rf-head-top: 76px;
+    }
+}
+
+html {
+    scroll-padding-top: 72px;
+}
+
+// Stock pads the body on phones to clear its fixed mobile header (foundation/global/_global.scss);
+// the ReelFlies header is in the flow, so nothing needs clearing
+body {
+    padding-top: 0;
+}
+
+// The focus ring takes the ground's colour: mist on shale and moss, ink again on paper inside them
+.rf-strip,
+.rf-stone,
+.rf-species,
+.rf-signature,
+.rf-foot,
+.rf-orderline {
+    --rf-ring: var(--rf-mist);
+}
+
+.rf-fly,
+.rf-box {
+    --rf-ring: var(--rf-ink);
+}
+
+// The home page's bands run full bleed from the header to the footer
+.body:has(> .rf-stone) {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+
+// Shared pieces
+// -----------------------------------------------------------------------------
+
+.rf-num {
+    @include rf-numerals;
+    font-weight: 650;
+}
+
+.rf-icon {
+    width: 20px;
+    height: 20px;
+    flex: none;
+}
+
+.rf-icon-sheet {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+}
+
+.rf-wrap {
+    width: 100%;
+    max-width: calc(var(--rf-column-max) + 2 * var(--rf-gutter));
+    margin: 0 auto;
+    padding: 0 var(--rf-gutter);
+}
+
+.rf-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: var(--rf-tap-min);
+    font-weight: 650;
+    text-decoration: underline;
+    text-decoration-color: var(--rf-edge);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.25em;
+
+    .rf-icon {
+        width: 18px;
+        height: 18px;
+        transition: transform var(--rf-settle);
+    }
+
+    &:hover {
+        text-decoration-color: currentColor;
+
+        .rf-icon {
+            transform: translateX(3px);
+        }
+    }
+}
+
+.rf-more--on-dark {
+    color: var(--rf-mist);
+    text-decoration-color: var(--rf-shale-400);
+}
+
+.rf-sec-head {
+    display: grid;
+    gap: var(--rf-space-3);
+    margin-bottom: var(--rf-space-8);
+    max-width: 44rem;
+
+    p {
+        color: var(--rf-ink-muted);
+        font-size: 17px;
+        max-width: 38rem;
+    }
+}
+
+.rf-sec-head h2,
+.rf-hatch__intro h2,
+.rf-species h2,
+.rf-signature h2,
+.rf-shop h2 {
+    @include rf-type-headline;
+}
+
+@media (min-width: 900px) {
+    .rf-sec-head--split {
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+        align-items: end;
+        gap: var(--rf-space-12);
+        max-width: none;
+    }
+}
+
+// The stand-in slate photographs' warm grade, until the commissioned shoot replaces them
+// (DESIGN.md "Do's"); never on a product photo
+.rf-graded {
+    filter: sepia(0.34) saturate(1.3) brightness(0.9) contrast(1.05);
+}
+
+// Utility strip
+// -----------------------------------------------------------------------------
+.rf-strip {
+    background: var(--rf-shale-950);
+    color: var(--rf-mist);
+    font-size: 13px;
+}
+
+.rf-strip__inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--rf-space-8);
+    max-width: calc(var(--rf-column-max) + 2 * var(--rf-gutter));
+    margin: 0 auto;
+    padding: 0 var(--rf-gutter);
+    min-height: 36px;
+}
+
+.rf-strip p {
+    white-space: nowrap;
+}
+
+.rf-strip .rf-num {
+    font-size: 14px;
+}
+
+.rf-strip__mid,
+.rf-strip__end {
+    display: none;
+}
+
+.rf-strip__end {
+    gap: var(--rf-space-6);
+    align-items: center;
+}
+
+.rf-strip__end a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--rf-mist);
+    text-decoration: none;
+}
+
+.rf-strip__end a:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+}
+
+.rf-strip__end .rf-icon {
+    width: 15px;
+    height: 15px;
+}
+
+@media (min-width: 900px) {
+    .rf-strip__inner {
+        justify-content: space-between;
+    }
+
+    .rf-strip__end {
+        display: flex;
+    }
+
+}
+
+// the middle line joins only where all three fit on one row
+@media (min-width: 1040px) {
+    .rf-strip__mid {
+        display: block;
+        color: var(--rf-limestone-300);
+    }
+
+}
+
+// Header
+// -----------------------------------------------------------------------------
+.rf-head {
+    position: relative;
+    z-index: 50;
+    background: var(--rf-limestone-100);
+    border-bottom: 1px solid var(--rf-limestone-300);
+}
+
+.rf-head__bar {
+    display: grid;
+    align-items: center;
+    column-gap: var(--rf-space-2);
+    grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "menu brand . acct box" "search search search search search";
+    max-width: calc(var(--rf-column-max) + 2 * var(--rf-gutter));
+    margin: 0 auto;
+    padding: var(--rf-space-2) var(--rf-gutter) var(--rf-space-3);
+}
+
+.rf-head__menu {
+    grid-area: menu;
+    display: grid;
+    place-items: center;
+    width: var(--rf-tap-min);
+    height: var(--rf-tap-min);
+    margin-left: -10px;
+    border: 0;
+    background: none;
+    border-radius: var(--rf-radius-md);
+}
+
+.rf-head__menu .rf-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.rf-brand {
+    grid-area: brand;
+    display: block;
+}
+
+.rf-brand__text {
+    font: 780 20px/1 var(--rf-font-display);
+}
+
+.rf-brand img {
+    height: 44px;
+    width: auto;
+    mix-blend-mode: multiply;
+}
+
+.rf-nav {
+    grid-area: nav;
+    display: none;
+}
+
+.rf-search {
+    grid-area: search;
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-top: var(--rf-space-2);
+}
+
+.rf-search > .rf-icon {
+    position: absolute;
+    left: 14px;
+    color: var(--rf-ink-muted);
+    pointer-events: none;
+}
+
+.rf-search input {
+    width: 100%;
+    height: 46px;
+    padding: 0 92px 0 44px;
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-md);
+    background: var(--rf-paper);
+    font-size: 16px;
+    color: var(--rf-ink);
+}
+
+.rf-search input::placeholder {
+    color: var(--rf-ink-muted);
+}
+
+.rf-search input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+}
+
+.rf-search__go {
+    position: absolute;
+    right: 4px;
+    top: 4px;
+    bottom: 4px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: var(--rf-radius-sm);
+    background: var(--rf-ink);
+    color: var(--rf-paper);
+    font-weight: 650;
+    font-size: 15px;
+}
+
+.rf-search__go:hover {
+    background: var(--rf-shale-800);
+}
+
+.rf-head__link,
+.rf-box-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: var(--rf-tap-min);
+    padding: 0 8px;
+    border: 0;
+    border-radius: var(--rf-radius-md);
+    background: none;
+    text-decoration: none;
+    font-weight: 650;
+    font-size: 15px;
+}
+
+.rf-head__link {
+    grid-area: acct;
+}
+
+.rf-box-btn {
+    grid-area: box;
+    margin-right: -8px;
+}
+
+.rf-head__link:hover,
+.rf-box-btn:hover {
+    background: var(--rf-limestone-200);
+}
+
+// Phones show the icons alone; the words stay for screen readers, so Account and Box keep names
+.rf-head__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.rf-box-btn__count {
+    min-width: 24px;
+    height: 24px;
+    padding: 0 6px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--rf-radius-pill);
+    background: var(--rf-limestone-300);
+    color: var(--rf-ink);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.rf-box-btn.has-flies .rf-box-btn__count {
+    background: var(--rf-copper);
+    color: var(--rf-on-copper);
+}
+
+.rf-box-btn.is-bumped .rf-box-btn__count {
+    animation: rf-bump 420ms var(--rf-settle);
+}
+
+@keyframes rf-bump {
+    0% {
+        transform: scale(1);
+    }
+
+    35% {
+        transform: scale(1.22);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+
+}
+
+@media (min-width: 640px) {
+    .rf-head__bar {
+        grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+        grid-template-areas: "menu brand search acct box";
+        column-gap: var(--rf-space-4);
+        padding: var(--rf-space-3) var(--rf-gutter);
+    }
+
+    .rf-search {
+        margin: 0 0 0 var(--rf-space-4);
+        max-width: 560px;
+    }
+
+    .rf-head__label {
+        position: static;
+        width: auto;
+        height: auto;
+        overflow: visible;
+        clip-path: none;
+    }
+
+}
+
+// desktop: two rows; the top row scrolls away and the navigation row stays
+@media (min-width: 1040px) {
+    .rf-head {
+        position: sticky;
+        top: calc(-1 * var(--rf-head-top));
+    }
+
+    .rf-head__bar {
+        grid-template-columns: auto minmax(0, 1fr) auto auto;
+        grid-template-rows: var(--rf-head-top) 52px;
+        grid-template-areas: "brand search acct box" "nav nav nav nav";
+        padding: 0 var(--rf-gutter);
+        column-gap: var(--rf-space-6);
+    }
+
+    .rf-head__menu {
+        display: none;
+    }
+
+    .rf-brand img {
+        height: 52px;
+    }
+
+    .rf-search {
+        justify-self: center;
+        width: 100%;
+        max-width: 620px;
+        margin: 0;
+    }
+
+    .rf-nav {
+        display: block;
+        align-self: stretch;
+        margin: 0 calc(-1 * var(--rf-space-3));
+    }
+
+}
+
+.rf-nav__list {
+    display: flex;
+    height: 100%;
+    align-items: stretch;
+}
+
+.rf-nav__item {
+    display: flex;
+}
+
+.rf-nav__item--aside {
+    margin-left: auto;
+}
+
+.rf-nav__btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 var(--rf-space-3);
+    border: 0;
+    background: none;
+    text-decoration: none;
+    font-weight: 650;
+    font-size: 15px;
+    white-space: nowrap;
+}
+
+.rf-nav__btn::after {
+    content: "";
+    position: absolute;
+    left: var(--rf-space-3);
+    right: var(--rf-space-3);
+    bottom: -1px;
+    height: 3px;
+    border-radius: 2px 2px 0 0;
+    background: var(--rf-ink);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--rf-settle);
+}
+
+.rf-nav__btn:hover::after,
+.rf-nav__btn[aria-expanded="true"]::after {
+    transform: scaleX(1);
+}
+
+.rf-nav__item--aside .rf-nav__btn {
+    color: var(--rf-ink-muted);
+}
+
+.rf-nav__chev {
+    width: 16px;
+    height: 16px;
+    transition: transform var(--rf-settle);
+}
+
+.rf-nav__btn[aria-expanded="true"] .rf-nav__chev {
+    transform: rotate(180deg);
+}
+
+// mega menu: full width under the header
+.rf-mega {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    z-index: 2;
+    background: var(--rf-limestone-100);
+    border-top: 1px solid var(--rf-limestone-300);
+    box-shadow: var(--rf-shadow-drop);
+}
+
+.rf-mega__inner {
+    max-width: calc(var(--rf-column-max) + 2 * var(--rf-gutter));
+    margin: 0 auto;
+    padding: var(--rf-space-8) var(--rf-gutter) var(--rf-space-8);
+}
+
+.rf-mega__inner--flies {
+    display: grid;
+    grid-template-columns: 272px minmax(0, 1fr);
+    gap: var(--rf-space-8);
+}
+
+.rf-mega__rail {
+    display: grid;
+    gap: 2px;
+    align-content: start;
+    padding-right: var(--rf-space-8);
+    border-right: 1px solid var(--rf-limestone-300);
+}
+
+.rf-mega__type {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 18px;
+    align-items: center;
+    gap: var(--rf-space-3);
+    min-height: 48px;
+    padding: 0 var(--rf-space-3);
+    border-radius: var(--rf-radius-md);
+    text-decoration: none;
+    font-weight: 650;
+    font-size: 16px;
+}
+
+.rf-mega__n {
+    color: var(--rf-ink-muted);
+    font-size: 15px;
+}
+
+.rf-mega__go {
+    width: 18px;
+    height: 18px;
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity var(--rf-settle), transform var(--rf-settle);
+}
+
+.rf-mega__type.is-active {
+    background: var(--rf-paper);
+    box-shadow: var(--rf-shadow-plain);
+}
+
+.rf-mega__type.is-active .rf-mega__go {
+    opacity: 1;
+    transform: none;
+}
+
+.rf-mega__pane {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 400px);
+    gap: var(--rf-space-8);
+    align-items: start;
+}
+
+.rf-mega__head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--rf-space-3);
+    margin-bottom: var(--rf-space-4);
+}
+
+.rf-mega__head a {
+    font: 760 24px/1.15 var(--rf-font-display);
+    letter-spacing: -0.01em;
+    text-decoration: none;
+}
+
+.rf-mega__head a:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 2px;
+}
+
+.rf-mega__head > span {
+    color: var(--rf-ink-muted);
+    font-size: 14px;
+}
+
+.rf-mega__kids {
+    columns: 2;
+    column-gap: var(--rf-space-8);
+}
+
+.rf-mega__kids li {
+    break-inside: avoid;
+}
+
+.rf-mega__kids a {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--rf-space-3);
+    padding: 9px 0;
+    border-bottom: 1px solid var(--rf-limestone-300);
+    text-decoration: none;
+    font-size: 15px;
+}
+
+.rf-mega__kids a .rf-num {
+    color: var(--rf-ink-muted);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.rf-mega__kids a:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+}
+
+.rf-mega__plate {
+    position: relative;
+    display: block;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: var(--rf-radius-md);
+    background: var(--rf-shale-900);
+    box-shadow: var(--rf-shadow-plain);
+}
+
+.rf-mega__plate img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.rf-mega__plate::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(0deg, rgba(28, 25, 22, 0.85), rgba(28, 25, 22, 0) 55%);
+}
+
+.rf-mega__plate-name {
+    position: absolute;
+    z-index: 1;
+    left: var(--rf-space-4);
+    bottom: var(--rf-space-3);
+    color: var(--rf-mist);
+    font: 720 17px/1.2 var(--rf-font-text);
+}
+
+.rf-mega__plate--rf-paper {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--rf-space-2);
+    padding: var(--rf-space-3) var(--rf-space-3) var(--rf-space-12);
+    background: var(--rf-paper);
+}
+
+.rf-mega__plate--rf-paper img {
+    object-fit: contain;
+}
+
+.rf-mega__plate--rf-paper::after {
+    background: linear-gradient(0deg, rgba(28, 25, 22, 0.86) 0, rgba(28, 25, 22, 0.86) 44px, rgba(28, 25, 22, 0) 44px);
+}
+
+.rf-mega__more {
+    border-top: 1px solid var(--rf-limestone-300);
+    background: var(--rf-limestone-200);
+}
+
+.rf-mega__more-inner {
+    display: flex;
+    align-items: center;
+    gap: var(--rf-space-6);
+    max-width: calc(var(--rf-column-max) + 2 * var(--rf-gutter));
+    margin: 0 auto;
+    padding: var(--rf-space-3) var(--rf-gutter);
+}
+
+.rf-mega__more p {
+    color: var(--rf-ink-muted);
+    font-size: 14px;
+}
+
+.rf-mega__more ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--rf-space-2) var(--rf-space-6);
+}
+
+.rf-mega__more a {
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.rf-mega__more a .rf-num {
+    color: var(--rf-ink-muted);
+    font-size: 14px;
+}
+
+.rf-mega__more a:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+}
+
+.rf-mega__inner--species {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(280px, 360px);
+    gap: var(--rf-space-12);
+}
+
+.rf-mega__group {
+    margin-bottom: var(--rf-space-3);
+    color: var(--rf-ink-muted);
+    font-size: 14px;
+    font-weight: 650;
+}
+
+.rf-mega__splist {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    column-gap: var(--rf-space-8);
+}
+
+.rf-mega__splist a {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--rf-space-3);
+    padding: 10px 0;
+    border-bottom: 1px solid var(--rf-limestone-300);
+    text-decoration: none;
+    font: 700 17px/1.25 var(--rf-font-text);
+}
+
+.rf-mega__splist a .rf-num {
+    color: var(--rf-ink-muted);
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.rf-mega__splist a:hover span:first-child {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+}
+
+.rf-mega__hatch {
+    display: grid;
+    align-content: start;
+    gap: var(--rf-space-2);
+    padding: var(--rf-space-6);
+    border-radius: var(--rf-radius-md);
+    background: var(--rf-limestone-200);
+    text-decoration: none;
+}
+
+.rf-mega__hatch-title {
+    font: 760 22px/1.15 var(--rf-font-display);
+    letter-spacing: -0.01em;
+}
+
+.rf-mega__hatch-line {
+    color: var(--rf-ink-muted);
+}
+
+.rf-mega__hatch-go {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: var(--rf-space-2);
+    font-weight: 650;
+    text-decoration: underline;
+    text-decoration-color: var(--rf-edge);
+    text-underline-offset: 0.25em;
+}
+
+.rf-mega__hatch:hover .rf-mega__hatch-go {
+    text-decoration-color: currentColor;
+}
+
+.rf-mega-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(28, 25, 22, 0.32);
+    animation: rf-fade 220ms ease-out;
+}
+
+@keyframes rf-fade {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+
+}
+
+// phone and tablet drawer
+.rf-drawer {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    background: rgba(28, 25, 22, 0.45);
+}
+
+.rf-drawer__panel {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: #{"min(420px, 90vw)"};
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--rf-limestone-100);
+    box-shadow: var(--rf-shadow-lift);
+    padding-bottom: var(--rf-space-12);
+    animation: rf-slide var(--rf-drawer) var(--rf-ease);
+}
+
+@keyframes rf-slide {
+    from {
+        transform: translateX(-24px);
+        opacity: 0.4;
+    }
+
+    to {
+        transform: none;
+        opacity: 1;
+    }
+
+}
+
+.rf-drawer__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--rf-space-2) var(--rf-space-2) var(--rf-space-2) var(--rf-space-4);
+    border-bottom: 1px solid var(--rf-limestone-300);
+}
+
+.rf-drawer__title {
+    font: 760 20px/1 var(--rf-font-display);
+}
+
+.rf-drawer__close {
+    display: grid;
+    place-items: center;
+    width: var(--rf-tap-min);
+    height: var(--rf-tap-min);
+    border: 0;
+    background: none;
+    border-radius: var(--rf-radius-md);
+}
+
+.rf-drawer__group > summary,
+.rf-drawer__links a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 56px;
+    padding: 0 var(--rf-space-4);
+    border-bottom: 1px solid var(--rf-limestone-300);
+    font: 700 18px/1.2 var(--rf-font-text);
+    text-decoration: none;
+    list-style: none;
+    cursor: pointer;
+}
+
+.rf-drawer summary::-webkit-details-marker {
+    display: none;
+}
+
+.rf-drawer__chev {
+    transition: transform var(--rf-settle);
+}
+
+details[open] > summary .rf-drawer__chev {
+    transform: rotate(180deg);
+}
+
+.rf-drawer__list {
+    background: var(--rf-limestone-200);
+}
+
+.rf-drawer__sub > summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 20px;
+    gap: var(--rf-space-3);
+    align-items: center;
+    min-height: 52px;
+    padding: 0 var(--rf-space-4) 0 var(--rf-space-6);
+    border-bottom: 1px solid var(--rf-limestone-300);
+    font-weight: 650;
+    list-style: none;
+    cursor: pointer;
+}
+
+.rf-drawer__sub > summary .rf-num {
+    color: var(--rf-ink-muted);
+    font-size: 15px;
+}
+
+.rf-drawer__sub ul {
+    padding: var(--rf-space-2) 0 var(--rf-space-3);
+    background: var(--rf-limestone-100);
+}
+
+.rf-drawer__sub ul a,
+.rf-drawer__list--plain a {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: var(--rf-tap-min);
+    padding: 0 var(--rf-space-4) 0 var(--rf-space-8);
+    text-decoration: none;
+}
+
+.rf-drawer__list--plain a {
+    padding-left: var(--rf-space-6);
+    border-bottom: 1px solid var(--rf-limestone-300);
+    font-weight: 600;
+}
+
+.rf-drawer__list--plain .rf-num {
+    color: var(--rf-ink-muted);
+    font-size: 15px;
+}
+
+.rf-drawer__all {
+    font-weight: 700;
+    text-decoration: underline !important;
+    text-underline-offset: 0.2em;
+}
+
+.rf-drawer__call {
+    display: flex;
+    gap: var(--rf-space-2);
+    align-items: center;
+    padding: var(--rf-space-6) var(--rf-space-4) 0;
+    color: var(--rf-ink-muted);
+    font-size: 15px;
+}
+
+.rf-drawer__call a {
+    color: var(--rf-ink);
+    font-weight: 650;
+}

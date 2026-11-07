@@ -1,0 +1,5 @@
+{{!--
+    A category's product count, as BigCommerce reports it, in the numerals' cut. Shown only while
+    rf_counts is on (Theme Styles, Menu; the page variable head.html sets from it). A parent's count is BigCommerce's sum over its
+    subcategories, so a fly filed in two of them counts twice there. Thousands take a comma.
+--}}{{#if (getVar 'rf_counts')}}{{#if n}}<span class="rf-num{{#if class}} {{class}}{{/if}}">{{addCommas n}}</span>{{/if}}{{/if}}

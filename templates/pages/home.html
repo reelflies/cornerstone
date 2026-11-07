@@ -1,45 +1,42 @@
 ---
 products:
-    new:
-        limit: {{theme_settings.homepage_new_products_count}}
-    featured:
-        limit: {{theme_settings.homepage_featured_products_count}}
     top_sellers:
-        limit: {{theme_settings.homepage_top_products_count}}
-carousel: {{theme_settings.homepage_show_carousel}}
-blog:
-    recent_posts:
-        limit: {{theme_settings.homepage_blog_posts_count}}
+        limit: 6
+gql: "query RfHome {
+  site {
+    best: bestSellingProducts(first: 6) { edges { node { ...RfFly ...RfSizes } } }
+    hatch: products(entityIds: [0,{{theme_settings.rf_hatch_midges}},{{theme_settings.rf_hatch_black_stone}},{{theme_settings.rf_hatch_bwo}},{{theme_settings.rf_hatch_hendrickson}},{{theme_settings.rf_hatch_caddis}},{{theme_settings.rf_hatch_march_brown}},{{theme_settings.rf_hatch_sulphur}},{{theme_settings.rf_hatch_hex}},{{theme_settings.rf_hatch_trico}},{{theme_settings.rf_hatch_hoppers}}], first: 50) { edges { node { ...RfFly } } }
+    sig: products(entityIds: [0,{{theme_settings.rf_home_signature_id}}], first: 1) { edges { node { ...RfFly } } }
+    sel: products(entityIds: [0,{{theme_settings.rf_home_selection_ids}}], first: 8) { edges { node { ...RfFly } } }
+  }
+}
+fragment RfFly on Product {
+  entityId name path brand { name }
+  prices { price { value } }
+  defaultImage { small: url(width: 160) card: url(width: 360) large: url(width: 720) }
+  productOptions(first: 2) { edges { node { entityId displayName ... on MultipleChoiceOption { values(first: 30) { edges { node { entityId label } } } } } } }
+}
+fragment RfSizes on Product {
+  variants(first: 30) { edges { node { entityId isPurchasable inventory { isInStock } options(first: 1) { edges { node { entityId values(first: 1) { edges { node { entityId label } } } } } } } } }
+}"
 ---
+{{!--
+    ReelFlies hook (Streamside Stone): the stock home page's carousel, product bands and Page
+    Builder regions are replaced by the ReelFlies home page (components/reelflies/home.html).
+    The front matter loads the six best sellers (products.top_sellers) and, through GraphQL, their
+    sizes and stock (best), the hatch chart's flies (hatch), the Signature fly (sig) and the
+    Selections (sel), from the Home page and Hatch chart settings. Front matter only fills in
+    plain values, so every id list is written after a 0: an empty setting leaves [0,], which
+    GraphQL reads as [0] and matches nothing, where [] would match every product. The shipping
+    messages stay stock, above the stone. CUSTOMIZATIONS.md.
+--}}
 {{#partial "hero"}}
-    {{{region name="home_below_menu"}}}
-    {{#and carousel carousel.slides.length}}
-        {{> components/carousel arrows=theme_settings.homepage_show_carousel_arrows play_pause_button=theme_settings.homepage_show_carousel_play_pause_button}}
-    {{/and}}
-    {{{region name="home_below_carousel"}}}
-{{/partial}}
-
-{{#partial "page"}}
-
     {{#each shipping_messages}}
         {{> components/common/alert/alert-info message}}
     {{/each}}
-
-<div class="main full">
-    {{#if products.featured}}
-        {{> components/products/featured products=products.featured columns=theme_settings.homepage_featured_products_column_count}}
-    {{/if}}
-    {{{region name="home_below_featured_products"}}}
-
-    {{#if products.top_sellers}}
-        {{> components/products/top products=products.top_sellers columns=theme_settings.homepage_top_products_column_count}}
-    {{/if}}
-    {{{region name="home_below_top_products"}}}
-
-    {{#if products.new}}
-        {{> components/products/new products=products.new columns=theme_settings.homepage_new_products_column_count}}
-    {{/if}}
-    {{{region name="home_below_new_products"}}}
-</div>
+    {{> components/reelflies/home}}
+    <script type="application/json" data-rf-sizes-seed>{{{json gql.data.site.best}}}</script>
 {{/partial}}
+
+{{#partial "page"}}{{/partial}}
 {{> layout/base}}

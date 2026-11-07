@@ -1,0 +1,109 @@
+{{!--
+    How one category draws in each place it appears, for cats.html (rf_cat, rf_pos from 0,
+    rf_view). Names are the store's own; a count shows only while rf_counts is on (count.html).
+
+    Header (header.html): rail, pane, also, nav. Drawer: drawer, drawer-link. Footer: foot.
+    Home (home.html): way, plate, row-plate. Hatch chart (hatch.html): hatch-more, hatch-link. Signature and Selections bands: sig-count,
+    sig-all, sel-all.
+--}}
+{{~#if rf_view '===' 'rail'~}}
+<li><a class="rf-mega__type{{#if rf_pos '==' 0}} is-active{{/if}}" href="{{rf_cat.url}}" data-rf-pane-for="{{rf_cat.id}}"><span>{{rf_cat.name}}</span>{{> components/reelflies/count n=rf_cat.count class='rf-mega__n'}}{{> components/reelflies/icon name='arrow' class='rf-mega__go'}}</a></li>
+{{~/if~}}
+
+{{~#if rf_view '===' 'pane'~}}
+<div class="rf-mega__pane{{#unless rf_cat.image}} rf-mega__pane--bare{{/unless}}" data-rf-pane="{{rf_cat.id}}"{{#if rf_pos '!=' 0}} hidden{{/if}}>
+    <div>
+        <p class="rf-mega__head"><a href="{{rf_cat.url}}">{{rf_cat.name}}</a>{{#if (getVar 'rf_counts')}}{{#if rf_cat.count}} <span>{{> components/reelflies/count n=rf_cat.count}} {{lang 'reelflies.menu.patterns'}}</span>{{/if}}{{/if}}</p>
+        {{#if rf_cat.children.length}}
+        <ul class="rf-mega__kids">
+            {{#each rf_cat.children}}<li><a href="{{url}}"><span>{{name}}</span>{{> components/reelflies/count n=count}}</a></li>{{/each}}
+        </ul>
+        {{/if}}
+    </div>
+    {{#if rf_cat.image}}
+    <a class="rf-mega__plate" href="{{rf_cat.url}}" tabindex="-1" aria-hidden="true">
+        <img src="{{getImage rf_cat.image '800x800'}}" srcset="{{getImageSrcset rf_cat.image use_default_sizes=true}}" sizes="400px" width="800" height="350" alt="" loading="lazy" decoding="async">
+        <span class="rf-mega__plate-name">{{lang 'reelflies.menu.all' name=rf_cat.name}}</span>
+    </a>
+    {{/if}}
+</div>
+{{~/if~}}
+
+{{~#if rf_view '===' 'also'~}}
+<li><a href="{{rf_cat.url}}">{{rf_cat.name}} {{> components/reelflies/count n=rf_cat.count}}</a></li>
+{{~/if~}}
+
+{{~#if rf_view '===' 'nav'~}}
+<li class="rf-nav__item"><a class="rf-nav__btn" href="{{rf_cat.url}}">{{rf_cat.name}}</a></li>
+{{~/if~}}
+
+{{~#if rf_view '===' 'drawer'~}}
+{{#if rf_cat.children.length}}
+<li><details class="rf-drawer__sub"><summary><span>{{rf_cat.name}}</span>{{> components/reelflies/count n=rf_cat.count}}{{> components/reelflies/icon name='chevron' class='rf-drawer__chev'}}</summary>
+    <ul>{{#each rf_cat.children}}<li><a href="{{url}}">{{name}}</a></li>{{/each}}<li><a class="rf-drawer__all" href="{{rf_cat.url}}">{{lang 'reelflies.menu.all' name=rf_cat.name}}</a></li></ul>
+</details></li>
+{{else}}
+<li><a class="rf-drawer__row" href="{{rf_cat.url}}"><span>{{rf_cat.name}}</span>{{> components/reelflies/count n=rf_cat.count}}</a></li>
+{{/if}}
+{{~/if~}}
+
+{{~#if rf_view '===' 'drawer-link'~}}
+<li><a href="{{rf_cat.url}}">{{rf_cat.name}}</a></li>
+{{~/if~}}
+
+{{~#if rf_view '===' 'foot'~}}
+<li><a href="{{rf_cat.url}}">{{rf_cat.name}}</a></li>
+{{~/if~}}
+
+{{~#if rf_view '===' 'way'~}}
+<li><a class="rf-way" href="{{rf_cat.url}}" data-rf-way="{{rf_cat.id}}" data-rf-way-name="{{rf_cat.name}}"{{#if (getVar 'rf_counts')}} data-rf-count="{{rf_cat.count}}"{{/if}}>{{rf_cat.name}}{{> components/reelflies/count n=rf_cat.count class='rf-way__n'}}</a></li>
+{{~/if~}}
+
+{{~#if rf_view '===' 'plate'~}}
+{{#if rf_pos '<' 3}}
+<li class="rf-plate">
+    <a class="rf-plate__photo" href="{{rf_cat.url}}">
+        {{#if rf_cat.image}}<img src="{{getImage rf_cat.image '800x800'}}" srcset="{{getImageSrcset rf_cat.image use_default_sizes=true}}" sizes="(min-width: 1040px) 420px, (min-width: 640px) 50vw, 100vw" width="1600" height="700" alt="" loading="lazy" decoding="async">{{/if}}
+        <span class="rf-plate__label"><span class="rf-plate__name">{{rf_cat.name}}</span>{{#if (getVar 'rf_counts')}}{{#if rf_cat.count}}<span class="rf-plate__n">{{> components/reelflies/count n=rf_cat.count}} {{lang 'reelflies.menu.patterns'}}</span>{{/if}}{{/if}}</span>
+    </a>
+    {{#if rf_cat.children.length}}
+    <ul class="rf-plate__kids">{{#each (limit rf_cat.children 5)}}<li><a href="{{url}}">{{name}}</a></li>{{/each}}<li><a class="rf-plate__all" href="{{rf_cat.url}}">{{lang 'reelflies.menu.all' name=rf_cat.name}}{{> components/reelflies/icon name='arrow'}}</a></li></ul>
+    {{/if}}
+</li>
+{{/if}}
+{{~/if~}}
+
+{{~#if rf_view '===' 'row-plate'~}}
+{{#if rf_pos '>=' 3}}
+<li class="rf-row-plate">
+    <a class="rf-row-plate__link" href="{{rf_cat.url}}">
+        <span class="rf-row-plate__thumb">{{#if rf_cat.image}}<img src="{{getImage rf_cat.image '320x320'}}" srcset="{{getImageSrcset rf_cat.image use_default_sizes=true}}" sizes="112px" width="800" height="350" alt="" loading="lazy" decoding="async">{{/if}}</span>
+        <span class="rf-row-plate__words"><span class="rf-row-plate__name">{{rf_cat.name}}</span>{{#if (getVar 'rf_counts')}}{{#if rf_cat.count}}<span class="rf-row-plate__n">{{> components/reelflies/count n=rf_cat.count}} {{lang 'reelflies.menu.patterns'}}</span>{{/if}}{{/if}}</span>
+        {{> components/reelflies/icon name='arrow' class='rf-row-plate__go'}}
+    </a>
+    {{#if rf_cat.children.length}}
+    <ul class="rf-row-plate__kids">{{#each (limit rf_cat.children 4)}}<li><a href="{{url}}">{{name}}</a></li>{{/each}}</ul>
+    {{/if}}
+</li>
+{{/if}}
+{{~/if~}}
+
+{{~#if rf_view '===' 'hatch-more'~}}
+<a class="rf-more" href="{{rf_cat.url}}">{{lang 'reelflies.hatch.more' name=rf_cat.name}}{{> components/reelflies/icon name='arrow'}}</a>
+{{~/if~}}
+
+{{~#if rf_view '===' 'hatch-link'~}}
+<a class="rf-hatch__link" href="{{rf_cat.url}}">{{rf_cat.name}}{{> components/reelflies/icon name='arrow' class='rf-hatch__chev'}}</a>
+{{~/if~}}
+
+{{~#if rf_view '===' 'sig-count'~}}
+{{#if (getVar 'rf_counts')}}{{#if rf_cat.count}}<span class="rf-num">{{addCommas rf_cat.count}}</span> {{/if}}{{/if}}
+{{~/if~}}
+
+{{~#if rf_view '===' 'sig-all'~}}
+<a class="rf-more rf-more--on-dark" href="{{rf_cat.url}}">{{lang 'reelflies.home.sig_all'}}{{> components/reelflies/icon name='arrow'}}</a>
+{{~/if~}}
+
+{{~#if rf_view '===' 'sel-all'~}}
+<a class="rf-more" href="{{rf_cat.url}}">{{lang 'reelflies.menu.all' name=rf_cat.name}}{{> components/reelflies/icon name='arrow'}}</a>
+{{~/if~}}

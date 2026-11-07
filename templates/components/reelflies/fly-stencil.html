@@ -1,0 +1,33 @@
+{{!--
+    A specimen card (fly.html) from a Stencil product card (rf_card, such as one of the home page's
+    products.top_sellers): its formatted price, its image at Stencil's sizes, and the "/ fly" rule
+    (fly-rule.html, with rf_exclude, theme setting rf_price_unit_exclude). Its size range comes
+    from the matching GraphQL product in rf_gql (edges, by entityId); with none, the line is empty
+    and quick-add.js fills it once it has the sizes. A product with options always opens the strip,
+    unless it has exactly one size, so a size is never added without the shopper's choice. rf_size and rf_eager are passed through.
+--}}
+{{~assignVar 'rf_sz_first' ''}}{{assignVar 'rf_sz_last' ''}}{{assignVar 'rf_sz_n' 0~}}
+{{~#each rf_gql as |rfEdge|~}}{{~#if rfEdge.node.entityId '==' ../rf_card.id~}}
+{{~#each rfEdge.node.productOptions.edges~}}{{~#if @first~}}{{~#each node.values.edges~}}
+{{~#if @first}}{{assignVar 'rf_sz_first' node.label}}{{/if}}{{#if @last}}{{assignVar 'rf_sz_last' node.label}}{{/if~}}
+{{~assignVar 'rf_sz_n' (add (getVar 'rf_sz_n') 1)~}}
+{{~/each~}}{{~/if~}}{{~/each~}}
+{{~/if~}}{{~/each~}}
+{{> components/reelflies/fly-range}}
+{{~#if rf_card.has_options}}{{#if (getVar 'rf_sz_n') '!=' 1}}{{assignVar 'rf_multi' 1}}{{/if}}{{/if~}}
+{{> components/reelflies/fly-rule rf_categories=rf_card.category rf_exclude=rf_exclude}}
+{{~#if (getVar 'rf_fly')}}{{assignVar 'rf_card_unit' 'fly'}}{{else}}{{assignVar 'rf_card_unit' ''}}{{/if~}}
+{{> components/reelflies/fly
+    rf_id=rf_card.id
+    rf_name=rf_card.name
+    rf_url=rf_card.url
+    rf_price=rf_card.price.without_tax.formatted
+    rf_unit=(getVar 'rf_card_unit')
+    rf_src=(getImage rf_card.image '360x240')
+    rf_srcset=(getImageSrcset rf_card.image use_default_sizes=true)
+    rf_photo_sizes='(min-width: 1040px) 240px, (min-width: 640px) 30vw, 46vw'
+    rf_eager=rf_eager
+    rf_range=(getVar 'rf_range_text')
+    rf_multi=(getVar 'rf_multi')
+    rf_size=rf_size
+}}

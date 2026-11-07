@@ -1,0 +1,34 @@
+{{!--
+    The phone and tablet drawer (DESIGN.md "Phone drawer"), below 1040px: a limestone panel from
+    the left over a shale scrim, opened by the header's Menu button (menu.js). Fly Types open as
+    native disclosures to their subcategories and an "All …" link; Species is one disclosure; then
+    the plain links, the hatch chart, Account and Wholesale, and the phone number at the foot.
+    A modal dialog while open: focus stays inside, Escape and the scrim close it, and focus goes
+    back to Menu.
+--}}
+<div class="rf-drawer" id="rf-drawer" hidden data-rf-drawer>
+    <div class="rf-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="rf-drawer-title">
+        <div class="rf-drawer__head">
+            <p class="rf-drawer__title" id="rf-drawer-title">{{lang 'reelflies.nav.menu'}}</p>
+            <button class="rf-drawer__close" type="button" data-rf-drawer-close>{{> components/reelflies/icon name='close'}}<span class="is-srOnly">{{lang 'reelflies.nav.close_menu'}}</span></button>
+        </div>
+        <nav aria-label="{{lang 'reelflies.nav.menu'}}">
+            {{#if (trim theme_settings.rf_menu_type_ids)}}
+            <details class="rf-drawer__group" open><summary>{{lang 'reelflies.nav.flies'}}{{> components/reelflies/icon name='chevron' class='rf-drawer__chev'}}</summary>
+                <ul class="rf-drawer__list">{{> components/reelflies/cats rf_tree=categories ids=theme_settings.rf_menu_type_ids view='drawer'}}</ul>
+            </details>
+            {{/if}}
+            {{> components/reelflies/species rf_tree=categories view='drawer'}}
+            <ul class="rf-drawer__links">
+                {{> components/reelflies/nav-links rf_tree=categories rf_link_ids=theme_settings.rf_menu_link_ids rf_view='drawer-link'}}
+                <li><a href="{{#if page_type '===' 'default'}}{{else}}{{urls.home}}{{/if}}#hatch" data-rf-drawer-close>{{lang 'reelflies.nav.hatch'}}</a></li>
+                {{#if (trim theme_settings.rf_hook_chart_url)}}<li><a href="{{trim theme_settings.rf_hook_chart_url}}">{{lang 'reelflies.menu.hook_chart'}}</a></li>{{/if}}
+                <li><a href="{{#if customer}}{{urls.account.index}}{{else}}{{urls.auth.login}}{{/if}}">{{lang 'reelflies.header.account'}}</a></li>
+                {{#if (trim theme_settings.rf_trade_url)}}<li><a href="{{trim theme_settings.rf_trade_url}}">{{lang 'reelflies.nav.trade'}}</a></li>{{/if}}
+            </ul>
+        </nav>
+        {{#if settings.phone_number}}
+        <p class="rf-drawer__call">{{> components/reelflies/icon name='phone'}}<span>{{lang 'reelflies.nav.call'}} <a href="tel:{{#if (trim theme_settings.rf_store_phone)}}{{trim theme_settings.rf_store_phone}}{{else}}{{settings.phone_number}}{{/if}}">{{settings.phone_number}}</a></span></p>
+        {{/if}}
+    </div>
+</div>

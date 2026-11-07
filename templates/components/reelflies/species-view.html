@@ -1,0 +1,57 @@
+{{!--
+    The Species branch (rf_root) in each place, for species.html. With rf_species_salt_ids set,
+    the species split into Freshwater and Saltwater groups; empty, they are one list with no
+    group title.
+
+    nav: the header's Species item and its mega menu, with the hatch card. drawer: the phone
+    drawer's Species group. ways: the stone's "What it catches" (five). band: the moss band's
+    lists (home). foot: one link to the root, in the footer.
+--}}
+{{~#if rf_view '===' 'nav'~}}
+<li class="rf-nav__item" data-rf-mega>
+    <button class="rf-nav__btn" type="button" aria-expanded="false" aria-controls="rf-mega-species">{{lang 'reelflies.nav.species'}}{{> components/reelflies/icon name='chevron' class='rf-nav__chev'}}</button>
+    <div class="rf-mega" id="rf-mega-species" data-rf-mega-panel hidden>
+        <div class="rf-mega__inner rf-mega__inner--species">
+            {{#if (getVar 'rf_salt_ids')}}
+            <div class="rf-mega__sp"><p class="rf-mega__group">{{lang 'reelflies.species.fresh'}}</p><ul class="rf-mega__splist">{{> components/reelflies/species-list rf_root=rf_root rf_salt=0 rf_view='mega' rf_limit=99}}</ul></div>
+            <div class="rf-mega__sp"><p class="rf-mega__group">{{lang 'reelflies.species.salt'}}</p><ul class="rf-mega__splist">{{> components/reelflies/species-list rf_root=rf_root rf_salt=1 rf_view='mega' rf_limit=99}}</ul></div>
+            {{else}}
+            <div class="rf-mega__sp rf-mega__sp--all"><p class="rf-mega__group"><a href="{{rf_root.url}}">{{rf_root.name}}</a></p><ul class="rf-mega__splist">{{> components/reelflies/species-list rf_root=rf_root rf_salt=0 rf_view='mega' rf_limit=99}}</ul></div>
+            {{/if}}
+            {{> components/reelflies/hatch-card}}
+        </div>
+    </div>
+</li>
+{{~/if~}}
+
+{{~#if rf_view '===' 'drawer'~}}
+<details class="rf-drawer__group"><summary>{{lang 'reelflies.nav.species'}}{{> components/reelflies/icon name='chevron' class='rf-drawer__chev'}}</summary>
+    <ul class="rf-drawer__list rf-drawer__list--plain">
+        {{> components/reelflies/species-list rf_root=rf_root rf_salt=0 rf_view='drawer' rf_limit=99}}
+        {{#if (getVar 'rf_salt_ids')}}{{> components/reelflies/species-list rf_root=rf_root rf_salt=1 rf_view='drawer' rf_limit=99}}{{/if}}
+        <li><a class="rf-drawer__all" href="{{rf_root.url}}">{{lang 'reelflies.menu.all' name=rf_root.name}}</a></li>
+    </ul>
+</details>
+{{~/if~}}
+
+{{~#if rf_view '===' 'ways'~}}
+<div class="rf-ways__group">
+    <h2 class="rf-ways__title">{{lang 'reelflies.home.ways_catches'}}</h2>
+    <ul class="rf-ways__list">{{> components/reelflies/species-list rf_root=rf_root rf_salt=0 rf_view='way' rf_limit=5}}<li><a class="rf-way rf-way--all" href="{{rf_root.url}}">{{lang 'reelflies.home.ways_all_species' n=rf_root.children.length}}</a></li></ul>
+</div>
+{{~/if~}}
+
+{{~#if rf_view '===' 'band'~}}
+<div class="rf-species__groups">
+    {{#if (getVar 'rf_salt_ids')}}
+    <div><h3 class="rf-species__group">{{lang 'reelflies.species.fresh'}}</h3><ul class="rf-sp-list">{{> components/reelflies/species-list rf_root=rf_root rf_salt=0 rf_view='band' rf_limit=99}}</ul></div>
+    <div><h3 class="rf-species__group">{{lang 'reelflies.species.salt'}}</h3><ul class="rf-sp-list">{{> components/reelflies/species-list rf_root=rf_root rf_salt=1 rf_view='band' rf_limit=99}}</ul></div>
+    {{else}}
+    <div><ul class="rf-sp-list">{{> components/reelflies/species-list rf_root=rf_root rf_salt=0 rf_view='band' rf_limit=99}}</ul></div>
+    {{/if}}
+</div>
+{{~/if~}}
+
+{{~#if rf_view '===' 'foot'~}}
+<li><a href="{{rf_root.url}}">{{rf_root.name}}</a></li>
+{{~/if~}}

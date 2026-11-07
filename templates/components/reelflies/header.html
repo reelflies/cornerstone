@@ -1,0 +1,78 @@
+{{!--
+    The ReelFlies header (DESIGN.md "Navigation"), in place of the stock <header>
+    (components/common/header.html). Styles: assets/scss/reelflies/_shell.scss. Behaviour:
+    assets/js/theme/reelflies/menu.js (the mega menus and the drawer) and order-line.js (the Box
+    count). Every link is in the server's HTML.
+
+    - The icon sheet and the utility strip come first.
+    - Phones: Menu, the logo, Account and Box in one row, search full width beneath. From 640px
+      search joins the row. From 1040px two rows: the brand row (logo, search, Account, Box),
+      which scrolls away, and the nav row, which stays.
+    - The logo is a link in a plain <a>, never an <h1>: each page's own heading is its only one.
+      It is the store logo (Settings, Logo), multiplied onto the limestone.
+    - The nav row: Flies (the Fly Types, rf_menu_type_ids) and Species (rf_menu_species_root_id)
+      open mega menus; then the plain links (nav-links.html), the hatch chart on the home page,
+      and Wholesale (rf_trade_url) at the right. Flies and Species are buttons that only open
+      their panels; each category inside is a link.
+    - After the drawer, the one polite live region every ReelFlies status message goes through
+      (live-region.js), empty at load so screen readers already watch it.
+    - Box links to the cart; order-line.js opens the box sheet instead while the order line is on
+      the page. Its count is the cart's, in flies once the Cart API has been read.
+--}}
+{{> components/reelflies/icons}}
+{{> components/reelflies/strip}}
+<header class="rf-head" data-rf-head>
+    <div class="rf-head__bar">
+        <button class="rf-head__menu" type="button" aria-expanded="false" aria-controls="rf-drawer" data-rf-drawer-open>{{> components/reelflies/icon name='menu'}}<span class="is-srOnly">{{lang 'reelflies.nav.menu'}}</span></button>
+        <a class="rf-brand" href="{{urls.home}}">
+            {{~#if settings.store_logo.image~}}
+            <img src="{{getImage settings.store_logo.image 'logo_size'}}" srcset="{{getImageSrcset1x2x settings.store_logo.image theme_settings.logo_size}}" width="{{settings.store_logo.image.width}}" height="{{settings.store_logo.image.height}}" alt="{{lang 'reelflies.header.logo_alt' store=settings.store_logo.title}}">
+            {{~else~}}
+            <span class="rf-brand__text">{{settings.store_logo.title}}</span>
+            {{~/if~}}
+        </a>
+        <nav class="rf-nav" aria-label="{{lang 'reelflies.nav.label'}}">
+            <ul class="rf-nav__list">
+                {{#if (trim theme_settings.rf_menu_type_ids)}}
+                <li class="rf-nav__item" data-rf-mega>
+                    <button class="rf-nav__btn" type="button" aria-expanded="false" aria-controls="rf-mega-flies">{{lang 'reelflies.nav.flies'}}{{> components/reelflies/icon name='chevron' class='rf-nav__chev'}}</button>
+                    <div class="rf-mega" id="rf-mega-flies" data-rf-mega-panel hidden>
+                        <div class="rf-mega__inner rf-mega__inner--flies">
+                            <ul class="rf-mega__rail">{{> components/reelflies/cats rf_tree=categories ids=theme_settings.rf_menu_type_ids view='rail'}}</ul>
+                            <div class="rf-mega__panes">{{> components/reelflies/cats rf_tree=categories ids=theme_settings.rf_menu_type_ids view='pane'}}</div>
+                        </div>
+                        {{#or (trim theme_settings.rf_menu_also_ids) (trim theme_settings.rf_hook_chart_url)}}
+                        <div class="rf-mega__more">
+                            <div class="rf-mega__more-inner">
+                                <p>{{lang 'reelflies.menu.also'}}</p>
+                                <ul>
+                                    {{> components/reelflies/cats rf_tree=categories ids=theme_settings.rf_menu_also_ids view='also'}}
+                                    {{#if (trim theme_settings.rf_hook_chart_url)}}<li><a href="{{trim theme_settings.rf_hook_chart_url}}">{{lang 'reelflies.menu.hook_chart'}}</a></li>{{/if}}
+                                </ul>
+                            </div>
+                        </div>
+                        {{/or}}
+                    </div>
+                </li>
+                {{/if}}
+                {{> components/reelflies/species rf_tree=categories view='nav'}}
+                {{> components/reelflies/nav-links rf_tree=categories rf_link_ids=theme_settings.rf_menu_link_ids rf_view='nav'}}
+                <li class="rf-nav__item"><a class="rf-nav__btn" href="{{#if page_type '===' 'default'}}{{else}}{{urls.home}}{{/if}}#hatch" data-rf-mega-close>{{lang 'reelflies.nav.hatch'}}</a></li>
+                {{#if (trim theme_settings.rf_trade_url)}}
+                <li class="rf-nav__item rf-nav__item--aside"><a class="rf-nav__btn" href="{{trim theme_settings.rf_trade_url}}">{{lang 'reelflies.nav.trade'}}</a></li>
+                {{/if}}
+            </ul>
+        </nav>
+        <form class="rf-search" role="search" action="{{urls.search}}" method="get">
+            <label class="is-srOnly" for="rf-search-q">{{lang 'reelflies.search.label'}}</label>
+            {{> components/reelflies/icon name='search'}}
+            <input id="rf-search-q" name="search_query" type="search" placeholder="{{lang 'reelflies.search.placeholder'}}" autocomplete="off" spellcheck="false" enterkeyhint="search">
+            <button class="rf-search__go" type="submit">{{lang 'reelflies.search.go'}}</button>
+        </form>
+        <a class="rf-head__link" href="{{#if customer}}{{urls.account.index}}{{else}}{{urls.auth.login}}{{/if}}">{{> components/reelflies/icon name='user'}}<span class="rf-head__label">{{lang 'reelflies.header.account'}}</span></a>
+        <a class="rf-box-btn" href="{{urls.cart}}" data-rf-box-btn>{{> components/reelflies/icon name='box'}}<span class="rf-head__label">{{lang 'reelflies.header.box'}}</span><span class="rf-box-btn__count rf-num" data-rf-count>0</span><span class="is-srOnly" data-rf-count-label>{{lang 'reelflies.header.count_flies'}}</span></a>
+    </div>
+</header>
+<div class="rf-mega-scrim" data-rf-mega-scrim hidden></div>
+{{> components/reelflies/drawer}}
+<div class="is-srOnly" role="status" aria-live="polite" aria-atomic="true" data-rf-live-region></div>

@@ -1,0 +1,19 @@
+{{!--
+    The Species branch: the category rf_menu_species_root_id names, found at the categories
+    data's first two levels, drawn in one place (species-view.html):
+
+        {{> components/reelflies/species rf_tree=categories view='nav'}}
+
+    `rf_tree` is the page's categories data, as for cats.html. The root's id is the page variable
+    rf_species_root, which head.html sets from the setting. Nothing draws while the setting is empty or names a category the tree doesn't hold. As with
+    cats.html, the view name is kept in a page variable while the loops run.
+--}}
+{{~#if (getVar 'rf_species_root')~}}
+{{~assignVar 'rf_sp_view' view~}}
+{{~#each rf_tree as |rfC1|~}}
+{{~#if rfC1.id '==' (getVar 'rf_species_root')}}{{> components/reelflies/species-view rf_root=rfC1 rf_view=(getVar 'rf_sp_view')}}{{/if~}}
+{{~#each rfC1.children as |rfC2|~}}
+{{~#if rfC2.id '==' (getVar 'rf_species_root')}}{{> components/reelflies/species-view rf_root=rfC2 rf_view=(getVar 'rf_sp_view')}}{{/if~}}
+{{~/each~}}
+{{~/each~}}
+{{~/if~}}

@@ -1,0 +1,430 @@
+// =============================================================================
+// REELFLIES SPECIMEN CARDS (Streamside Stone)
+// =============================================================================
+//
+// The specimen card and its size strip (DESIGN.md "Cards", "Size Strip", "Elevation"): paper,
+// photo as shot, one reserved line, and the copper buy button. On stone and moss a card is
+// seated, lifts on point, and catches the raking light in hand; a fly in the box keeps a
+// copper-lit ring. Markup: components/reelflies/fly.html. Behaviour: quick-add.js.
+//
+// -----------------------------------------------------------------------------
+
+// Specimen cards (fly)
+// -----------------------------------------------------------------------------
+.rf-flies {
+    display: grid;
+    gap: var(--rf-space-4);
+}
+
+.rf-fly {
+    position: relative;
+    min-width: 0;
+}
+
+.rf-fly__card {
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--rf-paper);
+    color: var(--rf-ink);
+    border-radius: var(--rf-radius-md);
+    padding: var(--rf-space-2) var(--rf-space-2) var(--rf-space-3);
+    box-shadow: var(--rf-shadow-plain);
+    transition: box-shadow var(--rf-settle), transform var(--rf-settle), opacity var(--rf-settle);
+}
+
+.rf-fly__photo {
+    display: block;
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    border-radius: var(--rf-radius-sm);
+    background: var(--rf-paper);
+}
+
+.rf-fly__photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.rf-fly__body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: var(--rf-space-2) var(--rf-space-1) 0;
+}
+
+.rf-fly__name {
+    font: 650 15px/1.25 var(--rf-font-text);
+}
+
+.rf-fly__name a {
+    text-decoration: none;
+}
+
+.rf-fly__name a:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+}
+
+.rf-fly__buy {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--rf-space-2);
+    margin-top: auto;
+    padding-top: var(--rf-space-2);
+}
+
+// room for the shortest in-box line; a card too narrow for it puts + Add below, the same on every card at that width
+.rf-fly__meta {
+    flex: 1 1 auto;
+    min-width: 96px;
+}
+
+.rf-fly__price {
+    white-space: nowrap;
+}
+
+.rf-fly__price .rf-num {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.rf-fly__unit,
+.rf-fly__sizes {
+    color: var(--rf-ink-muted);
+    font-size: 13px;
+}
+
+.rf-fly__sizes {
+    white-space: nowrap;
+}
+
+// one reserved line under the price: the size range, or what's in the box once the fly is added.
+// Every card carries it, so adding never moves the layout, and nothing is set over the photo.
+// width 0 + min-width 100%: the line fills the meta but never widens it, so the buy row never re-wraps
+.rf-fly__line {
+    width: 0;
+    min-width: 100%;
+    min-height: 1.5em;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rf-fly.is-in .rf-fly__sizes {
+    display: none;
+}
+
+.rf-fly__inbox {
+    color: var(--rf-copper);
+    font-weight: 650;
+}
+
+.rf-fly__inbox[hidden] {
+    display: none;
+}
+
+.rf-add,
+.rf-buy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--rf-space-1);
+    min-height: 40px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: var(--rf-radius-md);
+    background: var(--rf-copper);
+    color: var(--rf-on-copper);
+    font: 700 15px/1 var(--rf-font-text);
+    white-space: nowrap;
+    text-decoration: none;
+    transition: background-color 160ms ease, transform 120ms ease;
+}
+
+.rf-add:hover,
+.rf-buy:hover {
+    background: var(--rf-copper-deep);
+}
+
+.rf-add:active,
+.rf-buy:active {
+    transform: translateY(1px);
+}
+
+.rf-buy[aria-disabled="true"] {
+    background: var(--rf-shale-800);
+    color: var(--rf-shale-400);
+    pointer-events: none;
+}
+
+.rf-fly.is-open .rf-add {
+    background: var(--rf-ink);
+}
+
+// phones: one consistent buy row, and a full tap target
+@media (max-width: 639px) {
+    .rf-fly__buy {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .rf-add {
+        width: 100%;
+        min-height: var(--rf-tap-min);
+    }
+
+    .rf-row-plate__link {
+        grid-template-columns: 88px minmax(0, 1fr) 20px;
+    }
+
+    .rf-row-plate__kids {
+        padding-left: calc(88px + var(--rf-space-4));
+    }
+
+}
+
+// on stone and moss: seated, lifted, in hand
+.rf-flies--stone .rf-fly__card,
+.rf-flies--moss .rf-fly__card,
+.rf-flies--feature .rf-fly__card {
+    box-shadow: var(--rf-shadow-seat);
+}
+
+.rf-flies--stone .rf-fly:not(.rf-is-open) .rf-fly__card:hover,
+.rf-flies--moss .rf-fly:not(.rf-is-open) .rf-fly__card:hover {
+    box-shadow: var(--rf-shadow-lift);
+    transform: translateY(-3px);
+}
+
+.rf-fly.is-in .rf-fly__card {
+    box-shadow: 0 0 0 2px var(--rf-copper-lit), var(--rf-shadow-plain);
+}
+
+.rf-flies--stone .rf-fly.is-in .rf-fly__card,
+.rf-flies--moss .rf-fly.is-in .rf-fly__card,
+.rf-flies--feature .rf-fly.is-in .rf-fly__card {
+    box-shadow: 0 0 0 2px var(--rf-copper-lit), var(--rf-shadow-seat);
+}
+
+.rf-fly.is-open {
+    z-index: 6;
+}
+
+.rf-fly.is-open .rf-fly__card {
+    transform: translate(-4px, -6px);
+    box-shadow: var(--rf-shadow-light-edge), var(--rf-shadow-rake);
+}
+
+.rf-fly.is-open.is-in .rf-fly__card {
+    box-shadow: var(--rf-shadow-light-edge), 0 0 0 2px var(--rf-copper-lit), var(--rf-shadow-rake);
+}
+
+.rf-flies--stone .rf-fly.is-open::before,
+.rf-flies--moss .rf-fly.is-open::before,
+.rf-flies--feature .rf-fly.is-open::before {
+    content: "";
+    position: absolute;
+    inset: -80px -10px 10px -80px;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(closest-side, rgba(255, 233, 201, 0.42), rgba(255, 233, 201, 0.14) 55%, rgba(255, 233, 201, 0));
+}
+
+.rf-fly.is-shade .rf-fly__card {
+    opacity: 0;
+    transform: translateY(6px);
+}
+
+.rf-fly.is-arriving .rf-fly__card {
+    animation: rf-arrive 380ms var(--rf-settle) both;
+}
+
+.rf-fly.is-arriving:nth-child(2) .rf-fly__card {
+    animation-delay: 40ms;
+}
+
+.rf-fly.is-arriving:nth-child(3) .rf-fly__card {
+    animation-delay: 80ms;
+}
+
+.rf-fly.is-arriving:nth-child(4) .rf-fly__card {
+    animation-delay: 120ms;
+}
+
+.rf-fly.is-arriving:nth-child(5) .rf-fly__card {
+    animation-delay: 160ms;
+}
+
+.rf-fly.is-arriving:nth-child(6) .rf-fly__card {
+    animation-delay: 200ms;
+}
+
+@keyframes rf-arrive {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+
+}
+
+// the size strip: opens under the card, over what's below it
+.rf-fly__sizes-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% - 4px);
+    z-index: 3;
+    min-width: 248px;
+    padding: var(--rf-space-3) var(--rf-space-3) var(--rf-space-3);
+    background: var(--rf-paper);
+    border-radius: 0 0 var(--rf-radius-md) var(--rf-radius-md);
+    border-top: 1px solid var(--rf-limestone-300);
+    box-shadow: var(--rf-shadow-rake);
+}
+
+.rf-fly__sizes-panel[hidden] {
+    display: none;
+}
+
+.rf-fly__sizes-panel.is-flip {
+    left: auto;
+    right: 0;
+}
+
+.rf-sizes__hint {
+    margin-bottom: var(--rf-space-2);
+    color: var(--rf-ink-muted);
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.rf-sizes__strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+    gap: 6px;
+}
+
+.rf-sz {
+    display: grid;
+    gap: 2px;
+}
+
+.rf-sz__btn {
+    position: relative;
+    display: grid;
+    grid-template-rows: 22px auto;
+    justify-items: center;
+    align-content: end;
+    gap: 3px;
+    width: 100%;
+    min-height: 54px;
+    padding: 4px 2px 6px;
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-md);
+    background: var(--rf-paper);
+    color: var(--rf-ink);
+    font: 700 17px/1 var(--rf-font-numerals);
+    font-variant-numeric: tabular-nums;
+}
+
+.rf-sz__btn:hover {
+    border-color: var(--rf-ink);
+    background: var(--rf-limestone-100);
+}
+
+.rf-sz__step {
+    align-self: end;
+    width: 3px;
+    height: calc(var(--rf-k, 0.5) * 20px);
+    min-height: 3px;
+    border-radius: 2px;
+    background: var(--rf-shale-400);
+}
+
+.rf-sz__btn.has-count {
+    border-color: var(--rf-copper);
+    box-shadow: inset 0 0 0 1px var(--rf-copper);
+}
+
+.rf-sz__btn.has-count .rf-sz__step {
+    background: var(--rf-copper);
+}
+
+.rf-sz__count {
+    position: absolute;
+    top: -8px;
+    right: -6px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 5px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--rf-radius-pill);
+    background: var(--rf-copper);
+    color: var(--rf-on-copper);
+    font: 700 13px/1 var(--rf-font-numerals);
+}
+
+.rf-sz__btn:disabled {
+    color: var(--rf-shale-400);
+    border-style: dashed;
+    background: var(--rf-limestone-100);
+    text-decoration: line-through;
+    cursor: not-allowed;
+}
+
+.rf-sz__minus {
+    min-height: 28px;
+    border: 0;
+    background: none;
+    color: var(--rf-ink-muted);
+    font: 600 13px/1 var(--rf-font-text);
+    border-radius: var(--rf-radius-sm);
+}
+
+.rf-sz__minus:hover {
+    color: var(--rf-ink);
+    background: var(--rf-limestone-100);
+}
+
+.rf-sizes__foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--rf-space-2);
+    margin-top: var(--rf-space-2);
+    color: var(--rf-ink-muted);
+    font-size: 13px;
+}
+
+.rf-sizes__done {
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-pill);
+    background: none;
+    font-weight: 650;
+    font-size: 14px;
+}
+
+.rf-sizes__done:hover {
+    border-color: var(--rf-ink);
+}
+
+// The reserved "−1" row of a cell whose size isn't in the box
+.rf-sz__minus--none {
+    display: block;
+    visibility: hidden;
+}

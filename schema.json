@@ -3031,6 +3031,365 @@
     ]
   },
   {
+    "name": "i18n.RfReelFlies",
+    "settings": [
+      {
+        "type": "heading",
+        "content": "i18n.RfMenu"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfMenuTypeIds",
+        "force_reload": true,
+        "id": "rf_menu_type_ids"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfMenuSpeciesRootId",
+        "force_reload": true,
+        "id": "rf_menu_species_root_id"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfSpeciesSaltIds",
+        "force_reload": true,
+        "id": "rf_species_salt_ids"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfMenuLinkIds",
+        "force_reload": true,
+        "id": "rf_menu_link_ids"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfMenuExcludeIds",
+        "force_reload": true,
+        "id": "rf_menu_exclude_ids"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfMenuAlsoIds",
+        "force_reload": true,
+        "id": "rf_menu_also_ids"
+      },
+      {
+        "type": "checkbox",
+        "label": "i18n.RfCounts",
+        "force_reload": true,
+        "id": "rf_counts"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHookChartUrl",
+        "force_reload": true,
+        "id": "rf_hook_chart_url"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfTradeUrl",
+        "force_reload": true,
+        "id": "rf_trade_url"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfAltStoreUrl",
+        "force_reload": true,
+        "id": "rf_alt_store_url"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfAltStoreText",
+        "force_reload": true,
+        "id": "rf_alt_store_text"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfAltStoreFoot",
+        "force_reload": true,
+        "id": "rf_alt_store_foot"
+      },
+      {
+        "type": "heading",
+        "content": "i18n.RfProductCards"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfPriceUnitExclude",
+        "force_reload": true,
+        "id": "rf_price_unit_exclude"
+      },
+      {
+        "type": "checkbox",
+        "label": "i18n.RfQuickAdd",
+        "force_reload": true,
+        "id": "rf_quick_add"
+      },
+      {
+        "type": "checkbox",
+        "label": "i18n.RfCartState",
+        "force_reload": true,
+        "id": "rf_cart_state"
+      },
+      {
+        "type": "heading",
+        "content": "i18n.RfOrderLine"
+      },
+      {
+        "type": "checkbox",
+        "label": "i18n.RfOrderLine",
+        "force_reload": true,
+        "id": "rf_order_line"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfFlyBrands",
+        "force_reload": true,
+        "id": "rf_fly_brands"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfShipFreeThreshold",
+        "force_reload": true,
+        "id": "rf_ship_free_threshold"
+      },
+      {
+        "type": "heading",
+        "content": "i18n.RfStoreDetails"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfStoreName",
+        "force_reload": true,
+        "id": "rf_store_name"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfStoreUrl",
+        "force_reload": true,
+        "id": "rf_store_url"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfStoreLegalName",
+        "force_reload": true,
+        "id": "rf_store_legal_name"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfStorePhone",
+        "force_reload": true,
+        "id": "rf_store_phone"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfStoreStreet",
+        "force_reload": true,
+        "id": "rf_store_street"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfStoreLocality",
+        "force_reload": true,
+        "id": "rf_store_locality"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfStoreRegion",
+        "force_reload": true,
+        "id": "rf_store_region"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfStorePostalCode",
+        "force_reload": true,
+        "id": "rf_store_postal_code"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfStoreCountry",
+        "force_reload": true,
+        "id": "rf_store_country"
+      },
+      {
+        "type": "heading",
+        "content": "i18n.RfHome"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHomePriceFrom",
+        "force_reload": true,
+        "id": "rf_home_price_from"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHomeSignatureId",
+        "force_reload": true,
+        "id": "rf_home_signature_id"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHomeSignatureCat",
+        "force_reload": true,
+        "id": "rf_home_signature_cat"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHomeSignatureText",
+        "force_reload": true,
+        "id": "rf_home_signature_text"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHomeSignatureNote",
+        "force_reload": true,
+        "id": "rf_home_signature_note"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHomeSelectionIds",
+        "force_reload": true,
+        "id": "rf_home_selection_ids"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHomeSelectionsCat",
+        "force_reload": true,
+        "id": "rf_home_selections_cat"
+      },
+      {
+        "type": "heading",
+        "content": "i18n.RfHatch"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchMidges",
+        "force_reload": true,
+        "id": "rf_hatch_midges"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchMidgesMore",
+        "force_reload": true,
+        "id": "rf_hatch_midges_more"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchBlackStone",
+        "force_reload": true,
+        "id": "rf_hatch_black_stone"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchBlackStoneMore",
+        "force_reload": true,
+        "id": "rf_hatch_black_stone_more"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchBwo",
+        "force_reload": true,
+        "id": "rf_hatch_bwo"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchBwoMore",
+        "force_reload": true,
+        "id": "rf_hatch_bwo_more"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchHendrickson",
+        "force_reload": true,
+        "id": "rf_hatch_hendrickson"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchHendricksonMore",
+        "force_reload": true,
+        "id": "rf_hatch_hendrickson_more"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchCaddis",
+        "force_reload": true,
+        "id": "rf_hatch_caddis"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchCaddisMore",
+        "force_reload": true,
+        "id": "rf_hatch_caddis_more"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchMarchBrown",
+        "force_reload": true,
+        "id": "rf_hatch_march_brown"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchMarchBrownMore",
+        "force_reload": true,
+        "id": "rf_hatch_march_brown_more"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchSulphur",
+        "force_reload": true,
+        "id": "rf_hatch_sulphur"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchSulphurMore",
+        "force_reload": true,
+        "id": "rf_hatch_sulphur_more"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchHex",
+        "force_reload": true,
+        "id": "rf_hatch_hex"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchHexMore",
+        "force_reload": true,
+        "id": "rf_hatch_hex_more"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchTrico",
+        "force_reload": true,
+        "id": "rf_hatch_trico"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchTricoMore",
+        "force_reload": true,
+        "id": "rf_hatch_trico_more"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchHoppers",
+        "force_reload": true,
+        "id": "rf_hatch_hoppers"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchHoppersMore",
+        "force_reload": true,
+        "id": "rf_hatch_hoppers_more"
+      },
+      {
+        "type": "text",
+        "label": "i18n.RfHatchToTry",
+        "force_reload": true,
+        "id": "rf_hatch_to_try"
+      }
+    ]
+  },
+  {
     "name": "i18n.PaymentButtons",
     "enable": "smartButtons",
     "settings": [

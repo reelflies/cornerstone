@@ -1,6 +1,7 @@
 __webpack_public_path__ = window.__webpack_public_path__; // eslint-disable-line
 
 import Global from './theme/global';
+import reelfliesPageModules from './theme/reelflies/page-modules'; // ReelFlies hook: see customClasses
 
 const getAccount = () => import('./theme/account');
 const getLogin = () => import('./theme/auth');
@@ -52,7 +53,7 @@ const pageClasses = {
     wishlists: () => import('./theme/wishlist'),
 };
 
-const customClasses = {};
+const customClasses = { ...reelfliesPageModules }; // ReelFlies hook: was {}; per-template ReelFlies modules (page-modules.js)
 
 /**
  * This function gets added to the global window and then called

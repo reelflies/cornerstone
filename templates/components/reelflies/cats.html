@@ -1,0 +1,28 @@
+{{!--
+    Draws a list of categories named by id, in the order given, in one of the places a category
+    appears (cat-view.html):
+
+        {{> components/reelflies/cats rf_tree=categories ids=theme_settings.rf_menu_type_ids view='rail'}}
+
+    - `ids` is a theme setting: category ids, comma-separated. Each is found in the categories
+      data at any of its first three levels (tree 1 files the Fly Types under Flies, and the
+      Signature and Clearance categories a level below those), so the channel's Menu Display Depth
+      must be 3 or more. An id the tree doesn't hold draws nothing.
+    - `rf_tree` is the page's categories data, passed in by the caller: inside a page's
+      {{#partial}} block @root is empty, so a partial can't reach it from there.
+    - Every link is in the server's HTML, so it is crawled whether or not a menu is open.
+    - Don't call this from inside a view: the view name is kept in a page variable while the
+      loops run.
+--}}
+{{~assignVar 'rf_cats_view' view~}}
+{{~#each (split ids ',') as |rfId rfPos|~}}
+{{~#each ../rf_tree as |rfC1|~}}
+{{~#if rfC1.id '==' (trim rfId)}}{{> components/reelflies/cat-view rf_cat=rfC1 rf_pos=rfPos rf_view=(getVar 'rf_cats_view')}}{{/if~}}
+{{~#each rfC1.children as |rfC2|~}}
+{{~#if rfC2.id '==' (trim rfId)}}{{> components/reelflies/cat-view rf_cat=rfC2 rf_pos=rfPos rf_view=(getVar 'rf_cats_view')}}{{/if~}}
+{{~#each rfC2.children as |rfC3|~}}
+{{~#if rfC3.id '==' (trim rfId)}}{{> components/reelflies/cat-view rf_cat=rfC3 rf_pos=rfPos rf_view=(getVar 'rf_cats_view')}}{{/if~}}
+{{~/each~}}
+{{~/each~}}
+{{~/each~}}
+{{~/each~}}

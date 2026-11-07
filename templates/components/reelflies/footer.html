@@ -1,0 +1,69 @@
+{{!--
+    The ReelFlies footer (DESIGN.md "Footer"), in place of the stock <footer>
+    (components/common/footer.html, below the stock bottom banners). Riverbed shale, mist links.
+    Styles: assets/scss/reelflies/_shell.scss.
+
+    - The newsletter row: the stock form's action and fields, a visible heading and label, and the
+      CASL wording of record (content/pages/1895766/newsletter.json: the line as the heading, the
+      consent under the field), shown while the store's newsletter box is on.
+    - The store: the logo on a paper plate (never straight on shale), the address and phone
+      number from the Store details settings (rf_store_*), walk-ins by appointment.
+    - Fly types (rf_menu_type_ids, then the Species root), More (the menus' plain links and the
+      hook size chart) and Help (the channel's own Web Pages, page-link.html, and the blog).
+    - The base row: the copyright and trademark line, and the other storefront (rf_alt_store_url,
+      rf_alt_store_foot), a real link for every visitor.
+    Then the order line (order-line.html), on every page but the cart.
+--}}
+<footer class="rf-foot" data-rf-foot>
+    <h2 class="is-srOnly">{{lang 'footer.title'}}</h2>
+    {{#if settings.show_newsletter_box}}
+    <div class="rf-wrap rf-foot__news">
+        <form class="rf-news" action="{{urls.subscribe.action}}" method="post">
+            <input type="hidden" name="action" value="subscribe">
+            <input type="hidden" name="nl_first_name" value="bc">
+            <input type="hidden" name="check" value="1">
+            <h3 class="rf-news__title" id="rf-news-title">{{lang 'reelflies.footer.newsletter_line'}}</h3>
+            <label class="is-srOnly" for="nl_email">{{lang 'reelflies.footer.email_label'}}</label>
+            <div class="rf-news__row">
+                <input id="nl_email" name="nl_email" type="email" value="{{customer.email}}" autocomplete="email" placeholder="{{lang 'reelflies.footer.email_placeholder'}}" required aria-describedby="rf-news-consent">
+                <button type="submit">{{lang 'reelflies.footer.subscribe'}}</button>
+            </div>
+            <p class="rf-news__fine" id="rf-news-consent">{{lang 'reelflies.footer.newsletter_consent'}}</p>
+        </form>
+    </div>
+    {{/if}}
+    <div class="rf-wrap rf-foot__grid">
+        <div class="rf-foot__brand">
+            <span class="rf-foot__plate">{{#if settings.store_logo.image}}<img src="{{getImage settings.store_logo.image 'logo_size'}}" width="{{settings.store_logo.image.width}}" height="{{settings.store_logo.image.height}}" alt="{{settings.store_logo.title}}" loading="lazy" decoding="async">{{else}}{{settings.store_logo.title}}{{/if}}</span>
+            {{#if (trim theme_settings.rf_store_street)}}
+            <address>{{lang 'reelflies.footer.address_name' legal=theme_settings.rf_store_legal_name}}<br>{{theme_settings.rf_store_street}}<br>{{theme_settings.rf_store_locality}}, {{theme_settings.rf_store_region}} {{theme_settings.rf_store_postal_code}}</address>
+            {{/if}}
+            <p>{{#if settings.phone_number}}<a href="tel:{{#if (trim theme_settings.rf_store_phone)}}{{trim theme_settings.rf_store_phone}}{{else}}{{settings.phone_number}}{{/if}}">{{settings.phone_number}}</a> {{lang 'reelflies.footer.toll_free'}}<br>{{/if}}{{lang 'reelflies.footer.walk_ins'}}</p>
+        </div>
+        {{#or (trim theme_settings.rf_menu_type_ids) (trim theme_settings.rf_menu_species_root_id)}}
+        <nav aria-labelledby="rf-foot-types"><h3 id="rf-foot-types">{{lang 'reelflies.footer.types'}}</h3><ul>
+            {{> components/reelflies/cats rf_tree=categories ids=theme_settings.rf_menu_type_ids view='foot'}}
+            {{> components/reelflies/species rf_tree=categories view='foot'}}
+        </ul></nav>
+        {{/or}}
+        <nav aria-labelledby="rf-foot-more"><h3 id="rf-foot-more">{{lang 'reelflies.footer.more'}}</h3><ul>
+            {{> components/reelflies/nav-links rf_tree=categories rf_link_ids=theme_settings.rf_menu_link_ids rf_view='foot'}}
+            {{#if (trim theme_settings.rf_hook_chart_url)}}<li><a href="{{trim theme_settings.rf_hook_chart_url}}">{{lang 'reelflies.menu.hook_chart'}}</a></li>{{/if}}
+            {{#if settings.blog_enabled}}<li><a href="{{urls.home}}blog/">{{lang 'reelflies.footer.articles'}}</a></li>{{/if}}
+        </ul></nav>
+        <nav aria-labelledby="rf-foot-help"><h3 id="rf-foot-help">{{lang 'reelflies.footer.help'}}</h3><ul>
+            {{> components/reelflies/page-link path='/shipping-returns/'}}
+            {{> components/reelflies/page-link path='/help/'}}
+            {{> components/reelflies/page-link path='/contact-us/'}}
+            {{> components/reelflies/page-link path='/about-us/'}}
+            {{> components/reelflies/page-link path='/privacy-policy/'}}
+            {{#if settings.gift_certificates_enabled}}<li><a href="{{urls.gift_certificate.purchase}}">{{lang 'reelflies.footer.gift_certificates'}}</a></li>{{/if}}
+        </ul></nav>
+    </div>
+    <div class="rf-wrap rf-foot__base">
+        <p>{{lang 'reelflies.footer.copyright' year=(moment format="YYYY") holder=theme_settings.rf_store_legal_name}}</p>
+        {{#if (trim theme_settings.rf_alt_store_url)}}<p><a href="{{trim theme_settings.rf_alt_store_url}}">{{theme_settings.rf_alt_store_foot}}</a></p>{{/if}}
+    </div>
+    {{{region name="ssl_site_seal--global"}}}
+</footer>
+{{#if theme_settings.rf_order_line}}{{#if template '!==' 'pages/cart'}}{{> components/reelflies/order-line}}{{/if}}{{/if}}

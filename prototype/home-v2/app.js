@@ -106,9 +106,9 @@
       const q = qty(p.id, s);
       const out = p.soldOut.includes(s);
       if (out) {
-        return `<li class="sz"><button class="sz__btn" type="button" disabled aria-label="Size ${s}, sold out"><span class="sz__step" style="--k:${stepFor(s)}"></span><span>${s}</span></button></li>`;
+        return `<li class="sz"><button class="sz__btn" type="button" disabled aria-label="Size ${s}, sold out"><span class="sz__step" style="--k:${stepFor(s)}"></span><span>${s}</span></button><span class="sz__minus sz__minus--none" aria-hidden="true"></span></li>`;
       }
-      return `<li class="sz"><button class="sz__btn${q ? ' has-count' : ''}" type="button" data-size="${s}" aria-label="Add one, size ${s}${q ? `, ${q} in your box` : ''}"><span class="sz__step" style="--k:${stepFor(s)}"></span><span>${s}</span>${q ? `<span class="sz__count">${q}</span>` : ''}</button>${q ? `<button class="sz__minus" type="button" data-minus="${s}" aria-label="Remove one, size ${s}">−1</button>` : ''}</li>`;
+      return `<li class="sz"><button class="sz__btn${q ? ' has-count' : ''}" type="button" data-size="${s}" aria-label="Add one, size ${s}${q ? `, ${q} in your box` : ''}"><span class="sz__step" style="--k:${stepFor(s)}"></span><span>${s}</span>${q ? `<span class="sz__count">${q}</span>` : ''}</button>${q ? `<button class="sz__minus" type="button" data-minus="${s}" aria-label="Remove one, size ${s}">−1</button>` : '<span class="sz__minus sz__minus--none" aria-hidden="true"></span>'}</li>`;
     }).join('');
     const sold = p.soldOut.length ? `<span>${p.soldOut.length === 1 ? `Size ${p.soldOut[0]} is` : `Sizes ${p.soldOut.join(', ')} are`} sold out.</span>` : '<span>Largest hook first.</span>';
     return `<p class="sizes__hint" id="hint-${p.id}">Choose a size to add one. Choose it again for more.</p>

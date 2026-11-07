@@ -1,0 +1,6 @@
+{{!--
+    One size on the hook scale (hatch-chart.html): the authored hook drawn at its relative height
+    (h, in px, 64 for 2/0 down to 12 for 24), its size in the numerals' cut, and a link to that
+    size on the hook size chart (rf_hook_chart_url, the page variable rf_hook_chart; #size-<slug>). A plain item without the chart.
+--}}
+<li>{{#if (getVar 'rf_hook_chart')}}<a href="{{getVar 'rf_hook_chart'}}#size-{{slug}}">{{else}}<span>{{/if}}<svg class="rf-hook" viewBox="0 0 32 64" style="height:{{h}}px" aria-hidden="true" focusable="false"><use href="#rf-i-hook"></use></svg><span class="rf-num">{{size}}</span><span class="is-srOnly"> {{lang 'reelflies.home.hook_size'}}</span>{{#if (getVar 'rf_hook_chart')}}</a>{{else}}</span>{{/if}}</li>

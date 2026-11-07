@@ -1,0 +1,140 @@
+{{!--
+    The home page (prototype/home-v2; DESIGN.md "Region mapping"), the whole of pages/home.html's
+    hero block, full bleed. Styles: assets/scss/reelflies/_home.scss and _fly.scss. Behaviour:
+    assets/js/theme/reelflies/home.js (ways in, the moss lay, this month) and quick-add.js
+    (+ Add and the size strip). Data from home.html's front matter: products.top_sellers and the
+    GraphQL query (gql.data.site: best, hatch, sig, sel). Read inside the page's {{#partial}}
+    block, so every partial gets the data it needs as params.
+
+    Bands, top to bottom:
+    1. The stone (wet shale): the H1, the lead, the ways in (Fly Types and five Species), and the
+       six best sellers laid on the stone under the bin label. The stone photograph is the one
+       eager, high-priority image. Its warm grade (rf-graded) is for the stand-in only.
+    2. Shop by fly type (limestone): three plates, then a row plate for each further Fly Type.
+    3. The hatch chart and the hook scale (dry limestone).
+    4. Species (moss), with the lay of a species' flies from 1040px.
+    5. Signature (wet shale): the band's fly, the hand-written note, the link to all of them.
+    6. Selections (limestone).
+    7. The shop (dry limestone), with the promise and the sign-off.
+    A band whose data is missing (no Fly Types, no Species root, no Signature id) is left out.
+--}}
+<section class="rf-stone" aria-labelledby="rf-stone-title">
+    <picture class="rf-stone__photo">
+        <source media="(max-width: 1039px)" srcset="{{cdn 'img/reelflies/stone/hero-stone-portrait.jpg'}}" width="700" height="1600">
+        <img class="rf-graded" src="{{cdn 'img/reelflies/stone/hero-stone-1600.jpg'}}" width="1600" height="700" alt="" fetchpriority="high" decoding="async">
+    </picture>
+    <div class="rf-stone__inner">
+        <div class="rf-stone__lead">
+            <h1 id="rf-stone-title">{{lang 'reelflies.home.title'}}</h1>
+            <p class="rf-stone__line">{{lang 'reelflies.home.lead_before'}} <span class="rf-num">{{settings.money.currency_token}}{{trim theme_settings.rf_home_price_from}}</span> {{lang 'reelflies.home.lead_after'}}</p>
+            <div class="rf-ways">
+                {{#if (trim theme_settings.rf_menu_type_ids)}}
+                <div class="rf-ways__group">
+                    <h2 class="rf-ways__title">{{lang 'reelflies.home.ways_is'}}</h2>
+                    <ul class="rf-ways__list">{{> components/reelflies/cats rf_tree=categories ids=theme_settings.rf_menu_type_ids view='way'}}</ul>
+                </div>
+                {{/if}}
+                {{> components/reelflies/species rf_tree=categories view='ways'}}
+            </div>
+        </div>
+        {{#if products.top_sellers}}
+        <div class="rf-stone__lay">
+            <div class="rf-lay__head">
+                <h2 class="rf-lay__label" data-rf-lay-title>{{lang 'reelflies.home.best'}}</h2>
+                <a class="rf-lay__all" href="#" data-rf-lay-all hidden><span></span>{{> components/reelflies/icon name='arrow'}}</a>
+            </div>
+            <ul class="rf-flies rf-flies--stone" data-rf-lay>
+                {{#each products.top_sellers}}{{> components/reelflies/fly-stencil rf_card=this rf_gql=../gql.data.site.best.edges rf_exclude=../theme_settings.rf_price_unit_exclude rf_size='sm' rf_eager=1}}{{/each}}
+            </ul>
+        </div>
+        {{/if}}
+    </div>
+</section>
+
+{{#if (trim theme_settings.rf_menu_type_ids)}}
+<section class="rf-types" aria-labelledby="rf-types-title">
+    <div class="rf-wrap">
+        <header class="rf-sec-head">
+            <h2 id="rf-types-title">{{lang 'reelflies.home.types_title'}}</h2>
+            <p>{{lang 'reelflies.home.types_lead'}}</p>
+        </header>
+        <ul class="rf-plates">{{> components/reelflies/cats rf_tree=categories ids=theme_settings.rf_menu_type_ids view='plate'}}</ul>
+        <ul class="rf-row-plates">{{> components/reelflies/cats rf_tree=categories ids=theme_settings.rf_menu_type_ids view='row-plate'}}</ul>
+    </div>
+</section>
+{{/if}}
+
+{{> components/reelflies/hatch-chart}}
+
+{{#if (getVar 'rf_species_root')}}
+<section class="rf-species" aria-labelledby="rf-species-title" data-rf-species>
+    <div class="rf-wrap rf-species__grid">
+        <div class="rf-species__text">
+            <h2 id="rf-species-title">{{lang 'reelflies.home.species_title'}}</h2>
+            <p>{{lang 'reelflies.home.species_lead'}} <span class="rf-species__point">{{lang 'reelflies.home.species_point'}}</span></p>
+            {{> components/reelflies/species rf_tree=categories view='band'}}
+        </div>
+        <div class="rf-species__lay" data-rf-sp-region hidden>
+            <div class="rf-lay__head rf-lay__head--moss">
+                <p class="rf-species__lay-title" data-rf-sp-title></p>
+                <a class="rf-lay__all" href="#" data-rf-sp-all><span></span>{{> components/reelflies/icon name='arrow'}}</a>
+            </div>
+            <ul class="rf-flies rf-flies--moss" data-rf-sp-lay></ul>
+        </div>
+    </div>
+</section>
+{{/if}}
+
+{{#each gql.data.site.sig.edges}}
+<section class="rf-signature" aria-labelledby="rf-sig-title">
+    <img class="rf-signature__photo rf-graded" src="{{cdn 'img/reelflies/stone/fly-type-dry-flies-800.jpg'}}" srcset="{{cdn 'img/reelflies/stone/fly-type-dry-flies-800.jpg'}} 800w, {{cdn 'img/reelflies/stone/fly-type-dry-flies-1600.jpg'}} 1600w" sizes="100vw" width="1600" height="700" alt="" loading="lazy" decoding="async">
+    <div class="rf-wrap rf-signature__grid">
+        <div class="rf-signature__text">
+            <h2 id="rf-sig-title">{{lang 'reelflies.home.sig_title'}}</h2>
+            <p>{{#if (trim ../theme_settings.rf_home_signature_cat)}}{{> components/reelflies/cats rf_tree=../categories ids=../theme_settings.rf_home_signature_cat view='sig-count'}}{{/if}}{{lang 'reelflies.home.sig_count'}} {{../theme_settings.rf_home_signature_text}}</p>
+            {{#if (trim ../theme_settings.rf_home_signature_cat)}}{{> components/reelflies/cats rf_tree=../categories ids=../theme_settings.rf_home_signature_cat view='sig-all'}}{{/if}}
+        </div>
+        <div class="rf-signature__lay">
+            {{#if (trim ../theme_settings.rf_home_signature_note)}}<p class="rf-signature__note" aria-hidden="true">{{../theme_settings.rf_home_signature_note}}<svg viewBox="0 0 90 60" class="rf-signature__arrow" focusable="false"><path d="M4 8c22 2 46 10 60 30 4 6 7 11 8 16M58 44l14 11 4-17"/></svg></p>{{/if}}
+            <ul class="rf-flies rf-flies--feature">{{> components/reelflies/fly-gql rf_node=node rf_size='lg' rf_unit='fly'}}</ul>
+        </div>
+    </div>
+</section>
+{{/each}}
+
+{{#if gql.data.site.sel.edges.length}}
+<section class="rf-selections" aria-labelledby="rf-sel-title">
+    <div class="rf-wrap">
+        <header class="rf-sec-head rf-sec-head--split">
+            <h2 id="rf-sel-title">{{lang 'reelflies.home.sel_title'}}</h2>
+            <p>{{lang 'reelflies.home.sel_lead'}}</p>
+        </header>
+        <ul class="rf-flies rf-flies--grid">
+            {{#each (split theme_settings.rf_home_selection_ids ',') as |rfId|}}{{#each ../gql.data.site.sel.edges as |rfEdge|}}{{#if rfEdge.node.entityId '==' (trim rfId)}}{{> components/reelflies/fly-gql rf_node=rfEdge.node rf_size='md' rf_unit='set'}}{{/if}}{{/each}}{{/each}}
+        </ul>
+        {{#if (trim theme_settings.rf_home_selections_cat)}}{{> components/reelflies/cats rf_tree=categories ids=theme_settings.rf_home_selections_cat view='sel-all'}}{{/if}}
+    </div>
+</section>
+{{/if}}
+
+<section class="rf-shop" aria-labelledby="rf-shop-title">
+    <div class="rf-wrap rf-shop__grid">
+        <figure class="rf-shop__photo">
+            <img src="{{cdn 'img/reelflies/shop-front.jpg'}}" width="600" height="450" alt="{{lang 'reelflies.home.shop_alt'}}" loading="lazy" decoding="async">
+            <figcaption>{{lang 'reelflies.home.shop_caption'}}</figcaption>
+        </figure>
+        <div class="rf-shop__text">
+            <h2 id="rf-shop-title">{{lang 'reelflies.home.shop_title'}}</h2>
+            <p class="rf-shop__lead">{{lang 'reelflies.home.shop_lead'}}</p>
+            <dl class="rf-facts">
+                <div><dt>{{lang 'reelflies.home.fact_range'}}</dt><dd>{{lang 'reelflies.home.fact_range_text'}}</dd></div>
+                <div><dt>{{lang 'reelflies.home.fact_hooks'}}</dt><dd>{{lang 'reelflies.home.fact_hooks_text'}}</dd></div>
+                <div><dt>{{lang 'reelflies.home.fact_trade'}}</dt><dd>{{lang 'reelflies.home.fact_trade_text'}}{{#if (trim theme_settings.rf_trade_url)}} <a href="{{trim theme_settings.rf_trade_url}}">{{lang 'reelflies.home.fact_trade_link'}}</a>.{{/if}}</dd></div>
+            </dl>
+            <p class="rf-promise">{{lang 'reelflies.home.promise'}}</p>
+            {{#if settings.phone_number}}<p class="rf-shop__call">{{> components/reelflies/icon name='phone'}}<span>{{lang 'reelflies.home.call_before'}} <a href="tel:{{#if (trim theme_settings.rf_store_phone)}}{{trim theme_settings.rf_store_phone}}{{else}}{{settings.phone_number}}{{/if}}">{{settings.phone_number}}</a>. {{lang 'reelflies.home.call_after'}}</span></p>{{/if}}
+            <p class="rf-signoff">{{lang 'reelflies.home.signoff'}}</p>
+        </div>
+    </div>
+</section>
+{{#if gql.errors}}<!-- ReelFlies home: the GraphQL query failed, so the bands it feeds are left out. -->{{/if}}

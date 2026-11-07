@@ -6091,6 +6091,189 @@
   "i18n.RfArchivoExpanded": {
     "default": "Archivo Expanded ExtraBold"
   },
+  "i18n.RfReelFlies": {
+    "default": "ReelFlies"
+  },
+  "i18n.RfMenu": {
+    "default": "Menu"
+  },
+  "i18n.RfMenuTypeIds": {
+    "default": "Fly Type category ids, comma-separated, in menu order"
+  },
+  "i18n.RfMenuSpeciesRootId": {
+    "default": "Flies by Species category id"
+  },
+  "i18n.RfSpeciesSaltIds": {
+    "default": "Saltwater species category ids, comma-separated (empty: one list, no groups)"
+  },
+  "i18n.RfMenuLinkIds": {
+    "default": "Category ids for the plain menu links after Flies and Species, comma-separated (empty: the other top-level categories)"
+  },
+  "i18n.RfMenuExcludeIds": {
+    "default": "Top-level category ids to leave out of those plain links, comma-separated"
+  },
+  "i18n.RfMenuAlsoIds": {
+    "default": "Category ids for the Flies menu's \"Also\" row, comma-separated"
+  },
+  "i18n.RfCounts": {
+    "default": "Show product counts beside categories"
+  },
+  "i18n.RfHookChartUrl": {
+    "default": "Hook size chart page path (empty: no link)"
+  },
+  "i18n.RfTradeUrl": {
+    "default": "Wholesale link path (empty: no link)"
+  },
+  "i18n.RfAltStoreUrl": {
+    "default": "The other storefront's URL (empty: no link)"
+  },
+  "i18n.RfAltStoreText": {
+    "default": "The other storefront, in the strip"
+  },
+  "i18n.RfAltStoreFoot": {
+    "default": "The other storefront, in the footer"
+  },
+  "i18n.RfProductCards": {
+    "default": "Product cards"
+  },
+  "i18n.RfPriceUnitExclude": {
+    "default": "Gear and Assortment category names, comma-separated: no \"/ fly\" on their products"
+  },
+  "i18n.RfQuickAdd": {
+    "default": "\"+ Add\" on cards, with the size strip"
+  },
+  "i18n.RfCartState": {
+    "default": "Show what's in the box on the cards"
+  },
+  "i18n.RfOrderLine": {
+    "default": "The order line pinned at the foot, with the box sheet"
+  },
+  "i18n.RfFlyBrands": {
+    "default": "Fly brands, comma-separated: a box of these alone counts in flies and patterns"
+  },
+  "i18n.RfShipFreeThreshold": {
+    "default": "Free standard shipping on fly orders over this many dollars, in Canada (empty: no shipping line)"
+  },
+  "i18n.RfStoreDetails": {
+    "default": "Store details"
+  },
+  "i18n.RfStoreName": {
+    "default": "Store name, such as ReelFlies.ca"
+  },
+  "i18n.RfStoreUrl": {
+    "default": "Store home page URL, with https:// and the closing slash"
+  },
+  "i18n.RfStoreLegalName": {
+    "default": "Legal name of the business"
+  },
+  "i18n.RfStorePhone": {
+    "default": "Phone number, in international form (+1-866-250-4071)"
+  },
+  "i18n.RfStoreStreet": {
+    "default": "Street address"
+  },
+  "i18n.RfStoreLocality": {
+    "default": "City or town"
+  },
+  "i18n.RfStoreRegion": {
+    "default": "Province, as its two-letter code (ON)"
+  },
+  "i18n.RfStorePostalCode": {
+    "default": "Postal code"
+  },
+  "i18n.RfStoreCountry": {
+    "default": "Country, as its two-letter code (CA)"
+  },
+  "i18n.RfHome": {
+    "default": "Home page"
+  },
+  "i18n.RfHomePriceFrom": {
+    "default": "Lowest price per fly, for \"from $0.50 each\""
+  },
+  "i18n.RfHomeSignatureId": {
+    "default": "The Signature band's product id (0: no band)"
+  },
+  "i18n.RfHomeSignatureCat": {
+    "default": "Signature category id, for the band's link and count"
+  },
+  "i18n.RfHomeSignatureText": {
+    "default": "The Signature band's line about its fly"
+  },
+  "i18n.RfHomeSignatureNote": {
+    "default": "The hand-written note beside the Signature fly"
+  },
+  "i18n.RfHomeSelectionIds": {
+    "default": "The Selections band's product ids, comma-separated, in order (empty: no band)"
+  },
+  "i18n.RfHomeSelectionsCat": {
+    "default": "Selections category id, for the band's \"All\" link"
+  },
+  "i18n.RfHatch": {
+    "default": "Hatch chart"
+  },
+  "i18n.RfHatchMidges": {
+    "default": "Midges: product ids, comma-separated"
+  },
+  "i18n.RfHatchMidgesMore": {
+    "default": "Midges: \"More\" category id"
+  },
+  "i18n.RfHatchBlackStone": {
+    "default": "Little black stonefly: product ids, comma-separated"
+  },
+  "i18n.RfHatchBlackStoneMore": {
+    "default": "Little black stonefly: \"More\" category id"
+  },
+  "i18n.RfHatchBwo": {
+    "default": "Blue-winged olive: product ids, comma-separated"
+  },
+  "i18n.RfHatchBwoMore": {
+    "default": "Blue-winged olive: \"More\" category id"
+  },
+  "i18n.RfHatchHendrickson": {
+    "default": "Hendrickson: product ids, comma-separated"
+  },
+  "i18n.RfHatchHendricksonMore": {
+    "default": "Hendrickson: \"More\" category id"
+  },
+  "i18n.RfHatchCaddis": {
+    "default": "Caddis: product ids, comma-separated"
+  },
+  "i18n.RfHatchCaddisMore": {
+    "default": "Caddis: \"More\" category id"
+  },
+  "i18n.RfHatchMarchBrown": {
+    "default": "March brown: product ids, comma-separated"
+  },
+  "i18n.RfHatchMarchBrownMore": {
+    "default": "March brown: \"More\" category id"
+  },
+  "i18n.RfHatchSulphur": {
+    "default": "Sulphur: product ids, comma-separated"
+  },
+  "i18n.RfHatchSulphurMore": {
+    "default": "Sulphur: \"More\" category id"
+  },
+  "i18n.RfHatchHex": {
+    "default": "Hex: product ids, comma-separated"
+  },
+  "i18n.RfHatchHexMore": {
+    "default": "Hex: \"More\" category id"
+  },
+  "i18n.RfHatchTrico": {
+    "default": "Trico: product ids, comma-separated"
+  },
+  "i18n.RfHatchTricoMore": {
+    "default": "Trico: \"More\" category id"
+  },
+  "i18n.RfHatchHoppers": {
+    "default": "Hoppers and terrestrials: product ids, comma-separated"
+  },
+  "i18n.RfHatchHoppersMore": {
+    "default": "Hoppers and terrestrials: \"More\" category id"
+  },
+  "i18n.RfHatchToTry": {
+    "default": "Hatches whose flies are placeholders (\"to try\"), comma-separated: midges, black-stone, bwo, hendrickson, caddis, march-brown, sulphur, hex, trico, hoppers"
+  },
   "i18n.BoltProviderSortingLabel": {
     "default": "Bolt",
     "fr": "Bolt",

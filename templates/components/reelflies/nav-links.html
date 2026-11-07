@@ -1,0 +1,10 @@
+{{!--
+    The menus' plain category links, after Flies and Species (rf_view: nav, drawer-link or foot):
+    the ids in rf_menu_link_ids, in that order, or, with that setting empty, the top-level
+    categories the menus don't already cover (nav-more.html). rf_tree is the page's categories.
+--}}
+{{~#if (trim rf_link_ids)~}}
+{{> components/reelflies/cats rf_tree=rf_tree ids=rf_link_ids view=rf_view}}
+{{~else~}}
+{{> components/reelflies/nav-more rf_tree=rf_tree rf_view=rf_view}}
+{{~/if~}}

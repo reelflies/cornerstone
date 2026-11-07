@@ -1,0 +1,28 @@
+{{!--
+    The order line and the box sheet (DESIGN.md "Order Line"): a riverbed bar pinned at the foot
+    of every page but the cart while rf_order_line is on, over the Cart API (order-line.js). The
+    body pads its foot by the bar's height (_order-line.scss), so nothing hides beneath it.
+
+    - The bar: the last flies added as thumbnails (an empty slot at first), the count in flies
+      and patterns, the distance to free standard shipping (rf_ship_free_threshold; hidden under
+      640px) and Check out with the total. Activating the count opens the sheet above the bar.
+    - The sheet: each pattern with its sizes in hook order and a stepper per size, the total, the
+      shipping meter, and Check out. It is the cart preview; the cart page stays the full cart.
+    - Server-rendered empty: a cached page never shows another shopper's box. order-line.js reads
+      the cart and fills it. Without JavaScript, Check out is the cart page.
+    - Status messages (each add, change and failure) go to the polite live region in header.html.
+--}}
+<aside class="rf-orderline" aria-label="{{lang 'reelflies.box.label'}}" data-rf-orderline data-rf-free="{{trim theme_settings.rf_ship_free_threshold}}" data-rf-money="{{settings.money.currency_token}}">
+    <div class="rf-box" id="rf-box" hidden data-rf-box>
+        <div class="rf-box__head"><h2 tabindex="-1" data-rf-box-title>{{lang 'reelflies.box.title'}}</h2><button class="rf-box__close" type="button" data-rf-box-close>{{> components/reelflies/icon name='close'}}<span class="is-srOnly">{{lang 'reelflies.box.close'}}</span></button></div>
+        <div class="rf-box__body" data-rf-box-body><p class="rf-box__empty">{{lang 'reelflies.box.empty_long'}}</p></div>
+    </div>
+    <div class="rf-orderline__bar">
+        <button class="rf-orderline__toggle" type="button" aria-expanded="false" aria-controls="rf-box" data-rf-box-toggle>
+            <span class="rf-orderline__thumbs" data-rf-thumbs aria-hidden="true"></span>
+            <span class="rf-orderline__sum" data-rf-sum>{{lang 'reelflies.box.empty'}}</span>
+        </button>
+        <p class="rf-orderline__ship" data-rf-ship>{{#if (trim theme_settings.rf_ship_free_threshold)}}{{lang 'reelflies.box.ship_rule'}} <span class="rf-num">{{settings.money.currency_token}}{{trim theme_settings.rf_ship_free_threshold}}</span>.{{/if}}</p>
+        <a class="rf-buy rf-orderline__checkout" href="{{urls.cart}}" data-rf-checkout data-rf-checkout-url="{{urls.checkout.single_address}}" data-rf-cart-url="{{urls.cart}}" aria-disabled="true">{{lang 'reelflies.box.checkout'}} <span class="rf-num" data-rf-total></span></a>
+    </div>
+</aside>

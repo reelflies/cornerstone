@@ -404,6 +404,66 @@
     "afterpay-button-color": "black-mint",
     "amazon-button-color": "Gold",
     "masterpass-button-color": "black",
+    "rf_menu_type_ids": "",
+    "rf_menu_species_root_id": "",
+    "rf_species_salt_ids": "",
+    "rf_menu_link_ids": "",
+    "rf_menu_exclude_ids": "",
+    "rf_menu_also_ids": "",
+    "rf_counts": true,
+    "rf_hook_chart_url": "/fly-hook-size-chart/",
+    "rf_trade_url": "/contact-us/",
+    "rf_alt_store_url": "https://reelflies.com/",
+    "rf_alt_store_text": "Shopping from the US? ReelFlies.com",
+    "rf_alt_store_foot": "Ordering from outside Canada? Shop ReelFlies.com in US dollars",
+
+    "rf_price_unit_exclude": "",
+    "rf_quick_add": true,
+    "rf_cart_state": true,
+
+    "rf_order_line": true,
+    "rf_fly_brands": "ReelFlies",
+    "rf_ship_free_threshold": "60",
+
+    "rf_store_name": "ReelFlies.ca",
+    "rf_store_url": "https://reelflies.ca/",
+    "rf_store_legal_name": "Digital Barn Ltd.",
+    "rf_store_phone": "+1-866-250-4071",
+    "rf_store_street": "93 Broadway St",
+    "rf_store_locality": "Tillsonburg",
+    "rf_store_region": "ON",
+    "rf_store_postal_code": "N4G 3P5",
+    "rf_store_country": "CA",
+
+    "rf_home_price_from": "0.50",
+    "rf_home_signature_id": "3899",
+    "rf_home_signature_cat": "",
+    "rf_home_signature_text": "The Psycho Caddis is one of them, with black hackle and orange rubber legs.",
+    "rf_home_signature_note": "Our take on the elk hair caddis",
+    "rf_home_selection_ids": "3886,5445,3870,4251",
+    "rf_home_selections_cat": "",
+
+    "rf_hatch_midges": "4001,5118,5608",
+    "rf_hatch_midges_more": "",
+    "rf_hatch_black_stone": "4941,4507",
+    "rf_hatch_black_stone_more": "",
+    "rf_hatch_bwo": "4333,4754",
+    "rf_hatch_bwo_more": "",
+    "rf_hatch_hendrickson": "4675,4877",
+    "rf_hatch_hendrickson_more": "",
+    "rf_hatch_caddis": "5835,4941,5558,3899",
+    "rf_hatch_caddis_more": "",
+    "rf_hatch_march_brown": "4368,4675",
+    "rf_hatch_march_brown_more": "",
+    "rf_hatch_sulphur": "4754,5745",
+    "rf_hatch_sulphur_more": "",
+    "rf_hatch_hex": "4877,4979",
+    "rf_hatch_hex_more": "",
+    "rf_hatch_trico": "5608,4675",
+    "rf_hatch_trico_more": "",
+    "rf_hatch_hoppers": "5663,6178",
+    "rf_hatch_hoppers_more": "",
+    "rf_hatch_to_try": "black-stone,sulphur,hex,trico",
     "paymentbuttons-provider-sorting": []
   },
   "read_only_files": [
@@ -460,7 +520,15 @@
           "sports_recreation"
         ]
       },
-      "settings": {}
+      "settings": {
+        "rf_menu_type_ids": "450,458,489,505,535",
+        "rf_ship_free_threshold": "",
+        "rf_store_name": "ReelFlies.com",
+        "rf_store_url": "https://reelflies.com/",
+        "rf_alt_store_url": "https://reelflies.ca/",
+        "rf_alt_store_text": "Shopping from Canada? ReelFlies.ca",
+        "rf_alt_store_foot": "Ordering from Canada? Shop ReelFlies.ca in Canadian dollars"
+      }
     },
     {
       "name": "ReelFlies CA channel 1",
@@ -479,7 +547,25 @@
           "sports_recreation"
         ]
       },
-      "settings": {}
+      "settings": {
+        "rf_menu_type_ids": "298,251,255,272,438",
+        "rf_menu_link_ids": "399,434,400",
+        "rf_menu_also_ids": "399,434,382",
+        "rf_price_unit_exclude": "Fly Gear,Fly Selections & Fly Boxes",
+        "rf_quick_add": false,
+        "rf_home_signature_cat": "434",
+        "rf_home_selections_cat": "399",
+        "rf_hatch_midges_more": "378",
+        "rf_hatch_black_stone_more": "275",
+        "rf_hatch_bwo_more": "306",
+        "rf_hatch_hendrickson_more": "306",
+        "rf_hatch_caddis_more": "381",
+        "rf_hatch_march_brown_more": "306",
+        "rf_hatch_sulphur_more": "307",
+        "rf_hatch_hex_more": "306",
+        "rf_hatch_trico_more": "306",
+        "rf_hatch_hoppers_more": "358"
+      }
     }
   ]
 }

@@ -1,0 +1,40 @@
+{{!--
+    The hatch chart band (DESIGN.md "Hatch Chart" and "Hook Scale"), dry limestone, on the home
+    page at #hatch: the intro (this month and what's on the water, sticky from 1040px), the month
+    heads with this month lit and the hand-written "Now", the rows (hatches.html), then the hook
+    scale. The month is the server's (rf_now); home.js moves it if the page was cached in another.
+    The rows' flies come from home.html's GraphQL (gql.data.site.hatch).
+--}}
+{{~assignVar 'rf_hatch_n' 0}}{{> components/reelflies/hatches view='count'}}{{assignVar 'rf_hatch_i' 0~}}
+<section class="rf-hatch" id="hatch" aria-labelledby="rf-hatch-title" data-rf-hatch>
+    <div class="rf-wrap rf-hatch__grid">
+        <header class="rf-hatch__intro">
+            <h2 id="rf-hatch-title">{{lang 'reelflies.hatch.on_water'}} <span data-rf-now-month>{{moment format="MMMM"}}</span></h2>
+            <p class="rf-hatch__now" data-rf-now-list>{{#if (getVar 'rf_hatch_n')}}{{> components/reelflies/hatches view='now'}}.{{else}}{{lang 'reelflies.hatch.quiet'}}{{/if}}</p>
+            <p>{{lang 'reelflies.hatch.intro_timing'}}</p>
+            <p class="rf-hatch__how">{{lang 'reelflies.hatch.intro_how'}}</p>
+        </header>
+        <div class="rf-hatch__chart" style="--rf-now: {{getVar 'rf_now'}}" data-rf-hatch-chart>
+            <div class="rf-months" aria-hidden="true">
+                <span class="rf-months__pad"></span>
+                <span class="rf-months__track">
+                    {{~#for 0 11~}}<span class="rf-months__m{{#if $index '==' (getVar 'rf_now')}} is-now{{/if}}" data-rf-m="{{$index}}" data-rf-now-label="{{lang 'reelflies.hatch.now'}}"><abbr title="{{lang (concat 'reelflies.months.m' $index)}}">{{lang (concat 'reelflies.months.a' $index)}}</abbr></span>{{~/for~}}
+                </span>
+                <span class="rf-months__pad rf-months__pad--end"></span>
+            </div>
+            <ol class="rf-hatch__rows">
+                {{> components/reelflies/hatches view='row' rf_products=gql.data.site.hatch.edges}}
+            </ol>
+        </div>
+    </div>
+    <div class="rf-wrap rf-hooks">
+        <div class="rf-hooks__text">
+            <h3>{{lang 'reelflies.home.hooks_title'}}</h3>
+            <p>{{lang 'reelflies.home.hooks_text'}}</p>
+            {{#if (trim theme_settings.rf_hook_chart_url)}}<a class="rf-more" href="{{trim theme_settings.rf_hook_chart_url}}">{{lang 'reelflies.menu.hook_chart'}}{{> components/reelflies/icon name='arrow'}}</a>{{/if}}
+        </div>
+        <ol class="rf-hookstep">
+            {{> components/reelflies/hook size='2/0' slug='2-0' h=64}}{{> components/reelflies/hook size='1/0' slug='1-0' h=60}}{{> components/reelflies/hook size='2' slug='2' h=56}}{{> components/reelflies/hook size='4' slug='4' h=52}}{{> components/reelflies/hook size='6' slug='6' h=48}}{{> components/reelflies/hook size='8' slug='8' h=44}}{{> components/reelflies/hook size='10' slug='10' h=40}}{{> components/reelflies/hook size='12' slug='12' h=36}}{{> components/reelflies/hook size='14' slug='14' h=32}}{{> components/reelflies/hook size='16' slug='16' h=28}}{{> components/reelflies/hook size='18' slug='18' h=24}}{{> components/reelflies/hook size='20' slug='20' h=20}}{{> components/reelflies/hook size='22' slug='22' h=16}}{{> components/reelflies/hook size='24' slug='24' h=12}}
+        </ol>
+    </div>
+</section>

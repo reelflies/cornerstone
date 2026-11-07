@@ -1,0 +1,11 @@
+{{!--
+    Turns the size option's first and last labels and its count (the page variables rf_sz_first,
+    rf_sz_last and rf_sz_n, which the card adapters set) into the card's reserved line and its
+    buy mode: rf_range_text ("Sizes 8–20", "Size 14" or empty) and rf_multi (1 when the shopper
+    picks a size). Renders nothing.
+--}}
+{{~#if (getVar 'rf_sz_n') '>' 1~}}
+{{~assignVar 'rf_range_text' (lang 'reelflies.card.sizes' from=(getVar 'rf_sz_first') to=(getVar 'rf_sz_last'))}}{{assignVar 'rf_multi' 1~}}
+{{~else~}}
+{{~#if (getVar 'rf_sz_n') '==' 1}}{{assignVar 'rf_range_text' (lang 'reelflies.card.size' size=(getVar 'rf_sz_first'))}}{{else}}{{assignVar 'rf_range_text' ''}}{{/if}}{{assignVar 'rf_multi' 0~}}
+{{~/if~}}

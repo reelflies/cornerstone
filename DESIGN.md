@@ -392,7 +392,7 @@ Corners are small and honest: 4px (`rounded.md`) on cards, buttons, fields, size
 - **Footer:** riverbed shale; newsletter row, the logo on a paper plate, column heads in 650 14px weathered shale, mist links that underline on hover, fine print in weathered shale above a shaded-shale rule.
 
 ### Size Strip (signature)
-Opens under the card in hand, over what is below it, on paper with the Rake shadow. Sizes run largest hook first. Each size is a 54px paper cell with the hook number in condensed 700 and a 3px step bar above it whose height steps with the hook's place in the full hook order. Choosing a size adds one fly: the cell takes a copper outline and bar, a copper count badge sits on its corner, and a "−1" appears beneath. Sold-out sizes are dashed, struck through, pale on limestone, and named in the foot ("Sizes 8, 16, 18 are sold out."). A caption hint above and a Done pill below; Escape closes it.
+Opens under the card in hand, over what is below it, on paper with the Rake shadow. Sizes run largest hook first. Each size is a 54px paper cell with the hook number in condensed 700 and a 3px step bar above it whose height steps with the hook's place in the full hook order. Choosing a size adds one fly: the cell takes a copper outline and bar, a copper count badge sits on its corner, and a "−1" appears beneath. Sold-out sizes are dashed, struck through, pale on limestone, and named in the foot ("Sizes 8, 16, 18 are sold out."). Every cell keeps room for its "−1", so the strip never changes shape as flies go in. A caption hint above and a Done pill below; Escape closes it.
 
 ### Order Line (signature)
 Riverbed shale bar pinned at the foot with Float shadow: overlapping 44×32 thumbnails of added flies (a dashed `shale-600` slot when empty), the count in flies and patterns underlined, the distance to free shipping in weathered shale with its figure in copper-lit (hidden under 640px), and the copper checkout with its total. A newly added fly drops from its card into the bar; the header box count turns copper and bumps. Activating the count opens the box sheet above the bar: paper with Lift shadow, patterns with 64×43 thumbnails and per-size steppers in hook order, the total in copper numerals, a 6px shipping meter on dry limestone with a copper fill, and a full-width checkout.
@@ -419,14 +419,14 @@ The trout-oval raster is the only fixed asset. On limestone it is multiplied ont
 One settle (220ms, `cubic-bezier(0.16, 1, 0.3, 1)`) for shade, light, lift, underlines, arrows and chevrons; arrivals on the stone in 380ms with a 40ms stagger; one drop (420ms) for a fly travelling to the order line; the drawer slides in over 260ms. With reduced motion, durations collapse to 1ms and the flying fly is not drawn.
 
 ### Region mapping (BigCommerce Stencil)
-The base is Cornerstone 6.22, rebuilt fresh rather than ported from the old skin. ReelFlies code lives in its own folders and touches upstream files only through hooks listed in `CUSTOMIZATIONS.md` (ADR 0001). The prototype's comments map its regions as follows.
-- **Utility strip:** `components/common/utility-strip` (theme settings text; phone number from store settings).
-- **Header, nav, mega menu and drawer:** `components/common/header` with navigation from the category tree, depth 2, rendered on the server.
-- **The stone:** `pages/home.html` region `home_stone`: a Page Builder image under a theme section; best sellers from front matter `products.top_sellers`.
-- **Fly-type plates and species band:** the category tree's branches, rendered on the server; the species lay's flies by category through the Storefront GraphQL API.
-- **Hatch chart:** a Web Page's chart placed by a Page Builder widget; matching flies by product id through the Storefront GraphQL API.
-- **Footer:** `components/common/footer`.
-- **Order line and box sheet:** a theme layer over the Cart API (`/api/storefront/carts`); the sheet is the cart preview.
+The base is Cornerstone 6.22, rebuilt fresh rather than ported from the old skin. ReelFlies code lives in its own folders and touches upstream files only through hooks listed in `CUSTOMIZATIONS.md` (ADR 0001). As built (step 2):
+- **Utility strip:** `components/reelflies/strip.html`: the free-shipping figure from `rf_ship_free_threshold`, the phone number from the store profile, the other storefront from `rf_alt_store_*`.
+- **Header, nav, mega menu and drawer:** `components/reelflies/header.html` and `drawer.html`, in place of the stock header. Every link is server-rendered from the `categories` data by the ids in the Menu settings (Fly Types, Species root, plain links, the "Also" row), so the channel's Menu Display Depth is 3.
+- **The stone:** `components/reelflies/home.html`; the photograph is a theme asset (`assets/img/reelflies/stone/`, a crop of the store's own slate banner until the commissioned shoot) and the one eager, high-priority image. Best sellers from front matter `products.top_sellers`, their sizes and stock from the page's GraphQL front matter. A way in re-lays the stone with that category's best sellers through the Storefront GraphQL API (search, best selling).
+- **Fly-type plates and species band:** the same category data; plates use each category's own image. The species lay's flies come through the Storefront GraphQL API, from 1040px.
+- **Hatch chart:** theme data (`components/reelflies/hatches.html`: names, Latin names, hook ranges, months), each row's flies and "More" category as Theme Styles settings the owner edits without a push, read by the home page's GraphQL front matter. (A Page Builder widget would let the owner edit the timing too; it needs a widget template written to the store.)
+- **Footer:** `components/reelflies/footer.html`, in place of the stock footer; the newsletter carries the CASL wording of record (`content/pages/1895766/newsletter.json`).
+- **Order line and box sheet:** `components/reelflies/order-line.html` over the Cart API (`/api/storefront/carts`, `box.js`): changes show at once and are sent one at a time; the sheet is the cart preview, and the cart page has no order line.
 
 ## Do's and Don'ts
 

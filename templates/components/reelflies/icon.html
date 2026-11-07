@@ -1,0 +1,7 @@
+{{!--
+    One icon from the sheet (icons.html), decorative and hidden from screen readers, so it always
+    sits beside a visible label or inside a control with a name of its own:
+
+        {{> components/reelflies/icon name='arrow'}}
+        {{> components/reelflies/icon name='chevron' class='rf-nav__chev'}}
+--}}<svg class="rf-icon{{#if class}} {{class}}{{/if}}" aria-hidden="true" focusable="false"><use href="#rf-i-{{name}}"></use></svg>
