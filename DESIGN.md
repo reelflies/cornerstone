@@ -139,7 +139,7 @@ components:
     padding: "0 18px"
     height: "48px"
   way-pill:
-    backgroundColor: "rgba(28, 25, 22, 0.42)"
+    backgroundColor: "rgba(28, 25, 22, 0.56)"
     textColor: "{colors.mist}"
     typography: "{typography.label}"
     rounded: "{rounded.pill}"
@@ -424,7 +424,7 @@ Corners are small and honest: 4px (`rounded.md`) on cards, buttons, fields, size
 - **Text actions:** underlined links in label weight with an `edge` underline that darkens on hover and an arrow that slides 3px ("See all", "All 1,600", "Hook size chart").
 
 ### Chips
-- **Ways in (on stone):** translucent shale ground, mist label, a 42% mist outline and a condensed count in `limestone-300`. Hover and the lit way flip to paper with ink text; lighting a way re-lays the stone with that category's flies, and clicking still goes to the category. Grouped under plain labels ("What it is", "What it catches").
+- **Ways in (on stone):** a 56% shale ground, mist label, a 42% mist outline and a condensed count in `limestone-300`; their group labels in mist. Over a stone photograph every line of text holds 4.5:1 against the slate's palest patches: the stacked scrim stays at 58% or more through the band the words sit in. Hover and the lit way flip to paper with ink text; lighting a way re-lays the stone with that category's flies, and clicking still goes to the category. Grouped under plain labels ("What it is", "What it catches").
 - **Toggles (on light ground):** transparent with an `edge` outline, 36px, turning ink-outlined on hover.
 - **Subcategory chips:** a listing's subcategories, at most two rows with a dashed "+N more" (never a sideways scroll): on the stone they are the ways in; on limestone the same 44px pill outlined in `edge`, ink text, a condensed count in ink-muted, limestone-200 on hover.
 - **Size filter:** a size cell as a filter (44px, condensed numerals, `edge` outline), in hook order; the chosen size is an ink cell with paper numerals. Never copper: a filter isn't a buy.
