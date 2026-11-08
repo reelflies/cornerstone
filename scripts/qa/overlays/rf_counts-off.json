@@ -1,0 +1,7 @@
+{
+    "description": "The counts switched off: no figure beside a way in, a menu category, a plate or a Species hub tile, and no \"All n\" on the stone (redesign step 2; ticket 54's switch matrix)",
+    "ticket": "redesign step 2",
+    "settings": {
+        "rf_counts": false
+    }
+}

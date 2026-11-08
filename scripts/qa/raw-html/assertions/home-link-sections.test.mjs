@@ -1,135 +1,109 @@
-// Tests the home link sections' raw-HTML assertion (ticket 49): home-link-sections, on home pages
-// built from the widgets' own renders (the hero and the cards in home_below_menu; the tiles, the
-// Species section and the About block in home_below_top_products), with each promise broken
-// once. It judges only the page, so a page without the sections passes.
+// Tests the home link sections' raw-HTML assertion (redesign step 2; ticket 49's rules),
+// home-link-sections, on the redesign's home page rendered from fixed data (../home-fixture.mjs):
+// the Fly Type plates, the Species band and the shop, with each promise broken once. It judges
+// only the page, so a page without the plates or the Species band passes.
 //
 //   node --test scripts/qa/raw-html/assertions/home-link-sections.test.mjs
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import path from 'node:path';
-import { readFixture, renderWidget, WIDGETS_DIR } from '../../render/render.mjs';
 import { checkPage, loadAssertions } from '../../raw-html.mjs';
+import { homePage } from '../home-fixture.mjs';
 import linkSections, { linkSectionProblems } from './home-link-sections.mjs';
 
-const fixture = name => readFixture(path.join(WIDGETS_DIR, name, 'fixtures', 'default.json'));
-const render = name => renderWidget(name, fixture(name));
-let widgetId = 0;
-const wrap = html => {
-    widgetId += 1;
-    return `<div data-widget-id="w${widgetId}" data-placement-id="p${widgetId}" data-placement-status="ACTIVE">${html}</div>`;
-};
-
-// A home page as stencil start serves it, with the widgets in their regions, in placement order.
-async function homePage({
-    lead, tiles, species, about, order,
-} = {}) {
-    const parts = {
-        tiles: tiles ?? await render('link-tiles'),
-        species: species ?? await render('shop-by-fish'),
-        about: about ?? await render('about'),
-    };
-    const below = (order || ['tiles', 'species', 'about']).map(name => parts[name]).filter(Boolean).map(wrap).join('');
-    const leadHtml = lead ?? await render('home-lead');
-    return {
-        kind: 'home',
-        key: 'home',
-        path: '/',
-        url: 'http://localhost:3301/',
-        status: 200,
-        html: '<!DOCTYPE html><html lang="en"><head><title>ReelFlies</title></head><body><header></header><main class="body" id="main-content">'
-            + `<div data-content-region="home_below_menu">${leadHtml && wrap(leadHtml)}</div><div class="container"><div class="main full">`
-            + `<div data-content-region="home_below_top_products">${below}</div></div></div></main></body></html>`,
-    };
+const page = await homePage();
+const failures = fixture => checkPage(fixture, [linkSections]).filter(result => result.status === 'fail');
+function edited(from, to, html = page.html) {
+    assert.ok(typeof from === 'string' ? html.includes(from) : from.test(html), `the fixture has ${from}`);
+    return { ...page, html: html.replace(from, to) };
 }
-
-const failures = page => checkPage(page, [linkSections]).filter(result => result.status === 'fail');
+const problems = html => linkSectionProblems(html).join('\n');
+const PLATE_IMG = /<img src="[^"]*i\/dry-flies\.jpg"[^>]*>/;
 
 test('it is registered, for the home page only', async () => {
     assert.ok((await loadAssertions()).some(assertion => assertion.id === 'home-link-sections'));
     assert.deepEqual(linkSections.pages, ['home']);
-    assert.equal(linkSections.ticket, 49);
 });
 
-test('the Species section and the About block as the widgets render them pass, after the hero, the cards and the tiles', async () => {
-    const page = await homePage();
+test('the home page as the theme renders it passes: three plates, two row plates, six species and the shop', () => {
     assert.deepEqual(linkSectionProblems(page.html), []);
     assert.deepEqual(failures(page), []);
+    assert.equal(page.html.match(/class="rf-plate"/g).length, 3);
+    assert.equal(page.html.match(/class="rf-row-plate"/g).length, 2);
+    assert.equal(page.html.match(/class="rf-sp"/g).length, 6);
 });
 
-test('a page without the sections passes: the widgets aren\'t placed yet, or are unpublished', async () => {
-    assert.deepEqual(linkSectionProblems((await homePage({ species: '', about: '' })).html), []);
-    assert.deepEqual(linkSectionProblems((await homePage({ species: '' })).html), []);
-    assert.deepEqual(linkSectionProblems((await homePage({ about: '' })).html), []);
+test('a page without the plates or the Species band passes: their menu ids are empty', async () => {
+    const bare = await homePage({ theme_settings: { rf_menu_type_ids: '', rf_menu_species_root_id: '' } });
+    assert.ok(!bare.html.includes('rf-types') && !bare.html.includes('rf-species'));
+    assert.deepEqual(linkSectionProblems(bare.html), []);
+    assert.ok(bare.html.includes('<section class="rf-shop"'), 'the shop is always there');
 });
 
-test('each section has one <h2>, which names it', async () => {
-    const species = await render('shop-by-fish');
-    const about = await render('about');
-    const twoH2 = species.replace('</section>', '<h2>More species</h2></section>');
-    assert.deepEqual(linkSectionProblems(twoH2), ['the Species section (Shop by fish) has 2 <h2> elements: each section has exactly one']);
-    const noH2 = about.replace(/<h2([^>]*)>/, '<p$1>').replace('</h2>', '</p>');
-    assert.deepEqual(linkSectionProblems(noH2), ['the About block has 0 <h2> elements: each section has exactly one']);
-    const unnamed = species.replace(/aria-labelledby="[^"]*"/, 'aria-labelledby="elsewhere"');
-    assert.deepEqual(linkSectionProblems(unnamed), ['the Species section (Shop by fish) is labelled by "elsewhere", not by its <h2>']);
+test('each section has one <h2>, which names it', () => {
+    const twoH2 = edited('<h2 id="rf-types-title">', '<h2>Flies</h2><h2 id="rf-types-title">');
+    assert.match(problems(twoH2.html), /the Fly Type plates has 2 <h2> elements/);
+    const label = edited('aria-labelledby="rf-species-title"', 'aria-labelledby="elsewhere"');
+    assert.match(problems(label.html), /the Species band is labelled by "elsewhere", not by its <h2>/);
+    const shop = edited('<h2 id="rf-shop-title">', '<h3 id="rf-shop-title">').html.replace(/<\/h2>(\s*<p class="rf-shop__lead">)/, '</h3>$1');
+    assert.match(problems(shop), /the shop has 0 <h2> elements/);
 });
 
-test('each group\'s image is one link with its photo, its name and a visible call to action, and nothing interactive inside it', async () => {
-    const species = await render('shop-by-fish');
-    const button = species.replace('<span class="rf-species-group__cta">Shop bass flies</span>', '<button class="rf-species-group__cta">Shop bass flies</button>');
-    assert.deepEqual(linkSectionProblems(button), [
-        'group 2 (Bass, pike & panfish) has no call to action (.rf-species-group__cta, a <span>) in its link',
-        'group 2 (Bass, pike & panfish) has <button> inside its link: nothing interactive goes inside a link',
-    ]);
-    const noLink = species.replace('href="/bonefish-flies/" class="rf-species-group__link"', 'class="rf-species-group__link"').replace('class="rf-species-group__link" href="/bonefish-flies/"', 'class="rf-species-group__link"');
-    assert.deepEqual(linkSectionProblems(noLink), ['group 3 (Saltwater) links to "", not a page']);
-    const pillHash = species.replace('href="/carp-flies/"', 'href="#"');
-    assert.deepEqual(linkSectionProblems(pillHash), ['the Species section\'s pill "Carp Flies" links to "#", not a page']);
+test('each plate and row plate is a link to a page with its name, nothing interactive inside, and no size category', () => {
+    const anchor = edited('<a class="rf-plate__photo" href="/flies/dry-flies/">', '<a class="rf-plate__photo" href="#">');
+    assert.match(problems(anchor.html), /plate 1 \(Dry Flies\)'s photo links to "#", not a page[\s\S]*the Fly Type plates has a link to "#", not a page/);
+    const nested = edited('<span class="rf-plate__name">Dry Flies</span>', '<span class="rf-plate__name">Dry Flies</span><button type="button">Shop</button>');
+    assert.match(problems(nested.html), /plate 1 \(Dry Flies\)'s photo has <button> inside its link/);
+    const unnamed = edited('<span class="rf-plate__name">Dry Flies</span>', '<span class="rf-plate__name"></span>');
+    assert.match(problems(unnamed.html), /plate 1 has no name \(\.rf-plate__name\)/);
+    const row = edited('<a class="rf-row-plate__link" href="/flies/saltwater-warmwater-salmon/">', '<a class="rf-row-plate__link" href="javascript:void(0)">');
+    assert.match(problems(row.html), /row plate 1 \(Saltwater, Warmwater & Salmon\) links to "javascript:void\(0\)", not a page/);
+    const sizes = edited('<a href="/flies/dry-flies/parachutes/">Parachutes</a>', '<a href="/fly-sizes/12/">Size 12</a>');
+    assert.match(problems(sizes.html), /the Fly Type plates links to \/fly-sizes\/12\/, a hidden size category \(SEO-6\)/);
+    const noAll = edited(/<li><a class="rf-plate__all" href="\/flies\/dry-flies\/">[\s\S]*?<\/a><\/li>/, '');
+    assert.match(problems(noAll.html), /plate 1 \(Dry Flies\) lists its subcategories with no "All" link/);
 });
 
-test('no link in the sections goes to a hidden size category or a size listing (SEO-6, UX-16)', async () => {
-    const species = (await render('shop-by-fish')).replace('href="/permit-flies/"', 'href="/fly-sizes/14/"');
-    assert.deepEqual(linkSectionProblems(species), ['the Species section (Shop by fish) links to /fly-sizes/14/, a hidden size category (SEO-6)']);
+test('every photo in the plates is a lazy <img> with two or more srcset candidates, sizes, its box, alt="" and no fetchpriority', () => {
+    const [img] = page.html.match(PLATE_IMG);
+    const cases = [
+        [img.replace(' loading="lazy"', ''), /the Fly Type plates' <img> 1 isn't loading="lazy"/],
+        [img.replace(/ srcset="[^"]*"/, ` srcset="${img.match(/src="([^"]*)"/)[1]} 800w"`), /srcset has 1 candidate: it needs two or more/],
+        [img.replace(/ sizes="[^"]*"/, ''), /<img> 1 has no sizes/],
+        [img.replace(' width="1600" height="700"', ''), /has no width[\s\S]*has no height/],
+        [img.replace(' alt=""', ' alt="Dry flies"'), /<img> 1 needs alt=""/],
+        [img.replace(' loading="lazy"', ' loading="lazy" fetchpriority="low"'), /<img> 1 has fetchpriority="low"/],
+    ];
+    for (const [to, expected] of cases) assert.match(problems(edited(PLATE_IMG, to).html), expected);
 });
 
-test('every photo is a lazy server-rendered <img> with a srcset, sizes, width and height, no fetchpriority and no CSS background (SEO-8)', async () => {
-    const species = await render('shop-by-fish');
-    const about = await render('about');
-    const bare = about.replace(/ srcset="[^"]*" sizes="[^"]*"/, '').replace(/ width="600" height="450"/, '');
-    assert.deepEqual(linkSectionProblems(bare), ['srcset', 'sizes', 'width', 'height'].map(name => `the About block's <img> has no ${name}`));
-    const eager = species.replace('alt="" loading="lazy" data-rf-photo-repeat', 'alt="" data-rf-photo-repeat');
-    assert.deepEqual(linkSectionProblems(eager), ['the Species section (Shop by fish)\'s <img> 1 isn\'t loading="lazy"']);
-    const priority = about.replace('loading="lazy"', 'loading="lazy" fetchpriority="high"');
-    assert.deepEqual(linkSectionProblems(priority), ['the About block\'s <img> has fetchpriority="high": the hero\'s photo is the page\'s only one']);
-    const background = species.replace('<span class="rf-species-group__media">', '<span class="rf-species-group__media" style="background-image: url(/x.jpg)">');
-    assert.deepEqual(linkSectionProblems(background), ['the Species section (Shop by fish) sets a photo as a CSS background: style="background-image: url(/x.jpg)"']);
+test('the Species band carries its hooks for home.js: data-rf-species, each species\' id and name, and the hidden, empty lay region', () => {
+    const unmarked = edited(' aria-labelledby="rf-species-title" data-rf-species>', ' aria-labelledby="rf-species-title">');
+    assert.match(problems(unmarked.html), /the Species band has no data-rf-species/);
+    const noId = edited(' data-rf-sp="601" data-rf-sp-name="Brook Trout"', ' data-rf-sp-name="Brook Trout"');
+    assert.match(problems(noId.html), /the Species band's species "Brook Trout" has no data-rf-sp \(its category id\) or data-rf-sp-name/);
+    const anchor = edited('<a class="rf-sp" href="/species/brook-trout/"', '<a class="rf-sp" href=""');
+    assert.match(problems(anchor.html), /species "Brook Trout" links to "", not a page/);
+    const shown = edited('<div class="rf-species__lay" data-rf-sp-region hidden>', '<div class="rf-species__lay" data-rf-sp-region>');
+    assert.match(problems(shown.html), /lay region isn't hidden on the server/);
+    const filled = edited('<ul class="rf-flies rf-flies--moss" data-rf-sp-lay></ul>', '<ul class="rf-flies rf-flies--moss" data-rf-sp-lay><li data-rf-product="1"></li></ul>');
+    assert.match(problems(filled.html), /lay holds cards on the server/);
+    const noAll = edited(' data-rf-sp-all>', '>');
+    assert.match(problems(noAll.html), /lay region has no its "All" link \(\[data-rf-sp-all\]\)/);
+    const noRegion = edited(/<div class="rf-species__lay" data-rf-sp-region hidden>[\s\S]*?<ul class="rf-flies rf-flies--moss" data-rf-sp-lay><\/ul>\s*<\/div>/, '');
+    assert.match(problems(noRegion.html), /the Species band has no lay region/);
 });
 
-// CD-4: the Dry banner's left third is the page's one allowed repeat, a section or more away
-// from the Dry card.
-test('the marked crop of the Dry banner sits at least one section away from the Dry card', async () => {
-    assert.deepEqual(linkSectionProblems((await homePage()).html), []);
-    const next = await homePage({ order: ['species', 'tiles', 'about'] });
-    assert.deepEqual(linkSectionProblems(next.html), ['the photo i/dry-flies__36885.original.jpg, marked data-rf-photo-repeat, is in the widget right after the one that shows it: put a section or more between them (CD-4)']);
-    // A marked photo that repeats nothing is no problem.
-    const fresh = (await render('shop-by-fish')).replace(/i\/dry-flies__36885\.original\.jpg/g, 'image-manager/rf-cold-water.jpg');
-    assert.deepEqual(linkSectionProblems((await homePage({ species: fresh, order: ['species', 'tiles', 'about'] })).html), []);
-});
-
-test('the About block has the photo\'s alt text, a real tel: number and no product card or price (CD-9)', async () => {
-    const about = await render('about');
-    const noAlt = about.replace(/alt="The ReelFlies shop front[^"]*"/, 'alt=""');
-    assert.deepEqual(linkSectionProblems(noAlt), ['the About block\'s photo has no alt text: it says where the shop is']);
-    const priced = about.replace('</ul>', '</ul><p class="price">$34.95</p>');
-    assert.deepEqual(linkSectionProblems(priced), [
-        'the About block holds a price or product card (class="price"): it carries none',
-        'the About block shows a price, $34.95: it carries none',
-    ]);
-    const card = about.replace('</ul>', '</ul><article class="card" data-product-id="3886"></article>');
-    assert.deepEqual(linkSectionProblems(card), [
-        'the About block holds a price or product card (class="card"): it carries none',
-        'the About block holds a price or product card (data-product-id="3886"): it carries none',
-    ]);
-    const badTel = about.replace('tel:+18662504071', 'tel:1 866 250 4071');
-    assert.deepEqual(linkSectionProblems(badTel), ['the About block\'s phone link "tel:1 866 250 4071" isn\'t tel:+1 and ten digits']);
+test('the shop\'s photo has alt text and is lazy, its phone link dials, and it carries no card or price', () => {
+    const noAlt = edited(/alt="The ReelFlies shop[^"]*"/, 'alt=""');
+    assert.match(problems(noAlt.html), /the shop's <img> has no alt text: it says where the shop is/);
+    const eager = edited(/(alt="The ReelFlies shop[^"]*") loading="lazy"/, '$1');
+    assert.match(problems(eager.html), /the shop's <img> isn't loading="lazy"/);
+    const phone = edited('href="tel:+1-866-250-4071"', 'href="tel:866-250-4071"');
+    assert.match(problems(phone.html), /the shop's phone link "tel:866-250-4071" isn't tel:\+1 and ten digits/);
+    assert.deepEqual(linkSectionProblems(edited('href="tel:+1-866-250-4071"', 'href="tel:+18662504071"').html), [], 'the digits alone dial too');
+    const price = edited('<p class="rf-promise">', '<p class="rf-promise">Flies from $0.50. ');
+    assert.match(problems(price.html), /the shop shows a price, \$0\.50: it carries none \(CD-9\)/);
+    const card = edited('<figure class="rf-shop__photo">', '<li data-rf-product="4877"></li><figure class="rf-shop__photo">');
+    assert.match(problems(card.html), /the shop holds a product card \(data-rf-product="4877"\)/);
 });

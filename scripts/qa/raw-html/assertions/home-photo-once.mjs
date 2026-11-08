@@ -1,30 +1,29 @@
-// No photo twice on the home page (ticket 47; CD-1, CD-4, O23): the hero's frame, each card's
-// banner and each tile's product photo appear once. A <picture> and its <img> are one photo,
-// whatever sizes their srcsets list.
+// No photo twice on the home page (redesign step 2; ticket 47's rule, CD-1, CD-4, O23), band by
+// band:
 //
+// - The page's own photographs (the stone's, the Signature band's, the shop's) and the Fly Type
+//   plates' each appear once across the home's bands.
+// - A fly is photographed once per band: on the stone, in a hatch row, in the Signature band or
+//   among the Selections, no product id and no photo appears twice. A fly in several bands is by
+//   design (a best seller that matches a hatch; the Signature fly in the caddis row; the Adams in
+//   three hatches), and so are a hatch row's thumbnails (.rf-hatch__thumbs, the summary's cue:
+//   the same flies the row opens on), which aren't counted.
+// - Only the home's bands are read (section.rf-stone to section.rf-shop, home-product-bands'
+//   homeSections). The header's menu panes ([data-rf-pane]) show the Fly Types' images again,
+//   lazy, in closed panels, and the header and the footer both show the logo: they are the
+//   shell's, on every page, not the home's.
 // - A file is named by its path after the store's size segment (/images/stencil/<size>/), so the
-//   320w and 1600w copies of one file are the same photo, and its query string is dropped. Any
-//   other URL is named by its path.
-// - It reads src, srcset and a lazy-loading library's data-src and data-srcset, on each <img> and
-//   on the <source> elements of its <picture>.
-// - The one allowed repeat is ticket 49's crop of the Dry Flies banner, a section or more away
-//   from the Dry card: the element that repeats a photo on purpose carries
-//   data-rf-photo-repeat, and isn't counted.
-// - Ticket 29's pane banners aren't counted either: each <img> marked data-rf-menu-banner inside a
-//   div[data-rf-menu-pane], with its <picture> if it has one (from the <picture>'s start tag
-//   through that <img>, when it is the <picture>'s first). Each is its pane's category image,
-//   which is the card's banner for a Fly Type, but they are the menu's: lazy, in closed panes,
-//   desktop only. A marked <img> anywhere else counts, and so does anything after a banner in its
-//   pane, a second <img> in its <picture> or the rest of a <picture> never closed included.
-//
-// Like home-hero, it judges the page as served, whatever widgets it has.
+//   160w and 360w copies of one file are the same photo, and its query string is dropped. Any
+//   other URL is named by its path. A <picture>'s <source> elements and its <img> are one photo,
+//   and a lazy-loading library's data-src and data-srcset are read too.
 
-import { elementsHtml, findTags, markupOnly } from '../html.mjs';
+import { elementsHtml, findTags } from '../html.mjs';
+import { cards, homeSections, productBands } from './home-product-bands.mjs';
 
-export const REPEAT_ATTRIBUTE = 'data-rf-photo-repeat';
-export const MENU_BANNER_ATTRIBUTE = 'data-rf-menu-banner';
-export const MENU_PANE_ATTRIBUTE = 'data-rf-menu-pane';
+export const MENU_PANE_ATTRIBUTE = 'data-rf-pane';
+export const THUMBS_CLASS = 'rf-hatch__thumbs';
 const SIZE_SEGMENT = /\/images\/stencil\/[^/]+\//;
+const hasClass = name => attrs => (attrs.class || '').split(/\s+/).includes(name);
 
 // The photo a URL shows: its path after the size segment, or its whole path.
 export function photoKey(url) {
@@ -42,36 +41,13 @@ const urlsIn = attrs => [attrs.src, attrs['data-src'], ...[attrs.srcset, attrs['
     .flatMap(set => (set || '').split(',').map(item => item.trim().split(/\s+/)[0]))]
     .filter(url => url && !url.startsWith('data:'));
 
-// The markup with each menu pane's banners taken out, so only the menu's own copies go: a marked
-// <img>, and when it is the first <img> of a <picture>, everything from the <picture>'s start tag
-// through it (its <source> elements). Nothing after the banner goes with it: a second <img> in the
-// <picture>, or the rest of the pane when the <picture> is never closed, is still read.
-// Replacements are functions, so a "$&" in a pane's text is text, not a replacement pattern.
-const isBanner = tag => MENU_BANNER_ATTRIBUTE in tag.attrs;
-function withoutPaneBanners(html) {
-    let markup = markupOnly(html);
-    for (const pane of elementsHtml(markup, 'div', attrs => MENU_PANE_ATTRIBUTE in attrs)) {
-        let kept = pane;
-        for (const picture of elementsHtml(pane, 'picture')) {
-            const [first] = findTags(picture, 'img');
-            if (first && isBanner(first)) {
-                const throughBanner = picture.slice(0, picture.indexOf(first.raw) + first.raw.length);
-                kept = kept.replace(throughBanner, () => '');
-            }
-        }
-        for (const tag of findTags(kept, 'img').filter(isBanner)) kept = kept.replace(tag.raw, () => '');
-        markup = markup.replace(pane, () => kept);
-    }
-    return markup;
-}
-
-// Every photo on the page, as { keys, raw, repeat }: each <img> with the <source> elements of the
-// <picture> it closes, in page order. A menu pane's banner is left out.
+// Every photo in the markup, as { keys, raw }: each <img> with the <source> elements of the
+// <picture> it closes, in order.
 export function photosOn(html) {
     const photos = [];
     let sources = [];
     let inPicture = false;
-    for (const tag of findTags(withoutPaneBanners(html), 'picture|source|img')) {
+    for (const tag of findTags(html, 'picture|source|img')) {
         if (tag.name === 'picture') {
             inPicture = true;
             sources = [];
@@ -79,11 +55,7 @@ export function photosOn(html) {
             if (inPicture) sources.push(tag);
         } else {
             const tags = inPicture ? [...sources, tag] : [tag];
-            photos.push({
-                keys: [...new Set(tags.flatMap(({ attrs }) => urlsIn(attrs)).map(photoKey))],
-                raw: tag.raw,
-                repeat: tags.some(({ attrs }) => REPEAT_ATTRIBUTE in attrs),
-            });
+            photos.push({ keys: [...new Set(tags.flatMap(({ attrs }) => urlsIn(attrs)).map(photoKey))], raw: tag.raw });
             inPicture = false;
             sources = [];
         }
@@ -91,22 +63,48 @@ export function photosOn(html) {
     return photos;
 }
 
-export function repeatedPhotos(html) {
+// The markup with each of `parts` (elementsHtml results of it) taken out. Replacements are
+// functions, so a "$&" in the markup is text, not a replacement pattern.
+const without = (html, parts) => parts.reduce((kept, part) => kept.replace(part, () => ''), html);
+
+// The photos shown more than once in the markup, as { key, first, second }.
+function repeats(html) {
     const seen = new Map();
-    const problems = [];
-    for (const photo of photosOn(html).filter(({ repeat }) => !repeat)) {
+    const found = [];
+    for (const photo of photosOn(html)) {
         for (const key of photo.keys) {
-            if (seen.has(key)) problems.push(`the photo ${key} appears twice on the home page: ${seen.get(key).slice(0, 90)} and ${photo.raw.slice(0, 90)}`);
+            if (seen.has(key)) found.push({ key, first: seen.get(key), second: photo.raw });
             else seen.set(key, photo.raw);
         }
     }
+    return found;
+}
+
+const shown = (first, second) => `${first.slice(0, 90)} and ${second.slice(0, 90)}`;
+
+export function repeatedPhotos(html) {
+    const problems = [];
+    for (const band of productBands(html)) {
+        const markup = without(band.html, elementsHtml(band.html, 'span', hasClass(THUMBS_CLASS)));
+        const seen = new Set();
+        for (const id of cards(markup).map(card => findTags(card, 'li')[0].attrs['data-rf-product'])) {
+            if (seen.has(id)) problems.push(`product ${id} is laid twice in ${band.name}: a fly is photographed once per band`);
+            seen.add(id);
+        }
+        for (const { key, first, second } of repeats(markup)) problems.push(`the photo ${key} appears twice in ${band.name}: ${shown(first, second)}`);
+    }
+    // The rest of the home: its own photographs and the plates, with every card and every hatch
+    // row's thumbnails taken out.
+    const home = homeSections(html).map(section => section.html).join('\n');
+    const rest = without(without(home, cards(home)), elementsHtml(home, 'span', hasClass(THUMBS_CLASS)));
+    for (const { key, first, second } of repeats(rest)) problems.push(`the photo ${key} appears twice on the home page: ${shown(first, second)}`);
     return problems;
 }
 
 export default {
     id: 'home-photo-once',
     ticket: 47,
-    description: `no photo appears twice on the home page (a <picture> and its <img> are one photo; an element with ${REPEAT_ATTRIBUTE} is ticket 49's allowed crop; ticket 29's <img ${MENU_BANNER_ATTRIBUTE}> banners inside a div[${MENU_PANE_ATTRIBUTE}], with their <picture> if they have one, are the menu's)`,
+    description: `no photo twice on the home page: the page's own photographs and the plates once across its bands, and a fly once per band (the stone's lay, a hatch row, the Signature band, the Selections); a <picture> and its <img> are one photo, a hatch row's .${THUMBS_CLASS} cue isn't counted, and the header's menu panes ([${MENU_PANE_ATTRIBUTE}]) and logos are the shell's, outside the bands`,
     pages: ['home'],
     check(page) {
         return repeatedPhotos(page.html);

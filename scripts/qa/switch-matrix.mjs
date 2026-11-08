@@ -11,14 +11,14 @@
 //   switch whose module has landed, rendered with the overlay that flips it (switches.mjs:
 //   flippingOverlays). So each switch is seen once on and once off.
 // - A switch is in the matrix once a template reads theme_settings.<switch>. One no template
-//   reads is listed as waiting for its module's ticket, and isn't a failure: a switchable module
+//   reads is listed as waiting for its module's owner, and isn't a failure: a switchable module
 //   that isn't ready ships switched off (ticket 10's rule).
 // - A landed switch with no overlay to flip it, or a boolean rf_* setting SWITCHES doesn't know,
 //   fails the matrix.
-// - A row with a switch on whose module waits for a QA override (SWITCHES' `query`: the
-//   outside-Canada prompt, which the runner's Canadian time zone vetoes) opens every page with
-//   the override that shows it (?rf_region=out), and makes the first interaction it waits for
-//   (fixtures.mjs, storefrontPage). The row's `query` says so.
+// - A row with a switch on whose module waits for a QA override (SWITCHES' `query`; master's
+//   outside-Canada prompt, which the runner's Canadian time zone vetoed, was one; no switch on
+//   this branch has one) opens every page with the override that shows it, and makes the first
+//   interaction it waits for (fixtures.mjs, storefrontPage). The row's `query` says so.
 // - Each row runs two commands, each with its own stencil start (an overlay never reuses a
 //   server, W0-8; the plain row reuses one that renders it):
 //     Playwright, with the specs in MATRIX_SPECS: the screenshot diffs and axe of the gates,
@@ -46,7 +46,7 @@ import {
     QA_CHANNEL, QA_PORT, QA_VARIATION, ROOT, checkEnv, slug,
 } from './storefront.mjs';
 import {
-    SWITCHES, describeValues, flippingOverlays, moduleSwitches, switchQuery, switchValues, templatesReading,
+    SWITCHES, describeValues, flippingOverlays, moduleSwitches, ownerOf, switchQuery, switchValues, templatesReading,
 } from './switches.mjs';
 
 // The Playwright specs each row runs, one gate each, in the order they are reported.
@@ -85,12 +85,14 @@ export function matrixPlan({
         if (!entry) {
             problems.push(`${key} is a module switch in config.json, and SWITCHES in scripts/qa/switches.mjs has no entry for it: add one, with the ticket that owns it`);
         } else if (!reading.has(key)) {
-            waiting.push({ key, ticket: entry.ticket, reason: `no template reads theme_settings.${key} yet, so ticket ${entry.ticket}'s module hasn't landed` });
+            waiting.push({
+                key, ticket: entry.ticket, owner: ownerOf(entry), reason: `no template reads theme_settings.${key} yet, so ${ownerOf(entry)}'s module hasn't landed`,
+            });
         } else {
             const flipped = !values[key];
             const [overlay, ...others] = flippingOverlays(key, flipped, overlays);
             if (!overlay) {
-                problems.push(`no overlay renders ${key} ${onOff(flipped)}: add scripts/qa/overlays/${key}-${onOff(flipped)}.json, setting "${key}" to ${flipped} and nothing else (ticket ${entry.ticket})`);
+                problems.push(`no overlay renders ${key} ${onOff(flipped)}: add scripts/qa/overlays/${key}-${onOff(flipped)}.json, setting "${key}" to ${flipped} and nothing else (${ownerOf(entry)})`);
             } else {
                 if (others.length) notes.push(`${key}: ${[overlay, ...others].join(', ')} all render it ${onOff(flipped)}; the matrix uses ${overlay}`);
                 const rowValues = { ...values, [key]: flipped };
@@ -218,7 +220,7 @@ export function matrixLines({
     }
     if (plan.waiting.length) {
         lines.push('', 'Not in the matrix yet:');
-        for (const { key, ticket, reason } of plan.waiting) lines.push(`  ${key} (ticket ${ticket}): ${reason}`);
+        for (const { key, owner, reason } of plan.waiting) lines.push(`  ${key} (${owner}): ${reason}`);
     }
     for (const note of plan.notes || []) lines.push(`NOTE     ${note}`);
     if (plan.problems.length) lines.push('');

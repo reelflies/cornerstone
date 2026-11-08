@@ -1,37 +1,42 @@
 // The module switches (spec, Implementation Decisions, "Server-side switches"): the boolean
-// rf_* theme settings that turn the rise ring, the cart state, quick add and the outside-Canada
-// prompt on and off. Each is checked in a template, so with it off the stock markup renders.
+// rf_* theme settings that turn a ReelFlies module on and off. Each is read in a template, so
+// with it off the module's markup stays out of the page (or stock's renders in its place).
 // Ticket 54's switch matrix (switch-matrix.mjs) renders every pinned page with each switch on
 // and off, through W0-8's overlays, and switch-stock.spec.mjs checks that nothing of a module
 // whose switch is off is on the page.
 //
-// SWITCHES has one entry per switch, in ticket order, with a blank line between entries, so
-// each module ticket changes only its own lines (build pipeline, section 6.1). An entry:
-//   ticket   the ticket whose module the switch turns on and off
+// SWITCHES has one entry per switch, in config.json's order, with a blank line between entries.
+// An entry:
+//   ticket   who owns the module: the master ticket it descends from ('43'), or the redesign step
+//            that made it ('redesign step 2', CUSTOMIZATIONS.md). ownerOf(entry) words it.
 //   module   what it switches, for messages
 //   markers  the data-rf-* attributes the module's markup carries. With the switch off, no
 //            element on the page may carry one (switch-stock.spec.mjs).
-//   chunks   the webpackChunkName of each script the module loads (as check-bundle.mjs names
-//            them). With the switch off, the page may not load one.
+//   chunks   the webpackChunkName of each script the module alone loads (as check-bundle.mjs
+//            names them). With the switch off, the page may not load one. A chunk that loads
+//            whatever the switch says (reelflies/global.js's order line, the product page's
+//            rf-product) isn't the module's to name.
 //   stock    optional: the stock markup the module replaces or guards, as page kind -> CSS
 //            selectors. With the switch off, each must match on every pinned page of that kind
 //            (switch-stock.spec.mjs), so a module that changes stock markup while it is off fails
-//            even with its markers and chunks gone. Quick add (43) would name the stock card's
-//            Quick view button, for example, on the kinds that list cards.
+//            even with its markers and chunks gone.
+//   browser  optional: for a module whose whole effect is written in the browser, with no marker
+//            of its own in the server HTML and no chunk of its own, what the matrix's off row shows
+//            instead (its screenshots). The cart state is one: quick-add.js fills a tag every
+//            card carries either way.
 //   query    optional: the QA overrides of a module that its switch alone doesn't show on the
-//            runner. The outside-Canada prompt (52) shows only outside Canada, and the runner's
-//            time zone (America/Toronto, playwright.config.mjs) vetoes it. A run with the switch on
-//            opens every pinned page with `show` added, and makes the first interaction the
-//            module waits for (fixtures.mjs, storefrontPage), so the run's screenshots, axe,
-//            reflow, motion and focus see it. switch-query.spec.mjs checks that it shows with
-//            `show`, and that nothing of it shows with `hide`. Needs a marker.
+//            runner, { show, hide }, each a query string. A run with the switch on opens every
+//            pinned page with `show` added, and makes the first interaction the module waits for
+//            (fixtures.mjs, storefrontPage); switch-query.spec.mjs checks that it shows with
+//            `show`, and that nothing of it shows with `hide`. Needs a marker. No switch on this
+//            branch has one (master's outside-Canada prompt, ticket 52, did).
 //   notOn    optional, with `query`: the page kinds the module never shows on, even with `show`.
-// The owning ticket fills in its markers and chunks when its module lands: once a template
-// reads theme_settings.<switch>, switches.test.mjs fails until the entry names at least one.
+// Once a template reads theme_settings.<switch>, switches.test.mjs fails until the entry names at
+// least one marker or chunk, or says in `browser` why it has none.
 //
 // A switch is in the matrix once a template reads theme_settings.<switch> outside a Handlebars
-// comment (templatesReading). Until then its module hasn't landed: the scaffold pre-declares
-// every switch (ticket 25), and flipping one that nothing reads renders the same page.
+// comment (templatesReading). Until then its module hasn't landed, and flipping a switch that
+// nothing reads renders the same page.
 
 import fs from 'fs';
 import path from 'path';
@@ -39,59 +44,67 @@ import { fileURLToPath } from 'url';
 import { readOverlay } from './overlays.mjs';
 
 export const SWITCHES = {
-    rf_rise: {
-        ticket: '27',
-        module: 'the rise ring on the cart count',
-        // The ring on the header's count (components/reelflies/header.html), and rise.js, which
-        // reelflies/global.js loads only with context.rfRise. The stock count pill stays either way.
-        markers: ['data-rf-rise'],
-        chunks: ['rf-rise'],
-    },
-
-    rf_cart_state: {
-        ticket: '42',
-        module: 'the cart state on the product page and the cards',
-        // The size pills' "In your cart" line, each pill's hidden "(N in cart)" and corner check
-        // (components/reelflies/size-pills.html, on the product page), and each card's line
-        // (card-cart-state.html); and cart-marks.js, which page-modules.js loads only with
-        // context.rfCartState. Nothing of stock's is replaced, so no `stock` selectors.
-        markers: ['data-rf-cart-line', 'data-rf-cart-tag', 'data-rf-cart-dot', 'data-rf-cart-card'],
-        chunks: ['rf-cart-state'],
+    rf_counts: {
+        ticket: 'redesign step 2',
+        module: 'the counts beside categories',
+        // A way in's count on the stone (data-rf-count, cat-view.html and species-list.html, which
+        // home.js reads for "All n") and a Species hub tile's (data-rf-hub-count, hub-tile.html).
+        // The counts are BigCommerce's own, written by the templates: no script of their own.
+        markers: ['data-rf-count', 'data-rf-hub-count'],
+        chunks: [],
     },
 
     rf_quick_add: {
         ticket: '43',
         module: 'quick add on the cards',
-        // "+ Add" on a listing card (components/reelflies/quick-add-button.html), and quick-add.js,
-        // which page-modules.js loads on the listing templates only with the switch on.
-        markers: ['data-rf-quick-add'],
-        chunks: ['rf-quick-add'],
-        // With it off, the stock card's Quick view button is back on the listing cards (the
-        // Quick view guard in components/reelflies/card.html; show_product_quick_view is on).
-        // The brand listing (ticket 36) and the Species hub (ticket 34) are checked once their pin
-        // lists cards: 1895766's brand pin has none until refactor 14, so a page with no card
-        // passes there.
+        // "+ Add" on a card and the size panel it opens (components/reelflies/fly.html), and the
+        // scripts the listings load only with the switch on (page-modules.js): quick-add.js and
+        // quick order (order-list.js). The redesign's card is the theme's own, not stock's, so
+        // with the switch off a card links to its page (a.rf-add--link) and no stock markup
+        // returns: no `stock` selectors.
+        markers: ['data-rf-add', 'data-rf-sizes'],
+        chunks: ['rf-quick-add', 'rf-order-list'],
+    },
+
+    rf_cart_state: {
+        ticket: '42',
+        module: 'the in-box line and ring on the cards',
+        // head.html injects it as context.rfCartState; quick-add.js (which quick add loads) shows
+        // what the box holds on the line every card reserves ([data-rf-inbox], hidden on the
+        // server either way) and lights the card's ring (is-in). Nothing in the server HTML and no
+        // chunk is the cart state's alone.
+        markers: [],
+        chunks: [],
+        browser: 'the cards\' in-box lines stay empty and no card is ring-lit, however many flies the box holds (the matrix\'s screenshots)',
+    },
+
+    rf_size_strip: {
+        ticket: 'redesign step 3',
+        module: 'the size picker on the product page',
+        // The picker drawn on the server (components/reelflies/product-picker.html) and stock's
+        // form hidden behind it (product-buy.html); product-buy.js loads on every product page
+        // (rf-product) and finds nothing to do without the picker. With the switch off, stock's
+        // form shows, so it is the stock markup to find.
+        markers: ['data-rf-pick-page', 'data-rf-pdp-form'],
+        chunks: [],
         stock: {
-            category: ['.productGrid .card .quickview'],
-            search: ['.productGrid .card .quickview'],
-            brand: ['.productGrid .card .quickview, html:not(:has(.productGrid .card))'],
-            'species-hub': ['.productGrid .card .quickview, html:not(:has(.productGrid .card))'],
+            product: ['.rf-pdp__form:not([hidden]) form[data-cart-item-add]'],
         },
     },
 
-    rf_region_prompt: {
-        ticket: '52',
-        module: 'the outside-Canada prompt',
-        // The prompt's root (the no-region-prompt raw-HTML assertion's marker). It is only ever
-        // made in the browser, so the server HTML never has it, whatever the switch says.
-        markers: ['data-rf-region-prompt'],
+    rf_order_line: {
+        ticket: 'redesign step 2',
+        module: 'the order line and the box sheet',
+        // The bar pinned at the foot of every page but the cart (components/reelflies/order-line.html,
+        // from footer.html). order-line.js loads on every page (reelflies/global.js) and does
+        // nothing without the bar, so the chunk isn't the switch's to name.
+        markers: ['data-rf-orderline'],
         chunks: [],
-        // Ticket 52's QA overrides, and the page it never shows on (the cart; checkout isn't
-        // the theme's).
-        query: { show: 'rf_region=out', hide: 'rf_region=in' },
-        notOn: ['cart'],
     },
 };
+
+// How messages name a switch's owner: "ticket 43", or "redesign step 2".
+export const ownerOf = entry => (/^\d+$/.test(String(entry.ticket)) ? `ticket ${entry.ticket}` : String(entry.ticket));
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 export const TEMPLATES_DIR = path.join(ROOT, 'templates');

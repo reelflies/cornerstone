@@ -1,0 +1,7 @@
+{
+    "description": "The size picker switched off: the product page buys through stock's restyled form, with no picker drawn on the server (redesign step 3; ticket 54's switch matrix)",
+    "ticket": "redesign step 3",
+    "settings": {
+        "rf_size_strip": false
+    }
+}

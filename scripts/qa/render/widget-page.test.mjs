@@ -2,7 +2,9 @@
 // (scripts/qa/render/widget-page.mjs, W0-9): where the widget sits, what the page loads, and
 // which requests it may make. The shots themselves are Playwright's
 // (scripts/qa/widget-screens.spec.mjs); these need no browser and no compiled CSS, so CI
-// runs them through `npm run test:scripts`.
+// runs them through `npm run test:scripts`. The redesign's home page has no Page Builder region
+// (redesign step 2), so the fixtures sit in a category page's category_below_header, in the
+// hero block (components/reelflies/category-page.html).
 //
 //   node --test scripts/qa/render/widget-page.test.mjs
 
@@ -25,7 +27,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WIDGETS = path.join(HERE, 'fixtures/widgets');
 const SELFTEST = path.join(HERE, 'selftest/widgets');
 const band = () => widgetCases([WIDGETS]).find(({ name }) => name === 'two-in-stock');
-const inRegion = (widgetCase, region) => ({ ...widgetCase, fixture: { ...widgetCase.fixture, region } });
+const inRegion = (widgetCase, region, more = {}) => ({ ...widgetCase, fixture: { ...widgetCase.fixture, region, ...more } });
 // The scripts a browser would run: a JSON-LD block (the home page's store schema, ticket 40) is
 // data, which the browser never executes.
 const runnable = html => findTags(html, 'script').filter(tag => (tag.attrs.type || '').trim().toLowerCase() !== 'application/ld+json');
@@ -43,14 +45,14 @@ function assertInOrder(html, needles) {
 
 describe('the fixture page around a widget', () => {
     it('puts the widget in its region, inside the boxes the page template gives that region', async () => {
-        // home.html renders home_below_top_products inside .main.full, inside body.html's .container.
-        const html = await renderWidgetPage(band());
-        assertInOrder(html, ['id="main-content"', 'class="container"', 'class="main full"', 'data-content-region="home_below_top_products"', `data-widget-id="${WIDGET_ID}"`, '<h2>Best sellers</h2>']);
+        // pages/brands.html renders brands_below_content in its page block, inside body.html's .container.
+        const html = await renderWidgetPage(inRegion(band(), 'brands_below_content', { page: 'pages/brands', page_context: {} }));
+        assertInOrder(html, ['id="main-content"', 'class="container"', 'data-content-region="brands_below_content"', `data-widget-id="${WIDGET_ID}"`, '<h2>Best sellers</h2>']);
     });
 
-    it('puts a widget in the hero block\'s region outside .container, as home.html does', async () => {
-        const html = await renderWidgetPage(inRegion(band(), 'home_below_menu'));
-        assertInOrder(html, ['id="main-content"', 'data-content-region="home_below_menu"', '<h2>Best sellers</h2>', 'class="container"']);
+    it('puts a widget in the hero block\'s region outside .container, as category-page.html does with category_below_header', async () => {
+        const html = await renderWidgetPage(band());
+        assertInOrder(html, ['id="main-content"', 'data-content-region="category_below_header"', '<h2>Best sellers</h2>', 'class="container"']);
     });
 
     it('marks the widget as the store does, with its widget, placement and status attributes', async () => {
@@ -62,22 +64,26 @@ describe('the fixture page around a widget', () => {
     it('renders the widget once, and leaves the page\'s other regions empty', async () => {
         const html = await renderWidgetPage(band());
         assert.equal(html.split('<h2>Best sellers</h2>').length, 2);
-        assert.match(html, /data-content-region="home_below_menu"><\/div>/);
+        assert.match(html, /data-content-region="category_below_content"><\/div>/);
     });
 
     it('fails on a region the page template doesn\'t render, naming the ones it does and how to reach the others', async () => {
         await assert.rejects(renderWidgetPage(inRegion(band(), 'header_bottom--global')), error => {
-            assert.match(error.message, /"header_bottom--global".*pages\/home/);
-            assert.match(error.message, /home_below_menu, home_below_carousel, home_below_featured_products, home_below_top_products, home_below_new_products/);
+            assert.match(error.message, /"header_bottom--global".*pages\/category/);
+            assert.match(error.message, /category_below_header, category_below_content/);
             assert.match(error.message, /"chrome": true/);
             assert.match(error.message, /"page_context"/);
             return true;
         });
     });
 
+    it('fails on the redesign\'s home page, which has no region at all: its bands are the theme\'s own', async () => {
+        await assert.rejects(renderWidgetPage(inRegion(band(), 'home_below_menu', { page: 'pages/home', page_context: {} })), /"home_below_menu" isn't on pages\/home[\s\S]*Its regions: none/);
+    });
+
     it('gives the page template the fixture\'s page_context, so a region inside a condition can hold the widget', async () => {
-        // cart.html renders cart_below_totals only inside {{#if cart.items.length}}.
-        const inCart = { ...band(), fixture: { ...band().fixture, page: 'pages/cart', region: 'cart_below_totals' } };
+        // cart-page.html renders cart_below_totals only inside {{#if cart.items.length}}.
+        const inCart = inRegion(band(), 'cart_below_totals', { page: 'pages/cart', page_context: {} });
         await assert.rejects(renderWidgetPage(inCart), /"cart_below_totals" isn't on pages\/cart/);
         const cart = { cart: { quantity: 1, items: [{ id: 'line-1', name: 'Parachute Adams', quantity: 1 }] } };
         const html = await renderWidgetPage({ ...inCart, fixture: { ...inCart.fixture, page_context: cart } });
@@ -100,22 +106,23 @@ describe('the fixture page around a widget', () => {
         assert.match(await renderWidgetPage(widgetCase, { themeDir }), /<p class="rf-template">pages\/rf-template<\/p>/);
     });
 
-    it('with "chrome": true, renders the theme\'s header and footer round the page, so a widget can sit in a header region', async () => {
-        const html = await renderWidgetPage({ ...band(), fixture: { ...band().fixture, region: 'header_bottom--global', chrome: true } });
-        assertInOrder(html, ['<header class="header rf-header"', '</header>', 'data-content-region="header_bottom--global"', `data-widget-id="${WIDGET_ID}"`, 'id="main-content"', '<footer class="footer rf-footer']);
+    it('with "chrome": true, renders the theme\'s header and footer round the page, so a widget can sit in the stock header_bottom region', async () => {
+        const html = await renderWidgetPage(inRegion(band(), 'header_bottom', { chrome: true }));
+        assertInOrder(html, ['<header class="rf-head"', '</header>', 'data-content-region="header_bottom"', `data-widget-id="${WIDGET_ID}"`, 'id="main-content"', '<footer class="rf-foot']);
         assert.deepEqual(runnable(html), []);
     });
 
     it('without "chrome", renders no header and no footer', async () => {
         const html = await renderWidgetPage(band());
-        assert.doesNotMatch(html, /<header|<footer/);
+        assert.doesNotMatch(html, /<header class="rf-head"|<footer class="rf-foot/);
     });
 
-    it('loads the theme\'s compiled CSS, whose @font-face brings Onest from theme assets, and no script', async () => {
+    it('loads the theme\'s compiled CSS, whose @font-face brings Archivo from theme assets, and no script', async () => {
         const html = await renderWidgetPage(band());
         const links = findTags(html, 'link');
         assert.ok(links.some(link => link.attrs.rel === 'stylesheet' && link.attrs.href === THEME_CSS_PATH), 'the theme CSS');
-        // Onest comes from theme assets through the CSS (ticket 25), so no theme font asks Google.
+        // Archivo comes from theme assets through the CSS and head.html's preload, so no theme font asks Google.
+        assert.ok(links.some(link => link.attrs.rel === 'preload' && /archivo/.test(link.attrs.href || '')), 'head.html\'s Archivo preload');
         assert.ok(!links.some(link => /fonts\.googleapis\.com/.test(link.attrs.href)), 'no Google Fonts link: the theme settings name no Google font');
         assert.deepEqual(runnable(html), []);
         assert.match(html, /<html class="js" lang="en-CA">/);
@@ -125,9 +132,10 @@ describe('the fixture page around a widget', () => {
         assert.deepEqual(unbalancedTags(await renderWidgetPage(band())), []);
     });
 
-    it('renders the shot self-test widget', async () => {
+    it('renders the shot self-test widget, in the same region', async () => {
         const [selftest] = widgetCases([SELFTEST]);
         assert.equal(selftest.widget, 'rf-selftest');
+        assert.equal(selftest.fixture.region, band().fixture.region);
         assert.match(await renderWidgetPage(selftest), /class="rf-selftest"/);
     });
 });

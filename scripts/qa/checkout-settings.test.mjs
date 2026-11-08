@@ -1,21 +1,22 @@
-// Ticket 24's theme part of the checkout. BigCommerce's Optimized One-Page Checkout is branded
-// through Theme Styles settings only (spec, Out of Scope), so these tests hold config.json's
-// checkout keys: the base settings, which both variations share, as each variation resolves them.
+// Ticket 24's theme part of the checkout, as the redesign (Streamside Stone, DESIGN.md "Colors"
+// and "Typography") sets it. BigCommerce's Optimized One-Page Checkout is branded through Theme
+// Styles settings only (spec, Out of Scope), so these tests hold config.json's checkout keys: the
+// base settings, which both variations share, as each variation resolves them.
 //
-// - The buy colour on the checkout button, with a white label (ticket 13, decision 6; eval O01).
-// - The storefront's ink, dun, edge and tile on everything else, so the checkout keeps none of
-//   stock Cornerstone's greys and blues (spec, "Look").
-// - Onest only (decision 7; eval O02). Ticket 25 owns the font keys and set them; this checks the
-//   checkout keeps them.
+// - The buy colour on the checkout button: beadhead copper, with a white label, deep copper on
+//   hover and press (DESIGN.md "The Copper Is For Buying Rule"; the sage of decision 6 is gone).
+// - Ink, ink muted, limestone and edge on everything else, so the checkout keeps none of stock
+//   Cornerstone's greys and blues, and the page itself is limestone, the storefront's ground.
+// - Archivo only (the Onest of decision 7 is gone): Archivo Expanded for the headings, Archivo for
+//   the text, Archivo's medium cut for the buttons and links.
 // - The logo: the current 133x95 PNG until ticket 14's master (decision 17), through the store
 //   logo the checkout falls back to.
 // - The keys that wait for Shaun's answers (ticket 24's HITL): the payment icons, the quick
-//   payment buttons, the wallet buttons and the checkout background. They keep their stock values
-//   until he answers, and no variation sets them.
+//   payment buttons and the wallet buttons. They keep their stock values until he answers, and no
+//   variation sets them. The checkout background was decided with the redesign: limestone, no image.
 //
-// Ticket 25 owns the font keys and optimizedCheckout-formField-placeholderColor (build pipeline,
-// section 6.3); ticket 24 owns every other optimizedCheckout-* key. scripts/check-contrast.mjs
-// checks the colour pairs.
+// scripts/check-contrast.mjs checks the colour pairs. The values here are the redesign's as of
+// 2026-11-08, for the owner to confirm.
 //
 //   node --test scripts/qa/checkout-settings.test.mjs
 
@@ -30,32 +31,37 @@ import { FOCUS_RING, contrast } from '../check-contrast.mjs';
 const read = file => fs.readFileSync(path.join(THEME_DIR, file), 'utf8');
 const config = JSON.parse(read('config.json'));
 const VARIATIONS = ['ReelFlies CA', 'ReelFlies US'];
-const BUY = '#5d705c';
-const WHITE = '#ffffff';
+// DESIGN.md's tokens the checkout keys hold as hex.
+const COPPER = '#9c4a22'; // beadhead copper, the buy colour
+const COPPER_DEEP = '#833d1b'; // hover and press on copper
+const MIST = '#ebe4d8'; // text on shale
+const WHITE = '#ffffff'; // specimen paper
 const TRANSPARENT = 'transparent';
 
 const hex = value => [1, 3, 5].map(i => parseInt(value.slice(i, i + 2), 16));
 const lower = value => String(value).toLowerCase();
 const forEachVariation = check => VARIATIONS.forEach(name => check(effectiveSettings(config, name), name));
 
-// Each checkout colour key and the storefront key (or literal) it follows. The checkout reads only
+// Each checkout colour key and the storefront key (or token) it follows. The checkout reads only
 // optimized-checkout.css, so it can't share the storefront's keys; these keep it on the palette.
 const FOLLOWS = {
-    // The checkout button: the buy colour (decision 6), as button--primary on the storefront.
-    'optimizedCheckout-buttonPrimary-backgroundColor': 'button--primary-backgroundColor',
-    'optimizedCheckout-buttonPrimary-backgroundColorHover': 'button--primary-backgroundColorHover',
-    'optimizedCheckout-buttonPrimary-backgroundColorActive': 'button--primary-backgroundColorActive',
-    'optimizedCheckout-buttonPrimary-borderColor': 'button--primary-backgroundColor',
-    'optimizedCheckout-buttonPrimary-color': 'button--primary-color',
-    'optimizedCheckout-buttonPrimary-colorHover': 'button--primary-colorHover',
-    'optimizedCheckout-buttonPrimary-colorActive': 'button--primary-colorActive',
-    'optimizedCheckout-buttonPrimary-colorDisabled': WHITE,
+    // The checkout button: copper, the buy colour, which the storefront's button--primary (ink,
+    // for Search and the like) is not.
+    'optimizedCheckout-buttonPrimary-backgroundColor': COPPER,
+    'optimizedCheckout-buttonPrimary-backgroundColorHover': COPPER_DEEP,
+    'optimizedCheckout-buttonPrimary-backgroundColorActive': COPPER_DEEP,
+    'optimizedCheckout-buttonPrimary-borderColor': COPPER,
+    'optimizedCheckout-buttonPrimary-color': WHITE,
+    'optimizedCheckout-buttonPrimary-colorHover': WHITE,
+    'optimizedCheckout-buttonPrimary-colorActive': WHITE,
+    // Disabled: limestone rule under ink muted, as the storefront's disabled controls.
+    'optimizedCheckout-buttonPrimary-colorDisabled': 'color-textSecondary',
     'optimizedCheckout-buttonPrimary-backgroundColorDisabled': 'color-greyLighter',
     // A transparent border shows the button's own fill, as stock.
     'optimizedCheckout-buttonPrimary-borderColorHover': TRANSPARENT,
     'optimizedCheckout-buttonPrimary-borderColorActive': TRANSPARENT,
     'optimizedCheckout-buttonPrimary-borderColorDisabled': TRANSPARENT,
-    // Ink text, dun secondary text (spec, "Look").
+    // Ink text, ink muted secondary text.
     'optimizedCheckout-headingPrimary-color': 'color-textHeading',
     'optimizedCheckout-headingSecondary-color': 'color-textHeading',
     'optimizedCheckout-contentPrimary-color': 'color-textBase',
@@ -66,70 +72,76 @@ const FOLLOWS = {
     'optimizedCheckout-formChecklist-color': 'color-textBase',
     'optimizedCheckout-discountBanner-textColor': 'color-textBase',
     'optimizedCheckout-discountBanner-iconColor': 'color-textBase',
+    // The toaster and the step numbers: ink with mist or white on it, as text on shale.
     'optimizedCheckout-loadingToaster-backgroundColor': 'color-textBase',
-    'optimizedCheckout-loadingToaster-textColor': WHITE,
-    'optimizedCheckout-step-backgroundColor': 'color-textSecondary',
+    'optimizedCheckout-loadingToaster-textColor': MIST,
+    'optimizedCheckout-step-backgroundColor': 'color-textBase',
     'optimizedCheckout-step-textColor': WHITE,
-    // Links as the storefront's: ink, dun on hover. The cart's coupon, gift certificate and
+    // Links as the storefront's: ink, ink muted on hover. The cart's coupon, gift certificate and
     // shipping estimate links read optimizedCheckout-link-color too (_cart.scss).
     'optimizedCheckout-link-color': 'color-textLink',
     'optimizedCheckout-link-hoverColor': 'color-textLink--hover',
-    // The secondary (Edit) button, as button--default: ink on white, edge border, tile on hover.
+    // The secondary (Edit) button, as button--default: ink on paper, the edge border, limestone
+    // on hover and dry limestone on press.
     'optimizedCheckout-buttonSecondary-color': 'button--default-color',
     'optimizedCheckout-buttonSecondary-colorHover': 'button--default-colorHover',
     'optimizedCheckout-buttonSecondary-colorActive': 'button--default-colorActive',
     'optimizedCheckout-buttonSecondary-backgroundColor': WHITE,
-    'optimizedCheckout-buttonSecondary-backgroundColorHover': 'container-fill-dark',
-    'optimizedCheckout-buttonSecondary-backgroundColorActive': 'container-border-global-color-base',
+    'optimizedCheckout-buttonSecondary-backgroundColorHover': 'body-bg',
+    'optimizedCheckout-buttonSecondary-backgroundColorActive': 'container-fill-dark',
     'optimizedCheckout-buttonSecondary-borderColor': 'button--default-borderColor',
     'optimizedCheckout-buttonSecondary-borderColorHover': 'button--default-borderColorHover',
     'optimizedCheckout-buttonSecondary-borderColorActive': 'button--default-borderColorActive',
-    // Fields and controls: the edge border (3:1), ink when chosen (spec: "selected states").
+    // Fields and controls: paper with the edge border, ink when chosen, hook rust for errors.
     'optimizedCheckout-formField-backgroundColor': 'input-bg-color',
     'optimizedCheckout-formField-shadowColor': TRANSPARENT, // no inset shadow, as stock
     'optimizedCheckout-formField-borderColor': 'input-border-color',
     'optimizedCheckout-formField-inputControlColor': 'color-textBase',
     'optimizedCheckout-formField-errorColor': 'color-error',
     'optimizedCheckout-colorFocus': FOCUS_RING,
-    // Lists, boxes and dividers: white, tile when chosen, tile-2 lines.
+    // Lists, boxes and dividers: paper, limestone when chosen, limestone-rule lines, dry
+    // limestone behind a discount.
     'optimizedCheckout-formChecklist-backgroundColor': WHITE,
-    'optimizedCheckout-formChecklist-backgroundColorSelected': 'container-fill-dark',
+    'optimizedCheckout-formChecklist-backgroundColorSelected': 'body-bg',
     'optimizedCheckout-formChecklist-borderColor': 'container-border-global-color-base',
     'optimizedCheckout-discountBanner-backgroundColor': 'container-fill-dark',
     'optimizedCheckout-orderSummary-backgroundColor': WHITE,
     'optimizedCheckout-orderSummary-borderColor': 'container-border-global-color-base',
     'optimizedCheckout-step-borderColor': 'container-border-global-color-base',
     'optimizedCheckout-header-borderColor': 'container-border-global-color-base',
+    // The page and its header: limestone, the storefront's ground.
+    'optimizedCheckout-header-backgroundColor': 'body-bg',
+    'optimizedCheckout-body-backgroundColor': 'body-bg',
 };
 
 // Stock Cornerstone's checkout colours: its greys, and the blues the palette has no place for.
 const STOCK_CHECKOUT_COLOURS = [
-    '#333333', '#666666', '#757575', '#999999', '#cccccc', '#dddddd', '#e5e5e5', '#000000',
+    '#333333', '#666666', '#757575', '#999999', '#cccccc', '#dddddd', '#e5e5e5', '#000000', '#f5f5f5',
     '#476bef', '#4496f6', '#002fe1', '#d14343',
 ];
 
-// The keys that wait for Shaun's answers (ticket 24's HITL), with the stock values they keep.
-const WAITING_BACKGROUND = {
+// The background image: none, as stock.
+const NO_BACKGROUND_IMAGE = {
     'optimizedCheckout-show-backgroundImage': false,
     'optimizedCheckout-backgroundImage': '',
     'optimizedCheckout-backgroundImage-size': '1000x400',
-    'optimizedCheckout-header-backgroundColor': '#f5f5f5',
-    'optimizedCheckout-body-backgroundColor': WHITE,
 };
+// The keys that wait for Shaun's answers (ticket 24's HITL), with the stock values they keep.
 const ICON_KEYS = Object.keys(config.settings).filter(key => key.startsWith('show_accept_'));
-const isWaitingKey = key => key in WAITING_BACKGROUND
-    || key.startsWith('show_accept_')
+const isWaitingKey = key => key.startsWith('show_accept_')
     || key === 'show_quick_payment_buttons'
     || key.startsWith('paymentbuttons-')
     || key.startsWith('checkout-paymentbuttons-');
 
 const resolve = (settings, ref) => lower(ref.startsWith('#') || ref === TRANSPARENT ? ref : settings[ref]);
 
-describe('the checkout button is the buy colour with a white label (decision 6)', () => {
-    it('is sage #5D705C, with a white label, on both variations', () => {
+describe('the checkout button is the buy colour with a white label (DESIGN.md, the copper rule)', () => {
+    it('is beadhead copper #9C4A22, deep copper #833D1B on hover and press, with a white label, on both variations', () => {
         forEachVariation((settings, name) => {
-            assert.equal(lower(settings['optimizedCheckout-buttonPrimary-backgroundColor']), BUY, name);
-            assert.equal(lower(settings['optimizedCheckout-buttonPrimary-borderColor']), BUY, name);
+            assert.equal(lower(settings['optimizedCheckout-buttonPrimary-backgroundColor']), COPPER, name);
+            assert.equal(lower(settings['optimizedCheckout-buttonPrimary-borderColor']), COPPER, name);
+            assert.equal(lower(settings['optimizedCheckout-buttonPrimary-backgroundColorHover']), COPPER_DEEP, name);
+            assert.equal(lower(settings['optimizedCheckout-buttonPrimary-backgroundColorActive']), COPPER_DEEP, name);
             assert.equal(lower(settings['optimizedCheckout-buttonPrimary-color']), WHITE, name);
         });
     });
@@ -145,17 +157,19 @@ describe('the checkout button is the buy colour with a white label (decision 6)'
         });
     });
 
-    it('never puts the brand sage #7B8E7A behind white text (3.5:1)', () => {
+    it('is never the storefront\'s ink primary button, nor master\'s sage: copper marks buying and nothing else', () => {
         forEachVariation((settings, name) => {
             for (const state of ['', 'Hover', 'Active']) {
-                assert.notEqual(lower(settings[`optimizedCheckout-buttonPrimary-backgroundColor${state}`]), '#7b8e7a', name);
+                const bg = lower(settings[`optimizedCheckout-buttonPrimary-backgroundColor${state}`]);
+                assert.notEqual(bg, lower(settings[`button--primary-backgroundColor${state}`]), `${name}: the checkout button isn't the storefront's ink button`);
+                assert.ok(!['#5d705c', '#4f5f4e', '#435242', '#7b8e7a'].includes(bg), `${name}: no sage`);
             }
         });
     });
 });
 
 describe('every other checkout colour follows the storefront palette', () => {
-    it('sets each checkout colour key to the storefront colour it follows', () => {
+    it('sets each checkout colour key to the storefront colour or token it follows', () => {
         forEachVariation((settings, name) => {
             for (const [key, ref] of Object.entries(FOLLOWS)) {
                 assert.ok(key in settings, `${key} is a setting`);
@@ -167,23 +181,31 @@ describe('every other checkout colour follows the storefront palette', () => {
     it('covers every checkout colour key ticket 24 owns', () => {
         const owned = Object.keys(config.settings).filter(key => key.startsWith('optimizedCheckout-')
             && /color/i.test(key)
-            && key !== 'optimizedCheckout-formField-placeholderColor' // ticket 25's
-            && !(key in WAITING_BACKGROUND));
+            && key !== 'optimizedCheckout-formField-placeholderColor'); // ticket 25's
         assert.deepEqual(owned.filter(key => !(key in FOLLOWS)), [], 'each one is in FOLLOWS');
+        assert.deepEqual(Object.keys(FOLLOWS).filter(key => !owned.includes(key)), [], 'and FOLLOWS names no key config.json lacks');
     });
 
     it('keeps none of stock Cornerstone\'s checkout greys and blues', () => {
         forEachVariation((settings, name) => {
             const stock = Object.entries(settings)
-                .filter(([key, value]) => key.startsWith('optimizedCheckout-') && !(key in WAITING_BACKGROUND)
-                    && STOCK_CHECKOUT_COLOURS.includes(lower(value)))
+                .filter(([key, value]) => key.startsWith('optimizedCheckout-') && STOCK_CHECKOUT_COLOURS.includes(lower(value)))
                 .map(([key, value]) => `${key}: ${value}`);
             assert.deepEqual(stock, [], name);
         });
     });
 
-    it('rings focus with the storefront\'s focus ring, not the stock blue', () => {
+    it('rings focus with the storefront\'s focus ring, ink, not the stock blue', () => {
         forEachVariation((settings, name) => assert.equal(lower(settings['optimizedCheckout-colorFocus']), FOCUS_RING, name));
+    });
+
+    it('lays the checkout on limestone, the storefront\'s ground, with no background image', () => {
+        forEachVariation((settings, name) => {
+            assert.equal(lower(settings['optimizedCheckout-body-backgroundColor']), '#e9e4db', name);
+            assert.equal(lower(settings['optimizedCheckout-header-backgroundColor']), '#e9e4db', name);
+            assert.equal(lower(settings['body-bg']), '#e9e4db', `${name}: the storefront's ground`);
+            for (const [key, value] of Object.entries(NO_BACKGROUND_IMAGE)) assert.equal(settings[key], value, `${name}: ${key}`);
+        });
     });
 
     it('sets the checkout colours once, in the base settings, so both variations share them', () => {
@@ -194,25 +216,29 @@ describe('every other checkout colour follows the storefront palette', () => {
     });
 });
 
-describe('Onest only (decision 7)', () => {
+describe('Archivo only (DESIGN.md "Typography")', () => {
     const fontKeys = Object.keys(config.settings).filter(key => /^optimizedCheckout-.*-font$/.test(key));
 
-    it('sets every checkout font key to the self-hosted Onest, on both variations', () => {
+    it('sets every checkout font key to the self-hosted Archivo, in its three cuts, on both variations', () => {
         assert.equal(fontKeys.length, 7, 'the seven checkout font keys');
         forEachVariation((settings, name) => {
-            for (const key of fontKeys) assert.match(settings[key], /^Onest_(400|500|600)$/, `${name}: ${key}`);
+            for (const key of fontKeys) assert.match(settings[key], /^Archivo(\+Expanded)?_\d{3}$/, `${name}: ${key}`);
+            for (const key of ['optimizedCheckout-headingPrimary-font', 'optimizedCheckout-headingSecondary-font']) assert.equal(settings[key], 'Archivo+Expanded_780', `${name}: ${key}`);
+            for (const key of ['optimizedCheckout-contentPrimary-font', 'optimizedCheckout-contentSecondary-font']) assert.equal(settings[key], 'Archivo_400', `${name}: ${key}`);
+            for (const key of ['optimizedCheckout-buttonPrimary-font', 'optimizedCheckout-buttonSecondary-font', 'optimizedCheckout-link-font']) assert.equal(settings[key], 'Archivo_650', `${name}: ${key}`);
         });
     });
 
-    it('asks Google Fonts for nothing on the checkout, so no Karla or Montserrat', () => {
+    it('asks Google Fonts for nothing on the checkout, so no Karla, Montserrat or Onest', () => {
         forEachVariation((settings, name) => {
-            for (const key of fontKeys) assert.doesNotMatch(settings[key], /^Google_|Karla|Montserrat/, `${name}: ${key}`);
+            for (const key of fontKeys) assert.doesNotMatch(settings[key], /^Google_|Karla|Montserrat|Onest/, `${name}: ${key}`);
         });
     });
 
-    it('loads Onest\'s @font-face in the one stylesheet the checkout reads', () => {
+    it('loads Archivo\'s @font-face in the one stylesheet the checkout reads', () => {
         assert.match(read('templates/pages/checkout.html'), /stylesheet '\/assets\/css\/optimized-checkout\.css'/);
         assert.match(read('assets/scss/optimized-checkout.scss'), /^@import "reelflies\/fonts";/m);
+        assert.match(read('assets/scss/reelflies/_fonts.scss'), /font-family:\s*["']?Archivo/);
     });
 });
 
@@ -244,7 +270,7 @@ describe('the checkout logo: the current 133x95 PNG until ticket 14\'s master (d
 
 describe('the keys that wait for Shaun\'s answers keep their stock values', () => {
     it('shows no payment icon until he says what each channel accepts', () => {
-        assert.equal(ICON_KEYS.length, 8, 'config.json:98-105');
+        assert.equal(ICON_KEYS.length, 8, 'the eight show_accept_* keys');
         forEachVariation((settings, name) => {
             for (const key of ICON_KEYS) assert.equal(settings[key], false, `${name}: ${key}`);
         });
@@ -252,12 +278,6 @@ describe('the keys that wait for Shaun\'s answers keep their stock values', () =
 
     it('leaves the quick payment buttons as they are live on ReelFlies_CA (on)', () => {
         forEachVariation((settings, name) => assert.equal(settings.show_quick_payment_buttons, true, name));
-    });
-
-    it('keeps the checkout background stock: a #F5F5F5 header, a white page and no image', () => {
-        forEachVariation((settings, name) => {
-            for (const [key, value] of Object.entries(WAITING_BACKGROUND)) assert.equal(settings[key], value, `${name}: ${key}`);
-        });
     });
 
     it('sets none of them in either variation yet', () => {

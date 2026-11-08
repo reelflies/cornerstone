@@ -1,44 +1,29 @@
-// Tests the home product bands' assertion (ticket 48), home-product-bands, on home pages built
-// from the widgets' own renders (the tiles, then best sellers and the Signature band in
-// home_below_top_products), with each promise broken once. It judges only the page, so a page
-// without the bands passes.
+// Tests the home product bands' assertion (redesign step 2; ticket 48's rules), home-product-bands,
+// on the redesign's home page rendered from fixed data (../home-fixture.mjs): the stone's lay,
+// the hatch rows' flies, the Signature band and the Selections, with each promise broken once.
+// It judges only the page, so a page without an optional band passes.
 //
 //   node --test scripts/qa/raw-html/assertions/home-product-bands.test.mjs
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import path from 'node:path';
-import { readFixture, renderWidget, WIDGETS_DIR } from '../../render/render.mjs';
 import { checkPage, loadAssertions } from '../../raw-html.mjs';
-import bands, { productBandsProblems } from './home-product-bands.mjs';
-import cardsTiles from './home-cards-tiles.mjs';
-import photoOnce from './home-photo-once.mjs';
-import nothingBetween from './home-nothing-between.mjs';
+import { homePage } from '../home-fixture.mjs';
+import bands, {
+    BAND_ORDER, cardProblems, cards, homeSections, productBands, productBandsProblems,
+} from './home-product-bands.mjs';
+import { elementsHtml, findTags } from '../html.mjs';
 
-const fixture = (name, file = 'default') => readFixture(path.join(WIDGETS_DIR, name, 'fixtures', `${file}.json`));
-const wrap = html => `<div data-widget-id="w" data-placement-id="p" data-placement-status="ACTIVE">${html}</div>`;
-const rendered = {
-    tiles: await renderWidget('link-tiles', fixture('link-tiles')),
-    best: await renderWidget('best-sellers', fixture('best-sellers')),
-    signature: await renderWidget('signature-band', fixture('signature-band')),
-};
-
-// A home page as stencil start serves it, with the widgets in home_below_top_products in
-// placement order.
-function homePage({ tiles = rendered.tiles, best = rendered.best, signature = rendered.signature } = {}) {
-    const region = [tiles, best, signature].filter(Boolean).map(wrap).join('');
-    return {
-        kind: 'home',
-        key: 'home',
-        path: '/',
-        url: 'http://localhost:3301/',
-        status: 200,
-        html: '<!DOCTYPE html><html lang="en"><head><title>ReelFlies</title></head><body><header><div class="header-logo"><a href="/">ReelFlies</a></div></header><main class="body" id="main-content">'
-            + `<div class="container"><div class="main full"><div data-content-region="home_below_top_products">${region}</div></div></div></main></body></html>`,
-    };
+const page = await homePage();
+const failures = fixture => checkPage(fixture, [bands]).filter(result => result.status === 'fail');
+function edited(from, to, html = page.html) {
+    assert.ok(typeof from === 'string' ? html.includes(from) : from.test(html), `the fixture has ${from}`);
+    return { ...page, html: html.replace(from, to) };
 }
-
-const failures = (page, assertion) => checkPage(page, [assertion]).filter(result => result.status === 'fail');
+// A Selections card's photo, which is lazy; a stone card's, which is eager.
+const SELECTION_IMG = /<img src="[^"]*42-mayfly-assortment\.jpg"[^>]*>/;
+const STONE_IMG = /<img src="[^"]*adams-parachute-dry-fly\.jpg"[^>]*>/;
+const problems = html => productBandsProblems(html).join('\n');
 
 test('it is registered, for the home page only', async () => {
     const ids = (await loadAssertions()).map(assertion => assertion.id);
@@ -47,59 +32,105 @@ test('it is registered, for the home page only', async () => {
     assert.equal(bands.id, 'home-product-bands');
 });
 
-test('both bands as the widgets render them pass, beside the tiles, and so do the other home checks', () => {
-    const page = homePage();
+test('the home page as the theme renders it passes, with every band and 34 cards in them', () => {
     assert.deepEqual(productBandsProblems(page.html), []);
-    for (const assertion of [bands, cardsTiles, photoOnce, nothingBetween]) assert.deepEqual(failures(page, assertion), [], assertion.id);
+    assert.deepEqual(failures(page), []);
+    assert.deepEqual(homeSections(page.html).map(({ name }) => name), BAND_ORDER);
+    const names = productBands(page.html).map(({ name }) => name);
+    assert.equal(names[0], 'the stone\'s lay');
+    assert.ok(names.includes('the Midges row') && names.includes('the Hoppers and terrestrials row'), names.join(', '));
+    assert.deepEqual(names.slice(-2), ['the Signature band', 'the Selections']);
+    assert.equal(cards(page.html).length, 34);
+    assert.equal(productBands(page.html).reduce((sum, band) => sum + cards(band.html).length, 0), 34);
 });
 
-test('a page without either band passes: the widgets aren\'t placed yet, or are unpublished', () => {
-    assert.deepEqual(productBandsProblems(homePage({ best: '', signature: '' }).html), []);
-    assert.deepEqual(productBandsProblems(homePage({ best: '' }).html), []);
-    assert.deepEqual(productBandsProblems(homePage({ signature: '' }).html), []);
+test('a page without best sellers, a Signature fly or Selections passes with fewer bands', async () => {
+    const bare = await homePage({ best: [], signature: null, selections: [] });
+    assert.deepEqual(productBandsProblems(bare.html), []);
+    const names = productBands(bare.html).map(({ name }) => name);
+    assert.ok(!names.includes('the stone\'s lay') && !names.includes('the Signature band') && !names.includes('the Selections'), names.join(', '));
+    assert.ok(names.length >= 10, 'the hatch rows still have their flies');
 });
 
-test('a band without its H2, or the Signature band before best sellers, fails', () => {
-    const noHeading = rendered.best.replace(/<h2 class="rf-home-band__heading"([^>]*)>Best sellers<\/h2>/, '<p class="rf-home-band__heading"$1>Best sellers</p>');
-    assert.deepEqual(productBandsProblems(homePage({ best: noHeading }).html), ['the best-sellers band has no <h2>: each band\'s heading is an H2 (story 68)']);
-    const h3 = rendered.signature.replace(/<h2 (class="rf-home-band__heading[^"]*"[^>]*)>([^<]*)<\/h2>/, '<h3 $1>$2</h3>');
-    assert.match(productBandsProblems(homePage({ signature: h3 }).html)[0], /the signature band has no <h2>/);
-    const swapped = homePage({ best: rendered.signature, signature: rendered.best });
-    assert.deepEqual(productBandsProblems(swapped.html), ['the bands are out of order: best sellers comes before the Signature band (placements 20 and 30)']);
+test('with rf_quick_add off, every card buys through a link to its page, and passes', async () => {
+    const off = await homePage({ theme_settings: { rf_quick_add: false } });
+    assert.deepEqual(productBandsProblems(off.html), []);
+    assert.ok(!findTags(off.html).some(tag => 'data-rf-add' in tag.attrs || 'data-rf-sizes' in tag.attrs), 'no "+ Add" and no size panel');
+    assert.equal(elementsHtml(off.html, 'a', attrs => (attrs.class || '').includes('rf-add--link')).length, 34);
 });
 
-test('a card with a button, a second link or no href fails, naming the card', () => {
-    const withAdd = rendered.best.replace('<h3 class="rf-product-card__name">Elk Hair Caddis Tan</h3>', '<h3 class="rf-product-card__name">Elk Hair Caddis Tan</h3><button type="button">+ Add</button>');
-    assert.deepEqual(productBandsProblems(homePage({ best: withAdd }).html), ['best-sellers card 3 (Elk Hair Caddis Tan) has <button> inside its link: each card is one link to its product page, with no "+ Add"']);
-    const addOutside = rendered.best.replace('</ul>', '<li><button type="button" class="rf-quick-add">+ Add</button></li></ul>');
-    assert.deepEqual(productBandsProblems(homePage({ best: addOutside }).html), ['the best-sellers band has <button>: its cards are links only, with no "+ Add"']);
-    const noHref = rendered.signature.replace('href="/reel-egg-nuke/"', 'href=""');
-    assert.deepEqual(productBandsProblems(homePage({ signature: noHref }).html), ['signature card 4 (Reel Egg Nuke) links to "", not a page']);
+test('the bands keep home.html\'s order, and every card is in a band', () => {
+    const shop = elementsHtml(page.html, 'section', attrs => (attrs.class || '').includes('rf-shop'))[0];
+    const moved = { ...page, html: page.html.replace(shop, () => '').replace('<section class="rf-stone"', `${shop}<section class="rf-stone"`) };
+    assert.match(problems(moved.html), /the home page's bands are out of order \(rf-shop, rf-stone, /);
+    const stray = edited('<figure class="rf-shop__photo">', '<ul><li data-rf-product="1"><article></article></li></ul><figure class="rf-shop__photo">');
+    assert.match(problems(stray.html), /1 card\(s\) sit outside the product bands/);
 });
 
-test('a card photo that isn\'t a lazy server-rendered <img> with alt="", srcset, sizes and dimensions fails', () => {
-    const eager = rendered.best.replace(' alt="" loading="lazy" />', ' alt="" fetchpriority="high" />');
-    assert.deepEqual(productBandsProblems(homePage({ best: eager }).html), [
-        'best-sellers card 1 (Adams Parachute Dry Fly)\'s <img> has fetchpriority="high": both bands sit below the first screen (SEO-8)',
-        'best-sellers card 1 (Adams Parachute Dry Fly)\'s <img> isn\'t loading="lazy": both bands sit below the first screen (SEO-8)',
-    ]);
-    const bare = rendered.signature.replace(/ srcset="[^"]*reel-leech[^"]*" sizes="[^"]*" width="600" height="400"/, '');
-    assert.deepEqual(productBandsProblems(homePage({ signature: bare }).html), ['srcset', 'sizes', 'width', 'height']
-        .map(name => `signature card 1 (Black Reel Egg Sucking Leech)'s <img> has no ${name}`));
-    const lazySizes = rendered.best.replace(/<img class="rf-product-card__img" src="([^"]*)"/, '<img class="rf-product-card__img lazyload" data-src="$1"');
-    assert.deepEqual(productBandsProblems(homePage({ best: lazySizes }).html), ['best-sellers card 1 (Adams Parachute Dry Fly)\'s <img> has no src']);
-    const alt = rendered.best.replace(' alt="" loading', ' alt="Adams Parachute" loading');
-    assert.deepEqual(productBandsProblems(homePage({ best: alt }).html), ['best-sellers card 1 (Adams Parachute Dry Fly)\'s <img> needs alt="": the card\'s name says what it is']);
+test('a labelled band has one <h2> that names it, and page links with no number in their label', () => {
+    const twoH2 = edited('<h2 id="rf-sig-title">', '<h2>Also</h2><h2 id="rf-sig-title">');
+    assert.match(problems(twoH2.html), /the Signature band has 2 <h2> elements/);
+    const label = edited('aria-labelledby="rf-sel-title"', 'aria-labelledby="elsewhere"');
+    assert.match(problems(label.html), /the Selections is labelled by "elsewhere", not by its <h2>/);
+    const counted = edited('>All Signature flies<', '>All 432 Signature flies<');
+    assert.match(problems(counted.html), /the Signature band's link says "All 432 Signature flies": a label carries no number \(HOME-4\)/);
+    const anchor = edited('href="/flies/streamers-buggers/reelflies-signature-flies/">All Signature flies', 'href="#">All Signature flies');
+    assert.match(problems(anchor.html), /the Signature band's link "All Signature flies" goes to "#", not a page/);
 });
 
-test('the Signature button must be a link to the ReelFlies brand listing, with no number in its label', () => {
-    const elsewhere = rendered.signature.replace('href="/brands/ReelFlies.html"', 'href="/reelflies-signature-flies/"');
-    assert.deepEqual(productBandsProblems(homePage({ signature: elsewhere }).html), ['the Signature band\'s button links to "/reelflies-signature-flies/", not the ReelFlies brand listing /brands/ReelFlies.html (ticket 36)']);
-    const counted = rendered.signature.replace('>See all ReelFlies originals</a>', '>Shop 355 signature patterns</a>');
-    assert.deepEqual(productBandsProblems(homePage({ signature: counted }).html), ['the Signature band\'s button says "Shop 355 signature patterns": a label carries no number (HOME-4)']);
-    const asButton = rendered.signature.replace(/<a class="rf-signature__button" href="[^"]*">([^<]*)<\/a>/, '<button class="rf-signature__button">$1</button>');
-    assert.deepEqual(productBandsProblems(homePage({ signature: asButton }).html), [
-        'the signature band has <button>: its cards are links only, with no "+ Add"',
-        'the Signature band has no button link (a.rf-signature__button) to the ReelFlies brand listing',
-    ]);
+test('a card\'s photo is one lazy <img> with alt="", srcset, sizes and its box, eager on the stone, never with fetchpriority', () => {
+    const [selection] = page.html.match(SELECTION_IMG);
+    const [stone] = page.html.match(STONE_IMG);
+    const cases = [
+        [SELECTION_IMG, selection.replace(' loading="lazy"', ''), /the Selections's card 1 \(42 Mayfly Assortment\)'s <img> isn't loading="lazy"/],
+        [SELECTION_IMG, selection.replace(' alt=""', ' alt="42 Mayfly Assortment"'), /card 1 \(42 Mayfly Assortment\)'s <img> needs alt=""/],
+        [SELECTION_IMG, selection.replace(/ srcset="[^"]*"/, '').replace(/ sizes="[^"]*"/, ''), /<img> has no srcset[\s\S]*<img> has no sizes/],
+        [SELECTION_IMG, selection.replace(' width="720" height="480"', ''), /<img> has no width[\s\S]*<img> has no height/],
+        [STONE_IMG, stone.replace(' decoding="async"', ' loading="lazy" decoding="async"'), /the stone's lay's card 1 \(Adams Parachute Dry Fly\)'s <img> is lazy/],
+        [STONE_IMG, stone.replace(' decoding="async"', ' fetchpriority="high" decoding="async"'), /card 1 \(Adams Parachute Dry Fly\)'s <img> has fetchpriority="high"/],
+    ];
+    for (const [from, to, expected] of cases) assert.match(problems(edited(from, to).html), expected);
+    const noPhoto = edited(STONE_IMG, '');
+    assert.match(problems(noPhoto.html), /card 1 \(Adams Parachute Dry Fly\) has 0 <img> elements in its photo link, not 1/);
+});
+
+test('a card\'s links go to its page, with nothing interactive inside, and the photo\'s is hidden from readers', () => {
+    const elsewhere = edited('<a class="rf-fly__photo" href="/adams-parachute-dry-fly/"', '<a class="rf-fly__photo" href="/adams/"');
+    assert.match(problems(elsewhere.html), /card 1 \(Adams Parachute Dry Fly\)'s photo links to \/adams\/ and its name to \/adams-parachute-dry-fly\/: both go to the product page/);
+    const readable = edited('<a class="rf-fly__photo" href="/adams-parachute-dry-fly/" tabindex="-1" aria-hidden="true">', '<a class="rf-fly__photo" href="/adams-parachute-dry-fly/">');
+    assert.match(problems(readable.html), /photo link isn't tabindex="-1" aria-hidden="true"/);
+    const nested = edited('<h3 class="rf-fly__name"><a href="/adams-parachute-dry-fly/">Adams Parachute Dry Fly</a>', '<h3 class="rf-fly__name"><a href="/adams-parachute-dry-fly/">Adams Parachute Dry Fly<button type="button">+ Add</button></a>');
+    assert.match(problems(nested.html), /has <button> inside a link: nothing interactive goes inside a link/);
+    const empty = edited('<a href="/adams-parachute-dry-fly/">Adams Parachute Dry Fly</a>', '<a href="">Adams Parachute Dry Fly</a>');
+    assert.match(problems(empty.html), /card 1 \(Adams Parachute Dry Fly\)'s name links to "", not a page/);
+});
+
+test('each card buys one way: "+ Add" with its hidden size panel, or a link to the page', () => {
+    const mode = edited('data-rf-add="sizes"', 'data-rf-add="now"');
+    assert.match(problems(mode.html), /"\+ Add" is data-rf-add="now", not "sizes" or "one"/);
+    const expanded = edited('data-rf-add="sizes" aria-expanded="false"', 'data-rf-add="sizes" aria-expanded="true"');
+    assert.match(problems(expanded.html), /isn't aria-expanded="false" on the server/);
+    const shown = edited('<div class="rf-fly__sizes-panel" data-rf-sizes hidden></div>', '<div class="rf-fly__sizes-panel" data-rf-sizes></div>');
+    assert.match(problems(shown.html), /size panel isn't hidden on the server/);
+    const noPanel = edited('<div class="rf-fly__sizes-panel" data-rf-sizes hidden></div>', '');
+    assert.match(problems(noPanel.html), /has 0 size panel\(s\) \(\[data-rf-sizes\]\), not 1/);
+    const both = edited('<div class="rf-fly__sizes-panel" data-rf-sizes hidden></div>', '<a class="rf-add rf-add--link" href="/adams-parachute-dry-fly/">Choose a size</a><div class="rf-fly__sizes-panel" data-rf-sizes hidden></div>');
+    assert.match(problems(both.html), /has 1 "\+ Add" button\(s\) and 1 buy link\(s\): each card buys one way/);
+    const field = edited('<div class="rf-fly__sizes-panel" data-rf-sizes hidden></div>', '<div class="rf-fly__sizes-panel" data-rf-sizes hidden><input type="number"></div>');
+    assert.match(problems(field.html), /has <input>: a card holds no form control on the server/);
+});
+
+test('the reserved line keeps its hidden in-box tag, and a Selection is never "/ fly"', () => {
+    const noTag = edited('<span class="rf-fly__inbox" data-rf-inbox hidden></span>', '');
+    assert.match(problems(noTag.html), /line has no in-box tag \(\[data-rf-inbox\]\)/);
+    const shown = edited('<span class="rf-fly__inbox" data-rf-inbox hidden></span>', '<span class="rf-fly__inbox" data-rf-inbox>2 in your box</span>');
+    assert.match(problems(shown.html), /in-box tag isn't hidden on the server/);
+    const unit = edited('<span class="rf-fly__unit">/ set</span>', '<span class="rf-fly__unit">/ fly</span>');
+    assert.match(problems(unit.html), /the Selections's card 1 \(42 Mayfly Assortment\) shows the unit "\/ fly": a Selection is priced per set/);
+});
+
+test('an empty card is named for everything it lacks', () => {
+    const named = cardProblems('<li data-rf-product="x"><article></article></li>', 'the card');
+    assert.match(named.join('\n'), /data-rf-product is "x", not a product id/);
+    assert.match(named.join('\n'), /has no name link[\s\S]*has no photo link[\s\S]*has no price[\s\S]*has no reserved line[\s\S]*0 "\+ Add" button\(s\) and 0 buy link\(s\)/);
 });

@@ -1,13 +1,15 @@
-// Ticket 53, Option A: the channel-1 variation (wave 1, lane B). Channel 1 is live reelflies.ca on
-// tree 1. Its variation, "ReelFlies CA channel 1" (decision 10's interim name), is as thin as
-// "ReelFlies CA" and "ReelFlies US": it holds only what differs on channel 1, which today is tree
-// 1's menu ids and its Gear and Assortment roots for the card's "/ fly" (ticket 31). Merging it
-// applies nothing to channel 1: only ticket 53's guarded channel-1 target takes it (wave 2, lane
-// F: typed by Shaun at his own terminal, never an agent), and ticket 56 pushes it there after
-// Shaun approves it and its ids (53:7).
+// Ticket 53, Option A: the channel-1 variation (wave 1, lane B), as the redesign keeps it. Channel 1
+// is live reelflies.ca on tree 1. Its variation, "ReelFlies CA channel 1" (decision 10's interim
+// name), is as thin as "ReelFlies CA" and "ReelFlies US": it holds only what differs on channel 1
+// (CUSTOMIZATIONS.md, step 2 "Variation values"): tree 1's Fly Types, plain links and "Also" row,
+// the "/ fly" roots and the no-box-note paths, the Signature and Selections categories, the hatch
+// rows' "More" categories, and rf_quick_add true, said on purpose: the owner's master value was
+// false, so the release guard flags the change at channel 1's push (step 3, round 2). Tree 1 has
+// no Species root, so the variation declares none and the base's empty value stands.
 //
-// From this ticket on, channel-1 gate runs render that variation, and their baselines live in
-// scripts/qa/baselines/1-reelflies-ca-channel-1/ (build pipeline, wave 1, lane B).
+// Merging it applies nothing to channel 1: only ticket 53's guarded channel-1 target takes it
+// (wave 2, lane F: typed by Shaun at his own terminal, never an agent). Channel-1 gate runs render
+// it, and their baselines live in scripts/qa/baselines/1-reelflies-ca-channel-1/.
 //
 //   node --test scripts/qa/channel-1-variation.test.mjs
 
@@ -35,9 +37,21 @@ const FLIES = 398;
 const TREE_1_TOP = [FLIES, 399, 400]; // Flies, Fly Selections & Fly Boxes, Fly Gear
 const TREE_1_UNDER_FLIES = [438, 298, 251, 255, 272]; // Realistic Trout, Dry, Nymphs & Sub Surface, Streamers & Buggers, Saltwater, Warmwater & Salmon
 const TREE_1_IDS = [...TREE_1_TOP, ...TREE_1_UNDER_FLIES];
-// The menu's order: the ticket's (53:28-33), lane G's default (revisitable once ticket 28 says
-// whether it renders in list order).
+// The menu's order: the ticket's (53:28-33), lane G's default.
 const TYPE_IDS = '298,251,255,272,438';
+// The hatch rows' "More" categories on tree 1 (Theme Styles, Hatch chart; redesign step 2).
+const HATCH_MORE = {
+    rf_hatch_midges_more: '378',
+    rf_hatch_black_stone_more: '275',
+    rf_hatch_bwo_more: '306',
+    rf_hatch_hendrickson_more: '306',
+    rf_hatch_caddis_more: '381',
+    rf_hatch_march_brown_more: '306',
+    rf_hatch_sulphur_more: '307',
+    rf_hatch_hex_more: '306',
+    rf_hatch_trico_more: '306',
+    rf_hatch_hoppers_more: '358',
+};
 
 describe('config.json: the channel-1 variation', () => {
     const variation = variationNamed(NAME);
@@ -57,20 +71,28 @@ describe('config.json: the channel-1 variation', () => {
         }
     });
 
-    it('holds only what differs on channel 1: tree 1\'s menu ids, its Gear and Assortment roots (ticket 31), and quick add off (ticket 43; build pipeline section 4)', () => {
+    it('holds only what differs on channel 1: tree 1\'s menu, the "/ fly" roots and no-box-note paths, the Signature, Selections and hatch categories, and quick add on, on purpose', () => {
         assert.deepEqual(variation.settings, {
             rf_menu_type_ids: TYPE_IDS,
-            rf_menu_species_root_id: '',
+            rf_menu_link_ids: '399,434,400',
+            rf_menu_also_ids: '399,434,382',
             rf_price_unit_exclude: 'Fly Gear,Fly Selections & Fly Boxes',
-            rf_quick_add: false,
+            rf_quick_add: true,
+            rf_no_box_note_paths: 'Fly Selections & Fly Boxes/Bulk Fly Selections,Fly Selections & Fly Boxes/Mini Fly Selections',
+            rf_home_signature_cat: '434',
+            rf_home_selections_cat: '399',
+            ...HATCH_MORE,
         });
+        assert.equal(Object.keys(variation.settings).length, 18);
+        for (const key of Object.keys(variation.settings)) assert.ok(key in config.settings, `${key} is a declared setting`);
     });
 
     it('names the five Fly-Type-like categories under Flies on tree 1, and no Species root', () => {
         const ids = variation.settings.rf_menu_type_ids.split(',').map(Number);
         assert.deepEqual([...ids].sort(), [...TREE_1_UNDER_FLIES].sort());
         assert.ok(!ids.some(id => TREE_1_TOP.includes(id)), 'no top-level category');
-        assert.equal(variation.settings.rf_menu_species_root_id, '', 'tree 1 has no Species root');
+        assert.ok(!('rf_menu_species_root_id' in variation.settings), 'tree 1 has no Species root, so the variation leaves the base\'s empty value alone');
+        assert.equal(effectiveSettings(config, NAME).rf_menu_species_root_id, '');
     });
 
     it('keeps tree 1\'s ids out of every other variation, whose channels run other trees', () => {
@@ -117,6 +139,7 @@ describe('the release guard and step 1 on the channel-1 variation (seam 5)', () 
         const switches = Object.keys(repo).filter(key => key.startsWith('rf_') && !MENU_ID_KEYS.includes(key)).sort();
         assert.deepEqual([...result.newSwitches].sort(), switches);
         assert.ok(result.values.some(({ key, value }) => key === 'rf_menu_type_ids' && value === TYPE_IDS));
+        assert.ok(result.values.some(({ key, value }) => key === 'rf_quick_add' && value === true));
     });
 
     it('doesn\'t stop step 1 on the first push: the rf_* keys are only in config.json', () => {

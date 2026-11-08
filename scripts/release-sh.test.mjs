@@ -320,7 +320,7 @@ test('a live colour pair that fails contrast is reported as a warning, and the r
     const result = run([...CA, '--dry-run'], env);
     assert.equal(result.status, 0, result.output);
     assert.match(result.stdout, /config\.ca\.live\.json · ReelFlies CA: \d+\/\d+ pass/);
-    assert.match(result.stdout, /FAIL {5}heading: #bbbbbb on #ffffff/);
+    assert.match(result.stdout, new RegExp(`FAIL {5}heading: #bbbbbb on ${caColours()['body-bg']}`));
     assert.match(result.stdout, /WARNING {2}the live colours: 1 pair\(s\) fail WCAG contrast.*doesn't stop the release.*step 3/);
     assert.match(result.stdout, /guard: pass/);
     assert.match(result.stdout, /stopped before the clean build/);

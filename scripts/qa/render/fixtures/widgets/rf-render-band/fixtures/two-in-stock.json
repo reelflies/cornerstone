@@ -1,7 +1,10 @@
 {
-    "description": "Two products in stock and one sold out in every size.",
-    "page": "pages/home",
-    "region": "home_below_top_products",
+    "description": "Two products in stock and one sold out in every size, in a category page's region under the head (the redesign's home page has no Page Builder region).",
+    "page": "pages/category",
+    "region": "category_below_header",
+    "page_context": {
+        "category": { "id": 298, "name": "Dry Flies", "url": "/flies/dry-flies/", "products": [] }
+    },
     "configuration": {
         "heading": "Best sellers"
     },

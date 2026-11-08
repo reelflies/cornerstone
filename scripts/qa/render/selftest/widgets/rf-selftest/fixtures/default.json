@@ -1,7 +1,10 @@
 {
-    "description": "The widget shot self-test: a heading, a product from a GraphQL fixture with its photo, and a theme button, in the home page's best-sellers region.",
-    "page": "pages/home",
-    "region": "home_below_top_products",
+    "description": "The widget shot self-test: a heading, a product from a GraphQL fixture with its photo, and a theme button, in a category page's region under the head (the redesign's home page has no Page Builder region).",
+    "page": "pages/category",
+    "region": "category_below_header",
+    "page_context": {
+        "category": { "id": 298, "name": "Dry Flies", "url": "/flies/dry-flies/", "products": [] }
+    },
     "configuration": {
         "heading": "Widget shot self-test",
         "background": "#f4f1ea",

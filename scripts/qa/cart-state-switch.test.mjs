@@ -1,10 +1,10 @@
-// Cart state's switch (ticket 42; ticket 15's guard; story 73; spec seam 5): rf_cart_state is a
-// Theme Styles checkbox, on in the base settings, which both gated variations inherit (ticket 53's
-// default: the channel-1 variation sets no switch of its own). A release whose config.json value
-// differs from the channel's live one stops, with no flag to override it; the first push over
-// Hero-2024 lists it as a new switch for Shaun to confirm. Once a template reads it, the switch
-// matrix (ticket 54) renders every pin with it off too, through rf_cart_state-off, and checks
-// that none of the module's markup or script is on the page.
+// Cart state's switch (ticket 42; ticket 15's guard; story 73; spec seam 5; redesign step 2):
+// rf_cart_state is a Theme Styles checkbox under Product cards, on in the base settings, which
+// both gated variations inherit. A release whose config.json value differs from the channel's
+// live one stops, with no flag to override it; the first push over Hero-2024 lists it as a new
+// switch for Shaun to confirm. head.html reads it (context.rfCartState), so the switch matrix
+// (ticket 54) renders every pin with it off too, through rf_cart_state-off; the module's whole
+// effect is quick-add.js's, in the browser, so the entry names no marker or chunk of its own.
 //
 //   node --test scripts/qa/cart-state-switch.test.mjs
 
@@ -28,13 +28,17 @@ const CHANNELS = [[1895766, 'ReelFlies CA'], [1, 'ReelFlies CA channel 1']];
 const treeOf = repo => ['rf_menu_type_ids', 'rf_menu_species_root_id'].flatMap(key => String(repo[key] || '').split(',')).map(Number).filter(Boolean);
 
 describe('rf_cart_state', () => {
-    it('is a Theme Styles checkbox under Cart state, with its label, on in the base settings and in both gated variations', () => {
+    it('is a Theme Styles checkbox under Product cards, with its label, on in the base settings and in both gated variations', () => {
         const group = schema.find(({ name }) => name === 'i18n.RfReelFlies');
-        const index = group.settings.findIndex(setting => setting.content === 'i18n.RfCartState');
-        assert.deepEqual(group.settings[index + 1], {
-            type: 'checkbox', label: 'i18n.RfCartStateSwitch', force_reload: true, id: 'rf_cart_state',
+        const heading = group.settings.findIndex(setting => setting.content === 'i18n.RfProductCards');
+        const at = group.settings.findIndex(setting => setting.id === 'rf_cart_state');
+        assert.ok(heading >= 0 && at > heading, 'rf_cart_state sits under the Product cards heading');
+        const next = group.settings.findIndex((setting, index) => index > heading && setting.type === 'heading');
+        assert.ok(next === -1 || at < next, 'and before the next heading');
+        assert.deepEqual(group.settings[at], {
+            type: 'checkbox', label: 'i18n.RfCartState', force_reload: true, id: 'rf_cart_state',
         });
-        assert.ok(translations['i18n.RfCartStateSwitch'].default);
+        assert.ok(translations['i18n.RfCartState'].default);
         assert.equal(config.settings.rf_cart_state, true);
         for (const [, variation] of CHANNELS) assert.equal(effectiveSettings(config, variation).rf_cart_state, true, variation);
     });
@@ -75,8 +79,9 @@ describe('rf_cart_state in the switch matrix (ticket 54)', () => {
     const reading = templatesReading(moduleSwitches(config));
     const overlays = listOverlays().map(name => readOverlay(name));
 
-    it('is read by a template, so its module has landed', () => {
+    it('is read by a template (head.html injects it for quick-add.js), so its module has landed', () => {
         assert.ok(reading.has('rf_cart_state'), 'a template reads theme_settings.rf_cart_state');
+        assert.match(fs.readFileSync(path.join(ROOT, 'templates/components/reelflies/head.html'), 'utf8'), /inject 'rfCartState' theme_settings\.rf_cart_state/);
     });
 
     it('renders off by rf_cart_state-off on both gated variations, with no problem in the plan', () => {
@@ -93,8 +98,13 @@ describe('rf_cart_state in the switch matrix (ticket 54)', () => {
         }
     });
 
-    it('names its markers and its chunk, which the switch-off rows check are off the page', () => {
-        assert.deepEqual(SWITCHES.rf_cart_state.markers, ['data-rf-cart-line', 'data-rf-cart-tag', 'data-rf-cart-dot', 'data-rf-cart-card']);
-        assert.deepEqual(SWITCHES.rf_cart_state.chunks, ['rf-cart-state']);
+    it('names no marker or chunk of its own, and says what the off row shows instead: the in-box tag every card carries is quick-add.js\'s to fill', () => {
+        assert.deepEqual(SWITCHES.rf_cart_state.markers, []);
+        assert.deepEqual(SWITCHES.rf_cart_state.chunks, []);
+        assert.match(SWITCHES.rf_cart_state.browser, /in-box lines stay empty/);
+        const card = fs.readFileSync(path.join(ROOT, 'templates/components/reelflies/fly.html'), 'utf8');
+        assert.match(card, /<span class="rf-fly__inbox" data-rf-inbox hidden><\/span>/, 'the tag is on every card, whatever the switch says');
+        assert.doesNotMatch(card, /rf_cart_state/);
+        assert.match(fs.readFileSync(path.join(ROOT, 'assets/js/theme/reelflies/quick-add.js'), 'utf8'), /cartState: context\.rfCartState !== false/);
     });
 });

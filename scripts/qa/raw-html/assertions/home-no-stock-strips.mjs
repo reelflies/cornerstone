@@ -1,10 +1,10 @@
-// No stock product strip on the home page (ticket 47; R5, HOME-3): nothing renders between the
-// Fly Type cards and the tiles, and the stock new-product strip doesn't land after every home
-// section. config.json sets homepage_featured_products_count, homepage_top_products_count and
-// homepage_new_products_count to 0 ("Disable") in the base settings, which every variation
-// inherits, so the store sends home.html no products for them. Best sellers come from ticket 48's
-// widget instead. This checks the page itself, so a variation or a Theme Styles edit that turns
-// a strip back on fails the run.
+// No stock product strip on the home page (ticket 47; R5, HOME-3): the stock featured, most
+// popular and new-product strips never land between the redesign's bands. config.json sets
+// homepage_featured_products_count, homepage_top_products_count and homepage_new_products_count
+// to 0 ("Disable") in the base settings, which every variation inherits, so the store sends
+// home.html no products for them; the best sellers it lays on the stone come from its own front
+// matter (products.top_sellers, limit 6; redesign step 2). This checks the page itself, so a
+// variation or a Theme Styles edit that turns a strip back on fails the run.
 
 import { findTags } from '../html.mjs';
 

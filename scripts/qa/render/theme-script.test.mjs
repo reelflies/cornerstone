@@ -1,6 +1,8 @@
 // Tests render/theme-script.mjs: theme modules as one script for a fixture page (ticket 41), built
 // with the theme bundle's Babel options; and those options, and babel.config.js's, spreading a
-// NodeList, a Set or a Map whole, which loose mode alone made [x] (ticket 41's follow-up).
+// NodeList, a Set or a Map whole, which loose mode alone made [x] (ticket 41's follow-up). The
+// modules are the redesign's (assets/js/theme/reelflies/): hook-order.js, which cart-page.js and
+// storefront.js import, and menu.js, which spreads a NodeList.
 //
 //   node --test scripts/qa/render/theme-script.test.mjs
 
@@ -22,12 +24,17 @@ const run = (names, code) => {
 };
 
 test('runs a module with its listed import, as the theme bundle would', () => {
-    const order = run(['reelflies/hook-order', 'reelflies/cart-groups'], "result = modules['reelflies/cart-groups'].rowOrder(['14', '12', '16']);");
-    assert.deepEqual(JSON.parse(JSON.stringify(order)), [1, 0, 2]);
+    // storefront.js imports ./hook-order, the cart page's size order (cart-page.js imports it too,
+    // with jQuery and the box, which a fixture page doesn't list).
+    const order = run(['reelflies/hook-order', 'reelflies/storefront'], "result = modules['reelflies/hook-order'].sortByHookOrder(['14', '2/0', '12', '16']);");
+    assert.deepEqual(JSON.parse(JSON.stringify(order)), ['2/0', '12', '14', '16']);
+    const compare = run(['reelflies/hook-order'], "result = [modules['reelflies/hook-order'].compareHookSizes('12', '14'), modules['reelflies/hook-order'].compareHookSizes('2/0', '2')];");
+    assert.ok(compare[0] < 0 && compare[1] < 0, 'bigger hooks first');
 });
 
 test('fails loudly on an import that isn\'t listed, and on a module that doesn\'t exist', () => {
-    assert.throws(() => run(['reelflies/cart-groups'], ''), /reelflies\/cart-groups requires \.\/hook-order, which isn't a listed module/);
+    assert.throws(() => run(['reelflies/storefront'], ''), /reelflies\/storefront requires \.\/hook-order, which isn't a listed module/);
+    assert.throws(() => run(['reelflies/cart-page'], ''), /reelflies\/cart-page requires jquery, which isn't a listed module/);
     assert.throws(() => themeScript(['reelflies/nothing-here']), /no theme module assets\/js\/theme\/reelflies\/nothing-here\.js/);
 });
 
@@ -78,9 +85,10 @@ test('without the assumption, loose mode spreads a NodeList as one element, the 
     assert.match(code, /\[\]\.concat\(list\)/);
 });
 
-test('themeScript builds each module with fixtureBabelOptions: a module\'s spread goes through the iterator helper', () => {
-    // open-state.js spreads an array; with loose mode alone that would be [].concat(tokens).
-    const script = themeScript(['reelflies/open-state']);
-    assert.match(script, /_toConsumableArray\(tokens\)/);
-    assert.doesNotMatch(script, /\[\]\.concat\(tokens/);
+test('themeScript builds each module with fixtureBabelOptions: a module\'s NodeList spread goes through the iterator helper', () => {
+    // menu.js spreads head.querySelectorAll('[data-rf-mega]'); with loose mode alone that would be
+    // [].concat(nodeList), one element.
+    const script = themeScript(['reelflies/menu']);
+    assert.match(script, /_toConsumableArray\(head\.querySelectorAll\('\[data-rf-mega\]'\)\)/);
+    assert.doesNotMatch(script, /\[\]\.concat\(head\.querySelectorAll/);
 });

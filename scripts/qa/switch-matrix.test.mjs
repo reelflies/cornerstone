@@ -1,6 +1,7 @@
 // The switch matrix (ticket 54a; scripts/qa/switch-matrix.mjs): which rows it renders, how it
 // reads each row's Playwright report, what it runs for a row and in what environment, and what
-// it prints. Nothing here starts a server: the runs are stand-ins.
+// it prints. Nothing here starts a server: the runs are stand-ins. The switches are the
+// redesign's (switches.mjs): all on in both gated variations, each flipped off by its overlay.
 //
 //   node --test scripts/qa/switch-matrix.test.mjs
 
@@ -16,64 +17,78 @@ import {
 
 const CONFIG = {
     settings: {
-        rf_rise: true, rf_cart_state: true, rf_quick_add: true, rf_region_prompt: false, rf_menu_type_ids: '',
+        rf_counts: true, rf_quick_add: true, rf_cart_state: true, rf_size_strip: true, rf_order_line: true, rf_menu_type_ids: '',
     },
     variations: [{ name: 'ReelFlies CA', settings: {} }, { name: 'ReelFlies CA channel 1', settings: { rf_quick_add: false } }],
 };
 const OVERLAYS = [
     { name: 'menu-ids-empty', settings: { rf_menu_type_ids: '' } },
-    { name: 'rf_rise-off', settings: { rf_rise: false } },
+    { name: 'rf_counts-off', settings: { rf_counts: false } },
     { name: 'rf_quick_add-off', settings: { rf_quick_add: false } },
     { name: 'rf_quick_add-on', settings: { rf_quick_add: true } },
-    { name: 'rf_region_prompt-on', settings: { rf_region_prompt: true } },
+    { name: 'rf_order_line-off', settings: { rf_order_line: false } },
 ];
+// A registry with a switch whose module waits for a QA override (master's outside-Canada prompt
+// did; none of the redesign's does), for the query cases.
+const QUERIED = {
+    rf_counts: {
+        ticket: 'redesign step 2', module: 'the counts', markers: ['data-rf-count'], chunks: [],
+    },
+    rf_prompt: {
+        ticket: '52', module: 'the prompt', markers: ['data-rf-prompt'], chunks: [], query: { show: 'rf_region=out', hide: 'rf_region=in' }, notOn: ['cart'],
+    },
+};
+const QUERIED_CONFIG = { settings: { rf_counts: true, rf_prompt: false }, variations: [{ name: 'ReelFlies CA', settings: {} }] };
+const QUERIED_OVERLAYS = [{ name: 'rf_counts-off', settings: { rf_counts: false } }, { name: 'rf_prompt-on', settings: { rf_prompt: true } }];
 
 describe('the matrix plan', () => {
     it('renders the plain run, then each landed switch flipped by its overlay', () => {
         const plan = matrixPlan({
-            config: CONFIG, variation: 'ReelFlies CA', overlays: OVERLAYS, reading: new Set(['rf_rise', 'rf_quick_add', 'rf_region_prompt']),
+            config: CONFIG, variation: 'ReelFlies CA', overlays: OVERLAYS, reading: new Set(['rf_counts', 'rf_quick_add', 'rf_order_line']),
         });
         assert.deepEqual(plan.rows.map(({ name, overlay }) => [name, overlay]), [
             ['plain', null],
-            ['rf_rise off', 'rf_rise-off'],
+            ['rf_counts off', 'rf_counts-off'],
             ['rf_quick_add off', 'rf_quick_add-off'],
-            ['rf_region_prompt on', 'rf_region_prompt-on'],
+            ['rf_order_line off', 'rf_order_line-off'],
         ]);
         assert.deepEqual(plan.rows[0].values, {
-            rf_rise: true, rf_cart_state: true, rf_quick_add: true, rf_region_prompt: false,
+            rf_counts: true, rf_quick_add: true, rf_cart_state: true, rf_size_strip: true, rf_order_line: true,
         });
         assert.equal(plan.rows[2].values.rf_quick_add, false);
         assert.deepEqual(plan.problems, []);
     });
 
-    it('opens every page of a row with the switch on with its QA override, so the outside-Canada prompt can show', () => {
+    it('opens every page of a row with a queried switch on with its QA override, as master\'s outside-Canada prompt needed', () => {
         const plan = matrixPlan({
-            config: CONFIG, variation: 'ReelFlies CA', overlays: OVERLAYS, reading: new Set(['rf_rise', 'rf_region_prompt']),
+            config: QUERIED_CONFIG, variation: 'ReelFlies CA', overlays: QUERIED_OVERLAYS, reading: new Set(['rf_counts', 'rf_prompt']), switches: QUERIED,
         });
         assert.deepEqual(plan.rows.map(({ name, query }) => [name, query]), [
             ['plain', ''],
-            ['rf_rise off', ''],
-            ['rf_region_prompt on', 'rf_region=out'],
+            ['rf_counts off', ''],
+            ['rf_prompt on', 'rf_region=out'],
         ]);
         const on = matrixPlan({
-            config: { ...CONFIG, settings: { ...CONFIG.settings, rf_region_prompt: true } },
+            config: { ...QUERIED_CONFIG, settings: { ...QUERIED_CONFIG.settings, rf_prompt: true } },
             variation: 'ReelFlies CA',
-            overlays: [...OVERLAYS, { name: 'rf_region_prompt-off', settings: { rf_region_prompt: false } }],
-            reading: new Set(['rf_region_prompt']),
+            overlays: [...QUERIED_OVERLAYS, { name: 'rf_prompt-off', settings: { rf_prompt: false } }],
+            reading: new Set(['rf_prompt']),
+            switches: QUERIED,
         });
-        assert.deepEqual(on.rows.map(({ name, query }) => [name, query]), [['plain', 'rf_region=out'], ['rf_region_prompt off', '']]);
+        assert.deepEqual(on.rows.map(({ name, query }) => [name, query]), [['plain', 'rf_region=out'], ['rf_prompt off', '']]);
     });
 
     it('leaves out a switch no template reads yet, and says whose module it waits for', () => {
         const plan = matrixPlan({
-            config: CONFIG, variation: 'ReelFlies CA', overlays: OVERLAYS, reading: new Set(['rf_rise']),
+            config: CONFIG, variation: 'ReelFlies CA', overlays: OVERLAYS, reading: new Set(['rf_counts']),
         });
-        assert.deepEqual(plan.rows.map(({ name }) => name), ['plain', 'rf_rise off']);
-        assert.deepEqual(plan.waiting.map(({ key, ticket }) => [key, ticket]), [['rf_cart_state', '42'], ['rf_quick_add', '43'], ['rf_region_prompt', '52']]);
-        assert.match(plan.waiting[0].reason, /no template reads theme_settings\.rf_cart_state yet, so ticket 42's module hasn't landed/);
+        assert.deepEqual(plan.rows.map(({ name }) => name), ['plain', 'rf_counts off']);
+        assert.deepEqual(plan.waiting.map(({ key, owner }) => [key, owner]), [['rf_quick_add', 'ticket 43'], ['rf_cart_state', 'ticket 42'], ['rf_size_strip', 'redesign step 3'], ['rf_order_line', 'redesign step 2']]);
+        assert.match(plan.waiting[0].reason, /no template reads theme_settings\.rf_quick_add yet, so ticket 43's module hasn't landed/);
+        assert.match(plan.waiting[2].reason, /so redesign step 3's module hasn't landed/);
     });
 
-    it('flips the variation\'s value: quick add, off on channel 1 (ticket 43), is rendered on there by rf_quick_add-on', () => {
+    it('flips the variation\'s value: a variation with a switch off has it rendered on by the -on overlay', () => {
         const plan = matrixPlan({
             config: CONFIG, variation: 'ReelFlies CA channel 1', overlays: OVERLAYS, reading: new Set(['rf_quick_add']),
         });
@@ -85,27 +100,34 @@ describe('the matrix plan', () => {
 
     it('fails a landed switch with no overlay to flip it', () => {
         const plan = matrixPlan({
-            config: CONFIG, variation: 'ReelFlies CA channel 1', overlays: OVERLAYS.filter(({ name }) => name !== 'rf_quick_add-on'), reading: new Set(['rf_quick_add', 'rf_cart_state']),
+            config: CONFIG, variation: 'ReelFlies CA channel 1', overlays: OVERLAYS.filter(({ name }) => name !== 'rf_quick_add-on'), reading: new Set(['rf_quick_add', 'rf_size_strip']),
         });
         assert.deepEqual(plan.rows.map(({ name }) => name), ['plain']);
         assert.deepEqual(plan.problems, [
-            'no overlay renders rf_cart_state off: add scripts/qa/overlays/rf_cart_state-off.json, setting "rf_cart_state" to false and nothing else (ticket 42)',
             'no overlay renders rf_quick_add on: add scripts/qa/overlays/rf_quick_add-on.json, setting "rf_quick_add" to true and nothing else (ticket 43)',
+            'no overlay renders rf_size_strip off: add scripts/qa/overlays/rf_size_strip-off.json, setting "rf_size_strip" to false and nothing else (redesign step 3)',
         ]);
     });
 
-    it('renders this repo\'s quick add both ways on both gated variations: off by rf_quick_add-off on ReelFlies CA, on by rf_quick_add-on on channel 1 (ticket 43)', () => {
+    it('renders this repo\'s five switches off, one row each, on both gated variations, where every switch is on', () => {
         const config = JSON.parse(fs.readFileSync(path.resolve('config.json'), 'utf8'));
         const overlays = listOverlays().map(name => readOverlay(name));
         const reading = templatesReading(moduleSwitches(config));
-        assert.ok(reading.has('rf_quick_add'), 'a template reads theme_settings.rf_quick_add');
-        for (const [variation, overlay, name] of [['ReelFlies CA', 'rf_quick_add-off', 'rf_quick_add off'], ['ReelFlies CA channel 1', 'rf_quick_add-on', 'rf_quick_add on']]) {
+        for (const variation of ['ReelFlies CA', 'ReelFlies CA channel 1']) {
             const plan = matrixPlan({
                 config, variation, overlays, reading,
             });
-            assert.ok(plan.rows.some(row => row.name === name && row.overlay === overlay), `${variation}: ${plan.rows.map(row => row.name).join(', ')}`);
-            assert.ok(!plan.waiting.some(({ key }) => key === 'rf_quick_add'), variation);
-            assert.deepEqual(plan.problems.filter(problem => /rf_quick_add/.test(problem)), [], variation);
+            assert.deepEqual(plan.rows.map(({ name, overlay }) => [name, overlay]), [
+                ['plain', null],
+                ['rf_counts off', 'rf_counts-off'],
+                ['rf_quick_add off', 'rf_quick_add-off'],
+                ['rf_cart_state off', 'rf_cart_state-off'],
+                ['rf_size_strip off', 'rf_size_strip-off'],
+                ['rf_order_line off', 'rf_order_line-off'],
+            ], variation);
+            assert.deepEqual(plan.waiting, [], variation);
+            assert.deepEqual(plan.problems, [], variation);
+            assert.ok(plan.rows.every(({ query }) => query === ''), `${variation}: no row opens its pages with a QA override`);
         }
     });
 
@@ -180,7 +202,7 @@ describe('a row\'s Playwright run', () => {
 
 describe('running the matrix', () => {
     const plan = matrixPlan({
-        config: CONFIG, variation: 'ReelFlies CA', overlays: OVERLAYS, reading: new Set(['rf_rise']),
+        config: CONFIG, variation: 'ReelFlies CA', overlays: OVERLAYS, reading: new Set(['rf_counts']),
     });
     const passing = { suites: MATRIX_SPECS.map(({ file }) => ({ file, specs: [{ title: 't', tests: [{ projectName: 'phone-375', status: 'expected', results: [{ status: 'passed' }] }] }] })), errors: [] };
 
@@ -201,8 +223,8 @@ describe('running the matrix', () => {
         assert.deepEqual(calls, [
             ['playwright', 'plain', undefined, '4300', undefined],
             ['raw HTML', 'plain', undefined, '4300'],
-            ['playwright', 'rf_rise off', 'rf_rise-off', '4300', undefined],
-            ['raw HTML', 'rf_rise off', 'rf_rise-off', '4300'],
+            ['playwright', 'rf_counts off', 'rf_counts-off', '4300', undefined],
+            ['raw HTML', 'rf_counts off', 'rf_counts-off', '4300'],
         ]);
         const rawHtml = results.map(({ gates }) => gates.find(({ gate }) => gate === RAW_HTML_GATE));
         assert.deepEqual(rawHtml.map(({ ok }) => ok), [true, false]);
@@ -221,11 +243,12 @@ describe('running the matrix', () => {
         });
         const text = lines.join('\n');
         assert.match(text, new RegExp(`^Switch matrix on channel 1895766, "ReelFlies CA", port 4300 \\(overlays on ${4300 + OVERLAY_PORT_OFFSET}\\)`));
-        assert.match(text, /\n {2}plain +rf_rise on, rf_cart_state on, rf_quick_add on, rf_region_prompt off\n/);
-        assert.match(text, /\n {2}rf_rise off +the overlay rf_rise-off\n/);
-        assert.match(text, /\nNot in the matrix yet:\n {2}rf_cart_state \(ticket 42\): no template reads/);
+        assert.match(text, /\n {2}plain +rf_counts on, rf_quick_add on, rf_cart_state on, rf_size_strip on, rf_order_line on\n/);
+        assert.match(text, /\n {2}rf_counts off +the overlay rf_counts-off\n/);
+        assert.match(text, /\nNot in the matrix yet:\n {2}rf_quick_add \(ticket 43\): no template reads/);
+        assert.match(text, /\n {2}rf_size_strip \(redesign step 3\): no template reads/);
         assert.match(text, /\nok {7}plain · axe: 1 passed\n/);
-        assert.match(text, /\nFAIL {5}rf_rise off · raw HTML: the storefront couldn't be reached, or a port was busy \(its output is above\)\n/);
+        assert.match(text, /\nFAIL {5}rf_counts off · raw HTML: the storefront couldn't be reached, or a port was busy \(its output is above\)\n/);
         assert.match(text, /\nThe matrix failed: 1 of 18 gates\.$/);
     });
 
@@ -241,21 +264,21 @@ describe('running the matrix', () => {
 
     it('says which rows open their pages with a QA override', () => {
         const queried = matrixPlan({
-            config: CONFIG, variation: 'ReelFlies CA', overlays: OVERLAYS, reading: new Set(['rf_region_prompt']),
+            config: QUERIED_CONFIG, variation: 'ReelFlies CA', overlays: QUERIED_OVERLAYS, reading: new Set(['rf_prompt']), switches: QUERIED,
         });
         const lines = matrixLines({
             plan: queried, results: null, channel: '1895766', variation: 'ReelFlies CA', port: 4300,
         });
-        assert.ok(lines.includes('  rf_region_prompt on  the overlay rf_region_prompt-on, every page opened with ?rf_region=out'), lines.join('\n'));
-        assert.ok(lines.includes('  plain                rf_rise on, rf_cart_state on, rf_quick_add on, rf_region_prompt off'), lines.join('\n'));
+        assert.ok(lines.includes('  rf_prompt on  the overlay rf_prompt-on, every page opened with ?rf_region=out'), lines.join('\n'));
+        assert.ok(lines.includes('  plain         rf_counts on, rf_prompt off'), lines.join('\n'));
     });
 
     it('fails a plan with a problem, even with every gate passed', () => {
-        const broken = { ...plan, problems: ['no overlay renders rf_rise off: …'] };
+        const broken = { ...plan, problems: ['no overlay renders rf_counts off: …'] };
         const lines = matrixLines({
             plan: broken, results: [], channel: '1895766', variation: 'ReelFlies CA', port: 3300,
         });
-        assert.ok(lines.includes('FAIL     no overlay renders rf_rise off: …'));
+        assert.ok(lines.includes('FAIL     no overlay renders rf_counts off: …'));
         assert.equal(lines.at(-1), 'The matrix failed: 1 problem in its plan.');
     });
 });
@@ -264,7 +287,7 @@ describe('where the matrix runs', () => {
     it('only through local stencil starts that it sets the overlay of itself', () => {
         assert.equal(matrixEnvProblem({}), null);
         assert.equal(matrixEnvProblem({ QA_PORT: '4300' }), null);
-        assert.match(matrixEnvProblem({ QA_OVERLAY: 'rf_rise-off' }), /sets QA_OVERLAY itself, row by row/);
+        assert.match(matrixEnvProblem({ QA_OVERLAY: 'rf_counts-off' }), /sets QA_OVERLAY itself, row by row/);
         assert.match(matrixEnvProblem({ QA_BASE_URL: 'https://reelflies_ca-1895766.mybigcommerce.com' }), /local stencil start/);
         assert.match(matrixEnvProblem({ QA_FRESH_SERVER: '1' }), /QA_FRESH_SERVER=1/);
     });

@@ -1,94 +1,92 @@
-// Tests home-photo-once's skip of ticket 29's menu pane banners at its edges (ticket 49, from
-// #58's round-3 reviewers; ticket 47's own cases are in home-cards-tiles.test.mjs), and ticket
-// 49's cold-water crop of the Dry banner on a home page with the Species section on it.
-//
-// A pane banner is skipped with the <picture> round it, from the <picture>'s start tag through its
-// first <img>, and only when that <img> is the marked banner. So markup after it in the pane (a
-// second, unmarked <img>, or everything up to the pane's end when the <picture> is never closed)
-// is still read, and a photo it repeats is still counted.
+// Tests the home page's photo-once assertion (redesign step 2; ticket 47's rule), home-photo-once,
+// on the redesign's home page rendered from fixed data (../home-fixture.mjs): a fly once per
+// band, the page's own photographs and the plates once, and what is left out on purpose (a hatch
+// row's thumbnails, the header's menu panes, the logos).
 //
 //   node --test scripts/qa/raw-html/assertions/home-photo-once.test.mjs
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import path from 'node:path';
-import { readFixture, renderWidget, WIDGETS_DIR } from '../../render/render.mjs';
-import { checkPage } from '../../raw-html.mjs';
-import photoOnce, { photosOn, repeatedPhotos } from './home-photo-once.mjs';
+import { checkPage, loadAssertions } from '../../raw-html.mjs';
+import { CDN, homePage } from '../home-fixture.mjs';
+import photoOnce, {
+    MENU_PANE_ATTRIBUTE, THUMBS_CLASS, photoKey, photosOn, repeatedPhotos,
+} from './home-photo-once.mjs';
+import { cards, productBands } from './home-product-bands.mjs';
+import { elementsHtml, findTags } from '../html.mjs';
 
-const fixture = name => readFixture(path.join(WIDGETS_DIR, name, 'fixtures', 'default.json'));
-const CDN = 'https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil';
-const DRY = 'i/dry-flies__36885.original.jpg'; // card 1's banner, and the Dry Flies pane's
-const GLO_BUG = 'products/5101/5675/Glo-Bug-Pink__15852.1683224794.jpg'; // tile 1's photo
-const wrap = html => `<div data-widget-id="w" data-placement-id="p" data-placement-status="ACTIVE">${html}</div>`;
+const page = await homePage();
+const failures = fixture => checkPage(fixture, [photoOnce]).filter(result => result.status === 'fail');
+const firstCard = html => cards(html)[0];
 
-// A home page as stencil start serves it: the menu's panes in the header, then the widgets in
-// their regions, each in the store's wrapper.
-async function homePage({ menu = '', below = [] } = {}) {
-    const lead = await renderWidget('home-lead', fixture('home-lead'));
-    const tiles = await renderWidget('link-tiles', fixture('link-tiles'));
-    const sections = await Promise.all(below.map(name => renderWidget(name, fixture(name))));
-    return {
-        kind: 'home',
-        key: 'home',
-        path: '/',
-        url: 'http://localhost:3301/',
-        status: 200,
-        html: `<!DOCTYPE html><html lang="en"><head><title>ReelFlies</title></head><body><header><nav id="menu">${menu}</nav></header><main class="body" id="main-content">`
-            + `<div data-content-region="home_below_menu">${wrap(lead)}</div><div class="container"><div class="main full">`
-            + `<div data-content-region="home_below_top_products">${[tiles, ...sections].map(wrap).join('')}</div></div></div></main></body></html>`,
-    };
-}
-const pane = inner => `<div data-rf-menu-pane hidden><h2><a href="/dry-flies/">Dry Flies</a></h2>${inner}</div>`;
-const banner = `<img src="${CDN}/320w/${DRY}" srcset="${CDN}/320w/${DRY} 320w, ${CDN}/640w/${DRY} 640w" sizes="640px" width="1600" height="700" alt="" loading="lazy" data-rf-menu-banner>`;
-const source = `<source media="(min-width: 801px)" srcset="${CDN}/640w/${DRY} 640w">`;
-const repeat = `<img src="${CDN}/320w/${GLO_BUG}" alt="">`;
-const failures = page => checkPage(page, [photoOnce]).filter(result => result.status === 'fail');
+test('it is registered, for the home page only', async () => {
+    assert.ok((await loadAssertions()).some(assertion => assertion.id === 'home-photo-once'));
+    assert.deepEqual(photoOnce.pages, ['home']);
+});
 
-test('a pane banner in a closed <picture> is still skipped with its sources', async () => {
-    const page = await homePage({ menu: pane(`<picture>${source}${banner}</picture>`) });
+test('the home page as the theme renders it passes, with the header\'s panes and both logos round it', async () => {
     assert.deepEqual(repeatedPhotos(page.html), []);
     assert.deepEqual(failures(page), []);
+    const chrome = await homePage({ chrome: true });
+    assert.ok(findTags(chrome.html).filter(tag => MENU_PANE_ATTRIBUTE in tag.attrs).length >= 5, 'the menu panes are on the page');
+    assert.ok(chrome.html.includes('rf-mega__plate'), 'the panes show the Fly Types\' images again');
+    assert.deepEqual(repeatedPhotos(chrome.html), []);
 });
 
-test('an unclosed <picture> round a pane banner can\'t hide a repeat later in the pane', async () => {
-    const page = await homePage({ menu: pane(`<picture>${source}${banner}<p>More dry flies</p>${repeat}`) });
-    const problems = repeatedPhotos(page.html);
-    assert.equal(problems.length, 1);
-    assert.match(problems[0], new RegExp(`^the photo ${GLO_BUG.replace(/[.]/g, '\\.')} appears twice`));
-    assert.equal(failures(page).length, 1);
+test('a photo is named by its path after the store\'s size segment, without its query', () => {
+    assert.equal(photoKey(`${CDN}/360w/products/4877/1/adams.jpg?c=2`), 'products/4877/1/adams.jpg');
+    assert.equal(photoKey(`${CDN}/160w/products/4877/1/adams.jpg`), 'products/4877/1/adams.jpg');
+    assert.equal(photoKey('/stencil/0000/img/reelflies/stone/hero-stone-1600.jpg'), '/stencil/0000/img/reelflies/stone/hero-stone-1600.jpg');
+    assert.equal(photoKey('not a url'), '/not%20a%20url');
 });
 
-test('a second, unmarked <img> in a pane banner\'s <picture> still counts', async () => {
-    const page = await homePage({ menu: pane(`<picture>${source}${banner}${repeat}</picture>`) });
-    const problems = repeatedPhotos(page.html);
-    assert.equal(problems.length, 1);
-    assert.match(problems[0], new RegExp(`^the photo ${GLO_BUG.replace(/[.]/g, '\\.')} appears twice`));
+test('a <picture> and its <img> are one photo', () => {
+    const [stone] = photosOn(page.html);
+    assert.deepEqual(stone.keys.map(key => key.replace(/^.*\//, '')), ['hero-stone-portrait.jpg', 'hero-stone-1600.jpg']);
+    assert.match(stone.raw, /^<img class="rf-graded"/);
 });
 
-test('a <picture> whose first <img> isn\'t the marked banner isn\'t skipped: its sources go with that <img>', async () => {
-    // The browser shows the source's file in the first <img>, the Dry banner, which card 1 shows.
-    const page = await homePage({ menu: pane(`<picture>${source}<img src="${CDN}/320w/image-manager/rf-pane-photo.jpg" alt="">${banner}</picture>`) });
-    const [first] = photosOn(page.html);
-    assert.deepEqual(first.keys, [DRY, 'image-manager/rf-pane-photo.jpg']);
-    const problems = repeatedPhotos(page.html);
-    assert.equal(problems.length, 1);
-    assert.match(problems[0], new RegExp(`^the photo ${DRY.replace(/[.]/g, '\\.')} appears twice`));
+test('a fly laid twice in one band fails, naming the band', () => {
+    const card = firstCard(page.html);
+    const twice = { ...page, html: page.html.replace(card, () => `${card}${card}`) };
+    const problems = repeatedPhotos(twice.html);
+    assert.deepEqual(problems.filter(problem => problem.startsWith('product')), ['product 4877 is laid twice in the stone\'s lay: a fly is photographed once per band']);
+    assert.match(problems.join('\n'), /the photo products\/4877\/1\/adams-parachute-dry-fly\.jpg appears twice in the stone's lay/);
+    assert.equal(failures(twice).length, 1);
 });
 
-// Ticket 49's Species section shows the Dry banner's left third in its cold-water group, marked
-// as the page's one allowed repeat (CD-4).
-test('the Species section\'s cold-water crop of the Dry banner is the allowed repeat, and is counted once unmarked', async () => {
-    const page = await homePage({ below: ['shop-by-fish', 'about'] });
+test('a fly in several bands is by design: a best seller in a hatch row, the Adams in three rows, the Signature fly in the caddis row', () => {
+    const ids = band => cards(band.html).map(card => findTags(card, 'li')[0].attrs['data-rf-product']);
+    const bands = productBands(page.html);
+    const inRows = id => bands.filter(band => band.name.endsWith(' row') && ids(band).includes(id)).map(({ name }) => name);
+    assert.ok(ids(bands[0]).includes('4507'), 'the Prince Nymph is a best seller');
+    assert.deepEqual(inRows('4507'), ['the Little black stonefly row']);
+    assert.equal(inRows('4675').length, 3, inRows('4675').join(', '));
+    assert.ok(ids(bands.find(({ name }) => name === 'the Signature band')).includes('3899'));
+    assert.deepEqual(inRows('3899'), ['the Caddis row']);
     assert.deepEqual(repeatedPhotos(page.html), []);
-    assert.deepEqual(failures(page), []);
-    const crop = photosOn(page.html).find(photo => photo.repeat);
-    assert.deepEqual(crop.keys, [DRY]);
-    assert.equal(repeatedPhotos(page.html.replace(' data-rf-photo-repeat', '')).length, 1);
 });
 
-test('the description names the skip exactly: the marked banners inside a div[data-rf-menu-pane], with their <picture>', () => {
-    assert.match(photoOnce.description, /data-rf-menu-banner/);
-    assert.match(photoOnce.description, /div\[data-rf-menu-pane\]/);
-    assert.match(photoOnce.description, /<picture>/);
+test('a hatch row\'s thumbnails are its cards\' photos again, as the summary\'s cue, and aren\'t counted', () => {
+    const [row] = elementsHtml(page.html, 'li', attrs => (attrs.class || '').split(/\s+/).includes('rf-hatch__row'));
+    const [thumbs] = elementsHtml(row, 'span', attrs => (attrs.class || '').split(/\s+/).includes(THUMBS_CLASS));
+    const thumbKeys = photosOn(thumbs).flatMap(photo => photo.keys);
+    assert.equal(thumbKeys.length, 3);
+    const cardKeys = cards(row).flatMap(card => photosOn(card).flatMap(photo => photo.keys));
+    for (const key of thumbKeys) assert.ok(cardKeys.includes(key), key);
+    assert.deepEqual(repeatedPhotos(page.html), []);
+});
+
+test('a plate\'s photo shown twice fails, and so does one of the page\'s own photographs', () => {
+    const plates = { ...page, html: page.html.replace(/n\/nymphs\.jpg/g, 'i/dry-flies.jpg') };
+    const problems = repeatedPhotos(plates.html);
+    assert.equal(problems.length, 1, problems.join('\n'));
+    assert.match(problems[0], /^the photo i\/dry-flies\.jpg appears twice on the home page: <img src="[^"]*dry-flies\.jpg"/);
+    const signature = { ...page, html: page.html.replace(/fly-type-dry-flies-800\.jpg/g, 'hero-stone-1600.jpg') };
+    assert.match(repeatedPhotos(signature.html).join('\n'), /hero-stone-1600\.jpg appears twice on the home page/);
+});
+
+test('the description names what is left out: a row\'s thumbnails and the header\'s panes', () => {
+    assert.match(photoOnce.description, new RegExp(THUMBS_CLASS));
+    assert.match(photoOnce.description, new RegExp(`\\[${MENU_PANE_ATTRIBUTE}\\]`));
 });

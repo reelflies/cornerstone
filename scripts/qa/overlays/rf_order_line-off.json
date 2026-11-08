@@ -1,0 +1,7 @@
+{
+    "description": "The order line switched off: no bar pinned at the foot of the page and no box sheet, the footer without its room for them, and Box in the header a plain link to the cart (redesign step 2; ticket 54's switch matrix)",
+    "ticket": "redesign step 2",
+    "settings": {
+        "rf_order_line": false
+    }
+}
