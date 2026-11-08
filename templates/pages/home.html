@@ -36,6 +36,8 @@ fragment RfSizes on Product {
     {{/each}}
     {{> components/reelflies/home}}
     <script type="application/json" data-rf-sizes-seed>{{{json gql.data.site.best}}}</script>
+    {{!-- ReelFlies, ticket 40: the store schema (WebSite and OnlineStore JSON-LD), once, on the home page; CUSTOMIZATIONS.md --}}
+    {{> components/reelflies/store-schema}}
 {{/partial}}
 
 {{#partial "page"}}{{/partial}}

@@ -142,6 +142,38 @@
     width: auto;
 }
 
+// the social links, a line of words under the phone ("Facebook · Instagram"), each a 44px target
+.rf-foot__social {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: var(--rf-space-2) 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.rf-foot__social li {
+    display: inline-flex;
+    align-items: center;
+}
+
+.rf-foot__social li + li::before {
+    content: "·";
+    margin: 0 var(--rf-space-2);
+    color: var(--rf-shale-400);
+}
+
+.rf-foot__social a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--rf-tap-min); // "X" alone is 10px wide
+    min-height: var(--rf-tap-min);
+    text-decoration: underline;
+    text-decoration-color: var(--rf-shale-600);
+    text-underline-offset: 0.2em;
+}
+
 .rf-foot nav h3 {
     margin-bottom: var(--rf-space-3);
     font: 650 0.875rem/1.3 var(--rf-font-text);

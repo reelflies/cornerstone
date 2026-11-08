@@ -1279,6 +1279,7 @@
             "address_name": "ReelFlies, {legal}",
             "toll_free": "toll free",
             "walk_ins": "Walk-ins by appointment",
+            "social": "ReelFlies on social media",
             "types": "Fly types",
             "more": "More",
             "help": "Help",
@@ -1333,6 +1334,8 @@
             "related": "Related patterns"
         },
         "reviews": {
+            "store_shipping_name": "Free standard shipping in Canada",
+            "store_shipping_description": "Free standard shipping in Canada on fly orders over ${amount}. Fly boxes and gear not included.",
             "heading": "Reviews ({total})",
             "count": "{total, plural, one {# review} other {# reviews}}",
             "rated": "Rated {rating} out of 5",

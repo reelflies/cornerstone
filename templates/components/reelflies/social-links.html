@@ -1,0 +1,27 @@
+{{!--
+    The footer's social links (ticket 50) in ReelFlies' social set (ticket 40): the store's links
+    that social-keep.html keeps, as a quiet line of text links on the shale ("Facebook · Instagram"),
+    so the row and the home page's sameAs (store-schema.html) are one set. Text, not stock's icon
+    row: the footer is set in words, and the names need no icon sheet.
+
+        {{> components/reelflies/social-links rf_filter=theme_settings.rf_store_same_as}}
+
+    With rf_filter empty it lists every link the store sets, "twitter" as X. A link with no URL,
+    or every link filtered out, renders nothing. The redesign (step 4) brought this back: steps
+    1–3 had dropped the row and the schema with it.
+--}}
+{{~assignVar 'rf_social_any' 0~}}
+{{~#each social_media~}}
+{{> components/reelflies/social-keep rf_network=display_name rf_filter=../rf_filter~}}
+{{~#if (getVar 'rf_social_keep')~}}{{~#if (trim url)~}}{{~assignVar 'rf_social_any' 1~}}{{~/if~}}{{~/if~}}
+{{~/each~}}
+{{#if (getVar 'rf_social_any')}}
+<ul class="rf-foot__social" aria-label="{{lang 'reelflies.footer.social'}}">
+    {{~#each social_media~}}
+    {{> components/reelflies/social-keep rf_network=display_name rf_filter=../rf_filter~}}
+    {{~#if (getVar 'rf_social_keep')~}}{{~#if (trim url)~}}
+    <li><a href="{{url}}" rel="noopener">{{#if display_name '===' 'twitter'}}X{{else if display_name '===' 'youtube'}}YouTube{{else}}{{capitalize display_name}}{{/if}}</a></li>
+    {{~/if~}}{{~/if~}}
+    {{~/each~}}
+</ul>
+{{/if}}

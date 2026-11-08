@@ -7,7 +7,9 @@
       CASL wording of record (content/pages/1895766/newsletter.json: the line as the heading, the
       consent under the field), shown while the store's newsletter box is on.
     - The store: the logo on a paper plate (never straight on shale), the address and phone
-      number from the Store details settings (rf_store_*), walk-ins by appointment.
+      number from the Store details settings (rf_store_*), walk-ins by appointment, and the
+      store's social links as text (social-links.html, ReelFlies' set from rf_store_same_as: the
+      same links the home page's store schema lists as sameAs).
     - Fly types (rf_menu_type_ids, then the Species root), More (the menus' plain links and the
       hook size chart) and Help (the channel's own Web Pages, page-link.html, and the blog).
     - The base row: the copyright and trademark line, and the other storefront (rf_alt_store_url,
@@ -41,6 +43,7 @@
             <address>{{lang 'reelflies.footer.address_name' legal=theme_settings.rf_store_legal_name}}<br>{{theme_settings.rf_store_street}}<br>{{theme_settings.rf_store_locality}}, {{theme_settings.rf_store_region}} {{theme_settings.rf_store_postal_code}}</address>
             {{/if}}
             <p>{{#if settings.phone_number}}<a href="tel:{{#if (trim theme_settings.rf_store_phone)}}{{trim theme_settings.rf_store_phone}}{{else}}{{settings.phone_number}}{{/if}}">{{settings.phone_number}}</a> {{lang 'reelflies.footer.toll_free'}}<br>{{/if}}{{lang 'reelflies.footer.walk_ins'}}</p>
+            {{> components/reelflies/social-links rf_filter=theme_settings.rf_store_same_as}}
         </div>
         {{#or (trim theme_settings.rf_menu_type_ids) (trim theme_settings.rf_menu_species_root_id)}}
         <nav aria-labelledby="rf-foot-types"><h3 id="rf-foot-types">{{lang 'reelflies.footer.types'}}</h3><ul>
