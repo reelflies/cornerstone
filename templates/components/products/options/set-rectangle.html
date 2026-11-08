@@ -28,8 +28,12 @@
             id="attribute_rectangle__{{../id}}_{{id}}"
             name="attribute[{{../id}}]"
             value="{{id}}"
+            {{!-- ReelFlies hook (redesign step 4; CUSTOMIZATIONS.md): on a fresh product view
+                 (rf_pdp_fresh, set by components/reelflies/product-view.html) a catalogue default is
+                 never checked, so nothing is chosen for the shopper; the cart's Change dialog and
+                 Quick view keep stock's choice. data-default stays for stock's scripts. --}}
             {{#if selected}}
-                checked
+                {{#unless (getVar 'rf_pdp_fresh')}}checked{{/unless}}
                 data-default
             {{/if}}
             {{#if ../required}}required{{/if}}

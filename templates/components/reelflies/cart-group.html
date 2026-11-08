@@ -20,7 +20,7 @@
     <div class="rf-cart-group__head">
         <h2 class="rf-cart-group__name" id="rf-cart-g-{{rf_item.id}}"><a href="{{#if rf_gift}}{{rf_item.edit_url}}{{else}}{{rf_item.url}}{{/if}}">{{rf_item.name}}</a></h2>
         {{#unless rf_gift}}
-        <p class="rf-cart-group__price">{{#or customer (unless settings.hide_price_from_guests)}}<span class="rf-num">{{#if rf_item.price_discounted}}{{rf_item.price_discounted.formatted}}{{else}}{{rf_item.price.formatted}}{{/if}}</span> {{lang 'reelflies.cart.each'}}{{/or}}</p>
+        <p class="rf-cart-group__price">{{#if (getVar 'rf_show_prices')}}<span class="rf-num">{{#if rf_item.price_discounted}}{{rf_item.price_discounted.formatted}}{{else}}{{rf_item.price.formatted}}{{/if}}</span> {{lang 'reelflies.cart.each'}}{{/if}}</p>
         {{/unless}}
     </div>
     <ul class="rf-cart-group__rows"{{#if (getVar 'rf_cart_rows') '>' 1}} data-rf-cart-multi{{/if}} data-rf-cart-rows>

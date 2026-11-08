@@ -5,9 +5,17 @@
     copy in its place after every change, so the count follows the cart.
 --}}
 {{~assignVar 'rf_cart_seen' ','~}}{{~assignVar 'rf_cart_patterns' 0~}}{{~assignVar 'rf_cart_flies' 1~}}
+{{!-- The fly brands as ",ReelFlies,ReelFlies Signature,", spaces round the commas dropped, as
+     cart-count.js trims them; a gift certificate is a product of its own and never a fly, as
+     cart-lines.html groups it (step 4 critique). --}}
+{{~assignVar 'rf_cart_brands' (concat ',' (concat (strReplace (strReplace theme_settings.rf_fly_brands ', ' ',') ' ,' ',') ','))~}}
 {{~#each cart.items~}}
+{{~#if type '==' 'GiftCertificate'~}}
+{{~assignVar 'rf_cart_patterns' (add (getVar 'rf_cart_patterns') 1)~}}{{~assignVar 'rf_cart_flies' 0~}}
+{{~else~}}
 {{~#contains (getVar 'rf_cart_seen') (concat ',' (concat product_id ','))}}{{else}}{{assignVar 'rf_cart_seen' (concat (getVar 'rf_cart_seen') (concat product_id ','))}}{{assignVar 'rf_cart_patterns' (add (getVar 'rf_cart_patterns') 1)}}{{/contains~}}
-{{~#inArray (split ../theme_settings.rf_fly_brands ',') brand.name}}{{else}}{{assignVar 'rf_cart_flies' 0}}{{/inArray~}}
+{{~#contains (getVar 'rf_cart_brands') (concat ',' (concat brand.name ','))}}{{else}}{{assignVar 'rf_cart_flies' 0}}{{/contains~}}
+{{~/if~}}
 {{~/each~}}
 <div class="rf-cart__title" data-cart-page-title>
     <h1 class="rf-cart__h1">{{lang 'reelflies.cart.heading'}}</h1>

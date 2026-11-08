@@ -7,6 +7,10 @@
     data-cart-quantity is stock cart.js's: after a change it reloads the page when this reads 0.
 --}}
 {{~assignVar 'rf_cart_done' ','~}}
+{{!-- Prices show to customers, and to guests unless the store hides them (hide_price_from_guests).
+     Decided here, outside the loop, where customer and settings can be reached: the groups and
+     rows read rf_show_prices (step 4 critique: the lines showed every price to guests). --}}
+{{~assignVar 'rf_show_prices' 0~}}{{~#or customer (unless settings.hide_price_from_guests)}}{{assignVar 'rf_show_prices' 1}}{{/or~}}
 <div class="rf-cart-lines" data-cart-quantity="{{cart.quantity}}">
     {{#each cart.items as |rfItem|}}
     {{#if rfItem.type '==' 'GiftCertificate'}}

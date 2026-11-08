@@ -53,7 +53,7 @@
     </span>
     {{/if}}
     <span class="rf-cart-row__money">
-        {{#or customer (unless settings.hide_price_from_guests) rf_gift}}
+        {{#or (getVar 'rf_show_prices') rf_gift}}
         {{#if rf_line.total_discounted}}<s class="rf-cart-row__was rf-num">{{rf_line.total.formatted}}</s> <span class="rf-cart-row__total rf-num">{{rf_line.total_discounted.formatted}}</span>{{else}}<span class="rf-cart-row__total rf-num">{{rf_line.total.formatted}}</span>{{/if}}
         {{#unless rf_gift}}{{#if rf_line.price.value '!=' rf_group_price}}<span class="rf-cart-row__each"><span class="rf-num">{{rf_line.price.formatted}}</span> {{lang 'reelflies.cart.each'}}</span>{{/if}}{{/unless}}
         {{/or}}

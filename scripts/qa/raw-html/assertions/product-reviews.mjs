@@ -1,21 +1,21 @@
-// The product page's reviews as a crawler gets them (ticket 40; spec modules 15 and 23; R11, SEO-5;
-// stories 47 and 75), on every product pin: the structured data marks up only the reviews the page
-// shows.
+// The product page's reviews as a crawler gets them (ticket 40; redesign step 3; spec modules 15
+// and 23; R11, SEO-5; stories 47 and 75), on every product pin: the structured data marks up
+// only the reviews the page shows.
 //
-// - aggregateRating and review in the Product JSON-LD exactly when the page has the reviews section
-//   (section[data-rf-reviews], components/reelflies/product-reviews.html), so stock's JSON-LD on a
-//   page that shows no reviews (the theme setting off: criterion 3) fails. With the section, the
-//   JSON-LD counts what it says: reviewCount is the N of its "Reviews (N)", and one review for each
-//   review it lists, each datePublished an ISO 8601 date.
-// - The section, at most one: id="product-reviews" (the summary's link and stock's reviews.js read
-//   it), its <h2> "Reviews (N)", at most five reviews (productpage_reviews_count), each with an
-//   <h3> title.
-// - The star summary (p[data-rf-review-summary]) exactly when there is a section, in the buy box,
-//   linking to #product-reviews, its count the section's N.
-// - "Write a review": the page has stock's review form (#modal-review-form) exactly when one control
-//   opens it ([data-reveal-id="modal-review-form"]), so a product with no reviews still offers it
-//   while the store takes reviews (criterion 2). The control sits in the section, or in the
-//   no-reviews block (data-rf-reviews-empty).
+// - aggregateRating and review in the Product JSON-LD exactly when the page has the reviews
+//   section (section.rf-reviews, components/reelflies/product-reviews.html), so stock's JSON-LD on
+//   a page that shows no reviews (the theme setting off: criterion 3) fails. With the section, the
+//   JSON-LD counts what it says: reviewCount is the N of its "Reviews (N)", and one review for
+//   each review it lists, each datePublished an ISO 8601 date.
+// - The section, at most one: id="product-reviews" (the summary's link and stock's reviews.js
+//   read it), its <h2> "Reviews (N)", at most five reviews (productpage_reviews_count), each
+//   li.rf-review with an <h3> title.
+// - The star summary (p.rf-review-sum) exactly when there is a section, in the buy panel
+//   (section.rf-pdp__buy), linking to #product-reviews, its count the section's N.
+// - "Write a review": the page has stock's review form (#modal-review-form) exactly when one
+//   control opens it ([data-reveal-id="modal-review-form"]), so a product with no reviews still
+//   offers it while the store takes reviews (criterion 2). The control sits in the section, or in
+//   the no-reviews block (div.rf-reviews--none, which carries the id instead).
 // - The two pins that prove criteria 1 and 2 (pages.mjs), keyed as dead-ends keys search@none, so
 //   a page that lost its reviews, or its form and button together, fails rather than passing as
 //   consistently absent:
@@ -39,7 +39,7 @@ export const REVIEWS_PIN = 'product@reviews'; // pages.mjs, channel 1: Copper Jo
 export const NO_REVIEWS_PIN = 'product'; // pages.mjs: the reference's hopper (6178)
 export const REVIEWS_OFF_OVERLAY = 'show_product_reviews-off'; // overlays/, Theme Styles' setting off
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}(T[\d:.]+(Z|[+-]\d{2}:?\d{2})?)?$/;
-const has = name => attrs => name in attrs;
+const classed = name => attrs => new RegExp(`(^|\\s)${name}(\\s|$)`).test(attrs.class || '');
 const isWrite = tag => tag.attrs['data-reveal-id'] === 'modal-review-form';
 const typed = (block, type) => [].concat(block['@type']).includes(type);
 
@@ -57,21 +57,23 @@ export function productBlocks(html) {
 }
 
 const number = text => (/\d+/.exec(text || '') || [])[0];
+// The N of "Reviews (N)", the section's own count.
+const totalOf = section => (/\((\d+)\)/.exec(textOf(outerHtml(section, 'h2') || '')) || [])[1];
 
 function sectionProblems(section, data) {
     const problems = [];
     const [tag] = findTags(section, 'section');
     if (tag.attrs.id !== 'product-reviews') problems.push('the reviews section isn\'t id="product-reviews"');
-    const total = tag.attrs['data-rf-review-total'];
     const heading = textOf(outerHtml(section, 'h2') || '');
-    if (heading !== `Reviews (${total})`) problems.push(`the section's heading reads "${heading}", not "Reviews (${total})"`);
-    const reviews = elementsHtml(section, 'li', has('data-rf-review'));
+    const total = totalOf(section);
+    if (total === undefined) problems.push(`the section's heading reads "${heading}", not "Reviews (N)"`);
+    const reviews = elementsHtml(section, 'li', classed('rf-review'));
     if (!reviews.length) problems.push('a reviews section that lists no review');
     if (reviews.length > MAX_LISTED) problems.push(`${reviews.length} reviews in the section, more than ${MAX_LISTED}`);
     if (reviews.some(review => findTags(review, 'h3').length !== 1 || !textOf(outerHtml(review, 'h3') || ''))) problems.push('a review with no <h3> title');
     if (data) {
         const count = data.aggregateRating?.reviewCount;
-        if (data.aggregateRating && String(count) !== String(total)) problems.push(`the JSON-LD's reviewCount ${count}, but the section says Reviews (${total})`);
+        if (data.aggregateRating && total !== undefined && String(count) !== String(total)) problems.push(`the JSON-LD's reviewCount ${count}, but the section says Reviews (${total})`);
         const marked = [].concat(data.review || []);
         if (marked.length !== reviews.length) problems.push(`${marked.length} reviews in the JSON-LD, ${reviews.length} in the section`);
         for (const review of marked) {
@@ -82,17 +84,17 @@ function sectionProblems(section, data) {
 }
 
 function summaryProblems(markup, section) {
-    const box = outerHtml(markup, 'div', has('data-rf-product-buy')) || '';
-    const inBox = elementsHtml(box, 'p', has('data-rf-review-summary'));
-    const anywhere = elementsHtml(markup, 'p', has('data-rf-review-summary'));
+    const panel = outerHtml(markup, 'section', classed('rf-pdp__buy')) || '';
+    const inPanel = elementsHtml(panel, 'p', classed('rf-review-sum'));
+    const anywhere = elementsHtml(markup, 'p', classed('rf-review-sum'));
     if (!section) return anywhere.length ? ['a star summary with no reviews section'] : [];
-    if (inBox.length !== 1) return [`no star summary (data-rf-review-summary) in the buy box${anywhere.length ? `, but ${anywhere.length} elsewhere` : ''}`];
-    const [summary] = inBox;
+    if (inPanel.length !== 1) return [`no star summary (p.rf-review-sum) in the buy panel${anywhere.length ? `, but ${anywhere.length} elsewhere` : ''}`];
+    const [summary] = inPanel;
     const problems = [];
     if (!findTags(summary, 'a').some(tag => tag.attrs.href === '#product-reviews')) problems.push('the star summary doesn\'t link to #product-reviews');
-    const said = number(textOf(outerHtml(summary, 'span', has('data-rf-review-count')) || ''));
-    const total = findTags(section, 'section')[0].attrs['data-rf-review-total'];
-    if (said !== total) problems.push(`the star summary says ${said}, the section ${total}`);
+    const said = number(textOf(outerHtml(summary, 'span', classed('rf-review-sum__count')) || ''));
+    const total = totalOf(section);
+    if (total !== undefined && said !== total) problems.push(`the star summary says ${said}, the section ${total}`);
     return problems;
 }
 
@@ -102,20 +104,20 @@ function writeProblems(markup, section) {
     if (form && controls.length !== 1) return [`the review form is on the page, but ${controls.length} controls open it${controls.length > 1 ? ', not one' : ''}`];
     if (!form && controls.length) return [`${controls.length} control${controls.length > 1 ? 's' : ''} open${controls.length > 1 ? '' : 's'} the review form, which isn't on the page`];
     if (!controls.length) return [];
-    const empty = outerHtml(markup, 'div', has('data-rf-reviews-empty')) || '';
+    const empty = outerHtml(markup, 'div', classed('rf-reviews--none')) || '';
     const where = `${section || ''}${empty}`;
     return where.includes(controls[0].raw) ? [] : ['"Write a review" sits outside the reviews section and the no-reviews block'];
 }
 
-const productView = markup => findTags(markup, 'div').some(tag => /(^|\s)productView(\s|$)/.test(tag.attrs.class || ''));
+const productView = markup => findTags(markup, 'div').some(tag => classed('productView')(tag.attrs));
 
 // What a pin that proves a criterion must show (the module header), on a page with a product view.
 function pinProblems(page, markup, section, overlay) {
     if (![REVIEWS_PIN, NO_REVIEWS_PIN].includes(page.key) || !productView(markup)) return [];
-    const empty = outerHtml(markup, 'div', has('data-rf-reviews-empty'));
+    const empty = outerHtml(markup, 'div', classed('rf-reviews--none'));
     const emptyProblems = where => {
-        if (!empty) return [`no no-reviews block (data-rf-reviews-empty) on ${where}`];
-        return findTags(empty).some(isWrite) ? [] : [`no "Write a review" in the no-reviews block (data-rf-reviews-empty) on ${where}`];
+        if (!empty) return [`no no-reviews block (.rf-reviews--none) on ${where}`];
+        return findTags(empty).some(isWrite) ? [] : [`no "Write a review" in the no-reviews block (.rf-reviews--none) on ${where}`];
     };
     if (page.key === NO_REVIEWS_PIN) {
         const where = `${NO_REVIEWS_PIN}, the pin with no reviews`;
@@ -123,10 +125,10 @@ function pinProblems(page, markup, section, overlay) {
     }
     if (overlay === REVIEWS_OFF_OVERLAY) {
         if (section) return [`a reviews section on ${REVIEWS_PIN} under the overlay ${REVIEWS_OFF_OVERLAY}, which hides reviews`];
-        const none = textOf(outerHtml(empty || '', 'p', attrs => /(^|\s)rf-reviews-none(\s|$)/.test(attrs.class || '')) || '');
+        const none = textOf(outerHtml(empty || '', 'p', classed('rf-reviews__none')) || '');
         return [...emptyProblems(REVIEWS_PIN), ...(none ? [`the no-reviews block says "${none}" on ${REVIEWS_PIN}, which has reviews`] : [])];
     }
-    if (!section) return [`no reviews section (data-rf-reviews) on ${REVIEWS_PIN}, the pin with reviews: the section, the star summary and the JSON-LD's reviews are all missing`];
+    if (!section) return [`no reviews section (.rf-reviews) on ${REVIEWS_PIN}, the pin with reviews: the section, the star summary and the JSON-LD's reviews are all missing`];
     return findTags(section).some(isWrite) ? [] : [`no "Write a review" in the reviews section on ${REVIEWS_PIN}`];
 }
 
@@ -141,14 +143,15 @@ export default {
         const blocks = productBlocks(page.html);
         if (blocks === null) return [];
         const data = blocks[0];
-        const sections = elementsHtml(markup, 'section', has('data-rf-reviews'));
+        const sections = elementsHtml(markup, 'section', classed('rf-reviews'));
         if (sections.length > 1) return [`${sections.length} reviews sections, not one`];
         const [section] = sections;
         const problems = [];
         if (!section) {
             if (data?.aggregateRating) problems.push('aggregateRating in the JSON-LD with no reviews section on the page');
             if (data?.review) problems.push('review in the JSON-LD with no reviews section on the page');
-            if (findTags(markup).some(tag => tag.attrs.id === 'product-reviews')) problems.push('an element with id="product-reviews" but no reviews section');
+            const ids = findTags(markup).filter(tag => tag.attrs.id === 'product-reviews');
+            if (ids.some(tag => !classed('rf-reviews--none')(tag.attrs))) problems.push('an element with id="product-reviews" that is neither the reviews section nor the no-reviews block');
         } else {
             problems.push(...sectionProblems(section, data));
         }

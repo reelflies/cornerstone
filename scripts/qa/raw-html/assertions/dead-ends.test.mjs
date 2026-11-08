@@ -1,6 +1,7 @@
-// Tests the dead ends' raw-HTML assertion (ticket 51): dead-ends, on whole pages rendered from
-// fixture data (render/partials/dead-ends/pages.mjs) and on pages broken one way at a time, so each
-// rule is shown to fail.
+// Tests the dead ends' raw-HTML assertion (ticket 51; redesign step 3): dead-ends, on whole pages
+// rendered from fixture data (render/partials/dead-ends/pages.mjs) and on pages broken one way at a
+// time, so each rule is shown to fail. The breakages edit the redesign's markup (not-found.html's
+// search-form.html, cart-empty.html).
 //
 //   node --test scripts/qa/raw-html/assertions/dead-ends.test.mjs
 
@@ -47,7 +48,7 @@ describe('dead-ends', () => {
         it('a 404 page without the ReelFlies content in its <main>, or without the search box', async () => {
             const html = await notFound();
             assert.match(problems(html.replace(/data-rf-not-found/g, ''), '404'), /no ReelFlies 404 content/);
-            assert.match(problems(html.replace('<form class="form"  action="/search.php">', '<form class="form">'), '404'), /no search box/);
+            assert.match(problems(html.replace('<form class="rf-search rf-search--page" role="search" action="/search.php" method="get" data-rf-search>', '<form class="rf-search rf-search--page" role="search" data-rf-search>'), '404'), /no search box/);
         });
 
         it('Fly Type links that aren\'t the declared ids, in order, or a list with no links', async () => {
@@ -61,12 +62,12 @@ describe('dead-ends', () => {
 
         it('an empty list where a dead end has no ids', async () => {
             const html = await emptyCart(EMPTY_IDS, []);
-            assert.match(problems(html.replace('<div class="rf-dead-end rf-cart-empty" data-rf-cart-empty>', '<div class="rf-dead-end rf-cart-empty" data-rf-cart-empty><ul></ul>'), 'cart'), /an empty list in the empty cart/);
+            assert.match(problems(html.replace('<div class="rf-cart-empty" data-rf-cart-empty>', '<div class="rf-cart-empty" data-rf-cart-empty><ul></ul>'), 'cart'), /an empty list in the empty cart/);
         });
 
         it('an empty cart with a heading that takes focus, as stock\'s <h3 tabindex="0">', async () => {
             const html = await emptyCart();
-            assert.match(problems(html.replace('<div class="rf-dead-end rf-cart-empty" data-rf-cart-empty>', '<div class="rf-dead-end rf-cart-empty" data-rf-cart-empty><h3 tabindex="0">Your cart is empty</h3>'), 'cart'), /a heading that takes focus/);
+            assert.match(problems(html.replace('<div class="rf-cart-empty" data-rf-cart-empty>', '<div class="rf-cart-empty" data-rf-cart-empty><h3 tabindex="0">Your cart is empty</h3>'), 'cart'), /a heading that takes focus/);
         });
 
         it('an empty cart with no way forward', async () => {

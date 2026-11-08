@@ -1,74 +1,69 @@
-// Quick search's forms in the server HTML (ticket 30; spec modules 4 and 5; stories 1 and 3), on
-// every page: each ReelFlies search form (components/reelflies/search-form.html, data-rf-search-form)
-// works with no script, and the phone search row is where it belongs.
+// The ReelFlies search form in the server HTML (ticket 30; redesign step 3; spec modules 4 and 5;
+// stories 1 and 3), on every page: each form (components/reelflies/search-form.html,
+// form[data-rf-search]) works with no script, and quick-search.js has what it binds.
 //
-// - Each form is a GET with a real action (stock's had only data-url and submitted through
-//   script, quick-search.html:2), holding one field named search_query, so Enter lands on the
-//   search page with JavaScript off.
+// - Every page has at least one: the header's. The 404 page has a second (not-found.html).
+// - Each is a <form role="search"> that GETs a real action (stock's had only data-url and
+//   submitted through script), holding one field named search_query, type search, with an id
+//   its <label> names, and one submit button, so Enter lands on the search page with
+//   JavaScript off.
+// - Each holds its suggestions panel (data-rf-suggest), hidden and empty: quick-search.js fills
+//   it from the Storefront API after two characters.
 // - None carries stock quick-search.js's hooks (data-quick-search-form, data-search-quick), and
-//   its field carries no combobox attributes: the simple model (critique, aria-allowed-attr).
-// - Each form's name is used once on the page, so its ids are unique.
-// - The phone row (data-rf-search-form="phone", inside data-rf-phone-search) comes after the
-//   header, at most once. On home, category and search pages that carry the header's search form
-//   it is there; on product, cart, 404, brand, Web Page, sign-in and chart pages it isn't.
+//   the field carries no combobox attributes: the simple model (critique, aria-allowed-attr).
+// - Each field's id is used once on the page, so the labels hold.
+//
+// Retired with the redesign: the phone search row (the header's form is full width on phones).
 
-import { findTags, markupOnly, outerHtml } from '../html.mjs';
+import {
+    decodeHtml, findTags, elementsHtml, textOf,
+} from '../html.mjs';
 
-export const PHONE_ROW_ON = ['home', 'category', 'search'];
-export const PHONE_ROW_NEVER = ['product', 'cart', '404', 'brand', 'page', 'login', 'create-account', 'hook-chart'];
 const STOCK_HOOKS = ['data-quick-search-form', 'data-search-quick'];
 const COMBOBOX = ['aria-expanded', 'aria-controls', 'aria-activedescendant', 'aria-autocomplete', 'aria-owns'];
 
-function formProblems(html, tag) {
-    const name = tag.attrs['data-rf-search-form'];
-    const label = `the search form "${name}"`;
-    if (tag.name !== 'form') return [`${label} is a <${tag.name}>, not a <form>`];
+function formProblems(html, form, index) {
+    const [tag] = findTags(form, 'form');
+    const label = `search form ${index + 1}`;
     const problems = [];
-    const action = (tag.attrs.action || '').trim();
+    if (tag.attrs.role !== 'search') problems.push(`${label} isn't role="search"`);
+    const action = decodeHtml(tag.attrs.action || '').trim();
     if (!action || action === '#') problems.push(`${label} has no action, so it can't submit without script`);
     if ((tag.attrs.method || 'get').toLowerCase() !== 'get') problems.push(`${label} submits with ${tag.attrs.method}, not GET`);
-    const source = outerHtml(html, 'form', attrs => attrs['data-rf-search-form'] === name) || '';
-    const fields = findTags(source, 'input').filter(input => input.attrs.name === 'search_query');
+    const fields = findTags(form, 'input').filter(input => input.attrs.name === 'search_query');
     if (fields.length !== 1) problems.push(`${label} holds ${fields.length} fields named search_query, not 1`);
-    for (const inner of [tag, ...findTags(source)]) {
-        for (const hook of STOCK_HOOKS) if (hook in inner.attrs) problems.push(`${label} carries stock quick-search.js's ${hook}`);
-    }
     for (const field of fields) {
+        if (field.attrs.type !== 'search') problems.push(`${label}'s field is type="${field.attrs.type}", not search`);
+        if (!field.attrs.id) problems.push(`${label}'s field has no id for its label`);
+        else {
+            const labels = elementsHtml(form, 'label', attrs => attrs.for === field.attrs.id);
+            if (labels.length !== 1 || !textOf(labels[0])) problems.push(`${label}'s field has no label naming it (label[for="${field.attrs.id}"])`);
+            if (findTags(html).filter(each => each.attrs.id === field.attrs.id).length !== 1) problems.push(`${label}'s field id "${field.attrs.id}" is on the page more than once`);
+        }
         if (field.attrs.role === 'combobox') problems.push(`${label}'s field is a combobox: quick search uses a plain search field`);
         for (const attr of COMBOBOX) if (attr in field.attrs) problems.push(`${label}'s field carries ${attr}: quick search uses a plain search field`);
+    }
+    if (findTags(form, 'button').filter(button => (button.attrs.type || 'submit') === 'submit').length !== 1) problems.push(`${label} has no one submit button`);
+    const panels = elementsHtml(form, 'div', attrs => 'data-rf-suggest' in attrs);
+    if (panels.length !== 1) problems.push(`${label} has ${panels.length} suggestions panels (data-rf-suggest), not 1`);
+    else if (!('hidden' in findTags(panels[0], 'div')[0].attrs) || textOf(panels[0]) || findTags(panels[0]).length > 1) problems.push(`${label}'s suggestions panel isn't empty and hidden: quick-search.js fills it`);
+    for (const inner of findTags(form)) {
+        for (const hook of STOCK_HOOKS) if (hook in inner.attrs) problems.push(`${label} carries stock quick-search.js's ${hook}`);
     }
     return problems;
 }
 
-export function searchFormProblems(html, kind) {
-    const forms = findTags(html).filter(tag => 'data-rf-search-form' in tag.attrs);
-    const problems = forms.flatMap(tag => formProblems(html, tag));
-    const names = forms.map(tag => tag.attrs['data-rf-search-form']);
-    [...new Set(names.filter((name, index) => names.indexOf(name) !== index))]
-        .forEach(name => problems.push(`the search form "${name}" is on the page more than once, so its ids repeat`));
-
-    const phone = forms.filter(tag => tag.attrs['data-rf-search-form'] === 'phone');
-    const rows = findTags(html).filter(tag => 'data-rf-phone-search' in tag.attrs);
-    if (phone.length && PHONE_ROW_NEVER.includes(kind)) problems.push(`the phone search row is on the ${kind} page: it belongs on home, category and search pages only`);
-    if (rows.length > 1) problems.push(`${rows.length} phone search rows (data-rf-phone-search), not 1`);
-    if (rows.length === 1) {
-        const row = outerHtml(html, 'div', attrs => 'data-rf-phone-search' in attrs) || '';
-        if (!row.includes('data-rf-search-form="phone"')) problems.push('the phone search row holds no search form named phone');
-        const header = outerHtml(html, 'header', attrs => 'data-rf-header' in attrs);
-        const markup = markupOnly(html);
-        if (header && header.includes('data-rf-phone-search')) problems.push('the phone search row is inside the <header>: it belongs after it, in normal flow, so it scrolls away');
-        else if (header && markup.indexOf('data-rf-phone-search') < markup.indexOf(header)) problems.push('the phone search row comes before the <header>: it belongs after it');
-    }
-    const headerForm = forms.some(tag => tag.attrs['data-rf-search-form'] === 'header');
-    if (headerForm && PHONE_ROW_ON.includes(kind) && !phone.length) problems.push(`no phone search row on the ${kind} page (components/reelflies/phone-search-row.html)`);
-    return problems;
+export function searchFormProblems(html) {
+    const forms = elementsHtml(html, 'form', attrs => 'data-rf-search' in attrs);
+    if (!forms.length) return ['no ReelFlies search form (form[data-rf-search]) on the page: the header carries one on every page'];
+    return forms.flatMap((form, index) => formProblems(html, form, index));
 }
 
 export default {
     id: 'rf-search-forms',
     ticket: 30,
-    description: 'every ReelFlies search form a real GET with one search_query field and no stock or combobox hooks; the phone search row after the header on home, category and search pages only',
+    description: 'a ReelFlies search form on every page, each a real GET with role search, one labelled search_query field, one submit, its suggestions panel empty and hidden, and no stock or combobox hooks',
     check(page) {
-        return searchFormProblems(page.html, page.kind);
+        return searchFormProblems(page.html);
     },
 };

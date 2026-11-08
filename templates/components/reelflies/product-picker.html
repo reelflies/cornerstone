@@ -18,6 +18,7 @@
     - The data-rf-* attributes describe the product for the box's line until the store answers.
 --}}
 {{~assignVar 'rf_pick_sold' ''~}}{{~assignVar 'rf_pick_sold_n' 0~}}{{~assignVar 'rf_pick_n' 0~}}
+{{~assignVar 'rf_pick_product' product.id~}}{{!-- the rows draw inside a loop, where product is out of reach --}}
 <div class="rf-pick rf-pick--page" data-rf-pick-page data-rf-mode="{{#if rf_variant}}one{{else}}sizes{{/if}}" data-rf-meta data-rf-product="{{product.id}}" data-rf-name="{{product.title}}" data-rf-url="{{product.url}}" data-rf-price="{{product.price.without_tax.value}}" data-rf-brand="{{product.brand.name}}" data-rf-img="{{#if product.main_image}}{{getImageSrcset product.main_image 1x='160w'}}{{/if}}"{{#if rf_variant}} data-rf-variant="{{rf_variant.entityId}}" data-rf-stock="{{#if rf_variant.isPurchasable}}{{#if rf_variant.inventory.isInStock}}1{{else}}0{{/if}}{{else}}0{{/if}}"{{/if}}>
     {{#unless rf_variant}}
     <p class="rf-pick__hint" id="rf-pick-hint">{{#if (getVar 'rf_pdp_fly')}}{{lang 'reelflies.js.pick_hint'}}{{else}}{{lang 'reelflies.js.pick_hint_choice'}}{{/if}}</p>

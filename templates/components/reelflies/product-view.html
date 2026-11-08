@@ -15,7 +15,13 @@
     the form and its hooks (data-cart-item-add, data-product-option-change, the price's
     data-product-price-* spans, data-product-sku, #form-action-addToCart, #previewModal) stay, so
     it finds what it reads whichever way the product is bought.
+
+    rf_pdp_fresh marks a fresh product view for the stock option templates (products/options/
+    set-rectangle.html's hook): a catalogue default is never checked here, so nothing is chosen for
+    the shopper; the cart's Change dialog and Quick view, which don't come through this partial,
+    keep stock's choice.
 --}}
+{{~assignVar 'rf_pdp_fresh' 1~}}
 {{inject 'outOfStockDefaultMessage' (lang 'products.out_of_stock_default_message')}}
 {{inject 'availableOnHand' product.available_on_hand}}
 {{inject 'availableForBackorder' product.available_for_backorder}}

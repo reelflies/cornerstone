@@ -1,7 +1,8 @@
-// The dead ends' whole pages, rendered from fixture data (ticket 51), for the fixture render test
-// (dead-ends.test.mjs) and the raw-HTML assertion's test (raw-html/assertions/dead-ends.test.mjs):
-// the 404 page, the empty cart and a search with no results, each as the store's page context
-// gives it, with tree 4's menu ids and categories, tree 1's, or none.
+// The dead ends' whole pages, rendered from fixture data (ticket 51; redesign step 3), for the
+// fixture render test (dead-ends.test.mjs) and the raw-HTML assertions' tests (raw-html/
+// assertions/dead-ends.test.mjs, rf-search-forms.test.mjs): the 404 page, the empty cart and a
+// search with no results, each as the store's page context gives it, with tree 4's menu ids and
+// categories, tree 1's, or none.
 
 import { renderPartial } from '../../render.mjs';
 
@@ -35,7 +36,7 @@ const URLS = {
     home: '/', search: '/search.php', cart: '/cart.php', checkout: { single_address: '/checkout' }, auth: { login: '/login.php' },
 };
 const base = (settings, categories) => ({
-    breadcrumbs: [], categories, urls: URLS, settings: {}, theme_settings: settings,
+    breadcrumbs: [], categories, urls: URLS, settings: { money: { currency_token: '$' } }, theme_settings: settings,
 });
 
 export const notFound = (settings = TREE_4_IDS, categories = TREE_4, options = {}) => renderPartial('pages/errors/404', {
