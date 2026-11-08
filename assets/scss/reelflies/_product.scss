@@ -283,7 +283,8 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
     display: inline-flex;
     align-items: center;
     gap: var(--rf-space-2);
-    min-height: 32px;
+    min-height: var(--rf-tap-min);
+    margin: -6px 0; // a 44px target in a 32px row; nothing else tappable above or below it
     color: var(--rf-ink);
     font-size: 0.875rem;
     text-decoration: none;
@@ -419,7 +420,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
 
 .rf-pdp__wish .dropdown-menu-button {
     @include rf-link-more;
-    min-height: 32px;
+    min-height: var(--rf-tap-min);
     margin: 0;
     padding: 0;
     border: 0;

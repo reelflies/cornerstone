@@ -580,7 +580,7 @@
       "cardGrid": "2 across on phones, 3 from 640px, 3 beside the facets from 1040px, 4 from 1280px",
       "hubTiles": "1 across on phones (a compact row: 104px photo beside name and count), 2 from 640px, 3 from 1040px",
       "gauge": "7 to a row on phones, 10 from 640px, one row from 1040px; 1.5px, 2px, 2.6px per millimetre of hook",
-      "touchTargets": "44px: pills, rows, size cells, steppers, quick-order fields"
+      "touchTargets": "44px: pills, rows, size cells, steppers, quick-order fields, and secondary links (breadcrumb steps, plate and footer links, the review count, the Search button, the skip link); negative margins grow the hit area where a 44px row would move the layout"
     },
     "focus": {
       "light": "2px solid ink, offset 3px",

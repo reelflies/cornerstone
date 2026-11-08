@@ -150,7 +150,7 @@
 
 .rf-foot nav a {
     display: inline-flex;
-    min-height: 36px;
+    min-height: var(--rf-tap-min);
     align-items: center;
     font-size: 0.9375rem;
 }

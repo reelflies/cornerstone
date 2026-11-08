@@ -67,14 +67,16 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
 }
 
 // The breadcrumbs (stock components/common/breadcrumbs.html, its BreadcrumbList kept): one quiet
-// line above the H1, left-aligned, each step a 24px target
+// line above the H1, left-aligned, each step a 44px target. The row is pulled in by 10px top and
+// bottom, so the words sit where a 24px row put them and the H1 doesn't move; the extra hit area
+// reaches into the head's padding above and the gap below, where nothing else is tappable.
 .rf-list-head .breadcrumbs,
 .rf-pdp .breadcrumbs,
 .rf-hub .breadcrumbs {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    margin: 0;
+    margin: -10px 0;
     padding: 0;
     list-style: none;
     font: 400 0.8125rem / 1.4 var(--rf-font-text);
@@ -107,7 +109,11 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
 .rf-hub .breadcrumb-label {
     display: inline-flex;
     align-items: center;
-    min-height: 24px;
+    justify-content: center;
+    min-width: var(--rf-tap-min);
+    min-height: var(--rf-tap-min);
+    padding: 0 9px; // a short step ("Home", "Blog") is still 44px wide: the hit area reaches 9px
+    margin: 0 -9px; // into the separator's 8px margins either side, never into the next step
     color: var(--rf-ink-muted);
     text-decoration: none;
 
@@ -1146,18 +1152,23 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
 // current page in ink
 // -----------------------------------------------------------------------------
 
-:is(.rf-list, .rf-blog) .pagination {
+:is(.rf-list, .rf-blog, .rf-reviews) .pagination {
     margin: var(--rf-space-12) 0 0;
     text-align: left;
 }
 
+// the reviews' pager (stock's, under the five on show) sits closer to its rows
+.rf-reviews .pagination {
+    margin-top: var(--rf-space-6);
+}
+
 // a pager with no pages (stock renders an empty one for a search that found nothing) takes no room:
 // stock search.js hid it a moment after load and the page moved (step 4 audit)
-:is(.rf-list, .rf-blog) .pagination:not(:has(.pagination-item)) {
+:is(.rf-list, .rf-blog, .rf-reviews) .pagination:not(:has(.pagination-item)) {
     display: none;
 }
 
-:is(.rf-list, .rf-blog) .pagination-list {
+:is(.rf-list, .rf-blog, .rf-reviews) .pagination-list {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
@@ -1167,7 +1178,7 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
     list-style: none;
 }
 
-:is(.rf-list, .rf-blog) .pagination-item {
+:is(.rf-list, .rf-blog, .rf-reviews) .pagination-item {
     display: flex;
     margin: 0;
     padding: 0;
@@ -1176,7 +1187,7 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
     font-variant-numeric: tabular-nums lining-nums;
 }
 
-:is(.rf-list, .rf-blog) .pagination-link {
+:is(.rf-list, .rf-blog, .rf-reviews) .pagination-link {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1204,12 +1215,12 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
     }
 }
 
-:is(.rf-list, .rf-blog) .pagination-item--previous .pagination-link,
-:is(.rf-list, .rf-blog) .pagination-item--next .pagination-link {
+:is(.rf-list, .rf-blog, .rf-reviews) .pagination-item--previous .pagination-link,
+:is(.rf-list, .rf-blog, .rf-reviews) .pagination-item--next .pagination-link {
     font: 650 0.9375rem / 1 var(--rf-font-text);
 }
 
-:is(.rf-list, .rf-blog) .pagination-item--current .pagination-link {
+:is(.rf-list, .rf-blog, .rf-reviews) .pagination-item--current .pagination-link {
     border-color: var(--rf-ink);
     background: var(--rf-ink);
     color: var(--rf-paper);

@@ -260,7 +260,8 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    min-height: 36px; // the strip's whole height, so each link is a 36px target (step 4 audit: 20px)
+    min-height: var(--rf-tap-min); // a 44px target in the 36px strip (step 4 audit: 20px, then 36px)
+    margin: -4px 0; // the extra 4px above and below touch nothing tappable
     color: var(--rf-mist);
     text-decoration: none;
 }
@@ -302,6 +303,14 @@ body {
     z-index: 50;
     background: var(--rf-limestone-100);
     border-bottom: 1px solid var(--rf-limestone-300);
+}
+
+// stock's skip link (layouts/header/_header.scss), shown on focus: a 44px target
+.skip-to-main-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--rf-tap-min);
+    padding: 4px 12px;
 }
 
 .rf-head__bar {
@@ -369,7 +378,7 @@ body {
 
 .rf-search input {
     width: 100%;
-    height: 46px;
+    height: 48px; // the Search button inside, 2px in, is a 44px target
     padding: 0 92px 0 44px;
     border: 1px solid var(--rf-edge);
     border-radius: var(--rf-radius-md);
@@ -388,9 +397,9 @@ body {
 
 .rf-search__go {
     position: absolute;
-    right: 4px;
-    top: 4px;
-    bottom: 4px;
+    right: 2px;
+    top: 2px;
+    bottom: 2px;
     padding: 0 14px;
     border: 0;
     border-radius: var(--rf-radius-sm);
@@ -408,7 +417,9 @@ body {
 .rf-box-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
+    min-width: var(--rf-tap-min); // the icon alone, on phones, is still a 44px target
     min-height: var(--rf-tap-min);
     padding: 0 8px;
     border: 0;

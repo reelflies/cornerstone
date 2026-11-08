@@ -413,10 +413,11 @@
     color: var(--rf-mist);
 }
 
+// each link a 44px row; the rows touch, so the hit areas never overlap (step 4 re-audit)
 .rf-plate__kids {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--rf-space-1) var(--rf-space-4);
+    gap: 0 var(--rf-space-4);
     margin-top: var(--rf-space-3);
     font-size: 0.9375rem;
 }
@@ -424,7 +425,7 @@
 .rf-plate__kids a {
     display: inline-flex;
     align-items: center;
-    min-height: 36px;
+    min-height: var(--rf-tap-min);
     text-decoration: underline;
     text-decoration-color: var(--rf-limestone-300);
     text-underline-offset: 0.25em;
@@ -531,7 +532,7 @@
 
 .rf-row-plate__kids a {
     display: inline-flex;
-    min-height: 32px;
+    min-height: var(--rf-tap-min);
     align-items: center;
 }
 
