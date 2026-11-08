@@ -291,9 +291,15 @@ label {
 // Reduced motion
 // -----------------------------------------------------------------------------
 //
-// With reduced motion every state is simply there: transitions and animations finish at once
-// (0.01ms rather than none, so code waiting for transitionend still hears it), and smooth
-// scrolling jumps.
+// Nothing travels (DESIGN.md "Motion"): lifts, slides, arrivals, the box count's bump and the fly
+// that drops into the order line are gone, and every place is simply there. Changes of colour,
+// light and opacity, which carry state (a card lit in hand, a size turning copper, a menu
+// appearing), keep a short fade. Animations finish at once (0.01ms rather than none, so code
+// waiting for their end still hears it), and smooth scrolling jumps.
+//
+// The fallbacks that wait for a script (a category's chips, the cart's rows: an animation of no
+// length after 5s) keep their wait, so reduced motion never lifts them early and moves the page
+// when the script lays them out (step 4 audit: a category page shifted 0.47 on phones).
 
 @media (prefers-reduced-motion: reduce) {
     *,
@@ -302,8 +308,14 @@ label {
         animation-duration: 0.01ms !important;
         animation-delay: 0s !important;
         animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+        transition-property: color, background-color, border-color, text-decoration-color, outline-color, opacity, box-shadow !important;
+        transition-duration: 120ms !important;
         transition-delay: 0s !important;
         scroll-behavior: auto !important;
+    }
+
+    .rf-chips:not([data-rf-chips-ready]),
+    .rf-cart-group__rows[data-rf-cart-multi]:not([data-rf-cart-sorted]) {
+        animation-delay: 5s !important;
     }
 }

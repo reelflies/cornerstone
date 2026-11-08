@@ -532,6 +532,11 @@
         "name": "reduced-motion",
         "value": "1ms",
         "purpose": "All durations collapse; the flying fly is not drawn."
+      },
+      {
+        "name": "reduced",
+        "value": "spatial motion off; colour, light and opacity 120ms; animations 0.01ms; script fallbacks keep their delay",
+        "purpose": "prefers-reduced-motion: state still reads, nothing travels, nothing shown early."
       }
     ],
     "breakpoints": [

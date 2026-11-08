@@ -490,7 +490,7 @@ A moss band: the Expanded heading in mist, a lichen intro, species grouped under
 The trout-oval raster is the only fixed asset. On limestone it is multiplied onto the ground; on shale, moss or a photograph it sits on a paper plate (footer, 48px); never under 40px tall, never recoloured or redrawn.
 
 ### Motion
-One settle (220ms, `cubic-bezier(0.16, 1, 0.3, 1)`) for shade, light, lift, underlines, arrows and chevrons; arrivals on the stone in 380ms with a 40ms stagger; one drop (420ms) for a fly travelling to the order line; the drawer slides in over 260ms. With reduced motion, durations collapse to 1ms and the flying fly is not drawn.
+One settle (220ms, `cubic-bezier(0.16, 1, 0.3, 1)`) for shade, light, lift, underlines, arrows and chevrons; arrivals on the stone in 380ms with a 40ms stagger; one drop (420ms) for a fly travelling to the order line; the drawer slides in over 260ms. With reduced motion nothing travels: lifts, slides, arrivals and the bump are gone and the flying fly is not drawn, while changes of colour, light and opacity keep a 120ms fade so state still reads; a fallback waiting for a script keeps its wait.
 
 ### Region mapping (BigCommerce Stencil)
 The base is Cornerstone 6.22, rebuilt fresh rather than ported from the old skin. ReelFlies code lives in its own folders and touches upstream files only through hooks listed in `CUSTOMIZATIONS.md` (ADR 0001). As built (steps 2 and 3):
