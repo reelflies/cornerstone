@@ -100,6 +100,14 @@ export function isLoaded() {
     return loaded;
 }
 
+// A line's size: the option whose name holds "size" (Fat Albert's colour comes first), else its
+// one option.
+function sizeOf(options) {
+    if (!options || !options.length) return '';
+    const sized = options.find(option => /size/i.test(option.name || ''));
+    return String((sized || options[0]).value);
+}
+
 function storeLines() {
     if (!cart || !cart.lineItems) return [];
     const items = [...(cart.lineItems.physicalItems || []), ...(cart.lineItems.digitalItems || [])];
@@ -112,7 +120,7 @@ function storeLines() {
         url: item.url,
         imageUrl: item.imageUrl,
         brand: item.brand || '',
-        size: item.options && item.options[0] ? String(item.options[0].value) : '',
+        size: sizeOf(item.options),
         quantity: item.quantity,
         price: Number(item.salePrice),
     }));

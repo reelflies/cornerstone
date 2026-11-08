@@ -1,0 +1,37 @@
+{{!--
+    One pattern in the box (cart-lines.html): its photograph at 3:2 linking to it, its name and its
+    price each, then a row per size (cart-row.html) from rf_items, every line of the same product.
+    A pattern in more than one size is marked data-rf-cart-multi, and its rows wait unseen
+    (keeping their place) until cart-page.js has put them in hook order. A gift certificate
+    (rf_gift) is its own group with its one row.
+--}}
+{{~assignVar 'rf_cart_rows' 0~}}
+{{~#unless rf_gift}}{{#each rf_items}}{{#if product_id '==' ../rf_item.product_id}}{{#if type '!=' 'GiftCertificate'}}{{assignVar 'rf_cart_rows' (add (getVar 'rf_cart_rows') 1)}}{{/if}}{{/if}}{{/each}}{{/unless~}}
+<section class="rf-cart-group" aria-labelledby="rf-cart-g-{{rf_item.id}}">
+    <a class="rf-cart-group__photo" href="{{#if rf_gift}}{{rf_item.edit_url}}{{else}}{{rf_item.url}}{{/if}}" tabindex="-1" aria-hidden="true">
+        {{#if rf_gift}}
+        <img src="{{cdn theme_settings.default_image_gift_certificate}}" width="96" height="64" alt="" loading="lazy" decoding="async">
+        {{else if rf_item.image}}
+        <img src="{{getImageSrcset rf_item.image 1x='160w'}}" srcset="{{getImageSrcset rf_item.image 1x='160w' 2x='320w'}}" width="96" height="64" alt="" loading="lazy" decoding="async">
+        {{else}}
+        <img src="{{cdn theme_settings.default_image_product}}" width="96" height="64" alt="" loading="lazy" decoding="async">
+        {{/if}}
+    </a>
+    <div class="rf-cart-group__head">
+        <h2 class="rf-cart-group__name" id="rf-cart-g-{{rf_item.id}}"><a href="{{#if rf_gift}}{{rf_item.edit_url}}{{else}}{{rf_item.url}}{{/if}}">{{rf_item.name}}</a></h2>
+        {{#unless rf_gift}}
+        <p class="rf-cart-group__price">{{#or customer (unless settings.hide_price_from_guests)}}<span class="rf-num">{{#if rf_item.price_discounted}}{{rf_item.price_discounted.formatted}}{{else}}{{rf_item.price.formatted}}{{/if}}</span> {{lang 'reelflies.cart.each'}}{{/or}}</p>
+        {{/unless}}
+    </div>
+    <ul class="rf-cart-group__rows"{{#if (getVar 'rf_cart_rows') '>' 1}} data-rf-cart-multi{{/if}} data-rf-cart-rows>
+        {{#if rf_gift}}
+        {{> components/reelflies/cart-row rf_line=rf_item rf_gift=1}}
+        {{else}}
+        {{#each rf_items as |rfLine|}}
+        {{#if rfLine.product_id '==' ../rf_item.product_id}}{{#if rfLine.type '!=' 'GiftCertificate'}}
+        {{> components/reelflies/cart-row rf_line=rfLine rf_group_price=../rf_item.price.value}}
+        {{/if}}{{/if}}
+        {{/each}}
+        {{/if}}
+    </ul>
+</section>

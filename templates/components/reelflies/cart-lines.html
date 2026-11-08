@@ -1,0 +1,21 @@
+{{!--
+    The box's lines (ticket 41; O17, UX-13; stories 50 and 56), on paper: one group per pattern, in
+    the order each first went in (the store keeps the lines in the order they were added), its
+    sizes inside it (cart-group.html). A gift certificate is a group of its own. Grouping happens
+    here, on the server; cart-page.js only puts a group's sizes in hook order.
+
+    data-cart-quantity is stock cart.js's: after a change it reloads the page when this reads 0.
+--}}
+{{~assignVar 'rf_cart_done' ','~}}
+<div class="rf-cart-lines" data-cart-quantity="{{cart.quantity}}">
+    {{#each cart.items as |rfItem|}}
+    {{#if rfItem.type '==' 'GiftCertificate'}}
+    {{> components/reelflies/cart-group rf_item=rfItem rf_items=../cart.items rf_gift=1}}
+    {{else}}
+    {{#contains (getVar 'rf_cart_done') (concat ',' (concat rfItem.product_id ','))}}{{else}}
+    {{~assignVar 'rf_cart_done' (concat (getVar 'rf_cart_done') (concat rfItem.product_id ','))~}}
+    {{> components/reelflies/cart-group rf_item=rfItem rf_items=../cart.items}}
+    {{/contains}}
+    {{/if}}
+    {{/each}}
+</div>

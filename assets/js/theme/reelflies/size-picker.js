@@ -35,7 +35,7 @@ export function stepperHtml({
     const name = escapeHtml(what);
     return '<span class="rf-qty" data-rf-qty-group>'
         + `<button class="rf-qty__btn" type="button" data-rf-qty-step="-1" aria-label="${escapeHtml(word(what ? 'qty_minus' : 'qty_minus_one', { what }))}" disabled>${icon('minus')}</button>`
-        + `<input class="rf-qty__input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off" value="0" aria-label="${escapeHtml(word(what ? 'qty_label' : 'qty_label_one', { what }))}" data-rf-qty data-rf-product="${escapeHtml(productId)}" data-rf-variant="${escapeHtml(variantId)}" data-rf-label="${escapeHtml(label)}" data-rf-what="${name}">`
+        + `<input class="rf-qty__input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" value="0" aria-label="${escapeHtml(word(what ? 'qty_label' : 'qty_label_one', { what }))}" data-rf-qty data-rf-product="${escapeHtml(productId)}" data-rf-variant="${escapeHtml(variantId)}" data-rf-label="${escapeHtml(label)}" data-rf-what="${name}">`
         + `<button class="rf-qty__btn" type="button" data-rf-qty-step="1" aria-label="${escapeHtml(word(what ? 'qty_plus' : 'qty_plus_one', { what }))}">${icon('plus')}</button>`
         + '</span>';
 }

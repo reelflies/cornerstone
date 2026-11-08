@@ -1,0 +1,82 @@
+{{!--
+    The cart page, "Your box" (redesign step 3; ticket 41; DESIGN.md "Order Line": the cart page is
+    the box at full size and has no order line). pages/cart.html renders it in its hero block.
+
+    - The heading and its count in flies and patterns (cart-title.html) and the store's messages,
+      a promotion's free-shipping line among them (stock status-messages, hooked).
+    - The lines, on paper, grouped by pattern in the order each first went in, its sizes in hook
+      order beside their quantities (cart-lines.html; cart-page.js puts the sizes in order).
+    - Beside them from 1040px, held in view: the order summary. Stock's coupons, totals, shipping
+      estimator and gift certificates (restyled), the free-shipping meter the order line shows
+      (cart-page.js, from the box), copper Check out, the promise, the wallet buttons and the way
+      back to the flies.
+    - On phones, after the lines, the same summary, and a bar at the foot with the count and Check
+      out (cart-page.js keeps its total in step with the store's).
+    - Empty: cart-empty.html.
+
+    Stock cart.js finds its containers by their data attributes ([data-cart], [data-cart-content],
+    [data-cart-coupons], [data-cart-totals], [data-cart-status], [data-cart-page-title],
+    [data-cart-additional-checkout-buttons]) and fills them again after every change.
+--}}
+<div class="rf-cart">
+    <div class="rf-cart__inner">
+        <div class="rf-cart__head">
+            {{> components/cart/page-title}}
+            <div class="rf-cart__messages" data-cart-status>
+                {{> components/cart/status-messages}}
+            </div>
+        </div>
+        <div class="page-content rf-cart__body{{#unless cart.items.length}} rf-cart__body--empty{{/unless}}" data-cart>
+            {{#if cart.items.length}}
+            <div class="loadingOverlay"></div>
+            <div class="rf-cart__lines" data-cart-content>
+                {{> components/cart/content}}
+            </div>
+            <aside class="rf-cart__summary" aria-labelledby="rf-cart-summary-title">
+                <div class="rf-cart__panel">
+                    <h2 class="rf-cart__summary-title" id="rf-cart-summary-title">{{lang 'reelflies.cart.summary'}}</h2>
+                    {{#if cart.multi_coupon_ui_enabled}}
+                    <div class="rf-cart__coupons" data-cart-coupons>
+                        {{> components/cart/coupons}}
+                    </div>
+                    {{/if}}
+                    <div class="rf-cart__totals" data-cart-totals>
+                        {{> components/cart/totals}}
+                    </div>
+                    {{#if (trim theme_settings.rf_ship_free_threshold)}}
+                    <div class="rf-cart__ship" data-rf-cart-ship data-rf-free="{{trim theme_settings.rf_ship_free_threshold}}" data-rf-money="{{settings.money.currency_token}}"></div>
+                    {{/if}}
+                    {{{region name="cart_below_totals"}}}
+                    {{#or customer (unless settings.hide_price_from_guests)}}
+                        {{#if cart.show_primary_checkout_button}}
+                        <a class="rf-buy rf-cart__checkout" href="{{urls.checkout.single_address}}" data-primary-checkout-now-action data-rf-cart-checkout>{{lang 'reelflies.box.checkout'}}</a>
+                        {{#if cart.show_multiple_address_shipping}}
+                        <a class="rf-more rf-cart__multi" href="{{urls.checkout.multiple_address}}">{{lang 'cart.preview.checkout_multiple'}}</a>
+                        {{/if}}
+                        <p class="rf-cart__promise">{{lang 'reelflies.product.promise'}}</p>
+                        {{#if cart.additional_checkout_buttons}}
+                        <div class="rf-cart__wallets cart-additionalCheckoutButtons" data-cart-additional-checkout-buttons>
+                            {{> components/cart/additional-checkout-buttons}}
+                        </div>
+                        {{/if}}
+                        {{else}}
+                        <a class="rf-buy rf-cart__checkout" href="{{urls.home}}">{{lang 'cart.continue_shopping'}}</a>
+                        {{/if}}
+                    {{else}}
+                        <a class="rf-buy rf-cart__checkout" href="{{urls.auth.login}}">{{lang 'cart.login_to_checkout'}}</a>
+                    {{/or}}
+                    <a class="rf-more rf-cart__back" href="{{urls.home}}">{{lang 'reelflies.cart.keep_shopping'}}{{> components/reelflies/icon name='arrow'}}</a>
+                </div>
+            </aside>
+            {{#or customer (unless settings.hide_price_from_guests)}}{{#if cart.show_primary_checkout_button}}
+            <div class="rf-cartbar" data-rf-cartbar>
+                <p class="rf-cartbar__count" data-rf-cartbar-count></p>
+                <a class="rf-buy rf-cartbar__checkout" href="{{urls.checkout.single_address}}">{{lang 'reelflies.box.checkout'}} <span class="rf-num" data-rf-cartbar-total>{{cart.grand_total.formatted}}</span></a>
+            </div>
+            {{/if}}{{/or}}
+            {{else}}
+            {{> components/reelflies/cart-empty}}
+            {{/if}}
+        </div>
+    </div>
+</div>

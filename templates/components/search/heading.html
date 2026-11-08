@@ -1,7 +1,8 @@
-<h1 class="page-heading">
+{{!-- ReelFlies hook (redesign step 3; CUSTOMIZATIONS.md): the page's H1, "123 results for “caddis”", in the listing head's type. Stock search.js writes this again into #search-results-heading after every filter, sort or page. The store sends the query escaped, so it prints through sanitize in triple braces (ticket 51). --}}
+<h1 class="page-heading rf-list-head__title rf-search-head__title">
     {{#if forms.search.search_error}}
-        {{lang 'search.errorMessage' }}
+        {{lang 'search.errorMessage'}}
     {{else}}
-        {{{lang 'search.results.count' count=result_count search_query=(sanitize forms.search.query) }}}
+        {{{lang 'reelflies.search.results' count=result_count query=(sanitize forms.search.query)}}}
     {{/if}}
 </h1>

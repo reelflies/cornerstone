@@ -1,0 +1,17 @@
+{{!--
+    No results for a search that ran (ticket 51): what didn't match, in the shopper's own words
+    (the store sends the query escaped, so it prints through sanitize in triple braces), a tip, and
+    the Fly Types to start from (rf_menu_type_ids, as the footer lists them). The data-rf-* marks
+    are what the dead-ends check reads (scripts/qa/raw-html/assertions/dead-ends.mjs).
+--}}
+<div class="rf-search-empty" data-rf-search-empty>
+    <div class="rf-search-empty__inner">
+        <p class="rf-search-empty__lead" data-rf-search-empty-line>{{{lang 'reelflies.search.none' query=(sanitize forms.search.query)}}}</p>
+        <p class="rf-search-empty__tip">{{lang 'reelflies.search.none_tip'}}</p>
+        {{#if (trim theme_settings.rf_menu_type_ids)}}
+        <ul class="rf-search-empty__types" aria-label="{{lang 'reelflies.cart.empty_types'}}" data-rf-dead-end-links data-rf-menu-type-ids="{{theme_settings.rf_menu_type_ids}}">
+            {{> components/reelflies/cats rf_tree=categories ids=theme_settings.rf_menu_type_ids view='dead-end'}}
+        </ul>
+        {{/if}}
+    </div>
+</div>

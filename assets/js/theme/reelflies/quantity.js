@@ -9,7 +9,7 @@
 //       <button data-rf-qty-step="-1">  <input data-rf-qty data-rf-product="4877" data-rf-variant="26677" data-rf-label="12" data-rf-what="size 12">  <button data-rf-qty-step="1">
 //
 // - Typing sets the quantity: once the shopper pauses, on Enter, or on leaving the field. − and +
-//   (and ArrowUp / ArrowDown in the field) step it by one. 0 to 99; 0 takes the size out.
+//   (and ArrowUp / ArrowDown in the field) step it by one. 0 to 999; 0 takes the size out.
 // - The box changes at once (box.setQuantity), shown before the store answers and sent one call
 //   at a time. Each change is said in the polite live region; a refusal is said with the store's
 //   words and the field goes back to what the box holds.
@@ -24,7 +24,7 @@ import { bump, fly } from './flight';
 import { announce } from './live-region';
 import { word } from './words';
 
-export const MAX = 99;
+export const MAX = 999; // a trade order can run past 99 of a size
 const PAUSE_MS = 700;
 
 const typing = new WeakMap(); // field -> pause timer, while the shopper types
@@ -134,7 +134,7 @@ function onClick(event) {
 function onInput(event) {
     const field = event.target.closest && event.target.closest('[data-rf-qty]');
     if (!field) return;
-    const digits = field.value.replace(/\D/g, '').slice(0, 2);
+    const digits = field.value.replace(/\D/g, '').slice(0, 3);
     if (digits !== field.value) field.value = digits;
     const timer = typing.get(field);
     if (timer) clearTimeout(timer);

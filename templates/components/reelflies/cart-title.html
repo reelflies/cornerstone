@@ -1,0 +1,23 @@
+{{!--
+    The box's heading (ticket 41; story 51): "Your box", and under it what it holds, in flies and
+    patterns when every line is a fly brand's (rf_fly_brands, the order line's rule: cart-count.js),
+    else in items and products. One root, data-cart-page-title: stock cart.js puts the store's new
+    copy in its place after every change, so the count follows the cart.
+--}}
+{{~assignVar 'rf_cart_seen' ','~}}{{~assignVar 'rf_cart_patterns' 0~}}{{~assignVar 'rf_cart_flies' 1~}}
+{{~#each cart.items~}}
+{{~#contains (getVar 'rf_cart_seen') (concat ',' (concat product_id ','))}}{{else}}{{assignVar 'rf_cart_seen' (concat (getVar 'rf_cart_seen') (concat product_id ','))}}{{assignVar 'rf_cart_patterns' (add (getVar 'rf_cart_patterns') 1)}}{{/contains~}}
+{{~#inArray (split ../theme_settings.rf_fly_brands ',') brand.name}}{{else}}{{assignVar 'rf_cart_flies' 0}}{{/inArray~}}
+{{~/each~}}
+<div class="rf-cart__title" data-cart-page-title>
+    <h1 class="rf-cart__h1">{{lang 'reelflies.cart.heading'}}</h1>
+    {{#if cart.quantity}}
+    <p class="rf-cart__count" data-rf-cart-count>
+        {{~#if (getVar 'rf_cart_flies')~}}
+        <span class="rf-num">{{cart.quantity}}</span> {{#if cart.quantity '==' 1}}{{lang 'reelflies.js.fly'}}{{else}}{{lang 'reelflies.js.flies'}}{{/if}}, <span class="rf-num">{{getVar 'rf_cart_patterns'}}</span> {{#if (getVar 'rf_cart_patterns') '==' 1}}{{lang 'reelflies.js.pattern'}}{{else}}{{lang 'reelflies.js.patterns'}}{{/if}}
+        {{~else~}}
+        <span class="rf-num">{{cart.quantity}}</span> {{#if cart.quantity '==' 1}}{{lang 'reelflies.cart.item'}}{{else}}{{lang 'reelflies.cart.items'}}{{/if}}, <span class="rf-num">{{getVar 'rf_cart_patterns'}}</span> {{#if (getVar 'rf_cart_patterns') '==' 1}}{{lang 'reelflies.cart.product'}}{{else}}{{lang 'reelflies.cart.products'}}{{/if}}
+        {{~/if~}}
+    </p>
+    {{/if}}
+</div>

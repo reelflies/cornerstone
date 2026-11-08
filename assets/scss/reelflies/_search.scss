@@ -1,0 +1,268 @@
+// =============================================================================
+// REELFLIES SEARCH (Streamside Stone)
+// =============================================================================
+//
+// The header's search suggestions (DESIGN.md "Inputs / Fields", Search: a paper sheet with the
+// Drop shadow, group titles in caption weight 650, 48×32 photo thumbnails, matched text on low
+// warm light, limestone hover rows) and the search results page's own pieces: the tabs, "Did you
+// mean", the matching categories and the help when nothing matched. The results' facets, row,
+// grid and pager are the listing's (_listing.scss). Markup: components/reelflies/header.html,
+// search-page.html, search-empty.html; behaviour: quick-search.js, stock search.js.
+//
+// -----------------------------------------------------------------------------
+
+// The suggestions, under the field
+// -----------------------------------------------------------------------------
+
+.rf-suggest {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 60;
+    max-height: #{"min(70vh, 640px)"};
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--rf-space-3) 0 var(--rf-space-2);
+    border-radius: var(--rf-radius-md);
+    background: var(--rf-paper);
+    color: var(--rf-ink);
+    box-shadow: var(--rf-shadow-drop);
+    text-align: left;
+
+    &[hidden] {
+        display: none;
+    }
+}
+
+.rf-suggest__count {
+    margin: 0;
+    padding: 0 var(--rf-space-4) var(--rf-space-1);
+    font: 650 15px / 1.35 var(--rf-font-text);
+}
+
+.rf-suggest__hint {
+    margin: 0;
+    padding: 0 var(--rf-space-4) var(--rf-space-2);
+    color: var(--rf-ink-muted);
+    font-size: 14px;
+}
+
+.rf-suggest__title {
+    margin: var(--rf-space-2) var(--rf-space-4) var(--rf-space-1);
+    color: var(--rf-ink-muted);
+    font: 650 13px / 1.4 var(--rf-font-text);
+}
+
+.rf-suggest__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.rf-suggest__cat,
+.rf-suggest__fly {
+    display: flex;
+    align-items: center;
+    gap: var(--rf-space-3);
+    min-height: var(--rf-tap-min);
+    padding: 4px var(--rf-space-4);
+    color: var(--rf-ink);
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+        background: var(--rf-limestone-100);
+        color: var(--rf-ink);
+    }
+
+    &:focus-visible {
+        outline-offset: -2px !important;
+    }
+}
+
+.rf-suggest__fly img,
+.rf-suggest__noimg {
+    flex: none;
+    width: 48px;
+    height: 32px;
+    border-radius: var(--rf-radius-sm);
+    background: var(--rf-paper);
+    box-shadow: var(--rf-shadow-plain);
+    object-fit: contain;
+}
+
+.rf-suggest__name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    font: 400 15px / 1.3 var(--rf-font-text);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+
+    mark {
+        padding: 0 1px;
+        border-radius: 2px;
+        background: var(--rf-light-warm);
+        color: inherit;
+        font-weight: 650;
+    }
+}
+
+.rf-suggest__price {
+    flex: none;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.rf-suggest__n {
+    flex: none;
+    color: var(--rf-ink-muted);
+    font-size: 14px;
+}
+
+.rf-suggest__cat .rf-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--rf-ink-muted);
+}
+
+.rf-suggest__all {
+    margin: var(--rf-space-2) var(--rf-space-4) var(--rf-space-1);
+    color: var(--rf-ink);
+    font-size: 15px;
+}
+
+
+// The results page
+// -----------------------------------------------------------------------------
+
+.body:has(> .rf-search-head) {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.rf-search-head .rf-list-head__inner {
+    padding-bottom: var(--rf-space-4);
+}
+
+.rf-search-head__title {
+    font-size: #{"clamp(26px, 1.6vw + 16px, 40px)"};
+}
+
+.rf-search-head__mean {
+    margin: 0;
+    font-size: 16px;
+
+    a {
+        color: var(--rf-ink);
+        font-weight: 650;
+        text-decoration: underline;
+        text-underline-offset: 0.2em;
+    }
+}
+
+.rf-search-tabs {
+    width: 100%;
+    margin-top: var(--rf-space-2);
+}
+
+.rf-search-tabs__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--rf-space-1) 20px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.rf-search-tabs__tab,
+.rf-search-tabs .navBar-action,
+.rf-search-tabs .navBar-action-color--active {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--rf-tap-min);
+    padding: 0;
+    border-bottom: 3px solid transparent;
+    color: var(--rf-ink-muted);
+    font: 650 15px / 1 var(--rf-font-text);
+    text-decoration: none;
+    text-transform: none;
+    letter-spacing: 0;
+
+    &:hover {
+        color: var(--rf-ink);
+    }
+}
+
+.rf-search-tabs [role="tab"][aria-selected="true"],
+.rf-search-tabs .navBar-action-color--active {
+    border-bottom-color: var(--rf-ink);
+    color: var(--rf-ink);
+}
+
+.rf-search-empty {
+    background: var(--rf-limestone-100);
+}
+
+.rf-search-empty__inner {
+    display: grid;
+    justify-items: start;
+    gap: var(--rf-space-3);
+    max-width: calc(var(--rf-column-max) + 2 * var(--rf-gutter));
+    margin: 0 auto;
+    padding: var(--rf-space-6) var(--rf-gutter) var(--rf-space-4);
+}
+
+.rf-search-empty__lead {
+    margin: 0;
+    color: var(--rf-ink);
+    font: 650 20px / 1.3 var(--rf-font-text);
+}
+
+.rf-search-empty__tip {
+    margin: 0;
+    color: var(--rf-ink-muted);
+    font-size: 16px;
+}
+
+.rf-search-empty__types {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--rf-space-2);
+    margin: var(--rf-space-1) 0 0;
+    padding: 0;
+    list-style: none;
+
+    a {
+        display: inline-flex;
+        align-items: center;
+        min-height: var(--rf-tap-min);
+        padding: 0 14px;
+        border: 1px solid var(--rf-edge);
+        border-radius: var(--rf-radius-pill);
+        color: var(--rf-ink);
+        font: 650 15px / 1.2 var(--rf-font-text);
+        text-decoration: none;
+
+        &:hover {
+            border-color: var(--rf-ink);
+            background: var(--rf-limestone-200);
+        }
+    }
+}
+
+// the store's pages and posts that matched (stock content-listing), in the listing's column
+.rf-list #search-results-content {
+    font-size: 16px;
+
+    a {
+        color: var(--rf-ink);
+    }
+}
+
+// stock's heading margins, off: the head's grid spaces its rows
+.rf-search-head .page-heading,
+.rf-search-head #search-results-heading {
+    margin: 0;
+}

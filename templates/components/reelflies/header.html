@@ -63,11 +63,12 @@
                 {{/if}}
             </ul>
         </nav>
-        <form class="rf-search" role="search" action="{{urls.search}}" method="get">
+        <form class="rf-search" role="search" action="{{urls.search}}" method="get" data-rf-search>
             <label class="is-srOnly" for="rf-search-q">{{lang 'reelflies.search.label'}}</label>
             {{> components/reelflies/icon name='search'}}
             <input id="rf-search-q" name="search_query" type="search" placeholder="{{lang 'reelflies.search.placeholder'}}" autocomplete="off" spellcheck="false" enterkeyhint="search">
             <button class="rf-search__go" type="submit">{{lang 'reelflies.search.go'}}</button>
+            <div class="rf-suggest" data-rf-suggest hidden></div>
         </form>
         <a class="rf-head__link" href="{{#if customer}}{{urls.account.index}}{{else}}{{urls.auth.login}}{{/if}}">{{> components/reelflies/icon name='user'}}<span class="rf-head__label">{{lang 'reelflies.header.account'}}</span></a>
         <a class="rf-box-btn" href="{{urls.cart}}" data-rf-box-btn>{{> components/reelflies/icon name='box'}}<span class="rf-head__label">{{lang 'reelflies.header.box'}}</span><span class="rf-box-btn__count rf-num" data-rf-count>0</span><span class="is-srOnly" data-rf-count-label>{{lang 'reelflies.header.count_flies'}}</span></a>

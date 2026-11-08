@@ -17,7 +17,7 @@
 
 import $ from 'jquery';
 import * as box from './box';
-import { boxWords as wordsFor } from './box-words';
+import { meterHtml, shippingHtml, boxWords as wordsFor } from './box-words';
 import { flyBrandList } from './cart-count';
 import { escapeHtml, money } from './card-html';
 import { compareHookSizes } from './hook-order';
@@ -38,12 +38,7 @@ function patterns() {
 }
 
 function shipping(root, totals) {
-    const free = Number(root.dataset.rfFree);
-    const token = root.dataset.rfMoney || '$';
-    if (!free) return '';
-    if (!totals.units) return `${escapeHtml(word('ship_rule'))} <span class="rf-num">${money(free, token).replace(/\.00$/, '')}</span>.`;
-    if (totals.flyAmount >= free) return `<strong>${escapeHtml(word('ship_free'))}</strong> ${escapeHtml(word('ship_free_after'))}`;
-    return `<strong class="rf-num">${money(free - totals.flyAmount, token)}</strong> ${escapeHtml(word('ship_more'))}`;
+    return shippingHtml(Number(root.dataset.rfFree), root.dataset.rfMoney || '$', totals);
 }
 
 function renderSheet(root) {
@@ -66,7 +61,7 @@ function renderSheet(root) {
         return `<div class="rf-box__pattern">${image}<div><p class="rf-box__pname">${first.url ? `<a href="${escapeHtml(first.url)}">${escapeHtml(first.name)}</a>` : escapeHtml(first.name)}</p><div class="rf-box__lines">${rows}</div></div></div>`;
     }).join('');
     const free = Number(root.dataset.rfFree);
-    const meter = free ? `<div class="rf-box__meter" aria-hidden="true"><span style="width:${Math.min(100, (totals.flyAmount / free) * 100)}%"></span></div>` : '';
+    const meter = meterHtml(free, totals);
     const checkout = root.querySelector('[data-rf-checkout]').dataset.rfCheckoutUrl;
     const active = document.activeElement;
     const keep = active && body.contains(active) && active.dataset.rfStep ? active : null;

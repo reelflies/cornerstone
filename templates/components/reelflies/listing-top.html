@@ -6,7 +6,8 @@
     - The count: "389 patterns" on a fly listing, else "24 products", from category.total_products,
       which counts the filtered listing's unique products. A pattern is a product; "flies" stays
       the word for what is in the box (PRODUCT.md, Voice). A listing whose context has no total
-      passes rf_count, its own text for the row (BigCommerce gives brand pages no total). When
+      passes rf_count, its own text for the row (BigCommerce gives brand pages no total); search
+      passes rf_total, the paginator's total. When
       applied filters match nothing (listing-empty.html): "No flies match these filters", or
       "No products …". size-filter.js announces it after each refresh, and focuses it when the
       control the shopper used is gone, so it is never empty.
@@ -36,7 +37,9 @@
     <div class="rf-list-top__lead">
     <p class="rf-list-top__count" data-rf-list-count tabindex="-1">
         {{~#if category.products~}}
-            {{~#if category.total_products~}}
+            {{~#if rf_total~}}
+                <span class="rf-num">{{addCommas rf_total}}</span> {{#if (getVar 'rf_fly_listing')}}{{#if rf_total '==' 1}}{{lang 'reelflies.listing.pattern'}}{{else}}{{lang 'reelflies.listing.patterns'}}{{/if}}{{else}}{{#if rf_total '==' 1}}{{lang 'reelflies.listing.product'}}{{else}}{{lang 'reelflies.listing.products'}}{{/if}}{{/if}}
+            {{~else if category.total_products~}}
                 <span class="rf-num">{{addCommas category.total_products}}</span> {{#if (getVar 'rf_fly_listing')}}{{#if category.total_products '==' 1}}{{lang 'reelflies.listing.pattern'}}{{else}}{{lang 'reelflies.listing.patterns'}}{{/if}}{{else}}{{#if category.total_products '==' 1}}{{lang 'reelflies.listing.product'}}{{else}}{{lang 'reelflies.listing.products'}}{{/if}}{{/if}}
             {{~else~}}
                 {{~rf_count~}}

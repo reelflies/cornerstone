@@ -5,6 +5,8 @@
 //
 // - pages/home: quick add (+ Add and the size strip on every card) and the home page's ways in,
 //   moss lay and month (home.js).
+// - pages/cart: the box's sizes in hook order, steppers whose taps add up, the free-shipping line
+//   and the phone bar (cart-page.js), round stock cart.js.
 // - pages/product: the size picker, through the box (product-buy.js), and the related patterns'
 //   size lines (listing.js). Should the picker's chunk fail to load, stock's own form takes its
 //   place, so the product can still be bought.
@@ -64,6 +66,9 @@ const product = () => Promise.resolve({
 });
 
 export default {
+    'pages/cart': load([
+        () => import(/* webpackChunkName: "rf-cart" */ './cart-page'),
+    ]),
     'pages/product': product,
     'pages/home': load([
         quickAdd,

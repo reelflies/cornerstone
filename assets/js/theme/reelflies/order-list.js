@@ -56,14 +56,14 @@ function fieldHtml(product, size) {
     }
     const what = whatOf(size.label);
     return `<li class="rf-olist__cell" data-rf-qty-group><span class="rf-olist__size" aria-hidden="true">${label}</span>`
-        + `<input class="rf-qty__input rf-olist__input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off" value="" data-rf-blank aria-label="${escapeHtml(word('qty_label_of', { what, name: product.name }))}" data-rf-qty data-rf-product="${escapeHtml(product.id)}" data-rf-variant="${size.variantId}" data-rf-label="${label}" data-rf-what="${escapeHtml(what)}"></li>`;
+        + `<input class="rf-qty__input rf-olist__input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" value="" data-rf-blank aria-label="${escapeHtml(word('qty_label_of', { what, name: product.name }))}" data-rf-qty data-rf-product="${escapeHtml(product.id)}" data-rf-variant="${size.variantId}" data-rf-label="${label}" data-rf-what="${escapeHtml(what)}"></li>`;
 }
 
 function oneHtml(product) {
     const { single } = product;
     if (!single.inStock) return `<li class="rf-olist__cell is-sold"><span class="rf-olist__size">${escapeHtml(word('qty_short'))}</span><span class="rf-olist__none"><span aria-hidden="true">–</span><span class="is-srOnly">${escapeHtml(word('sold_short'))}</span></span></li>`;
     return `<li class="rf-olist__cell" data-rf-qty-group><span class="rf-olist__size" aria-hidden="true">${escapeHtml(word('qty_short'))}</span>`
-        + `<input class="rf-qty__input rf-olist__input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off" value="" data-rf-blank aria-label="${escapeHtml(word('qty_label_of', { what: word('qty_short'), name: product.name }))}" data-rf-qty data-rf-product="${escapeHtml(product.id)}" data-rf-variant="${single.variantId}" data-rf-label="" data-rf-what=""></li>`;
+        + `<input class="rf-qty__input rf-olist__input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" value="" data-rf-blank aria-label="${escapeHtml(word('qty_label_of', { what: word('qty_short'), name: product.name }))}" data-rf-qty data-rf-product="${escapeHtml(product.id)}" data-rf-variant="${single.variantId}" data-rf-label="" data-rf-what=""></li>`;
 }
 
 export function rowHtml(card, product) {

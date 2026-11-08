@@ -1,3 +1,4 @@
+{{!-- ReelFlies hook (redesign step 3; ticket 41; BUILD-1; CUSTOMIZATIONS.md): the store's own messages (a promotion's free-shipping line among them) as plain lines, in the store's own words and markup --}}
 {{#each cart.status_messages}}
-    {{> components/common/alert/alert-info message}}
+<p class="rf-cart__message">{{{message}}}</p>
 {{/each}}

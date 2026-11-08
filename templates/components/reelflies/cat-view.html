@@ -4,10 +4,11 @@
 
     Header (header.html): rail, pane, also, nav. Drawer: drawer, drawer-link. Footer: foot.
     Home (home.html): way, plate, row-plate. Hatch chart (hatch.html): hatch-more, hatch-link. Signature and Selections bands: sig-count,
-    sig-all, sel-all.
+    sig-all, sel-all. Dead ends (cart-empty.html, search-empty.html): dead-end, each link naming
+    its id for the dead-ends check (scripts/qa/raw-html, ticket 51).
 --}}
 {{~#if rf_view '===' 'rail'~}}
-<li><a class="rf-mega__type{{#if rf_pos '==' 0}} is-active{{/if}}" href="{{rf_cat.url}}" data-rf-pane-for="{{rf_cat.id}}"><span>{{rf_cat.name}}</span>{{> components/reelflies/count n=rf_cat.count class='rf-mega__n'}}{{> components/reelflies/icon name='arrow' class='rf-mega__go'}}</a></li>
+<li><a class="rf-mega__type{{#if rf_pos '==' 0}} is-active{{/if}}" href="{{rf_cat.url}}" data-rf-pane-for="{{rf_cat.id}}" data-rf-cat="{{rf_cat.name}}"><span>{{rf_cat.name}}</span>{{> components/reelflies/count n=rf_cat.count class='rf-mega__n'}}{{> components/reelflies/icon name='arrow' class='rf-mega__go'}}</a></li>
 {{~/if~}}
 
 {{~#if rf_view '===' 'pane'~}}
@@ -16,7 +17,7 @@
         <p class="rf-mega__head"><a href="{{rf_cat.url}}">{{rf_cat.name}}</a>{{#if (getVar 'rf_counts')}}{{#if rf_cat.count}} <span>{{> components/reelflies/count n=rf_cat.count}} {{lang 'reelflies.menu.patterns'}}</span>{{/if}}{{/if}}</p>
         {{#if rf_cat.children.length}}
         <ul class="rf-mega__kids">
-            {{#each rf_cat.children}}<li><a href="{{url}}"><span>{{name}}</span>{{> components/reelflies/count n=count}}</a></li>{{/each}}
+            {{#each rf_cat.children}}<li><a href="{{url}}" data-rf-cat="{{name}}"><span>{{name}}</span>{{> components/reelflies/count n=count}}</a></li>{{/each}}
         </ul>
         {{/if}}
     </div>
@@ -53,6 +54,10 @@
 
 {{~#if rf_view '===' 'foot'~}}
 <li><a href="{{rf_cat.url}}">{{rf_cat.name}}</a></li>
+{{~/if~}}
+
+{{~#if rf_view '===' 'dead-end'~}}
+<li><a href="{{rf_cat.url}}" data-rf-menu-id="{{rf_cat.id}}">{{rf_cat.name}}</a></li>
 {{~/if~}}
 
 {{~#if rf_view '===' 'way'~}}

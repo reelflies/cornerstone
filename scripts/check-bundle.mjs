@@ -17,6 +17,9 @@
 //   - rf-listing        listing cards' size lines and the chips (redesign)   3,000 B
 //   - rf-product        the product page's size picker, over the box (redesign) 12,000 B
 //   - rf-order-list     the listings' quick order, over the box (redesign)     12,000 B
+//   - rf-quick-search   the header's search suggestions (ticket 30, redesign)   4,000 B
+//   - rf-cart           the cart page, over the box (redesign; the box chunk,      7,000 B
+//                       5.2 KB, is the order line's too, already on the page)
 //   - rf-size-pills     the product page's size pills (ticket 37)            3,000 B
 //   - rf-add-flow       the add flow and sticky phone bar (ticket 38)        7,000 B
 //   - rf-cart-state     the cart state's marks and lines (ticket 42)         2,500 B
@@ -55,6 +58,8 @@ export const CHUNK_GZIP_LIMITS = {
     'theme-bundle.chunk.rf-listing.js': 3000,
     'theme-bundle.chunk.rf-product.js': 12000,
     'theme-bundle.chunk.rf-order-list.js': 12000,
+    'theme-bundle.chunk.rf-quick-search.js': 4000,
+    'theme-bundle.chunk.rf-cart.js': 7000,
     'theme-bundle.chunk.rf-size-pills.js': 3000,
     'theme-bundle.chunk.rf-add-flow.js': 7000,
     'theme-bundle.chunk.rf-cart-state.js': 2500,

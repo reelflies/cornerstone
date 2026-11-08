@@ -107,13 +107,13 @@ describe('the quantity fields', () => {
         });
     });
 
-    it('steps by one from what the box holds, and never below 0 or above 99', () => {
+    it('steps by one from what the box holds, and never below 0 or above 999', () => {
         const field = picker();
         box.quantityOf.mockReturnValue(2);
         document.querySelector('[data-rf-qty-step="1"]').click();
         expect(box.setQuantity).toHaveBeenLastCalledWith(expect.objectContaining({ quantity: 3 }));
-        setQuantity(field, '250');
-        expect(box.setQuantity).toHaveBeenLastCalledWith(expect.objectContaining({ quantity: 99 }));
+        setQuantity(field, '2500');
+        expect(box.setQuantity).toHaveBeenLastCalledWith(expect.objectContaining({ quantity: 999 }));
         setQuantity(field, '-4');
         expect(box.setQuantity).toHaveBeenLastCalledWith(expect.objectContaining({ quantity: 0 }));
     });

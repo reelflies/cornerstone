@@ -1043,7 +1043,13 @@
         "search": {
             "label": "Search flies",
             "placeholder": "Search caddis, size 16…",
-            "go": "Search"
+            "go": "Search",
+            "title": "Search",
+            "results": "{count, plural, =0 {No results} one {# result} other {# results}} for “{query}”",
+            "categories": "Matching categories",
+            "tabs": "Results",
+            "none": "No flies match “{query}”.",
+            "none_tip": "Check the spelling, or search by fly type, like “caddis” or “nymph”."
         },
         "menu": {
             "patterns": "patterns",
@@ -1224,7 +1230,17 @@
             "sold_out_row": "Sold out",
             "sold_short": "Sold out",
             "close": "Close",
-            "choose_on_page_short": "Choose on its page"
+            "choose_on_page_short": "Choose on its page",
+            "cart_now": "Your box: {count}.",
+            "search_one": "1 result for “{q}”",
+            "search_many": "{n} results for “{q}”",
+            "search_in_size": "in size {size}",
+            "search_none": "No flies match “{q}”.",
+            "search_none_hint": "Try a fly name, a fish or a hook size.",
+            "search_cats": "Categories",
+            "search_flies": "Flies",
+            "search_all": "See all {n} results",
+            "search_all_one": "See the result"
         },
         "months": {
             "m0": "January",
@@ -1275,6 +1291,7 @@
             "empty": "Your box is empty",
             "empty_long": "Nothing in your box yet. Tap + Add on any fly to start.",
             "checkout": "Check out",
+            "full": "Your whole box, with coupons and shipping",
             "ship_rule": "Free standard shipping in Canada on fly orders over"
         },
         "sort": {
@@ -1320,6 +1337,26 @@
             "write": "Write a review",
             "none_fly": "No reviews yet for this fly.",
             "none": "No reviews yet."
+        },
+        "cart": {
+            "heading": "Your box",
+            "summary": "Order summary",
+            "item": "item",
+            "items": "items",
+            "product": "product",
+            "products": "products",
+            "each": "each",
+            "size": "Size {size}",
+            "size_word": "Size",
+            "quantity": "Quantity",
+            "fewer": "One fewer, {name}, {what}",
+            "more": "One more, {name}, {what}",
+            "how_many": "How many, {name}, {what}",
+            "remove": "Remove {name}, {what}",
+            "keep_shopping": "Keep shopping",
+            "empty": "Your box is empty.",
+            "empty_hint": "Most orders start with a dozen dry flies or nymphs in two or three sizes.",
+            "empty_types": "Shop by fly type"
         },
         "listing": {
             "heading_patterns": "Patterns",

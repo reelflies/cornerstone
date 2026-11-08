@@ -1,0 +1,685 @@
+// =============================================================================
+// REELFLIES CART: "YOUR BOX" (Streamside Stone)
+// =============================================================================
+//
+// The cart page (redesign step 3; ticket 41): the box at full size on limestone, its lines on a
+// paper sheet grouped by pattern, sizes beside their quantity steppers; the order summary beside
+// it from 1040px, held in view; on phones a shale bar at the foot with the count and Check out.
+// The order line itself is not on this page. Markup: components/reelflies/cart-page.html,
+// cart-title, cart-lines, cart-group, cart-row, cart-empty, and stock's coupons, totals and
+// shipping estimator, restyled here. Behaviour: cart-page.js over stock cart.js.
+//
+// -----------------------------------------------------------------------------
+
+$rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
+
+.body:has(> .rf-cart) {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.rf-cart {
+    background: var(--rf-limestone-100);
+    color: var(--rf-ink);
+}
+
+.rf-cart__inner {
+    max-width: calc(var(--rf-column-max) + 2 * var(--rf-gutter));
+    margin: 0 auto;
+    padding: var(--rf-space-6) var(--rf-gutter) var(--rf-space-16);
+}
+
+.rf-cart__head {
+    display: grid;
+    gap: var(--rf-space-3);
+    margin-bottom: var(--rf-space-6);
+}
+
+.rf-cart__title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--rf-space-1) var(--rf-space-4);
+}
+
+.rf-cart__h1 {
+    @include rf-type-headline;
+    margin: 0;
+    color: var(--rf-ink);
+    text-transform: none;
+}
+
+.rf-cart__count {
+    margin: 0;
+    color: var(--rf-ink-muted);
+    font-size: 16px;
+
+    .rf-num {
+        color: var(--rf-ink);
+        font-size: 18px;
+        font-weight: 700;
+    }
+}
+
+.rf-cart__messages:empty {
+    display: none;
+}
+
+.rf-cart__message {
+    margin: 0;
+    padding: var(--rf-space-3) var(--rf-space-4);
+    border-radius: var(--rf-radius-md);
+    background: var(--rf-limestone-200);
+    color: var(--rf-ink);
+    font-size: 15px;
+}
+
+.rf-cart__message + .rf-cart__message {
+    margin-top: var(--rf-space-2);
+}
+
+// stock floats .page-content beside a sidebar; here it is the page's own grid
+.rf-cart__body.page-content {
+    float: none;
+    width: auto;
+}
+
+.rf-cart__body {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--rf-space-6);
+    margin: 0;
+    padding: 0;
+}
+
+@media (min-width: $rf-bp-desktop) {
+    .rf-cart__body:not(.rf-cart__body--empty) {
+        grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+        column-gap: var(--rf-space-12);
+        align-items: start;
+    }
+
+    .rf-cart__summary {
+        position: sticky;
+        top: calc(#{$rf-cart-pinned} + var(--rf-space-6));
+    }
+}
+
+// stock's overlay while it asks the store, over the lines and the summary
+.rf-cart__body > .loadingOverlay {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    background: rgba(233, 228, 219, 0.6);
+}
+
+
+// The lines: a paper sheet, a group per pattern
+// -----------------------------------------------------------------------------
+
+.rf-cart__lines {
+    min-width: 0;
+}
+
+.rf-cart-lines {
+    border-radius: var(--rf-radius-md);
+    background: var(--rf-paper);
+    box-shadow: var(--rf-shadow-plain);
+}
+
+.rf-cart-group {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    grid-template-areas: "photo head" "photo rows";
+    column-gap: var(--rf-space-4);
+    padding: var(--rf-space-4);
+    border-top: 1px solid var(--rf-limestone-300);
+}
+
+.rf-cart-group:first-child {
+    border-top: 0;
+}
+
+.rf-cart-group__photo {
+    grid-area: photo;
+    display: block;
+    width: 96px;
+    height: 64px;
+    overflow: hidden;
+    border-radius: var(--rf-radius-sm);
+    background: var(--rf-paper);
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+}
+
+.rf-cart-group__head {
+    grid-area: head;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--rf-space-1) var(--rf-space-3);
+    min-width: 0;
+}
+
+.rf-cart-group__name {
+    margin: 0;
+    font: 650 16px / 1.3 var(--rf-font-text);
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.rf-cart .rf-cart-group__name {
+    a {
+        color: var(--rf-ink);
+        text-decoration: none;
+
+        &:hover {
+            text-decoration: underline;
+            text-underline-offset: 0.2em;
+        }
+    }
+}
+
+.rf-cart-group__price {
+    margin: 0;
+    color: var(--rf-ink-muted);
+    font-size: 13px;
+
+    .rf-num {
+        color: var(--rf-ink);
+        font-size: 16px;
+        font-weight: 700;
+    }
+}
+
+.rf-cart-group__rows {
+    grid-area: rows;
+    margin: var(--rf-space-2) 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+// a pattern in more than one size waits, keeping its place, until cart-page.js has put its sizes
+// in hook order; with no script the rows show after 5s
+.rf-cart-group__rows[data-rf-cart-multi]:not([data-rf-cart-sorted]) {
+    visibility: hidden;
+    animation: rf-cart-rows-show 0s linear 5s forwards;
+}
+
+@keyframes rf-cart-rows-show {
+    to {
+        visibility: visible;
+    }
+}
+
+.rf-cart-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 88px var(--rf-tap-min);
+    align-items: center;
+    gap: var(--rf-space-3);
+    min-height: 56px;
+    padding: 6px 0;
+    border-top: 1px solid var(--rf-limestone-200);
+}
+
+.rf-cart-row:first-child {
+    border-top: 0;
+}
+
+.rf-cart-row__what {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px var(--rf-space-2);
+    min-width: 0;
+    font-size: 14px;
+}
+
+.rf-cart-row__size {
+    color: var(--rf-ink-muted);
+
+    .rf-num {
+        color: var(--rf-ink);
+        font-size: 19px;
+        font-weight: 700;
+    }
+}
+
+.rf-cart-row__other {
+    color: var(--rf-ink);
+    font-weight: 650;
+}
+
+.rf-cart-row__edit {
+    color: var(--rf-ink);
+    font-size: 13px;
+    text-decoration: underline;
+    text-decoration-color: var(--rf-edge);
+    text-underline-offset: 0.2em;
+}
+
+.rf-cart-row .rf-qty__input {
+    width: 52px;
+}
+
+.rf-cart-row__qty-fixed {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.rf-cart-row__money {
+    display: grid;
+    justify-items: end;
+    text-align: right;
+}
+
+.rf-cart-row__total {
+    color: var(--rf-ink);
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.rf-cart-row__was {
+    color: var(--rf-ink-muted);
+    font-size: 14px;
+}
+
+.rf-cart-row__each {
+    color: var(--rf-ink-muted);
+    font-size: 13px;
+}
+
+.rf-cart-row__remove {
+    display: grid;
+    place-items: center;
+    width: var(--rf-tap-min);
+    height: var(--rf-tap-min);
+    padding: 0;
+    border: 0;
+    border-radius: var(--rf-radius-md);
+    background: none;
+    color: var(--rf-ink-muted);
+    cursor: pointer;
+
+    &:hover {
+        background: var(--rf-limestone-100);
+        color: var(--rf-ink);
+    }
+}
+
+// stock's gift-wrap link, where the store offers it
+.rf-cart-row__what .cart-item-option {
+    font-size: 13px;
+}
+
+// phones: the rows span the group, under its photo and name
+@media (max-width: $rf-bp-tablet - 1) {
+    .rf-cart-group {
+        grid-template-columns: 72px minmax(0, 1fr);
+        grid-template-areas: "photo head" "rows rows";
+        column-gap: var(--rf-space-3);
+        padding: var(--rf-space-3);
+    }
+
+    .rf-cart-group__photo {
+        width: 72px;
+        height: 48px;
+    }
+
+    .rf-cart-row {
+        grid-template-columns: minmax(0, 1fr) auto var(--rf-tap-min);
+        grid-template-areas: "what qty remove" "money money money";
+        row-gap: 0;
+    }
+
+    .rf-cart-row__what {
+        grid-area: what;
+    }
+
+    .rf-cart-row .rf-qty {
+        grid-area: qty;
+    }
+
+    .rf-cart-row__remove {
+        grid-area: remove;
+    }
+
+    .rf-cart-row__money {
+        grid-area: money;
+        grid-auto-flow: column;
+        justify-content: end;
+        gap: var(--rf-space-2);
+        align-items: baseline;
+        padding-right: calc(var(--rf-tap-min) + var(--rf-space-3));
+    }
+}
+
+
+// The order summary: paper, beside the lines from 1040px
+// -----------------------------------------------------------------------------
+
+.rf-cart__panel {
+    display: grid;
+    gap: var(--rf-space-4);
+    padding: var(--rf-space-6);
+    border-radius: var(--rf-radius-md);
+    background: var(--rf-paper);
+    box-shadow: var(--rf-shadow-plain);
+}
+
+.rf-cart__summary-title {
+    @include rf-type-title;
+    margin: 0;
+    color: var(--rf-ink);
+    text-transform: none;
+}
+
+// stock's totals (components/cart/totals.html)
+.rf-cart__totals .cart-totals {
+    float: none;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 0;
+    text-align: left;
+}
+
+.rf-cart__totals .cart-total {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--rf-space-1) var(--rf-space-3);
+    margin: 0;
+    padding: var(--rf-space-2) 0;
+    border: 0;
+    border-top: 1px solid var(--rf-limestone-200);
+    float: none;
+    width: auto;
+
+    &:first-child {
+        border-top: 0;
+    }
+}
+
+.rf-cart__totals .cart-total-label,
+.rf-cart__totals .cart-total-value {
+    float: none;
+    width: auto;
+    padding: 0;
+    text-align: left;
+    color: var(--rf-ink);
+    font-size: 15px;
+
+    strong {
+        font-weight: 400;
+    }
+}
+
+.rf-cart__totals .cart-total-value {
+    @include rf-numerals;
+    margin-left: auto;
+    font-size: 17px;
+    font-weight: 700;
+    text-align: right;
+}
+
+.rf-cart__totals .cart-total-grandTotal,
+.rf-cart__totals .cart-total:last-child .cart-total-value {
+    font-size: 24px;
+}
+
+.rf-cart__totals .cart-total:last-child {
+    margin-top: var(--rf-space-2);
+    padding-top: var(--rf-space-3);
+    border-top: 1px solid var(--rf-limestone-300);
+
+    .cart-total-label strong {
+        font-weight: 650;
+    }
+}
+
+.rf-cart__totals .cart-total-savings {
+    display: block;
+    color: var(--rf-ink-muted);
+    font: 400 13px / 1.4 var(--rf-font-text);
+}
+
+// the shipping estimator and the coupon form (stock): links to open, then plain fields
+.rf-cart .shipping-estimate-show,
+.rf-cart .cart-coupon-link,
+.rf-cart .coupon-code-add,
+.rf-cart .giftCertificate-add,
+.rf-cart [data-discount-toggle] {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--rf-ink);
+    font: 650 14px / 1.3 var(--rf-font-text);
+    text-decoration: underline;
+    text-decoration-color: var(--rf-edge);
+    text-underline-offset: 0.2em;
+    cursor: pointer;
+}
+
+.rf-cart .shipping-estimator,
+.rf-cart .cart-form {
+    width: 100%;
+    margin: var(--rf-space-2) 0 0;
+    padding: 0;
+    float: none;
+}
+
+.rf-cart .form-field {
+    margin: 0 0 var(--rf-space-3);
+}
+
+.rf-cart .form-label {
+    margin: 0 0 4px;
+    color: var(--rf-ink);
+    font: 650 14px / 1.3 var(--rf-font-text);
+}
+
+.rf-cart .form-input,
+.rf-cart .form-select {
+    height: var(--rf-tap-min);
+    padding: 0 12px;
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-md);
+    background: var(--rf-paper);
+    color: var(--rf-ink);
+    font-size: 16px;
+}
+
+.rf-cart .cart-form .button,
+.rf-cart .shipping-estimator .button {
+    min-height: var(--rf-tap-min);
+    margin: 0;
+    padding: 0 16px;
+    border: 1px solid var(--rf-ink);
+    border-radius: var(--rf-radius-md);
+    background: var(--rf-ink);
+    color: var(--rf-paper);
+    font: 650 14px / 1 var(--rf-font-text);
+    text-transform: none;
+}
+
+.rf-cart .cart-coupon-list {
+    margin: var(--rf-space-2) 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.rf-cart .cart-coupon-item {
+    display: flex;
+    align-items: center;
+    gap: var(--rf-space-2);
+    font-size: 14px;
+}
+
+.rf-cart .cart-discount-list {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.rf-cart .cart-discount-item {
+    display: flex;
+    justify-content: space-between;
+    color: var(--rf-ink-muted);
+    font-size: 13px;
+}
+
+.rf-cart__ship .rf-box__ship {
+    margin: 0 0 var(--rf-space-2);
+    color: var(--rf-ink-muted);
+    font-size: 14px;
+
+    strong {
+        color: var(--rf-copper);
+    }
+}
+
+.rf-cart__checkout {
+    width: 100%;
+    min-height: 48px;
+    font-size: 16px;
+}
+
+.rf-cart__promise {
+    margin: 0;
+    color: var(--rf-ink);
+    font: 400 21px / 1.2 var(--rf-font-hand);
+    transform: rotate(-1.5deg);
+    transform-origin: left center;
+}
+
+.rf-cart__wallets {
+    margin: 0;
+    padding: 0;
+}
+
+.rf-cart__back,
+.rf-cart__multi {
+    justify-self: start;
+    color: var(--rf-ink);
+}
+
+
+// The bar at the foot on phones and tablets: the count and Check out
+// -----------------------------------------------------------------------------
+
+.rf-cartbar {
+    display: none;
+}
+
+@media (max-width: $rf-bp-desktop - 1) {
+    .rf-cartbar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 70;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--rf-space-3);
+        min-height: var(--rf-orderline-height);
+        padding: var(--rf-space-2) var(--rf-gutter) calc(var(--rf-space-2) + env(safe-area-inset-bottom, 0px));
+        background: var(--rf-shale-950);
+        color: var(--rf-mist);
+        box-shadow: var(--rf-shadow-float);
+        --rf-ring: var(--rf-mist);
+    }
+
+    .rf-cartbar__count {
+        min-width: 0;
+        margin: 0;
+        overflow: hidden;
+        font-size: 15px;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .rf-cartbar__checkout {
+        flex: none;
+        min-height: var(--rf-tap-min);
+    }
+
+    body:has(.rf-cartbar) {
+        padding-bottom: var(--rf-orderline-height);
+    }
+
+    html:has(.rf-cartbar) {
+        scroll-padding-bottom: calc(var(--rf-orderline-height) + var(--rf-space-2));
+    }
+}
+
+
+// An empty box
+// -----------------------------------------------------------------------------
+
+.rf-cart-empty {
+    display: grid;
+    justify-items: start;
+    gap: var(--rf-space-4);
+    max-width: 44rem;
+    padding: 0 0 var(--rf-space-12);
+}
+
+.rf-cart-empty__lead {
+    margin: 0;
+    color: var(--rf-ink);
+    font: 650 20px / 1.3 var(--rf-font-text);
+}
+
+.rf-cart-empty__hint {
+    margin: 0;
+    color: var(--rf-ink-muted);
+    font-size: 16px;
+}
+
+.rf-cart-empty__types ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--rf-space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.rf-cart .rf-cart-empty__types a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--rf-tap-min);
+    padding: 0 14px;
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-pill);
+    color: var(--rf-ink);
+    font: 650 15px / 1.2 var(--rf-font-text);
+    text-decoration: none;
+
+    &:hover {
+        border-color: var(--rf-ink);
+        background: var(--rf-limestone-200);
+    }
+}
+
+.rf-cart-empty .rf-more {
+    color: var(--rf-ink);
+}
+
+// stock underlines links in the page's content; the buy buttons and the way back keep their own
+.rf-cart .rf-buy,
+.rf-cart .rf-buy:hover {
+    color: var(--rf-on-copper);
+    text-decoration: none;
+}

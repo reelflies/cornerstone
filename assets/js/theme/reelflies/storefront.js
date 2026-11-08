@@ -4,8 +4,10 @@
 // - productsById(ids): the products, each normalised once and cached for the page.
 // - bestOf(categoryId, n): a category's n best sellers and its count of products, its
 //   subcategories' included (search, BEST_SELLING).
-// - seed(edges): products the server already sent (home.html's GraphQL `best`), so the strip on
+// - seed(edges): products the server already sent (home.html's GraphQL `best`), so the picker on
 //   a best seller opens with no request.
+// - searchFlies(words, { size, first }): the search page's own search (the same count, in the
+//   same order), for the header's suggestions, with a size as the Fly Sizes filter.
 //
 // A product normalises to { id, name, url, price, brand, img: { small, card, large }, sizes,
 // single, complex }: sizes are { label, variantId, inStock } in hook order, biggest first;
@@ -117,4 +119,26 @@ export function bestOf(categoryId, n) {
         lays.set(key, lay);
     }
     return lays.get(key);
+}
+
+// An aught size is spelled 2/0 or 2-0 in the catalogue until ticket 18's rename; ask for both.
+export function sizeValues(size) {
+    const aught = /^(\d+)[/-]0$/.exec(size);
+    return aught ? [`${aught[1]}/0`, `${aught[1]}-0`] : [size];
+}
+
+export async function searchFlies(words, { size = '', first = 8 } = {}) {
+    const sized = size ? `, productAttributes: [{ attribute: "Fly Sizes", values: ${JSON.stringify(sizeValues(size))} }]` : '';
+    const data = await query(`{ site { search { searchProducts(filters: { searchTerm: ${JSON.stringify(words)}${sized} }) { products(first: ${Number(first)}) { collectionInfo { totalItems } edges { node { entityId name path prices { price { value } } defaultImage { url(width: 96) } } } } } } } }`);
+    const found = data.site.search.searchProducts.products;
+    return {
+        total: found.collectionInfo ? found.collectionInfo.totalItems : 0,
+        products: edges(found).map(node => ({
+            id: String(node.entityId),
+            name: node.name,
+            url: node.path,
+            price: node.prices && node.prices.price ? node.prices.price.value : null,
+            img: node.defaultImage ? node.defaultImage.url : '',
+        })),
+    };
 }

@@ -1,0 +1,64 @@
+{{!--
+    One line of the box (cart-group.html): its size ("Size 12", from the option whose name holds
+    "Size"), any other choice in words ("Olive"), its quantity stepper, its total, and Remove.
+
+    - Stock cart.js's hooks stay: data-item-row, the field's id qty-{id}, .cart-item-qty-input with
+      data-cart-itemid and data-action="manualQtyChange" and its min and max, .cart-remove with
+      data-confirm-delete, data-item-edit for "Change". Typing a number and leaving the field (or
+      Enter) sends it through stock's own update, which redraws the box.
+    - − and + carry data-cart-itemid and data-action, so stock gives them focus back after its
+      redraw, but not data-cart-update: cart-page.js steps the number at once on every tap and
+      sends the total once the taps stop, so quick taps add up (stock would send one step).
+    - Its own price each, beside the total, where it differs from its pattern's (Kaufmann's Golden
+      Stone's sizes).
+    - "Change" only where the line has a choice other than its size (Fat Albert's colour).
+--}}
+{{~assignVar 'rf_row_size' ''~}}{{~assignVar 'rf_row_other' ''~}}{{~assignVar 'rf_row_edit' 0~}}
+{{~#each rf_line.options~}}
+{{~#contains name 'Size'}}{{assignVar 'rf_row_size' value}}{{else}}{{#if (getVar 'rf_row_other')}}{{assignVar 'rf_row_other' (concat (getVar 'rf_row_other') (concat ', ' value))}}{{else}}{{assignVar 'rf_row_other' value}}{{/if}}{{assignVar 'rf_row_edit' 1}}{{/contains~}}
+{{~/each~}}
+{{~#if (getVar 'rf_row_size')}}{{assignVar 'rf_row_label' (lang 'reelflies.cart.size' size=(getVar 'rf_row_size'))}}{{else}}{{assignVar 'rf_row_label' (lang 'reelflies.cart.quantity')}}{{/if~}}
+{{~#if (getVar 'rf_row_other')}}{{assignVar 'rf_row_what' (concat (getVar 'rf_row_label') (concat ', ' (getVar 'rf_row_other')))}}{{else}}{{assignVar 'rf_row_what' (getVar 'rf_row_label')}}{{/if~}}
+<li class="rf-cart-row" data-item-row data-rf-size="{{getVar 'rf_row_size'}}">
+    <div class="rf-cart-row__what">
+        <span class="rf-cart-row__size">{{#if (getVar 'rf_row_size')}}<span class="rf-cart-row__k">{{lang 'reelflies.cart.size_word'}}</span> <span class="rf-num">{{getVar 'rf_row_size'}}</span>{{else}}{{#unless rf_gift}}{{lang 'reelflies.cart.quantity'}}{{/unless}}{{/if}}</span>
+        {{#if (getVar 'rf_row_other')}}<span class="rf-cart-row__other">{{getVar 'rf_row_other'}}</span>{{/if}}
+        {{#if rf_gift}}<a class="rf-cart-row__edit" href="{{rf_line.edit_url}}" aria-label="{{lang 'cart.gift_certificates.change_gift_certificate' certificate_name=rf_line.name}}">{{lang 'common.change'}}</a>{{/if}}
+        {{#if (getVar 'rf_row_edit')}}{{#if rf_line.can_modify}}<a class="rf-cart-row__edit" href="#" data-item-edit="{{rf_line.id}}" data-product-id="{{rf_line.product_id}}" aria-label="{{lang 'products.change_product_options' name=rf_line.name}}">{{lang 'common.change'}}</a>{{/if}}{{/if}}
+        {{> components/cart/item-giftwrap rf_line}}
+    </div>
+    {{#if rf_gift}}
+    <span class="rf-cart-row__qty-fixed"><span class="rf-num">{{rf_line.quantity}}</span></span>
+    {{else}}
+    <span class="rf-qty rf-cart-qty">
+        {{#if rf_line.can_modify}}<button class="rf-qty__btn" type="button" data-rf-cart-step="-1" data-cart-itemid="{{rf_line.id}}" data-action="dec" aria-label="{{lang 'reelflies.cart.fewer' what=(getVar 'rf_row_what') name=rf_line.name}}">{{> components/reelflies/icon name='minus'}}</button>{{/if}}
+        <input class="rf-qty__input form-input--incrementTotal cart-item-qty-input"
+               id="qty-{{rf_line.id}}"
+               name="qty-{{rf_line.id}}"
+               type="text"
+               inputmode="numeric"
+               autocomplete="off"
+               value="{{rf_line.quantity}}"
+               data-quantity-min="{{rf_line.min_purchase_quantity}}"
+               data-quantity-max="{{rf_line.max_purchase_quantity}}"
+               data-quantity-min-error="{{lang 'products.quantity_min' quantity=rf_line.min_purchase_quantity}}"
+               data-quantity-max-error="{{lang 'products.quantity_max' quantity=rf_line.max_purchase_quantity}}"
+               min="1"
+               pattern="[0-9]*"
+               maxlength="3"
+               data-cart-itemid="{{rf_line.id}}"
+               data-action="manualQtyChange"
+               aria-label="{{lang 'reelflies.cart.how_many' what=(getVar 'rf_row_what') name=rf_line.name}}"{{#unless rf_line.can_modify}} disabled{{/unless}}>
+        {{#if rf_line.can_modify}}<button class="rf-qty__btn" type="button" data-rf-cart-step="1" data-cart-itemid="{{rf_line.id}}" data-action="inc" aria-label="{{lang 'reelflies.cart.more' what=(getVar 'rf_row_what') name=rf_line.name}}">{{> components/reelflies/icon name='plus'}}</button>{{/if}}
+    </span>
+    {{/if}}
+    <span class="rf-cart-row__money">
+        {{#or customer (unless settings.hide_price_from_guests) rf_gift}}
+        {{#if rf_line.total_discounted}}<s class="rf-cart-row__was rf-num">{{rf_line.total.formatted}}</s> <span class="rf-cart-row__total rf-num">{{rf_line.total_discounted.formatted}}</span>{{else}}<span class="rf-cart-row__total rf-num">{{rf_line.total.formatted}}</span>{{/if}}
+        {{#unless rf_gift}}{{#if rf_line.price.value '!=' rf_group_price}}<span class="rf-cart-row__each"><span class="rf-num">{{rf_line.price.formatted}}</span> {{lang 'reelflies.cart.each'}}</span>{{/if}}{{/unless}}
+        {{/or}}
+    </span>
+    {{#or rf_line.can_modify rf_gift}}
+    <button class="cart-remove rf-cart-row__remove" type="button" data-cart-itemid="{{rf_line.id}}" data-confirm-delete="{{lang 'cart.confirm_delete'}}" aria-label="{{lang 'reelflies.cart.remove' what=(getVar 'rf_row_what') name=rf_line.name}}">{{> components/reelflies/icon name='close'}}</button>
+    {{/or}}
+</li>

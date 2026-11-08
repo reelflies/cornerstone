@@ -10,7 +10,7 @@
 {{~#if (getVar 'rf_sp_salt') '==' ../rf_salt~}}
 {{~#if (getVar 'rf_sp_shown') '<' ../rf_limit~}}
 {{~assignVar 'rf_sp_shown' (add (getVar 'rf_sp_shown') 1)~}}
-{{#if ../rf_view '===' 'mega'}}<li><a href="{{rfSp.url}}"><span>{{rfSp.name}}</span>{{> components/reelflies/count n=rfSp.count}}</a></li>{{/if}}
+{{#if ../rf_view '===' 'mega'}}<li><a href="{{rfSp.url}}" data-rf-cat="{{rfSp.name}}"><span>{{rfSp.name}}</span>{{> components/reelflies/count n=rfSp.count}}</a></li>{{/if}}
 {{#if ../rf_view '===' 'drawer'}}<li><a href="{{rfSp.url}}"><span>{{rfSp.name}}</span>{{> components/reelflies/count n=rfSp.count}}</a></li>{{/if}}
 {{#if ../rf_view '===' 'band'}}<li><a class="rf-sp" href="{{rfSp.url}}" data-rf-sp="{{rfSp.id}}" data-rf-sp-name="{{rfSp.name}}"{{#if (getVar 'rf_counts')}} data-rf-count="{{rfSp.count}}"{{/if}}><span class="rf-sp__name">{{rfSp.name}}</span>{{#if (getVar 'rf_counts')}}{{#if rfSp.count}}<span class="rf-sp__n">{{> components/reelflies/count n=rfSp.count}} {{lang 'reelflies.menu.patterns'}}</span>{{/if}}{{/if}}</a></li>{{/if}}
 {{#if ../rf_view '===' 'way'}}<li><a class="rf-way" href="{{rfSp.url}}" data-rf-way="{{rfSp.id}}" data-rf-way-name="{{rfSp.name}}"{{#if (getVar 'rf_counts')}} data-rf-count="{{rfSp.count}}"{{/if}}>{{rfSp.name}}{{> components/reelflies/count n=rfSp.count class='rf-way__n'}}</a></li>{{/if}}

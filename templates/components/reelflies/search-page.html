@@ -1,0 +1,82 @@
+{{!--
+    The search results page (redesign step 3; tickets 30, 33 and 51), in the listing's look:
+
+    - The plain head: the H1, "123 results for “caddis”" (stock search/heading, hooked, in
+      #search-results-heading, which stock search.js writes again after each refresh); the store's
+      "Did you mean …?"; the categories its search matched, as chips, at most two rows with a
+      "more" chip as on a category (category-chips.js, from listing.js); and stock's two tabs,
+      products and the store's pages and posts, restyled.
+    - With no results for a query: the help (search-empty.html), the Fly Types to start from.
+    - The listing: the facets beside the grid from 1040px (the Fly Sizes cells in hook order), the
+      row with the count, Filter, Photos or Quick order and the sort, the grid, the pager. Stock's
+      ids stay: #faceted-search-container, #product-listing-container and #search-results-content,
+      the tab panels.
+--}}
+{{assignVar 'rf_search_side' 0}}
+{{#if product_results.faceted_search_enabled}}{{#if forms.search.section '==' 'product'}}{{assignVar 'rf_search_side' 1}}{{/if}}{{/if}}
+<div class="rf-list-head rf-list-head--plain rf-search-head">
+    <div class="rf-list-head__inner">
+        {{#if forms.search.query}}
+        <div id="search-results-heading">
+            {{> components/search/heading}}
+        </div>
+        {{else}}
+        <h1 class="rf-list-head__title">{{lang 'reelflies.search.title'}}</h1>
+        {{/if}}
+        {{#if forms.search.suggested_query}}
+        <p class="rf-search-head__mean">{{lang 'forms.search.did_you_mean'}} <a href="{{forms.search.suggested_query.url}}">{{forms.search.suggested_query.query}}</a>?</p>
+        {{/if}}
+        {{#if category_results.length}}
+        <ul class="rf-chips rf-chips--light rf-search-head__cats" aria-label="{{lang 'reelflies.search.categories'}}" data-rf-chips>
+            {{#each category_results}}
+            <li class="rf-chips__item">{{#each this}}{{#if @last}}<a class="rf-chip" href="{{url}}"><span class="rf-chip__name">{{name}}</span></a>{{/if}}{{/each}}</li>
+            {{/each}}
+            <li class="rf-chips__item rf-chips__more" data-rf-chips-more hidden>
+                <button class="rf-chip rf-chip--more" type="button" data-rf-more-label="{{lang 'reelflies.listing.chips_more' count='#'}}">
+                    <span class="rf-chips__wide" data-rf-chips-more-wide></span>
+                    <span class="rf-chips__narrow">{{lang 'reelflies.listing.chips_all' count=category_results.length}}</span>
+                </button>
+            </li>
+        </ul>
+        {{/if}}
+        <nav class="rf-search-tabs" aria-label="{{lang 'reelflies.search.tabs'}}">
+            <span id="search-tabs-widget-description" class="aria-description--hidden">{{lang 'search.tabs_accesibility_hint'}}</span>
+            <ul role="tablist" class="rf-search-tabs__list" data-search-page-tabs>
+                <li role="presentation">
+                    <a aria-describedby="search-tabs-widget-description" role="tab" aria-controls="product-listing-container" id="search-results-product-count" class="rf-search-tabs__tab navBar-action" href="{{forms.search.product_url}}" data-product-results-toggle>
+                        {{> components/search/product-count}}
+                    </a>
+                </li>
+                <li role="presentation">
+                    <a aria-describedby="search-tabs-widget-description" role="tab" aria-controls="search-results-content" id="search-results-content-count" class="rf-search-tabs__tab navBar-action" href="{{forms.search.content_url}}" data-content-results-toggle>
+                        {{> components/search/content-count}}
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {{#unless product_results.faceted_search_enabled}}
+        {{> components/search/advanced-search}}
+        {{/unless}}
+    </div>
+</div>
+{{#if forms.search.query}}{{#unless forms.search.search_error}}{{#if result_count '===' 0}}
+{{> components/reelflies/search-empty}}
+{{/if}}{{/unless}}{{/if}}
+<div class="rf-list{{#if (getVar 'rf_search_side')}} rf-list--side{{/if}}">
+    <div class="rf-list__inner">
+        {{#if product_results.faceted_search_enabled}}
+        <aside class="rf-list__side{{#if forms.search.section '!=' 'product'}} u-hiddenVisually{{/if}}" id="faceted-search-container">
+            {{> components/faceted-search/index product_results}}
+        </aside>
+        {{/if}}
+        <div class="rf-list__main">
+            <div role="tabpanel" id="search-results-content" aria-labelledby="search-results-content-count"{{#if forms.search.section '!=' 'content'}} class="u-hidden"{{/if}}>
+                {{> components/search/content-listing}}
+            </div>
+            <div role="tabpanel" id="product-listing-container" aria-labelledby="search-results-product-count"{{#if forms.search.section '!=' 'product'}} class="u-hidden"{{/if}}>
+                {{> components/search/product-listing}}
+            </div>
+        </div>
+    </div>
+</div>
+{{{region name="search_below_content"}}}

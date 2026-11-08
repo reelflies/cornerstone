@@ -14,7 +14,7 @@ body:has(.rf-orderline) {
     padding-bottom: var(--rf-orderline-height);
 }
 
-// whatever takes focus or is scrolled to (an opened size strip) stops clear of the bar
+// whatever takes focus or is scrolled to (an opened size picker) stops clear of the bar
 html:has(.rf-orderline) {
     scroll-padding-bottom: calc(var(--rf-orderline-height) + var(--rf-space-2));
 }
@@ -309,5 +309,16 @@ html:has(.rf-orderline) {
 
     .rf-orderline__thumb:nth-child(n+3) {
         display: none;
+    }
+}
+
+// the way to the whole box, with coupons and shipping (the cart page)
+.rf-box__full {
+    margin: 0;
+    padding: 0 var(--rf-space-4) var(--rf-space-2);
+
+    .rf-more {
+        color: var(--rf-ink);
+        font-size: 14px;
     }
 }

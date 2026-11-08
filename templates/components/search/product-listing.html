@@ -1,7 +1,8 @@
 {{inject 'noCompareMessage' (lang 'compare.no_compare')}}
 
 {{#if product_results.products.length}}
-    {{> components/products/filter sort=pagination.product_results.sort}}
+    {{!-- ReelFlies hook (redesign step 3; ticket 33; CUSTOMIZATIONS.md): the listing's row, the count, Filter, Photos or Quick order, and the sort (components/reelflies/listing-top.html; search has no total_products, so it passes the paginator's) --}}
+    {{> components/reelflies/listing-top category=product_results rf_sort=pagination.product_results.sort rf_total=pagination.product_results.total}}
 {{/if}}
 <div data-list-name="Search Results">
     {{#if theme_settings.product_list_display_mode '===' 'grid'}}
