@@ -1,8 +1,9 @@
 // The hook size chart page (ticket 35; spec module 22; R9, SEO-6, SEO-7, SEO-15; stories 15, 16
-// and 71): templates/pages/custom/page/hook-size-chart.html, the Web Page's custom template. The
-// page's content is Shaun's copy with the size rows that scripts/hook-chart/rows.mjs writes
-// between its two markers (hook-chart/rows.html is a run on that script's fixtures); the template
-// puts the gauge (components/reelflies/hook-gauge.html) between the copy and the rows.
+// and 71; redesign step 3): templates/pages/custom/page/hook-size-chart.html, the Web Page's
+// custom template, renders components/reelflies/chart-page.html. The page's content is Shaun's
+// copy with the size rows that scripts/hook-chart/rows.mjs writes between its two markers
+// (hook-chart/rows.html is a run on that script's fixtures); the template puts the gauge
+// (components/reelflies/chart-gauge.html) between the copy and the rows.
 //
 //   node --test scripts/qa/render/partials/hook-chart-page.test.mjs
 
@@ -17,50 +18,55 @@ import {
     MARKERS, buildTable, catalogueProducts, flyTypesFromTree, joinPages, readRowsConfig, renderRows,
 } from '../../../hook-chart/rows.mjs';
 import { unbalancedTags } from '../html-checks.mjs';
-import { renderPartial } from '../render.mjs';
+import { THEME_DIR, renderPartial } from '../render.mjs';
 
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const ROWS = fs.readFileSync(path.join(HERE, 'hook-chart/rows.html'), 'utf8');
 const SCRIPT_FIXTURES = path.join(HERE, '../../../hook-chart/fixtures');
 const PAGE_FIXTURE = path.join(HERE, '../pages/hook-chart-page/fixtures/chart.json');
-const TEMPLATE_FILE = path.join(HERE, '../../../../templates/pages/custom/page/hook-size-chart.html');
+const TEMPLATE_FILE = path.join(THEME_DIR, 'templates/pages/custom/page/hook-size-chart.html');
+const CHART_PAGE_FILE = path.join(THEME_DIR, 'templates/components/reelflies/chart-page.html');
 const INTRO = '<p>Fly hooks are sized by number. From 1 to 24, the bigger the number, the smaller the hook.</p>';
 const OUTRO = '<p>The smallest hook made for sale is a <a href="/blog/the-mustad-277-gold-plated-in-size-32-arguably-the-smallest-hook-ever-made-for-sale-today/">Mustad 277 in size 32</a>.</p>';
 const TEMPLATE = 'pages/custom/page/hook-size-chart';
 
-const render = (content = `${INTRO}${ROWS}${OUTRO}`) => renderPartial(TEMPLATE, {
+const render = (content = `${INTRO}${ROWS}${OUTRO}`, theme = {}) => renderPartial(TEMPLATE, {
     template: TEMPLATE,
     page_type: 'page',
     breadcrumbs: [{ url: 'https://reelflies.ca/', name: 'Home' }, { url: 'https://reelflies.ca/fly-hook-size-chart/', name: 'Fly Hook Size Chart' }],
     page: { title: 'Fly Hook Size Chart', content },
     settings: {},
-    theme_settings: {},
+    theme_settings: theme,
 });
-const gauge = html => outerHtml(html, 'div', attrs => /(^|\s)rf-hook-gauge(\s|$)/.test(attrs.class || ''));
+const hasClass = name => attrs => new RegExp(`(^|\\s)${name}(\\s|$)`).test(attrs.class || '');
+const gauge = html => outerHtml(html, 'figure', hasClass('rf-gauge'));
 
 describe('the hook size chart page (pages/custom/page/hook-size-chart.html)', () => {
-    it('has one <main> and one <h1>, the page\'s title', async () => {
+    it('has one <main> and one <h1>, the page\'s title, in the reading pages\' plain head', async () => {
         const html = await render();
         assert.equal(findTags(html, 'main').length, 1);
-        const h1s = findTags(html, 'h1');
-        assert.equal(h1s.length, 1);
+        assert.equal(findTags(html, 'h1').length, 1);
         assert.equal(textOf(outerHtml(html, 'h1')), 'Fly Hook Size Chart');
+        assert.ok(outerHtml(html, 'div', hasClass('rf-page-head')), 'the plain head');
+        assert.ok(outerHtml(html, 'div', hasClass('rf-chart')), 'the chart page');
     });
 
-    it('puts the chart\'s gauge between the copy and the size rows, as a labelled group', async () => {
+    it('puts the gauge between the copy and the size rows, each in its own reading column', async () => {
         const html = await render();
-        const at = html.indexOf('rf-hook-gauge--chart');
+        const at = html.indexOf('<figure class="rf-gauge">');
+        assert.ok(at > 0, 'the gauge');
         assert.ok(at > html.indexOf('Fly hooks are sized by number'), 'after the copy');
         assert.ok(at < html.indexOf('<table class="rf-chart-rows">'), 'before the rows');
         assert.ok(html.indexOf('Mustad 277 in size 32') > html.indexOf('</table>'), 'the copy after the rows stays after them');
-        const [group] = findTags(gauge(html), 'div');
-        assert.equal(group.attrs.role, 'group');
-        assert.ok(group.attrs['aria-label'], 'a short text alternative');
+        assert.ok(outerHtml(html, 'div', hasClass('rf-chart__copy')).includes('Fly hooks are sized by number'));
+        assert.ok(outerHtml(html, 'div', hasClass('rf-chart__rows')).includes('<table class="rf-chart-rows">'));
+        assert.equal(findTags(gauge(html), 'ol')[0].attrs['aria-label'], 'Hook sizes 6/0 to 24, drawn to relative scale');
     });
 
     it('links every gauge size to its row on the page, 6/0 to 24', async () => {
         const html = await render();
         const targets = findTags(gauge(html), 'a').map(link => decodeHtml(link.attrs.href));
+        assert.equal(targets.length, 19);
         assert.equal(targets[0], '#size-6-0');
         assert.equal(targets[targets.length - 1], '#size-24');
         const rows = new Set(findTags(html, 'tr').map(row => row.attrs.id).filter(Boolean));
@@ -77,17 +83,25 @@ describe('the hook size chart page (pages/custom/page/hook-size-chart.html)', ()
         }
     });
 
-    it('never prints the start marker, and balances the page', async () => {
+    it('never prints the start marker, keeps the end marker as a comment, and balances the page', async () => {
         const html = await render();
         assert.equal(html.includes(MARKERS.start), false);
+        assert.ok(html.includes(MARKERS.end), 'the end marker stays, so rows.mjs can find the block again');
         assert.deepEqual(unbalancedTags(html), []);
     });
 
     it('with no rows block yet, shows the copy alone: the gauge\'s links would lead nowhere', async () => {
         const html = await render(`${INTRO}${OUTRO}`);
         assert.match(html, /Mustad 277 in size 32/);
-        assert.equal(html.includes('rf-hook-gauge'), false);
+        assert.equal(gauge(html), null);
         assert.equal(findTags(html, 'table').length, 0);
+        assert.ok(outerHtml(html, 'div', hasClass('rf-chart__copy')).includes('Mustad 277'));
+    });
+
+    it('keeps the breadcrumbs with no H1 when Theme Styles hides page headings', async () => {
+        const html = await render(undefined, { hide_page_heading: true });
+        assert.equal(findTags(html, 'h1').length, 0);
+        assert.equal(findTags(html, 'nav').filter(nav => nav.attrs['aria-label'] === 'Breadcrumb').length, 1);
     });
 });
 
@@ -102,11 +116,13 @@ describe('the rows the page is tested with are the script\'s', () => {
         assert.equal(`${renderRows(table, config)}\n`, ROWS);
     });
 
-    it('the fixture page\'s content holds those rows, and the template splits at rows.mjs\'s own start marker', () => {
+    it('the fixture page\'s content holds those rows, and chart-page.html splits at rows.mjs\'s own start marker', () => {
         const fixture = JSON.parse(fs.readFileSync(PAGE_FIXTURE, 'utf8'));
         assert.ok(fixture.page_context.page.content.includes(ROWS.trim()), 'chart.json holds rows.html');
-        const template = fs.readFileSync(TEMPLATE_FILE, 'utf8');
+        assert.equal(fixture.page, TEMPLATE);
+        const template = fs.readFileSync(CHART_PAGE_FILE, 'utf8');
         const literals = [...template.matchAll(/'(<!-- rf:hook-chart-rows [^']*-->)'/g)].map(match => match[1]);
         assert.deepEqual(literals, [MARKERS.start, MARKERS.start]);
+        assert.match(fs.readFileSync(TEMPLATE_FILE, 'utf8'), /\{\{> components\/reelflies\/chart-page\}\}/, 'the custom template renders the chart page');
     });
 });

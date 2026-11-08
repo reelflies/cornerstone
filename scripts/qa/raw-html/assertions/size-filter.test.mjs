@@ -1,6 +1,7 @@
-// Tests the size-filter assertion (ticket 33; O11, O20; stories 24 and 25) on the category fixture
-// pages' contexts (render/pages/category-page/fixtures/), with and without products, on ticket
-// 36's brand pages (render/pages/brand-page/fixtures/), and on hand-made breakages of them.
+// Tests the size-filter assertion (ticket 33; O11, O20; stories 24 and 25; redesign step 3) on
+// the category fixture pages' contexts (render/pages/category-page/fixtures/), with and without
+// products, on ticket 36's brand pages (render/pages/brand-page/fixtures/), and on hand-made
+// breakages of them.
 //
 //   node --test scripts/qa/raw-html/assertions/size-filter.test.mjs
 
@@ -25,6 +26,8 @@ const brandPage = async name => ({
     html: await renderPartial('pages/brand', JSON.parse(fs.readFileSync(path.join(BRAND_FIXTURES, `${name}.json`), 'utf8')).page_context),
 });
 const problems = (good, from, to) => sizeFilter.check({ ...good, html: good.html.replace(from, to) }).join('\n');
+// "What do sizes mean?", as facet-sizes.html prints it under the cells.
+const HELP = '<p class="rf-size-facet__help">';
 
 test('applies to category pins, the Fly Type and Species kinds and ticket 36\'s brand listing, ticket 33', () => {
     assert.deepEqual(sizeFilter.pages, ['category', 'fly-type', 'species', 'brand']);
@@ -44,8 +47,9 @@ test('passes ticket 36\'s brand pages: with the facet and products, and with fil
 
 test('fails a Fly Sizes facet with no "What do sizes mean?" link, or two', async () => {
     const good = await page('fly-type');
-    assert.match(problems(good, /<p class="rf-size-help">[\s\S]*?<\/p>/, ''), /has 0 links to \/fly-hook-size-chart\//);
-    assert.match(problems(good, '<p class="rf-size-help">', '<p class="rf-size-help"><a href="/fly-hook-size-chart/">Again</a>'), /has 2 links/);
+    assert.ok(good.html.includes(HELP), 'the help under the cells');
+    assert.match(problems(good, /<p class="rf-size-facet__help">[\s\S]*?<\/p>/, ''), /has 0 links to \/fly-hook-size-chart\//);
+    assert.match(problems(good, HELP, `${HELP}<a href="/fly-hook-size-chart/">Again</a>`), /has 2 links/);
 });
 
 test('fails stock\'s Fly Sizes list, and stock\'s focus-grabbing no-products alert', async () => {

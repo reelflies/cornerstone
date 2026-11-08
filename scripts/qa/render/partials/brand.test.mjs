@@ -1,10 +1,16 @@
 // The ReelFlies brand listing (ticket 36; spec module 12; O10, O20, UX-7; stories 17, 23, 25, 26,
-// 68, 70 and 72): pages/brand.html's page block is components/reelflies/brand-page.html, and
-// stock brand/product-listing.html's listing is components/reelflies/brand-listing.html, which
-// stock brand.js's faceted search also renders alone after a filter or a sort. Rendered on the
-// brand fixture page's contexts (render/pages/brand-page/fixtures/), which are channel 1's brand
-// context as ?debug=context shaped it on 2026-10-09: the brand's image, its facets and a numbered
-// pagination window, and no total (BigCommerce gives a brand page none).
+// 68, 70 and 72; redesign step 3): pages/brand.html's hero block is components/reelflies/
+// brand-page.html, the category page's plain head (listing-head.html) and its listing, and stock
+// brand/product-listing.html's hook puts the listing's row (listing-top.html) and empty states
+// (listing-empty.html) round stock's grid and pager, which stock brand.js's faceted search also
+// renders alone after a filter or a sort. Rendered on the brand fixture page's contexts
+// (render/pages/brand-page/fixtures/), which are channel 1's brand context as ?debug=context
+// shaped it on 2026-10-09: the brand's image, its facets and a numbered pagination window, and no
+// total (BigCommerce gives a brand page none).
+//
+// Gone with master's brand-listing.html, and not tested: the brand's image as a banner (every
+// brand gets the plain head, DESIGN.md; the first card holds the page's high priority) and the
+// listing's own <main> (the page's one <main> is layout/base's, as on every page).
 //
 //   node --test scripts/qa/render/partials/brand.test.mjs
 
@@ -13,7 +19,7 @@ import path from 'path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    decodeHtml, elementsHtml, findTags, outerHtml, textOf,
+    decodeHtml, elementsHtml, findTags, markupOnly, outerHtml, textOf,
 } from '../../raw-html/html.mjs';
 import { unbalancedTags } from '../html-checks.mjs';
 import { THEME_DIR, renderPartial } from '../render.mjs';
@@ -22,6 +28,7 @@ const FIXTURES = path.join(THEME_DIR, 'scripts/qa/render/pages/brand-page/fixtur
 const fixture = name => JSON.parse(fs.readFileSync(path.join(FIXTURES, `${name}.json`), 'utf8')).page_context;
 const BANNER = fixture('banner');
 const EMPTY = fixture('empty');
+const SIZES = '(min-width: 1280px) 250px, (min-width: 1040px) 230px, (min-width: 640px) 31vw, 46vw';
 // The banner case on page `n` of its pagination window, as the store sends a later page.
 const onPage = n => ({
     ...BANNER,
@@ -33,8 +40,8 @@ const onPage = n => ({
 });
 
 // The brand page: `brand` lays fields over the banner case's brand.
-const page = (brand = {}, { context = BANNER, regions } = {}) => renderPartial('pages/brand', {
-    ...context, brand: { ...context.brand, ...brand }, settings: {},
+const page = (brand = {}, { context = BANNER, regions, theme = {} } = {}) => renderPartial('pages/brand', {
+    ...context, brand: { ...context.brand, ...brand }, settings: {}, theme_settings: { ...context.theme_settings, ...theme },
 }, regions ? { regions } : {});
 // What brand.js's faceted search puts in #product-listing-container: stock brand/product-listing,
 // rendered as its own template, with the brand at @root.
@@ -46,86 +53,74 @@ const refresh = (brand = {}, context = BANNER) => renderPartial('components/bran
 });
 
 const hasClass = name => attrs => new RegExp(`(^|\\s)${name}(\\s|$)`).test(attrs.class || '');
-const header = html => outerHtml(html, 'div', hasClass('rf-listing-header'));
-const banner = html => findTags(html, 'img').find(img => hasClass('rf-listing-banner')(img.attrs));
-const cardImages = html => elementsHtml(html, 'article', hasClass('card')).map(card => findTags(card, 'img')[0]);
+const head = html => outerHtml(html, 'div', hasClass('rf-list-head'));
+const cardImages = html => elementsHtml(html, 'article', hasClass('rf-fly__card')).map(card => findTags(card, 'img')[0]);
 const row = html => outerHtml(html, 'div', hasClass('rf-list-top'));
 const count = html => textOf(outerHtml(html, 'p', attrs => 'data-rf-list-count' in attrs));
 const chosenSort = html => findTags(row(html), 'option').filter(tag => 'selected' in tag.attrs).map(tag => tag.attrs.value);
-const SIDEBAR_SIZES = /^\(min-width: 1136px\) 258px, \(min-width: 801px\) calc\(23\.8vw - 13px\), calc\(50vw - 24px\)$/;
+const sidebar = html => outerHtml(html, 'aside', attrs => attrs.id === 'faceted-search-container');
+const pager = html => outerHtml(html, 'nav', hasClass('pagination'));
 
 describe('the page (components/reelflies/brand-page.html)', () => {
-    it('gives a brand with an image the banner: eager, fetchpriority="high", alt="", with the brand\'s name as the page\'s one H1 (O10; story 70)', async () => {
-        const html = await page();
-        const img = banner(header(html));
-        assert.ok(img, 'the banner is in the listing header');
-        assert.equal(img.attrs.loading, undefined, 'eager');
-        assert.equal(img.attrs.fetchpriority, 'high');
-        assert.equal(img.attrs.alt, '');
-        assert.match(img.attrs.srcset, /boxes-assortments-for-website_1662739586__80374\.original\.jpg 1600w$/);
-        assert.deepEqual(findTags(html, 'h1').length, 1);
-        assert.equal(textOf(outerHtml(header(html), 'h1', () => true)), 'ReelFlies');
-        assert.deepEqual(findTags(html, 'img').filter(tag => tag.attrs.fetchpriority === 'high').map(tag => tag.attrs.class), ['rf-listing-banner'], 'the banner holds the one fetchpriority');
+    it('gives every brand the plain head, image or not, with the brand\'s name as the page\'s one H1 and the breadcrumbs (O10)', async () => {
+        for (const [name, html] of [['with an image', await page()], ['without', await page({ image: null })]]) {
+            assert.ok(head(html), `${name}: the head`);
+            assert.match(findTags(head(html), 'div')[0].attrs.class, /(^|\s)rf-list-head--plain(\s|$)/, name);
+            assert.equal(findTags(head(html), 'img').length, 0, `${name}: no banner`);
+            assert.equal(findTags(html, 'h1').length, 1, name);
+            assert.equal(textOf(outerHtml(head(html), 'h1')), 'ReelFlies', name);
+            assert.equal(findTags(head(html), 'nav').filter(nav => nav.attrs['aria-label'] === 'Breadcrumb').length, 1, name);
+            assert.equal(findTags(head(html), 'ul').length, 0, `${name}: a brand has no chips`);
+        }
     });
 
-    it('gives a brand with no image the plain header, the H1 alone, and the first card the page\'s fetchpriority (ticket 31; story 70)', async () => {
-        const html = await page({ image: null });
-        assert.equal(banner(html), undefined);
-        assert.match(header(html), /rf-listing-header--plain/);
-        assert.equal(textOf(header(html)), 'ReelFlies');
+    it('gives the first card the page\'s one fetchpriority="high" (ticket 31; story 70)', async () => {
+        const html = await page();
         const high = findTags(html, 'img').filter(tag => tag.attrs.fetchpriority === 'high');
         assert.equal(high.length, 1);
         assert.equal(high[0].raw, cardImages(html)[0].raw);
     });
 
-    it('replaces stock\'s heading and its 100px image: no .brand-image-container and no H1 outside the listing header', async () => {
+    it('replaces stock\'s heading and its 100px image: no .brand-image-container and no H1 outside the head', async () => {
         const html = await page();
         assert.equal(findTags(html, 'div').filter(tag => hasClass('brand-image-container')(tag.attrs)).length, 0);
-        assert.equal(findTags(header(html), 'h1').length, 1);
+        assert.doesNotMatch(html, /class="page-heading"/);
+        assert.equal(findTags(head(html), 'h1').length, 1);
     });
 
-    it('keeps the brand_below_header region right after the header, where the intro widget goes, and brand_below_content after the listing', async () => {
+    it('keeps the brand_below_header region right after the head, where the intro widget goes, and brand_below_content after the listing', async () => {
         const html = await page({}, { regions: { brand_below_header: '<p data-rf-test-intro>Intro</p>', brand_below_content: '<p data-rf-test-below>Below</p>' } });
-        const after = html.slice(html.indexOf(header(html)) + header(html).length);
-        assert.match(after, /^\s*<div data-content-region="brand_below_header"><p data-rf-test-intro>Intro<\/p><\/div>\s*<div class="page rf-listing-page rf-brand-listing">/);
+        const markup = markupOnly(html);
+        const after = markup.slice(markup.indexOf(head(html)) + head(html).length);
+        assert.match(after, /^\s*<div data-content-region="brand_below_header"><p data-rf-test-intro>Intro<\/p><\/div>\s*<div class="rf-list rf-list--side">/);
+        assert.ok(html.indexOf('data-rf-test-below') > html.indexOf('data-rf-grid'), 'brand_below_content after the listing');
+        assert.doesNotMatch(outerHtml(html, 'div', attrs => attrs.id === 'product-listing-container'), /data-rf-test-below/, 'outside the container brand.js replaces');
     });
 
-    it('keeps brand_below_content out of <main>, which stock brand.js empties on every filter, sort or page refresh, in a .page-region after it, as the category page does', async () => {
-        for (const [name, html] of [['with products', await page({}, { regions: { brand_below_content: '<p data-rf-test-below>Below</p>' } })], ['with stock\'s search error', await page({ search_error: true }, { regions: { brand_below_content: '<p data-rf-test-below>Below</p>' } })]]) {
-            const main = outerHtml(html, 'main', () => true);
-            assert.doesNotMatch(main, /brand_below_content|data-rf-test-below/, `${name}: not inside <main>`);
-            const pageDiv = outerHtml(html, 'div', attrs => attrs.class === 'page rf-listing-page rf-brand-listing');
-            const after = pageDiv.slice(pageDiv.indexOf(main) + main.length);
-            assert.match(after, /^\s*<div class="page-region">\s*<div data-content-region="brand_below_content"><p data-rf-test-below>Below<\/p><\/div>\s*<\/div>\s*<\/div>$/, `${name}: right after </main>, in the page`);
-        }
-    });
-
-    it('keeps stock\'s one <main>, the listing\'s, beside the facet sidebar, in the page ticket 33\'s phone rules key on', async () => {
+    it('is the one <main>\'s content, the facets in an <aside> beside the listing, which stock brand.js finds by their ids', async () => {
         const html = await page();
-        const mains = findTags(html, 'main');
-        assert.equal(mains.length, 1);
-        assert.equal(mains[0].attrs.id, 'product-listing-container');
-        assert.equal(mains[0].attrs.class, 'page-content');
-        const [pageDiv] = findTags(html, 'div').filter(tag => hasClass('page')(tag.attrs));
-        assert.equal(pageDiv.attrs.class, 'page rf-listing-page rf-brand-listing');
-        assert.equal(findTags(html, 'aside')[0].attrs.id, 'faceted-search-container');
+        assert.equal(findTags(html, 'main').length, 1);
+        assert.ok(outerHtml(html, 'main').includes(head(html)), 'the head is in <main>');
+        const [aside] = findTags(sidebar(html), 'aside');
+        assert.match(aside.attrs.class, /(^|\s)rf-list__side(\s|$)/);
+        assert.equal(findTags(html).find(tag => tag.attrs.id === 'product-listing-container').name, 'div');
+        assert.match(findTags(html, 'div').find(tag => hasClass('rf-list')(tag.attrs)).attrs.class, /(^|\s)rf-list--side(\s|$)/);
     });
 
-    it('shows the Fly Sizes facet as ticket 33\'s pills, with BigCommerce\'s own anchors and "What do sizes mean?" (stories 23 and 24)', async () => {
+    it('shows the Fly Sizes facet as ticket 33\'s cells, with BigCommerce\'s own anchors and "What do sizes mean?" (stories 23 and 24)', async () => {
         const html = await page();
-        const sidebar = outerHtml(html, 'aside', () => true);
-        const pills = findTags(sidebar, 'a').filter(tag => hasClass('rf-size-pill')(tag.attrs));
+        const pills = findTags(sidebar(html), 'a').filter(tag => hasClass('rf-size-pill')(tag.attrs));
         assert.equal(pills.length, BANNER.brand.facets[0].items.length);
         for (const pill of pills) {
             assert.match(decodeHtml(pill.attrs.href), /^https:\/\/reelflies\.ca\/reelflies-2\/\?_bc_fsnf=1&Fly\+Sizes=/);
             assert.equal(pill.attrs.rel, 'nofollow');
         }
-        assert.equal(findTags(sidebar, 'a').filter(tag => tag.attrs.href === '/fly-hook-size-chart/').length, 1);
+        assert.equal(findTags(sidebar(html), 'a').filter(tag => tag.attrs.href === '/fly-hook-size-chart/').length, 1);
     });
 
-    it('prints stock\'s search error in place of the listing', async () => {
-        const html = await page({ search_error: true });
-        assert.match(textOf(outerHtml(html, 'main', () => true)), /^There was a problem retrieving your results/);
+    it('prints stock\'s search error in place of the listing when the store sends it with no products, as stock\'s hook orders them', async () => {
+        const html = await page({ search_error: true, products: [] });
+        assert.match(textOf(outerHtml(html, 'div', attrs => attrs.id === 'product-listing-container')), /^There was a problem retrieving your results/);
         assert.equal(cardImages(html).length, 0);
     });
 
@@ -136,28 +131,28 @@ describe('the page (components/reelflies/brand-page.html)', () => {
     });
 });
 
-describe('the listing (components/reelflies/brand-listing.html)', () => {
+describe('the listing (stock brand/product-listing.html\'s hook)', () => {
     for (const [name, render] of [['on the page', () => page()], ['after a filter or sort refresh', () => refresh()]]) {
-        it(`puts ticket 33's row above the grid, with the brand's own sort chosen, ${name}`, async () => {
+        it(`puts ticket 33's row above the grid, with the brand's own sort chosen and Filter for phones, ${name}`, async () => {
             const html = await render();
             assert.ok(row(html), 'the row');
             assert.deepEqual(chosenSort(html), ['featured']);
             assert.equal(findTags(row(html), 'button').filter(tag => 'data-rf-filter-button' in tag.attrs).length, 1, 'Filter, with a facet visible');
-            assert.ok(html.indexOf('rf-list-top') < html.indexOf('productGrid'));
+            assert.ok(html.indexOf('rf-list-top') < html.indexOf('data-rf-grid'));
+            assert.equal(textOf(outerHtml(row(html), 'h2')), 'Patterns', 'the Fly Sizes facet makes it a fly listing');
         });
 
-        it(`lists the brand's products as cards, the first three eager, sized for the column beside the sidebar, ${name}`, async () => {
+        it(`lists the brand's products as specimen cards, the first three eager, at the grid's sizes, ${name}`, async () => {
             const imgs = cardImages(await render());
             assert.equal(imgs.length, BANNER.brand.products.length);
             imgs.forEach((img, index) => {
-                assert.match(img.attrs.sizes, SIDEBAR_SIZES, `card ${index + 1}`);
+                assert.equal(img.attrs.sizes, SIZES, `card ${index + 1}`);
                 assert.equal(img.attrs.loading, index < 3 ? undefined : 'lazy', `card ${index + 1}`);
             });
         });
 
         it(`keeps the stock numbered pager of <a href> links (UX-7; story 26), ${name}`, async () => {
-            const pager = outerHtml(await render(), 'nav', attrs => /pagination/.test(attrs.class || ''));
-            const links = findTags(pager, 'a').map(link => decodeHtml(link.attrs.href));
+            const links = findTags(pager(await render()), 'a').map(link => decodeHtml(link.attrs.href));
             assert.deepEqual(links, [...BANNER.pagination.brand.links.map(link => link.url), BANNER.pagination.brand.next]);
         });
     }
@@ -188,8 +183,16 @@ describe('the listing (components/reelflies/brand-listing.html)', () => {
         }
     });
 
-    it('prints the count if the context ever has a total, as a category\'s does', async () => {
-        assert.equal(count(await page({ total_products: 2167 })), '2167 flies');
+    it('prints the count in patterns if the context ever has a total, as a category\'s does', async () => {
+        assert.equal(count(await page({ total_products: 2167 })), '2,167 patterns');
+        assert.equal(count(await page({ total_products: 2167, facets: [] })), '2,167 products', 'with no size facet the brand\'s root isn\'t a fly root');
+    });
+
+    it('shows the Photos / Quick order switch with quick add on, drawn invisible until the script takes the mark off, and none with it off', async () => {
+        const on = findTags(await page(), 'div').find(tag => 'data-rf-view' in tag.attrs);
+        assert.ok(on, 'the switch');
+        assert.ok('data-rf-view-pending' in on.attrs);
+        assert.equal(findTags(await page({}, { theme: { rf_quick_add: false } }), 'div').filter(tag => 'data-rf-view' in tag.attrs).length, 0);
     });
 });
 
@@ -198,29 +201,29 @@ describe('the empty states (ticket 33; O20; story 25)', () => {
         it(`when filters match nothing: "No flies match these filters" and Clear filters to the context's clear-all URL, ${name}`, async () => {
             const html = await render();
             assert.equal(count(html), 'No flies match these filters');
-            const link = elementsHtml(outerHtml(html, 'p', hasClass('rf-listing-empty')), 'a', () => true)[0];
-            assert.equal(textOf(link), 'Clear filters');
-            const [clear] = findTags(link, 'a');
+            const empty = outerHtml(html, 'div', hasClass('rf-list-empty'));
+            const [clear] = findTags(empty, 'a');
+            assert.equal(textOf(empty), 'Clear filters');
             assert.equal(decodeHtml(clear.attrs.href), EMPTY.brand.selected.remove_all_url);
             assert.equal(clear.attrs.rel, 'nofollow');
             assert.ok('data-faceted-search-facet' in clear.attrs, 'stock refreshes the listing in place');
             assert.equal(findTags(html, 'p').filter(tag => 'data-no-products-notification' in tag.attrs).length, 0, 'nothing takes focus');
             assert.equal(cardImages(html).length, 0);
-            assert.equal(outerHtml(html, 'nav', attrs => /pagination/.test(attrs.class || '')), null, 'no pager');
+            assert.equal(pager(html), null, 'no pager');
+            assert.doesNotMatch(row(html), /data-sort-by/, 'nothing to sort');
         });
     }
 
     it('a brand with no products and no filters: stock\'s message, with no alert and no row', async () => {
         for (const html of [await page({ products: [] }), await refresh({ products: [] })]) {
-            assert.equal(textOf(outerHtml(html, 'p', hasClass('rf-listing-empty'))), 'There are no products listed under this brand.');
+            assert.equal(textOf(outerHtml(html, 'div', hasClass('rf-list-empty'))), 'There are no products listed under this brand.');
             assert.equal(row(html), null);
             assert.doesNotMatch(html, /role="alert"|data-no-products-notification/);
         }
     });
 
     it('keeps the facets beside the empty state, so a size can be unpicked', async () => {
-        const sidebar = outerHtml(await page({}, { context: EMPTY }), 'aside', () => true);
-        const current = findTags(sidebar, 'a').filter(tag => hasClass('rf-size-pill')(tag.attrs) && tag.attrs['aria-current'] === 'true');
+        const current = findTags(sidebar(await page({}, { context: EMPTY })), 'a').filter(tag => hasClass('rf-size-pill')(tag.attrs) && tag.attrs['aria-current'] === 'true');
         assert.deepEqual(current.map(tag => tag.attrs['aria-label']), ['Size 3/0']);
     });
 });
@@ -237,16 +240,20 @@ describe('24 a page (UX-7; story 26)', () => {
 });
 
 describe('the hooks stay small (ADR 0001; CUSTOMIZATIONS.md)', () => {
-    it('brand.html\'s page block is one include, and its front matter, inject and head block are stock\'s', () => {
+    const strip = source => source.split('\n').filter(line => line.trim() && !/^\{\{!--.*--\}\}$/.test(line.trim()));
+
+    it('brand.html\'s hero block is one include, and its front matter, inject and head block are stock\'s', () => {
         const source = fs.readFileSync(path.join(THEME_DIR, 'templates/pages/brand.html'), 'utf8');
-        const block = source.slice(source.indexOf('{{#partial "page"}}'), source.lastIndexOf('{{/partial}}'));
-        assert.deepEqual(block.split('\n').filter(line => line.trim() && !/^\{\{!--.*--\}\}$/.test(line.trim())), ['{{#partial "page"}}', '{{> components/reelflies/brand-page}}']);
+        const block = source.slice(source.indexOf('{{#partial "hero"}}'), source.lastIndexOf('{{/partial}}'));
+        assert.deepEqual(strip(block), ['{{#partial "hero"}}', '{{> components/reelflies/brand-page}}']);
         assert.match(source, /<link rel="prev" href="\{\{\{pagination\.brand\.previous\}\}\}">/);
+        assert.doesNotMatch(source, /\{\{#partial "page"\}\}/, 'the whole page is the hero block, so its bands run full bleed');
     });
 
-    it('stock brand/product-listing.html keeps its first line and includes the ReelFlies listing', () => {
-        const lines = fs.readFileSync(path.join(THEME_DIR, 'templates/components/brand/product-listing.html'), 'utf8').split('\n').filter(line => line.trim());
+    it('stock brand/product-listing.html keeps its first line and stock\'s grid and pager, and includes the ReelFlies row and empty states', () => {
+        const lines = strip(fs.readFileSync(path.join(THEME_DIR, 'templates/components/brand/product-listing.html'), 'utf8'));
         assert.equal(lines[0], '{{inject \'noCompareMessage\' (lang \'compare.no_compare\')}}');
-        assert.deepEqual(lines.slice(1).filter(line => !/^\{\{!--.*--\}\}$/.test(line.trim())), ['{{> components/reelflies/brand-listing}}']);
+        const includes = lines.join('\n').match(/\{\{> components\/[a-z/-]+/g).map(include => include.slice(4));
+        assert.deepEqual(includes, ['components/reelflies/listing-top', 'components/products/grid', 'components/products/list', 'components/common/paginator', 'components/reelflies/listing-empty']);
     });
 });

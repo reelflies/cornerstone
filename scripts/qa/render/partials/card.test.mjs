@@ -1,8 +1,15 @@
-// The product card and the listing grid (ticket 31; spec module 13; stories 28, 35 and 70):
-// components/products/card.html hands the card to components/reelflies/card.html, which every
-// listing shares (category, search, brand, related products), with components/reelflies/
-// card-image.html for its photo, price-unit.html for "/ fly" and card-extras.html as tickets 42
-// and 43's slot. The cards are search results for "streamer" on channel 1 (card/products.json).
+// The specimen card and the listing grid (ticket 31; spec module 13; stories 28, 35 and 70;
+// redesign step 3; DESIGN.md "Cards"): components/products/grid.html's hook hands every listing's
+// products (category, search, brand) to components/reelflies/fly-listing.html, which turns a
+// Stencil card into components/reelflies/fly.html's params: the photo at the grid's sizes, the
+// price with "/ fly" by the fly rule (fly-rule.html), the sold-out line and the buy control.
+// The product page's related patterns (product-related.html) render the same card lazily. The
+// cards are search results for "streamer" on channel 1 (card/products.json).
+//
+// Gone with master's card.html, and not tested: the top-left sold-out badge (a "Sold out" line
+// under the photo now), stock's Quick view, Add to cart and compare actions, the card-extras slot
+// (tickets 42 and 43 write into the reserved line) and the default image for a product with no
+// photo (fly.html prints no <img> then).
 //
 //   node --test scripts/qa/render/partials/card.test.mjs
 
@@ -20,102 +27,135 @@ import { cardImageProblems } from '../../raw-html/assertions/card-images.mjs';
 const { products } = JSON.parse(fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), 'card/products.json'), 'utf8'));
 const TREE_1 = 'Fly Gear,Fly Selections & Fly Boxes';
 const CALLER = 'rf-test/card-grid-caller';
+const LANG = JSON.parse(fs.readFileSync(path.join(THEME_DIR, 'lang/en.json'), 'utf8')).reelflies.card;
+// The one sizes attribute for a listing's photos: two across on phones, three from 640px, three
+// beside the facets from 1040px and four from 1280px (fly-listing.html).
+const SIZES = '(min-width: 1280px) 250px, (min-width: 1040px) 230px, (min-width: 640px) 31vw, 46vw';
 
-// The grid as a listing renders it, on a page of `pageType`, with tree 1's Gear and Assortment
-// roots unless a test sets others; `banner` sets ticket 32's rf_banner flag before the grid, and
-// `overrides` replaces partials by name.
-const grid = (context = {}, { pageType = 'search', banner = false, overrides = {} } = {}) => renderPartial(CALLER, {
+// The grid as a listing renders it, with tree 1's Gear and Assortment roots and quick add on
+// unless a test sets otherwise; `before` runs first, to set a page variable (rf_banner from the
+// listing head, rf_cards_lazy from the hub's head).
+const grid = (context = {}, { before = '' } = {}) => renderPartial(CALLER, {
     products,
-    page_type: pageType,
-    settings: { show_product_rating: true, hide_price_from_guests: false },
-    show_compare: true,
+    page_type: 'category',
+    settings: {},
     ...context,
-    theme_settings: { rf_price_unit_exclude: TREE_1, ...context.theme_settings },
+    theme_settings: { rf_price_unit_exclude: TREE_1, rf_quick_add: true, ...context.theme_settings },
 }, {
-    overrides: {
-        [CALLER]: `${banner ? "{{assignVar 'rf_banner' 1}}" : ''}{{> components/products/grid products=products show_compare=show_compare theme_settings=theme_settings event="list"}}`,
-        ...overrides,
-    },
+    overrides: { [CALLER]: `${before}{{> components/products/grid products=products theme_settings=theme_settings event="list"}}` },
 });
-const cards = html => elementsHtml(html, 'article', attrs => /(^|\s)card(\s|$)/.test(attrs.class || ''));
+const hasClass = name => attrs => new RegExp(`(^|\\s)${name}(\\s|$)`).test(attrs.class || '');
+const items = html => elementsHtml(html, 'li', hasClass('rf-fly'));
+const cards = html => elementsHtml(html, 'article', hasClass('rf-fly__card'));
 const image = card => findTags(card, 'img')[0];
+const line = card => textOf(outerHtml(card, 'span', hasClass('rf-fly__sizes')));
+const price = card => textOf(outerHtml(card, 'p', hasClass('rf-fly__price')));
+const control = card => findTags(card).find(tag => hasClass('rf-add')(tag.attrs));
+// The control's words with its screen-reader name: "+ Add: Royal Coachman Streamer".
+const controlText = card => textOf(outerHtml(card, control(card).name, hasClass('rf-add'))).replace(/\s*:\s*/, ': ');
 
-describe('the card (components/reelflies/card.html)', () => {
-    it('keeps the stock card\'s data attributes, which the store\'s scripts read, and balances its markup', async () => {
+describe('the card (components/reelflies/fly.html, from fly-listing.html)', () => {
+    it('is one li.product per product, in order, each with the stock card\'s analytics attributes on its article, and balances', async () => {
         const html = await grid();
-        const list = cards(html);
-        assert.equal(list.length, products.length);
-        const [article] = findTags(list[0], 'article');
-        assert.equal(article.attrs['data-entity-id'], '4831');
+        assert.deepEqual(items(html).map(item => findTags(item, 'li')[0].attrs['data-rf-product']), products.map(product => String(product.id)));
+        assert.deepEqual(cards(html).map(card => findTags(card, 'article')[0].attrs['data-entity-id']), products.map(product => String(product.id)));
+        const [article] = findTags(cards(html)[0], 'article');
+        assert.equal(article.attrs['data-event-type'], 'list');
         assert.equal(article.attrs['data-position'], '1');
         assert.equal(article.attrs['data-name'], 'Royal Coachman Streamer');
-        assert.equal(article.attrs['data-event-type'], 'list');
-        assert.equal(article.attrs['data-test'], 'card-4831');
-        assert.match(article.attrs.class, /(^|\s)rf-card(\s|$)/);
+        assert.equal(article.attrs['data-product-category'], 'Flies/Streamers &amp; Buggers/Streamers &amp; Bucktails, Flies/Saltwater, Warmwater &amp; Salmon/Atlantic Salmon Flies');
+        assert.equal(article.attrs['data-product-price'], '1.25');
+        assert.equal(findTags(cards(html)[5], 'article')[0].attrs['data-product-brand'], 'ReelFlies');
+        assert.match(findTags(items(html)[0], 'li')[0].attrs.class, /(^|\s)product(\s|$)/, 'li.product, which stock search.js counts');
         assert.deepEqual(unbalancedTags(html), []);
     });
 
-    it('shows the name as a link and the price, with no brand line, star row or compare checkbox (SEO-9; story 28)', async () => {
+    it('shows the name as an H3 link and the price, with no brand line, star row, compare checkbox or Quick view (SEO-9; story 28)', async () => {
         const html = await grid();
         for (const card of cards(html)) {
             assert.equal(findTags(card, 'input').length, 0, 'no compare checkbox');
-            assert.doesNotMatch(card, /data-test-info-type="(brandName|productRating)"/);
-            assert.equal(findTags(outerHtml(card, 'h3', attrs => /card-title/.test(attrs.class || '')), 'a').length, 1);
-            assert.ok(outerHtml(card, 'div', attrs => attrs['data-test-info-type'] === 'price'), 'the price');
+            assert.doesNotMatch(card, /quickview|card-figcaption|data-test-info-type/, 'nothing of stock\'s card');
+            const name = outerHtml(card, 'h3', hasClass('rf-fly__name'));
+            assert.equal(findTags(name, 'a').length, 1);
+            assert.ok(price(card), 'the price');
         }
         assert.doesNotMatch(cards(html)[5], />\s*ReelFlies\s*</, 'no brand line, though the product has a brand');
+        assert.equal(textOf(outerHtml(cards(html)[0], 'h3')), 'Royal Coachman Streamer');
     });
 
-    it('adds "/ fly" to flies only, by the price-unit rule (story 28)', async () => {
-        const units = cards(await grid()).map(card => /rf-price-unit/.test(card));
+    it('adds "/ fly" to flies only, by the fly rule (story 28)', async () => {
+        const units = cards(await grid()).map(card => /rf-fly__unit/.test(card));
         // 4831 and 5906 flies; 5697 a hook pack; 5879 a bulk selection; 5234 and 4804 flies.
         assert.deepEqual(units, [true, true, false, false, true, true]);
-        assert.deepEqual(cards(await grid({ theme_settings: { rf_price_unit_exclude: '' } })).map(card => /rf-price-unit/.test(card)), products.map(() => false), 'no roots set: no unit');
+        assert.equal(price(cards(await grid())[0]), `$1.25 ${LANG.per_fly}`);
+        assert.equal(price(cards(await grid())[2]), '$22.95');
+        assert.deepEqual(cards(await grid({ theme_settings: { rf_price_unit_exclude: '' } })).map(card => /rf-fly__unit/.test(card)), products.map(() => false), 'no roots set: no unit');
     });
 
-    it('marks a sold-out product with the top-left badge (ticket 13, decision 1)', async () => {
+    it('prices a range from its lowest, with "from"', async () => {
+        const ranged = { ...products[0], price: { price_range: { min: { without_tax: { formatted: '$1.25', value: 1.25 } }, max: { without_tax: { formatted: '$2.50', value: 2.5 } } } } };
+        const [card] = cards(await grid({ products: [ranged] }));
+        assert.equal(price(card), `${LANG.from} $1.25 ${LANG.per_fly}`);
+        assert.equal(findTags(card, 'article')[0].attrs['data-product-price'], '1.25');
+    });
+
+    it('says "Sold out" in the reserved line of a product with stock_level 0, marks its item, and links to its page instead of adding (the owner, 2026-11-07: nothing over the photo)', async () => {
+        const html = await grid();
+        assert.deepEqual(items(html).map(item => hasClass('is-sold')(findTags(item, 'li')[0].attrs)), [false, false, false, false, true, false]);
+        assert.deepEqual(cards(html).map(line), ['', '', '', '', LANG.sold_out, '']);
+        const sold = control(cards(html)[4]);
+        assert.equal(sold.name, 'a');
+        assert.equal(sold.attrs.href, products[4].url);
+        assert.equal(controlText(cards(html)[4]), `${LANG.view}: ${products[4].name}`);
+        assert.equal(findTags(cards(html)[4], 'button').length, 0);
+    });
+
+    it('with quick add on, "+ Add" opens the sizes for a product with options and "Add 1" adds one without, each naming its product, with the hidden panel the script fills (story 35)', async () => {
         const list = cards(await grid());
-        const badged = list.map(card => outerHtml(card, 'div', attrs => attrs.class === 'sold-out-flag-side'));
-        assert.deepEqual(badged.map(Boolean), [false, false, false, false, true, false]);
-        assert.equal(textOf(badged[4]), 'Sold out');
+        const expected = [['sizes', LANG.add], ['one', LANG.add_one], ['one', LANG.add_one], ['one', LANG.add_one], null, ['sizes', LANG.add]];
+        list.forEach((card, index) => {
+            if (!expected[index]) return;
+            const button = control(card);
+            assert.equal(button.name, 'button', `card ${index + 1}`);
+            assert.equal(button.attrs.type, 'button');
+            assert.equal(button.attrs['data-rf-add'], expected[index][0], `card ${index + 1}`);
+            assert.equal(button.attrs['aria-expanded'], 'false');
+            assert.equal(controlText(card), `${expected[index][1]}: ${products[index].name}`);
+            const panel = findTags(card, 'div').find(tag => 'data-rf-sizes' in tag.attrs);
+            assert.ok(panel && 'hidden' in panel.attrs, `card ${index + 1}: a hidden sizes panel`);
+        });
     });
 
-    it('keeps the stock actions with quick add off, outside the photo, with no compare: Quick view, Choose options, Add to cart (story 35; quick-add.test.mjs has it on)', async () => {
+    it('with quick add off, links to the product page: "Choose a size" with options, "View" without, and no panel', async () => {
         const list = cards(await grid({ theme_settings: { rf_quick_add: false } }));
-        const actions = card => outerHtml(card, 'div', attrs => /(^|\s)rf-card-actions(\s|$)/.test(attrs.class || ''));
-        for (const card of list) {
-            assert.ok(actions(card), 'an actions row');
-            assert.equal(findTags(actions(card), 'button').filter(tag => /quickview/.test(tag.attrs.class)).length, 1, 'Quick view');
-            const figure = outerHtml(card, 'figure', () => true);
-            assert.doesNotMatch(figure, /quickview|card-figcaption/, 'nothing over the photo');
-        }
-        assert.match(textOf(actions(list[0])), /Choose Options/i, 'a product with sizes links to its page');
-        assert.match(textOf(actions(list[3])), /Add to Cart/i, 'a product with none adds from the card');
+        assert.deepEqual(list.map(card => control(card).name), products.map(() => 'a'));
+        assert.deepEqual(list.map(card => control(card).attrs.href), products.map(product => product.url));
+        assert.deepEqual(list.map(card => controlText(card).split(':')[0]), [LANG.choose, LANG.view, LANG.view, LANG.view, LANG.view, LANG.choose]);
+        assert.equal(findTags(await grid({ theme_settings: { rf_quick_add: false } })).filter(tag => 'data-rf-sizes' in tag.attrs).length, 0);
     });
 
-    it('honours hide_product_quick_view, as the cart preview passes it', async () => {
-        const html = await renderPartial('components/products/card', { ...products[0], hide_product_quick_view: true, theme_settings: { show_product_quick_view: true } });
-        assert.equal(findTags(html, 'button').filter(tag => /quickview/.test(tag.attrs.class)).length, 0);
-    });
-
-    it('renders tickets 42 and 43\'s slot, card-extras.html, inside the card body, empty until they fill it', async () => {
-        const html = await grid({}, { overrides: { 'components/reelflies/card-extras': '<i data-rf-test-slot></i>' } });
-        for (const card of cards(html)) {
-            const body = outerHtml(card, 'div', attrs => /(^|\s)card-body(\s|$)/.test(attrs.class || ''));
-            assert.equal(findTags(body, 'i').filter(tag => 'data-rf-test-slot' in tag.attrs).length, 1);
+    it('reserves one line under the price for the size range and what the box holds, so adding never moves the layout', async () => {
+        for (const card of cards(await grid())) {
+            const reserved = outerHtml(card, 'p', hasClass('rf-fly__line'));
+            assert.ok(reserved, 'the reserved line');
+            assert.equal(findTags(reserved, 'span').filter(tag => hasClass('rf-fly__sizes')(tag.attrs)).length, 1);
+            const inbox = findTags(reserved, 'span').find(tag => 'data-rf-inbox' in tag.attrs);
+            assert.ok(inbox && 'hidden' in inbox.attrs, 'the box line, hidden until the box has the fly');
         }
-        // Ticket 42's line has only screen-reader words until the cart is read, and none with its
-        // switch off (cart-state.test.mjs).
-        assert.equal(textOf(await renderPartial('components/reelflies/card-extras', { theme_settings: { rf_cart_state: false } })), '');
     });
 });
 
-describe('the card\'s photo (components/reelflies/card-image.html; SEO-14, O23, IMG-1)', () => {
-    it('is a 3:2 box: width 600 and height 400, as productgallery_size says', async () => {
+describe('the card\'s photo (SEO-14, O23, IMG-1)', () => {
+    it('is the photo as shot at 3:2, 720 by 480, in a link out of the tab order (the name is the link), with alt=""', async () => {
         for (const card of cards(await grid())) {
             const img = image(card);
-            assert.equal(img.attrs.width, '600');
-            assert.equal(img.attrs.height, '400');
+            assert.equal(img.attrs.width, '720');
+            assert.equal(img.attrs.height, '480');
+            assert.equal(img.attrs.alt, '');
+            const link = findTags(card, 'a').find(tag => hasClass('rf-fly__photo')(tag.attrs));
+            assert.equal(link.attrs.tabindex, '-1');
+            assert.equal(link.attrs['aria-hidden'], 'true');
+            assert.equal(findTags(outerHtml(card, 'a', hasClass('rf-fly__photo'))).filter(tag => tag.name !== 'a' && tag.name !== 'img').length, 0, 'nothing over the photo');
         }
     });
 
@@ -126,47 +166,41 @@ describe('the card\'s photo (components/reelflies/card-image.html; SEO-14, O23, 
         imgs.slice(0, 3).forEach(img => assert.equal(img.attrs.loading, undefined, 'eager'));
         imgs.slice(3).forEach(img => assert.equal(img.attrs.loading, 'lazy'));
         for (const img of imgs) {
-            assert.match(img.attrs.srcset, /320w, .* 640w, /, 'a real srcset');
-            assert.ok(img.attrs.sizes, 'sizes');
-            assert.ok(img.attrs.src, 'src');
-            assert.doesNotMatch(img.attrs.class, /(^|\s)lazyload(\s|$)/, 'not lazysizes');
+            assert.match(img.attrs.srcset, /\/80w\/.* 80w, .*\/2560w\/.* 2560w$/, 'Stencil\'s sizes');
+            assert.match(img.attrs.src, /\/360w\//);
+            assert.equal(img.attrs.sizes, SIZES);
+            assert.equal(img.attrs.decoding, 'async');
+            assert.doesNotMatch(img.attrs.class || '', /(^|\s)lazyload(\s|$)/, 'not lazysizes');
             assert.equal(img.attrs['data-srcset'], undefined);
-            assert.equal(img.attrs['data-sizes'], undefined);
             assert.doesNotMatch(img.attrs.srcset, /^data:/, 'no LQIP stand-in');
         }
     });
 
-    it('on a page with a banner (ticket 32 sets rf_banner): no card high priority, the first three still eager', async () => {
-        const imgs = cards(await grid({}, { pageType: 'category', banner: true })).map(image);
+    it('on a page with a banner (listing-head.html sets rf_banner): no card high priority, the first three still eager', async () => {
+        const imgs = cards(await grid({}, { before: "{{assignVar 'rf_banner' 1}}" })).map(image);
         imgs.forEach(img => assert.equal(img.attrs.fetchpriority, undefined));
         imgs.slice(0, 3).forEach(img => assert.equal(img.attrs.loading, undefined));
         imgs.slice(3).forEach(img => assert.equal(img.attrs.loading, 'lazy'));
     });
 
-    it('carries the photo\'s alt text, and the default image for a product with none', async () => {
-        assert.equal(image(cards(await grid())[0]).attrs.alt, 'Royal-Coachman-Streamer');
-        const html = await grid({ products: [{ ...products[0], image: null }], theme_settings: { default_image_product: 'img/ProductDefault.png' } });
-        const img = image(cards(html)[0]);
-        assert.match(img.attrs.src, /ProductDefault\.png/);
-        assert.equal(img.attrs.width, '600');
+    it('under the Species hub (hub-head.html sets rf_cards_lazy): every photo lazy, none high priority', async () => {
+        const imgs = cards(await grid({}, { before: "{{assignVar 'rf_cards_lazy' 1}}" })).map(image);
+        imgs.forEach(img => {
+            assert.equal(img.attrs.loading, 'lazy');
+            assert.equal(img.attrs.fetchpriority, undefined);
+        });
     });
 
-    it('gives the default image the photo\'s rules: a srcset, sizes, and its place\'s loading and priority (#68\'s review)', async () => {
-        for (const at of [0, 1, 4]) {
-            const list = products.map((product, index) => (index === at ? { ...product, image: null } : product));
-            const html = await grid({ products: list }); // eslint-disable-line no-await-in-loop
-            const img = image(cards(html)[at]);
-            assert.match(img.attrs.srcset, /default-product\.png 500w$/, `card ${at + 1}`);
-            assert.ok(img.attrs.sizes, `card ${at + 1}'s sizes`);
-            assert.equal(img.attrs.fetchpriority, at === 0 ? 'high' : undefined, `card ${at + 1}'s priority`);
-            assert.equal(img.attrs.loading, at < 3 ? undefined : 'lazy', `card ${at + 1}'s loading`);
-            assert.deepEqual(cardImageProblems(html), [], 'the card-images assertion passes it');
-        }
+    it('passes the card-images assertion, with and without a banner', async () => {
+        const page = (html, banner) => `${banner ? '<div class="rf-list-head rf-list-head--stone"><div class="rf-list-head__photo"><img src="/b.jpg" srcset="/b.jpg 1600w" sizes="100vw" width="1600" height="700" alt="" fetchpriority="high"></div></div>' : ''}<div id="product-listing-container">${html}</div>`;
+        assert.deepEqual(cardImageProblems(page(await grid(), false), 'category'), []);
+        assert.deepEqual(cardImageProblems(page(await grid({}, { before: "{{assignVar 'rf_banner' 1}}" }), true), 'category'), []);
     });
 });
 
-// A whole page, not just the grid: inside a page's {{#partial "page"}} block @root is empty, so a
-// card that read @root.theme_settings or @root.page_type would lose them there and nowhere else.
+// A whole page, not just the grid: inside a page's {{#partial}} block @root is empty, so a card
+// that read @root.theme_settings would lose them there and nowhere else. The grid reads
+// rf_quick_add from the theme_settings each caller passes, because a refresh renders it alone.
 describe('the cards on a whole search page (pages/search)', () => {
     const searchPage = theme => renderPartial('pages/search', {
         page_type: 'search',
@@ -178,21 +212,37 @@ describe('the cards on a whole search page (pages/search)', () => {
         theme_settings: theme,
     }, { variation: 'ReelFlies CA channel 1' });
 
-    it('keeps "/ fly" and the first row\'s eager photos, with the first one high priority', async () => {
-        const list = cards(await searchPage({}));
+    it('keeps "/ fly", the buy controls and the first row\'s eager photos, with the first one high priority and the page\'s only one', async () => {
+        const html = await searchPage({});
+        const list = cards(html);
         assert.equal(list.length, products.length);
-        assert.deepEqual(list.map(card => /rf-price-unit/.test(card)), [true, true, false, false, true, true]);
+        assert.deepEqual(list.map(card => /rf-fly__unit/.test(card)), [true, true, false, false, true, true]);
+        assert.deepEqual(list.map(card => control(card).name), ['button', 'button', 'button', 'button', 'a', 'button'], 'channel 1 has quick add on');
         const imgs = list.map(image);
         assert.equal(imgs[0].attrs.fetchpriority, 'high');
         assert.deepEqual(imgs.map(img => img.attrs.loading ?? 'eager'), ['eager', 'eager', 'eager', 'lazy', 'lazy', 'lazy']);
+        assert.equal(findTags(html, 'img').filter(img => img.attrs.fetchpriority === 'high').length, 1);
+        assert.equal(findTags(html, 'h1').length, 1);
+    });
+
+    it('and a refresh of the listing alone, with the quick-add switch off, draws links in place of the buttons', async () => {
+        const html = await renderPartial('components/search/product-listing', {
+            product_results: { products },
+            pagination: { product_results: { total: products.length, links: [] } },
+            settings: {},
+            theme_settings: { product_list_display_mode: 'grid', rf_quick_add: false, rf_price_unit_exclude: TREE_1 },
+        });
+        assert.deepEqual(cards(html).map(card => control(card).name), products.map(() => 'a'));
+        assert.equal(findTags(html).filter(tag => 'data-rf-sizes' in tag.attrs).length, 0);
     });
 });
 
-describe('the cards outside a listing grid (related products)', () => {
-    it('are lazy, with no high priority', async () => {
-        // As the product page's tabs call it, with the related products as its context.
-        const html = await renderPartial('rf-test/related-caller', { products, settings: {}, theme_settings: {} }, {
-            overrides: { 'rf-test/related-caller': '{{> components/products/related products}}' },
+describe('the cards outside a listing grid (the product page\'s related patterns)', () => {
+    it('are lazy, with no high priority and no quick add: each links to its own page to choose', async () => {
+        const html = await renderPartial('components/reelflies/product-related', {
+            product: { related_products: products },
+            settings: {},
+            theme_settings: { rf_price_unit_exclude: TREE_1, rf_quick_add: true },
         });
         const imgs = cards(html).map(image);
         assert.equal(imgs.length, products.length);
@@ -200,6 +250,8 @@ describe('the cards outside a listing grid (related products)', () => {
             assert.equal(img.attrs.loading, 'lazy');
             assert.equal(img.attrs.fetchpriority, undefined);
         });
+        assert.deepEqual(cards(html).map(card => control(card).name), products.map(() => 'a'));
+        assert.deepEqual(cards(html).map(card => /rf-fly__unit/.test(card)), [true, true, false, false, true, true], 'the fly rule holds here too');
     });
 });
 
@@ -211,7 +263,7 @@ describe('the card grid\'s shot (card-screens.spec.mjs)', () => {
         assert.equal(shot.page, 'pages/search');
     });
 
-    it('and every fixture page that lists these products lists them as this file has them, so the shots show what the store sends (out_of_stock_message included)', () => {
+    it('and every fixture page that lists these products lists them as this file has them, so the shots show what the store sends (stock_level included)', () => {
         const byId = new Map(products.map(product => [product.id, product]));
         const listed = [];
         const walk = (value, found) => {
@@ -237,10 +289,13 @@ describe('the card grid\'s shot (card-screens.spec.mjs)', () => {
 });
 
 describe('the grid (components/products/grid.html)', () => {
-    it('is the stock list of products, one card each, in order', async () => {
+    it('is the specimen list, ul.rf-flies[data-rf-grid], one card per product in order, and reads the quick-add switch from the theme_settings it is passed', async () => {
         const html = await grid();
         const [list] = findTags(html, 'ul');
-        assert.match(list.attrs.class, /(^|\s)productGrid(\s|$)/);
+        assert.match(list.attrs.class, /(^|\s)rf-flies(\s|$)/);
+        assert.ok('data-rf-grid' in list.attrs);
+        assert.equal(findTags(html, 'ul').length, 1);
         assert.deepEqual(cards(html).map(card => findTags(card, 'article')[0].attrs['data-entity-id']), products.map(product => String(product.id)));
+        assert.doesNotMatch(html, /productGrid/, 'stock\'s grid is gone');
     });
 });
