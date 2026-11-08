@@ -9,8 +9,10 @@
 //   its figure in lit copper, and Check out with the total.
 // - The sheet: each pattern with a stepper per size in hook order (box.change), the total, the
 //   shipping meter and Check out. It opens above the bar with focus on its heading; Escape and
-//   the close button shut it and focus goes back to what opened it. Redrawn after each change,
-//   it keeps focus on the stepper button in hand (or its heading, once the line is gone).
+//   the close button shut it and focus goes back to what opened it. It is not modal: when focus
+//   moves on past the order line, or a press lands outside it, it closes where it is and focus
+//   stays where the shopper put it. Redrawn after each change, it keeps focus on the stepper
+//   button in hand (or its heading, once the line is gone).
 // - The page's HTML has an empty box, so a cached page never shows another shopper's; the cart
 //   is read once the page has loaded, and only when it has one (context.cartId), and again
 //   after any stock add (cart-quantity-update).
@@ -110,7 +112,7 @@ function render(root) {
     if (!root.querySelector('[data-rf-box]').hidden) renderSheet(root);
 }
 
-function setSheet(root, open, from) {
+function setSheet(root, open, from, { restore = true } = {}) {
     const sheet = root.querySelector('[data-rf-box]');
     sheet.hidden = !open;
     document.querySelectorAll('[data-rf-box-toggle], [data-rf-box-btn]').forEach(el => el.setAttribute('aria-expanded', String(open)));
@@ -118,10 +120,24 @@ function setSheet(root, open, from) {
         opener = from || null;
         renderSheet(root);
         root.querySelector('[data-rf-box-title]').focus();
-    } else if (opener) {
-        opener.focus();
+    } else {
+        if (opener && restore) opener.focus();
         opener = null;
     }
+}
+
+// Focus arriving, or a press landing, anywhere outside the order line and the header's box button
+// closes the sheet in place. Watched on the document, not as focus leaving the order line: it is
+// last in the page, so Tab from it leaves the page for the browser's own controls and comes back
+// in at the top. A redraw of the sheet drops focus to the body for a moment, which is no arrival.
+function closeWhenLeft(root, button) {
+    const sheet = root.querySelector('[data-rf-box]');
+    const outside = el => el && el !== document.body && !root.contains(el) && !(button && button.contains(el));
+    const close = event => {
+        if (!sheet.hidden && outside(event.target)) setSheet(root, false, null, { restore: false });
+    };
+    document.addEventListener('focusin', close);
+    document.addEventListener('pointerdown', close);
 }
 
 function step(target) {
@@ -165,9 +181,10 @@ export function start(context = {}) {
         const toggle = root.querySelector('[data-rf-box-toggle]');
         toggle.addEventListener('click', () => setSheet(root, root.querySelector('[data-rf-box]').hidden, toggle));
         root.querySelector('[data-rf-box-close]').addEventListener('click', () => setSheet(root, false));
-        root.querySelector('[data-rf-box]').addEventListener('keydown', event => {
-            if (event.key === 'Escape') setSheet(root, false);
+        root.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && !root.querySelector('[data-rf-box]').hidden) setSheet(root, false);
         });
+        closeWhenLeft(root, button);
         root.querySelector('[data-rf-box-body]').addEventListener('click', event => {
             const target = event.target.closest('[data-rf-step]');
             if (target) step(target); // renderSheet keeps focus on the same stepper button

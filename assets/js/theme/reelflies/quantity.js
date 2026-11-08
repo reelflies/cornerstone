@@ -12,7 +12,9 @@
 //   (and ArrowUp / ArrowDown in the field) step it by one. 0 to 999; 0 takes the size out.
 // - The box changes at once (box.setQuantity), shown before the store answers and sent one call
 //   at a time. Each change is said in the polite live region; a refusal is said with the store's
-//   words and the field goes back to what the box holds.
+//   words, shown at the foot of its picker or quick-order row (aria-hidden: the live region has
+//   said it) until the next change there goes through, and the field goes back to what the box
+//   holds.
 // - Every field follows the box, except one the shopper is typing in. A field holding flies marks
 //   its group (has-qty), and "−" is off at 0.
 // - Nothing is ever added that the shopper didn't ask for: every field starts at what the box
@@ -70,13 +72,35 @@ export function syncQuantities(root = document) {
     });
 }
 
+// The refusal's words at the foot of the field's picker or quick-order row, or none.
+function note(field, text) {
+    const scope = field.closest('[data-rf-meta]');
+    if (!scope) return;
+    let el = Array.from(scope.children).find(child => child.hasAttribute('data-rf-qty-note'));
+    if (!text) {
+        if (el) el.remove();
+        return;
+    }
+    if (!el) {
+        el = document.createElement('p');
+        el.className = 'rf-qty-note';
+        el.setAttribute('data-rf-qty-note', '');
+        el.setAttribute('aria-hidden', 'true');
+        scope.appendChild(el);
+    }
+    el.textContent = text;
+}
+
 function say(field, n, before, error) {
     const meta = metaOf(field);
     const what = [meta.name, field.dataset.rfWhat].filter(Boolean).join(', ');
     if (error) {
-        announce(`${word('change_failed', { what })} ${error.storeWords ? error.message : word('try_again')}`);
+        const text = `${word('change_failed', { what })} ${error.storeWords ? error.message : word('try_again')}`;
+        announce(text);
+        note(field, text);
         return;
     }
+    note(field, '');
     if (n === before) return;
     if (n > 0) announce(word('qty_set', { what, n, count: boxWords(settings.flyBrands) }));
     else announce(word(box.lines().length ? 'qty_out' : 'qty_out_empty', { what, count: boxWords(settings.flyBrands) }));

@@ -502,6 +502,15 @@
     outline-offset: -2px;
 }
 
+// a change the store refused, in its words, at the foot of the picker or row (quantity.js);
+// across the whole row of a quick-order grid
+.rf-qty-note {
+    grid-column: 1 / -1;
+    margin: var(--rf-space-2) 0 0;
+    color: var(--rf-error);
+    font: 650 14px / 1.35 var(--rf-font-text);
+}
+
 .rf-qty.has-qty {
     border-color: var(--rf-copper);
     box-shadow: inset 0 0 0 1px var(--rf-copper);

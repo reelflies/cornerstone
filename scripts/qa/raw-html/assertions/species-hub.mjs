@@ -137,7 +137,8 @@ export function speciesHubProblems(html, pagePath) {
     if (findTags(html, 'meta').some(meta => (meta.attrs.name || '').toLowerCase() === 'robots' && /noindex/i.test(meta.attrs.content || ''))) problems.push('a robots meta says noindex: the hub is indexed (refactor 11)');
     const canonicals = findTags(html, 'link').filter(link => (link.attrs.rel || '').toLowerCase().split(/\s+/).includes('canonical'));
     if (canonicals.length === 1 && pagePath && pathOf(canonicals[0].attrs.href || '') !== pathOf(pagePath)) problems.push(`the canonical points at ${pathOf(canonicals[0].attrs.href || '')}, not the page's own path ${pathOf(pagePath)}`);
-    const grid = outerHtml(html, 'section', attrs => 'data-rf-hub-products' in attrs);
+    // master's grid is a <section>, the redesign's a <div> (a section would hold the facets' <aside>)
+    const grid = outerHtml(html, 'section', attrs => 'data-rf-hub-products' in attrs) || outerHtml(html, 'div', attrs => 'data-rf-hub-products' in attrs);
     if (grid) {
         if (html.indexOf('data-rf-hub-products') < html.indexOf('data-rf-hub-tiles')) problems.push('the grid comes before the tiles');
         problems.push(...gridProblems(grid));

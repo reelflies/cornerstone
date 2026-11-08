@@ -35,6 +35,8 @@ beforeAll(() => setWords({
         'reelflies.js.sold_all': 'Every size is sold out.',
         'reelflies.js.choices_sold': 'Sold out: {choices}.',
         'reelflies.js.choose_on_page_short': 'Choose on its page',
+        'reelflies.js.change_failed': 'Couldn\'t change {what}.',
+        'reelflies.js.try_again': 'Try again.',
     },
 }));
 
@@ -123,6 +125,23 @@ describe('the quantity fields', () => {
         box.quantityOf.mockReturnValue(5);
         setQuantity(field, '5');
         expect(box.setQuantity).not.toHaveBeenCalled();
+    });
+
+    it('shows a refused change at the foot of its picker, in the store\'s words, until a change there goes through', async () => {
+        const field = picker();
+        const scope = field.closest('[data-rf-meta]');
+        box.setQuantity.mockImplementationOnce(() => Promise.reject(Object.assign(new Error('Only 2 left.'), { storeWords: true })));
+        await setQuantity(field, '4');
+        const note = scope.querySelector('[data-rf-qty-note]');
+        expect(note.textContent).toBe('Couldn\'t change Adams, size 12. Only 2 left.');
+        expect(note.getAttribute('aria-hidden')).toBe('true'); // the live region has said it
+        expect(field.value).toBe('0');
+        box.setQuantity.mockImplementationOnce(() => Promise.reject(new Error('network')));
+        await setQuantity(field, '3');
+        expect(scope.querySelectorAll('[data-rf-qty-note]')).toHaveLength(1);
+        expect(scope.querySelector('[data-rf-qty-note]').textContent).toBe('Couldn\'t change Adams, size 12. Try again.');
+        await setQuantity(field, '1');
+        expect(scope.querySelector('[data-rf-qty-note]')).toBeNull();
     });
 });
 

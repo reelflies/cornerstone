@@ -3,13 +3,14 @@
     grid from 1040px, above it on phones behind the Filter button (listing-top.html). The sidebar
     shows only when the category has a visible facet, so a listing with none takes the full width.
     Stock category.js finds both by their ids and refreshes them in place on every filter, sort
-    and page. With rf_title (the Species hub), the listing is a section named by a visible H2,
-    data-rf-hub-products for the species-hub check.
+    and page. With rf_title (the Species hub), a visible H2 names the listing, and
+    data-rf-hub-products marks it for the species-hub check. A <div>, never a <section>: axe counts
+    a section as a landmark, and the facets' <aside> must stay a top-level complementary one.
 --}}
 {{assignVar 'rf_listing_sidebar' 0}}
 {{#if category.faceted_search_enabled}}{{#any category.facets visible=true}}{{assignVar 'rf_listing_sidebar' 1}}{{/any}}{{#if category.selected.items.length}}{{assignVar 'rf_listing_sidebar' 1}}{{/if}}{{/if}}
 {{#if rf_title}}
-<section class="rf-list{{#if (getVar 'rf_listing_sidebar')}} rf-list--side{{/if}} rf-list--titled" aria-labelledby="rf-list-title" data-rf-hub-products>
+<div class="rf-list{{#if (getVar 'rf_listing_sidebar')}} rf-list--side{{/if}} rf-list--titled" data-rf-hub-products>
     <h2 class="rf-list__title" id="rf-list-title">{{rf_title}}</h2>
 {{else}}
 <div class="rf-list{{#if (getVar 'rf_listing_sidebar')}} rf-list--side{{/if}}">
@@ -24,4 +25,4 @@
             {{> components/category/product-listing}}
         </div>
     </div>
-{{#if rf_title}}</section>{{else}}</div>{{/if}}
+</div>
