@@ -316,22 +316,32 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
     font: 650 15px / 1.4 var(--rf-font-text);
 }
 
-// the strip, open on the panel: the card's strip without its sheet
-.rf-pdp-strip {
+// the size picker, open on the panel (product-picker.html): rows in two columns where they fit
+.rf-pick--page {
     display: grid;
     gap: var(--rf-space-2);
     padding-top: var(--rf-space-4);
     border-top: 1px solid var(--rf-limestone-300);
 
-    .rf-sizes__hint {
+    .rf-pick__hint {
         margin: 0;
         color: var(--rf-ink-muted);
         font-size: 14px;
     }
 
+    .rf-pick__rows {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        column-gap: var(--rf-space-8);
+    }
+
+    .rf-pick__row {
+        border-top: 0;
+        border-bottom: 1px solid var(--rf-limestone-300);
+    }
+
     .rf-sizes__foot {
-        margin: 0;
         flex-wrap: wrap;
+        margin: 0;
         font-size: 14px;
 
         .rf-more {
@@ -341,72 +351,17 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
     }
 }
 
-.rf-pdp-strip__cells {
-    grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
-    gap: 8px 6px;
-    margin: 0;
-    padding: 8px 0 0;
-    list-style: none;
-}
-
-// the step bars wait for product-strip.js, which knows each one's height
-.rf-pdp-strip:not([data-rf-ready]) .rf-sz__step {
-    visibility: hidden;
-}
-
-.rf-sz__step--none {
+// the step bars wait for product-buy.js, which knows each one's height
+.rf-pick--page:not([data-rf-ready]) .rf-sz__step {
     visibility: hidden;
 }
 
 // what of this product is in the box: always there, so nothing moves as flies go in
-.rf-pdp-strip__inbox {
+.rf-pick__inbox {
     min-height: 1.5em;
     margin: 0;
     color: var(--rf-copper);
     font: 650 15px / 1.5 var(--rf-font-text);
-}
-
-.rf-pdp-one {
-    display: grid;
-    gap: var(--rf-space-2);
-    padding-top: var(--rf-space-4);
-    border-top: 1px solid var(--rf-limestone-300);
-}
-
-.rf-pdp-one__row {
-    display: flex;
-    gap: var(--rf-space-2);
-}
-
-.rf-pdp-one__add {
-    flex: 1 1 auto;
-    min-height: 48px;
-    font-size: 16px;
-}
-
-.rf-pdp-one__add:disabled {
-    background: var(--rf-shale-800);
-    color: var(--rf-shale-400);
-    cursor: not-allowed;
-}
-
-.rf-pdp-one__minus {
-    min-width: 56px;
-    min-height: 48px;
-    border: 1px solid var(--rf-edge);
-    border-radius: var(--rf-radius-md);
-    background: var(--rf-paper);
-    color: var(--rf-ink);
-    font: 650 15px / 1 var(--rf-font-text);
-    cursor: pointer;
-
-    &:hover {
-        border-color: var(--rf-ink);
-    }
-
-    &:disabled {
-        display: none;
-    }
 }
 
 .rf-pdp__ship {

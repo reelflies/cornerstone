@@ -5,12 +5,12 @@
 //
 // - pages/home: quick add (+ Add and the size strip on every card) and the home page's ways in,
 //   moss lay and month (home.js).
-// - pages/product: the size strip, or "Add 1", through the box (product-strip.js), and the
-//   related patterns' size lines (listing.js). Should the strip's chunk fail to load, stock's own
-//   form takes its place, so the product can still be bought.
+// - pages/product: the size picker, through the box (product-buy.js), and the related patterns'
+//   size lines (listing.js). Should the picker's chunk fail to load, stock's own form takes its
+//   place, so the product can still be bought.
 // - the listings (category, the noindex category, brand, search): the Fly size filter
-//   (size-filter.js), the cards' size lines and the chips (listing.js), and quick add while
-//   rf_quick_add is on.
+//   (size-filter.js), the cards' size lines and the chips (listing.js), and while rf_quick_add
+//   is on, quick add (+ Add's size picker) and quick order (order-list.js).
 
 const load = importers => () => Promise.resolve({
     default: {
@@ -29,6 +29,7 @@ const listing = () => Promise.resolve({
             () => import(/* webpackChunkName: "rf-size-filter" */ './size-filter'),
             () => import(/* webpackChunkName: "rf-listing" */ './listing'),
             context.rfQuickAdd ? quickAdd : null,
+            context.rfQuickAdd ? () => import(/* webpackChunkName: "rf-order-list" */ './order-list') : null,
         ].filter(Boolean).forEach(importer => importer()
             .then(module => module.start(context))
             // eslint-disable-next-line no-console
@@ -36,18 +37,18 @@ const listing = () => Promise.resolve({
     },
 });
 
-// The product page's own form, shown in place of the strip or "Add 1" when their script can't run.
+// The product page's own form, shown in place of the picker when its script can't run.
 function showStockForm() {
     const form = document.querySelector('[data-rf-pdp-form]');
-    const strip = document.querySelector('[data-rf-strip]');
+    const picker = document.querySelector('[data-rf-pick-page]');
     if (form) form.hidden = false;
-    if (strip) strip.hidden = true;
+    if (picker) picker.hidden = true;
 }
 
 const product = () => Promise.resolve({
     default: {
         load: context => {
-            import(/* webpackChunkName: "rf-product" */ './product-strip')
+            import(/* webpackChunkName: "rf-product" */ './product-buy')
                 .then(module => module.start(context))
                 .catch(error => {
                     showStockForm();

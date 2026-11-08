@@ -6140,13 +6140,13 @@
     "default": "Gear and Assortment category names, comma-separated: no \"/ fly\" on their products"
   },
   "i18n.RfQuickAdd": {
-    "default": "\"+ Add\" on cards, with the size strip"
+    "default": "\"+ Add\" on cards (each size with its quantity) and the listings' quick order"
   },
   "i18n.RfCartState": {
     "default": "Show what's in the box on the cards"
   },
   "i18n.RfSizeStrip": {
-    "default": "The size strip on the product page: a tap adds one (off: the store's own form)"
+    "default": "The size picker on the product page: each size with its quantity (off: the store's own form)"
   },
   "i18n.RfNoBoxNotePaths": {
     "default": "\"Fly box not included.\" under the price of products in these categories (full paths, comma-separated)"

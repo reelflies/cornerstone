@@ -1203,7 +1203,28 @@
             "choices_sold": "Sold out: {choices}.",
             "what_choice": "{name}, {choice}",
             "in_box_n": "In your box: {n}",
-            "add_one_box": "Add 1 to your box"
+            "add_one_box": "Add 1 to your box",
+            "pick_hint": "Set how many of each size. They go straight into your box.",
+            "pick_hint_choice": "Set how many of each. They go straight into your box.",
+            "olist_hint": "Type how many of each size. They go straight into your box, and the bar below keeps the tally.",
+            "size_n": "size {size}",
+            "quantity": "How many",
+            "qty_short": "Qty",
+            "qty_minus": "One fewer, {what}",
+            "qty_plus": "One more, {what}",
+            "qty_label": "How many, {what}",
+            "qty_minus_one": "One fewer",
+            "qty_plus_one": "One more",
+            "qty_label_one": "How many",
+            "qty_label_of": "How many of {what}, {name}",
+            "qty_set": "{what}: {n} in your box. {count} in all.",
+            "qty_out": "{what} taken out. {count} in your box.",
+            "qty_out_empty": "{what} taken out. Your box is empty.",
+            "sizes_of": "{name}, sizes",
+            "sold_out_row": "Sold out",
+            "sold_short": "Sold out",
+            "close": "Close",
+            "choose_on_page_short": "Choose on its page"
         },
         "months": {
             "m0": "January",
@@ -1317,7 +1338,10 @@
             "size": "Size {size}",
             "sizes_help": "What do sizes mean?",
             "about": "About {name}",
-            "page": "Page {page}"
+            "page": "Page {page}",
+            "view": "View",
+            "view_grid": "Photos",
+            "view_list": "Quick order"
         }
     },
     "consent_manager": {

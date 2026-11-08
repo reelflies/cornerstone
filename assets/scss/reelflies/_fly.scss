@@ -294,16 +294,18 @@
 
 }
 
-// the size strip: opens under the card, over what's below it
+// The size picker under a card ("+ Add", quick-add.js): over what's below it, in the card's
+// raking light; on phones a sheet from the foot of the screen
 .rf-fly__sizes-panel {
     position: absolute;
     left: 0;
     right: 0;
     top: calc(100% - 4px);
     z-index: 3;
-    min-width: 248px;
-    padding: var(--rf-space-3) var(--rf-space-3) var(--rf-space-3);
+    min-width: 300px;
+    padding: var(--rf-space-3) var(--rf-space-4) var(--rf-space-3);
     background: var(--rf-paper);
+    color: var(--rf-ink);
     border-radius: 0 0 var(--rf-radius-md) var(--rf-radius-md);
     border-top: 1px solid var(--rf-limestone-300);
     box-shadow: var(--rf-shadow-rake);
@@ -325,97 +327,6 @@
     line-height: 1.35;
 }
 
-.rf-sizes__strip {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
-    gap: 6px;
-}
-
-.rf-sz {
-    display: grid;
-    grid-template-rows: 1fr auto;
-    gap: 2px;
-}
-
-.rf-sz__btn {
-    position: relative;
-    display: grid;
-    grid-template-rows: 22px auto;
-    justify-items: center;
-    align-content: end;
-    gap: 3px;
-    width: 100%;
-    height: 100%;
-    min-height: 54px;
-    padding: 4px 2px 6px;
-    border: 1px solid var(--rf-edge);
-    border-radius: var(--rf-radius-md);
-    background: var(--rf-paper);
-    color: var(--rf-ink);
-    font: 700 17px/1 var(--rf-font-numerals);
-    font-variant-numeric: tabular-nums;
-}
-
-.rf-sz__btn:hover {
-    border-color: var(--rf-ink);
-    background: var(--rf-limestone-100);
-}
-
-.rf-sz__step {
-    align-self: end;
-    width: 3px;
-    height: calc(var(--rf-k, 0.5) * 20px);
-    min-height: 3px;
-    border-radius: 2px;
-    background: var(--rf-shale-400);
-}
-
-.rf-sz__btn.has-count {
-    border-color: var(--rf-copper);
-    box-shadow: inset 0 0 0 1px var(--rf-copper);
-}
-
-.rf-sz__btn.has-count .rf-sz__step {
-    background: var(--rf-copper);
-}
-
-.rf-sz__count {
-    position: absolute;
-    top: -8px;
-    right: -6px;
-    min-width: 22px;
-    height: 22px;
-    padding: 0 5px;
-    display: grid;
-    place-items: center;
-    border-radius: var(--rf-radius-pill);
-    background: var(--rf-copper);
-    color: var(--rf-on-copper);
-    font: 700 13px/1 var(--rf-font-numerals);
-}
-
-.rf-sz__btn:disabled {
-    color: var(--rf-shale-400);
-    border-style: dashed;
-    background: var(--rf-limestone-100);
-    text-decoration: line-through;
-    cursor: not-allowed;
-}
-
-.rf-sz__minus {
-    min-height: 28px;
-    border: 0;
-    background: none;
-    color: var(--rf-ink-muted);
-    font: 600 13px/1 var(--rf-font-text);
-    border-radius: var(--rf-radius-sm);
-}
-
-.rf-sz__minus:hover {
-    color: var(--rf-ink);
-    background: var(--rf-limestone-100);
-}
-
 .rf-sizes__foot {
     display: flex;
     justify-content: space-between;
@@ -427,8 +338,8 @@
 }
 
 .rf-sizes__done {
-    min-height: 36px;
-    padding: 0 12px;
+    min-height: var(--rf-tap-min);
+    padding: 0 16px;
     border: 1px solid var(--rf-edge);
     border-radius: var(--rf-radius-pill);
     background: none;
@@ -440,8 +351,203 @@
     border-color: var(--rf-ink);
 }
 
-// The reserved "−1" row of a cell whose size isn't in the box
-.rf-sz__minus--none {
-    display: block;
-    visibility: hidden;
+// The picker (size-picker.js, product-picker.html): a row per size, the hook number beside its
+// step bar, then the quantity stepper
+.rf-pick__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--rf-space-2);
+}
+
+.rf-pick__title {
+    min-width: 0;
+    font: 650 15px / 1.3 var(--rf-font-text);
+}
+
+.rf-pick__close {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: var(--rf-tap-min);
+    height: var(--rf-tap-min);
+    margin-right: -10px;
+    border: 0;
+    border-radius: var(--rf-radius-md);
+    background: none;
+    color: var(--rf-ink);
+}
+
+.rf-pick__close:hover {
+    background: var(--rf-limestone-100);
+}
+
+.rf-pick__rows {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.rf-pick__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--rf-space-3);
+    min-height: 52px;
+    padding: 4px 0;
+    border-top: 1px solid var(--rf-limestone-200);
+}
+
+.rf-pick__row:first-child {
+    border-top: 0;
+}
+
+.rf-pick__size {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    min-width: 0;
+    font: 700 19px / 1 var(--rf-font-numerals);
+    font-variant-numeric: tabular-nums lining-nums;
+}
+
+.rf-pick__size--word {
+    align-items: center;
+    font: 650 15px / 1.25 var(--rf-font-text);
+}
+
+.rf-pick__label {
+    min-width: 0;
+}
+
+.rf-sz__step {
+    flex: none;
+    width: 3px;
+    height: calc(var(--rf-k, 0.5) * 20px);
+    min-height: 3px;
+    border-radius: 2px;
+    background: var(--rf-shale-400);
+}
+
+.rf-pick__row:has(.rf-qty.has-qty) .rf-sz__step {
+    background: var(--rf-copper);
+}
+
+.rf-pick__row.is-sold .rf-pick__label {
+    color: var(--rf-ink-muted);
+    text-decoration: line-through;
+}
+
+.rf-pick__sold {
+    color: var(--rf-ink-muted);
+    font-size: 14px;
+}
+
+// The quantity stepper (quantity.js): − / the box's quantity / +. Copper once flies are in the box.
+.rf-qty {
+    display: inline-flex;
+    flex: none;
+    align-items: stretch;
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-md);
+    background: var(--rf-paper);
+}
+
+.rf-qty__btn {
+    display: grid;
+    place-items: center;
+    width: var(--rf-tap-min);
+    height: var(--rf-tap-min);
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--rf-ink);
+    cursor: pointer;
+
+    .rf-icon {
+        width: 18px;
+        height: 18px;
+    }
+
+    &:hover:not(:disabled) {
+        background: var(--rf-limestone-100);
+    }
+
+    &:disabled {
+        color: var(--rf-limestone-300);
+        cursor: default;
+    }
+}
+
+.rf-qty__input {
+    width: 44px;
+    min-width: 0;
+    height: var(--rf-tap-min);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-inline: 1px solid var(--rf-limestone-300);
+    border-radius: 0;
+    background: transparent;
+    color: var(--rf-ink);
+    font: 700 18px / 1 var(--rf-font-numerals);
+    font-variant-numeric: tabular-nums lining-nums;
+    text-align: center;
+    -moz-appearance: textfield;
+}
+
+.rf-qty__input:focus {
+    outline: 2px solid var(--rf-ink);
+    outline-offset: -2px;
+}
+
+.rf-qty.has-qty {
+    border-color: var(--rf-copper);
+    box-shadow: inset 0 0 0 1px var(--rf-copper);
+
+    .rf-qty__input {
+        color: var(--rf-copper);
+    }
+}
+
+.rf-pick-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 92;
+    background: rgba(28, 25, 22, 0.45);
+}
+
+// phones: the card's picker is a sheet from the foot of the screen, over the order line.
+// quick-add.js moves it to <body> while it is open, out of the card's stacking context.
+.rf-fly__sizes-panel--sheet[hidden] {
+    display: none;
+}
+
+@media (max-width: 639px) {
+    .rf-fly__sizes-panel--sheet {
+        position: fixed;
+        top: auto;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 95;
+        min-width: 0;
+        max-height: 82vh;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: var(--rf-space-3) var(--rf-gutter) calc(var(--rf-space-4) + env(safe-area-inset-bottom, 0px));
+        border-top: 0;
+        border-radius: var(--rf-radius-md) var(--rf-radius-md) 0 0;
+        box-shadow: var(--rf-shadow-lift);
+    }
+
+    .rf-fly.is-open .rf-fly__card {
+        transform: none;
+    }
+
+    html.rf-sheet-open,
+    html.rf-sheet-open body {
+        overflow: hidden;
+    }
 }

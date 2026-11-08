@@ -153,6 +153,17 @@ describe('the box', () => {
         delete window.bodlEvents;
     });
 
+    it('sets a size to a quantity from what the box holds, and asks nothing when it already holds that', async () => {
+        await box.load('');
+        await box.setQuantity({ productId: 10, variantId: 14, quantity: 3 });
+        expect(box.quantityOf(10, 14)).toBe(3);
+        await box.setQuantity({ productId: 10, variantId: 14, quantity: 1 });
+        await box.setQuantity({ productId: 10, variantId: 14, quantity: 1 });
+        expect(store.calls).toEqual(['POST /', 'PUT /c1/items/i1']);
+        await box.setQuantity({ productId: 10, variantId: 14, quantity: 0 });
+        expect(box.quantityOf(10, 14)).toBe(0);
+    });
+
     it('tells its listeners after every change', async () => {
         await box.load('');
         const heard = jest.fn();

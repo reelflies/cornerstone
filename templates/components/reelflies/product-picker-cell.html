@@ -1,0 +1,20 @@
+{{!--
+    One choice of the product page's picker (product-picker.html): the value rf_value ({ entityId,
+    label }) and the variant in rf_variants whose one option value it is, with its stock, drawn as
+    a row (product-picker-row.html). A choice with no variant draws nothing.
+--}}
+{{~assignVar 'rf_cell_variant' 0~}}{{~assignVar 'rf_cell_stock' 0~}}
+{{~#each rf_variants as |rfVariant|~}}
+{{~#if rfVariant.node.options.edges.[0].node.values.edges.[0].node.entityId '==' ../rf_value.entityId~}}
+{{~assignVar 'rf_cell_variant' rfVariant.node.entityId~}}
+{{~#if rfVariant.node.isPurchasable}}{{#if rfVariant.node.inventory.isInStock}}{{assignVar 'rf_cell_stock' 1}}{{/if}}{{/if~}}
+{{~/if~}}
+{{~/each~}}
+{{~#if (getVar 'rf_cell_variant')~}}
+{{~assignVar 'rf_pick_n' (add (getVar 'rf_pick_n') 1)~}}
+{{~#unless (getVar 'rf_cell_stock')~}}
+{{~#if (getVar 'rf_pick_sold')}}{{assignVar 'rf_pick_sold' (concat (getVar 'rf_pick_sold') (concat ', ' rf_value.label))}}{{else}}{{assignVar 'rf_pick_sold' rf_value.label}}{{/if~}}
+{{~assignVar 'rf_pick_sold_n' (add (getVar 'rf_pick_sold_n') 1)~}}
+{{~/unless~}}
+{{> components/reelflies/product-picker-row rf_label=rf_value.label rf_variant_id=(getVar 'rf_cell_variant') rf_stock=(getVar 'rf_cell_stock')}}
+{{~/if~}}

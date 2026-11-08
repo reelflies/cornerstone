@@ -1,20 +1,22 @@
 {{!--
-    How the product page buys (redesign step 3; the owner's choice, 2026-11-07: "a tap adds one").
+    How the product page buys (redesign step 3; the owner's choice, 2026-11-07: each size with a
+    quantity beside it).
 
-    - The strip (product-strip.html): a product with exactly one option, a list of choices (Fly
+    - The picker (product-picker.html): a product with exactly one option, a list of choices (Fly
       Sizes, a colour, a leader weight), drawn open on the page from the page's GraphQL front
-      matter with each choice's variant and stock. Each tap puts one in the box at once through the
-      Cart API (product-strip.js, box.js), the way quick add does on a card.
-    - One (product-one.html): a product with no options (an Assortment, a hook pack): "Add 1 to
-      your box", again one per tap.
+      matter with each choice's variant and stock. Each row's quantity is what the box holds of it,
+      and changing it changes the box at once through the Cart API (quantity.js, box.js), as the
+      card's "+ Add" picker and the listings' quick order do.
+    - A product with no options (an Assortment, a hook pack): the same picker with one row, "How
+      many".
     - The form: everything else, and every product while rf_size_strip is off. Stock's own form
       (two options, such as Fat Albert's Colour and Fly Sizes; a pre-order; a minimum quantity
       over 1; prices hidden from guests), restyled: the options visible from the server, the
       quantity, and Add to cart through stock product-details.js.
 
-    The strip and One keep stock's form on the page, hidden (data-rf-pdp-form): stock's
-    ProductDetails reads it on every product page, and should product-strip.js fail to load,
-    page-modules.js shows it in their place.
+    The picker keeps stock's form on the page, hidden (data-rf-pdp-form): stock's ProductDetails
+    reads it on every product page, and should product-buy.js fail to load, page-modules.js shows
+    it in the picker's place.
 --}}
 {{~assignVar 'rf_pdp_mode' 'form'~}}
 {{~#if theme_settings.rf_size_strip~}}
@@ -34,10 +36,10 @@
 {{~/or~}}
 {{~/if~}}
 {{#if (getVar 'rf_pdp_mode') '===' 'strip'}}
-{{> components/reelflies/product-strip rf_option=gql.data.site.product.productOptions.edges.[0].node rf_variants=gql.data.site.product.variants.edges}}
+{{> components/reelflies/product-picker rf_option=gql.data.site.product.productOptions.edges.[0].node rf_variants=gql.data.site.product.variants.edges}}
 {{/if}}
 {{#if (getVar 'rf_pdp_mode') '===' 'one'}}
-{{> components/reelflies/product-one rf_variant=gql.data.site.product.variants.edges.[0].node}}
+{{> components/reelflies/product-picker rf_variant=gql.data.site.product.variants.edges.[0].node}}
 {{/if}}
 <div class="rf-pdp__form"{{#if (getVar 'rf_pdp_mode') '!==' 'form'}} hidden data-rf-pdp-form{{/if}}>
     {{#if product.release_date}}

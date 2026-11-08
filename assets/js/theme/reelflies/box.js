@@ -9,6 +9,8 @@
 //   dropped, the box goes back to the store's cart, and the promise rejects with the store's own
 //   words where it sent any. `meta` describes a line the store hasn't returned yet (name, size,
 //   image, price, brand, url).
+// - setQuantity({ productId, variantId, quantity, meta }): the same, to a quantity rather than by
+//   a step, for the size pickers and the order list, whose fields show what the box holds.
 // - lines(): every line, in the order its pattern first went in, with what is waiting applied.
 // - subscribe(listener): called after every change, with no arguments.
 //
@@ -225,4 +227,23 @@ export function change(request) {
     });
     running = done.catch(() => {});
     return done;
+}
+
+// How many of one variant the box holds, with what is waiting applied.
+export function quantityOf(productId, variantId) {
+    const line = lines().find(found => found.key === keyOf(productId, variantId));
+    return line ? line.quantity : 0;
+}
+
+// Sets the box's quantity of one variant (0 removes it): the change from what it holds now,
+// queued like any other. Resolves at once when nothing changes.
+export function setQuantity({
+    productId, variantId, quantity, meta,
+}) {
+    const target = Math.max(0, Math.round(Number(quantity) || 0));
+    const delta = target - quantityOf(productId, variantId);
+    if (!delta) return Promise.resolve();
+    return change({
+        productId, variantId, delta, meta,
+    });
 }

@@ -1,0 +1,44 @@
+{{!--
+    The product page's size picker (DESIGN.md "Size picker"; the owner's choice, 2026-11-07): open on
+    the buy panel, every choice of the product's one option as a row with a quantity stepper that
+    shows, and sets, how many of it the box holds (quantity.js). Nothing is ever chosen for the
+    shopper: every quantity starts at what the box already holds.
+
+        {{> components/reelflies/product-picker rf_option=… rf_variants=…}}   one option (sizes, colours)
+        {{> components/reelflies/product-picker rf_variant=…}}                no options: one row, "How many"
+
+    - The rows come from the page's GraphQL front matter: rf_option's values in catalogue order, each
+      with the variant in rf_variants whose option value it is, and its stock
+      (product-picker-row.html). product-buy.js redraws them with size-picker.js's markup, in hook
+      order and with their step bars, before the shopper can use them.
+    - The foot names the sold-out sizes and leads to the hook size chart (on a fly). Under it the
+      reserved line says what of this product is in the box ("In your box: 3 × 12, 1 × 14").
+    - The data-rf-* attributes describe the product for the box's line until the store answers.
+--}}
+{{~assignVar 'rf_pick_sold' ''~}}{{~assignVar 'rf_pick_sold_n' 0~}}{{~assignVar 'rf_pick_n' 0~}}
+<div class="rf-pick rf-pick--page" data-rf-pick-page data-rf-mode="{{#if rf_variant}}one{{else}}sizes{{/if}}" data-rf-meta data-rf-product="{{product.id}}" data-rf-name="{{product.title}}" data-rf-url="{{product.url}}" data-rf-price="{{product.price.without_tax.value}}" data-rf-brand="{{product.brand.name}}" data-rf-img="{{#if product.main_image}}{{getImageSrcset product.main_image 1x='160w'}}{{/if}}"{{#if rf_variant}} data-rf-variant="{{rf_variant.entityId}}" data-rf-stock="{{#if rf_variant.isPurchasable}}{{#if rf_variant.inventory.isInStock}}1{{else}}0{{/if}}{{else}}0{{/if}}"{{/if}}>
+    {{#unless rf_variant}}
+    <p class="rf-pick__hint" id="rf-pick-hint">{{#if (getVar 'rf_pdp_fly')}}{{lang 'reelflies.js.pick_hint'}}{{else}}{{lang 'reelflies.js.pick_hint_choice'}}{{/if}}</p>
+    {{/unless}}
+    <ul class="rf-pick__rows" data-rf-rows{{#unless rf_variant}} aria-label="{{rf_option.displayName}}" aria-describedby="rf-pick-hint"{{/unless}}>
+        {{#if rf_variant}}
+        {{> components/reelflies/product-picker-row rf_label='' rf_variant_id=rf_variant.entityId rf_stock=rf_variant.inventory.isInStock rf_one=1}}
+        {{else}}
+        {{#each rf_option.values.edges as |rfValue|}}
+        {{> components/reelflies/product-picker-cell rf_value=rfValue.node rf_variants=../rf_variants}}
+        {{/each}}
+        {{/if}}
+    </ul>
+    {{#unless rf_variant}}
+    <div class="rf-sizes__foot rf-pick__foot">
+        <span data-rf-pick-foot>
+            {{~#if (getVar 'rf_pick_sold_n') '==' (getVar 'rf_pick_n')}}{{#if (getVar 'rf_pick_n')}}{{lang 'reelflies.js.sold_all'}}{{/if}}
+            {{~else if (getVar 'rf_pick_sold_n') '==' 1}}{{lang 'reelflies.js.sold_one' size=(getVar 'rf_pick_sold')}}
+            {{~else if (getVar 'rf_pick_sold_n') '>' 1}}{{lang 'reelflies.js.sold_many' sizes=(getVar 'rf_pick_sold')}}
+            {{~/if~}}
+        </span>
+        {{#if (getVar 'rf_pdp_fly')}}<a class="rf-more" href="{{#if (trim theme_settings.rf_hook_chart_url)}}{{trim theme_settings.rf_hook_chart_url}}{{else}}/fly-hook-size-chart/{{/if}}">{{lang 'reelflies.listing.sizes_help'}}{{> components/reelflies/icon name='arrow'}}</a>{{/if}}
+    </div>
+    {{/unless}}
+    <p class="rf-pick__inbox" data-rf-pick-inbox></p>
+</div>

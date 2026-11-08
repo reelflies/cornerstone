@@ -556,7 +556,7 @@
         "rf_menu_link_ids": "399,434,400",
         "rf_menu_also_ids": "399,434,382",
         "rf_price_unit_exclude": "Fly Gear,Fly Selections & Fly Boxes",
-        "rf_quick_add": false,
+        "rf_quick_add": true,
         "rf_no_box_note_paths": "Fly Selections & Fly Boxes/Bulk Fly Selections,Fly Selections & Fly Boxes/Mini Fly Selections",
         "rf_home_signature_cat": "434",
         "rf_home_selections_cat": "399",

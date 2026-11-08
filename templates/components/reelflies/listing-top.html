@@ -18,6 +18,9 @@
       which the stylesheet hides. It shows only when a facet is visible.
     - Stock's sort bar (components/products/filter), when there are products, with rf_sort, the
       listing's sort.
+    - With quick add on, the switch between Photos (the grid) and Quick order (order-list.js: an
+      order sheet with every size's quantity), hidden until that script shows it; its row keeps
+      the switch's height from the server, so nothing moves when it appears.
     - A visually hidden H2, "Patterns" or "Products", so the cards' H3 names follow a heading
       when the facets (H2 each) are folded away on phones.
 --}}
@@ -28,8 +31,9 @@
 {{~assignVar 'rf_list_root' ''~}}
 {{~#each breadcrumbs}}{{#if @index '==' 1}}{{assignVar 'rf_list_root' name}}{{/if}}{{/each~}}
 {{~#each (split theme_settings.rf_price_unit_exclude ',')}}{{#if (trim this)}}{{#if (trim this) '===' (getVar 'rf_list_root')}}{{assignVar 'rf_fly_listing' 0}}{{/if}}{{/if}}{{/each~}}
-<div class="rf-list-top">
+<div class="rf-list-top{{#if theme_settings.rf_quick_add}} rf-list-top--views{{/if}}">
     <h2 class="is-srOnly">{{#if (getVar 'rf_fly_listing')}}{{lang 'reelflies.listing.heading_patterns'}}{{else}}{{lang 'reelflies.listing.heading_products'}}{{/if}}</h2>
+    <div class="rf-list-top__lead">
     <p class="rf-list-top__count" data-rf-list-count tabindex="-1">
         {{~#if category.products~}}
             {{~#if category.total_products~}}
@@ -41,6 +45,13 @@
             {{~#if (getVar 'rf_fly_listing')}}{{lang 'reelflies.listing.none_flies'}}{{else}}{{lang 'reelflies.listing.none_products'}}{{/if~}}
         {{~/if~}}
     </p>
+    {{#if theme_settings.rf_quick_add}}{{#if category.products}}
+    <div class="rf-view" role="group" aria-label="{{lang 'reelflies.listing.view'}}" data-rf-view hidden>
+        <button type="button" class="rf-view__btn" data-rf-view-set="grid" aria-pressed="true">{{> components/reelflies/icon name='grid'}}<span class="rf-view__word">{{lang 'reelflies.listing.view_grid'}}</span></button>
+        <button type="button" class="rf-view__btn" data-rf-view-set="list" aria-pressed="false">{{> components/reelflies/icon name='rows'}}<span class="rf-view__word">{{lang 'reelflies.listing.view_list'}}</span></button>
+    </div>
+    {{/if}}{{/if}}
+    </div>
     <div class="rf-list-top__tools">
         {{#if category.faceted_search_enabled}}
         {{#any category.facets visible=true}}

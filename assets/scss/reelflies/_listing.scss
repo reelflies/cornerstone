@@ -347,6 +347,77 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
     border-bottom: 1px solid var(--rf-limestone-300);
 }
 
+.rf-list-top__lead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--rf-space-2) var(--rf-space-4);
+}
+
+// the switch's height, held from the server, so nothing moves when order-list.js shows it
+.rf-list-top--views .rf-list-top__lead {
+    min-height: var(--rf-tap-min);
+}
+
+.rf-view {
+    display: inline-flex;
+}
+
+.rf-view__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: var(--rf-tap-min);
+    padding: 0 14px;
+    border: 1px solid var(--rf-edge);
+    background: transparent;
+    color: var(--rf-ink);
+    font: 650 14px / 1 var(--rf-font-text);
+    cursor: pointer;
+
+    .rf-icon {
+        width: 18px;
+        height: 18px;
+    }
+
+    &:first-child {
+        border-radius: var(--rf-radius-pill) 0 0 var(--rf-radius-pill);
+    }
+
+    &:last-child {
+        margin-left: -1px;
+        border-radius: 0 var(--rf-radius-pill) var(--rf-radius-pill) 0;
+    }
+
+    &:hover {
+        background: var(--rf-limestone-200);
+    }
+
+    &[aria-pressed="true"] {
+        position: relative;
+        border-color: var(--rf-ink);
+        background: var(--rf-ink);
+        color: var(--rf-paper);
+    }
+}
+
+// the narrowest phones: the switch's two icons, so it shares the count's line; the words stay for
+// screen readers
+@media (max-width: 379px) {
+    .rf-view__btn {
+        padding: 0 12px;
+    }
+
+    .rf-view__word {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+}
+
 .rf-list-top__count {
     margin: 0;
     color: var(--rf-ink-muted);
@@ -912,6 +983,161 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
 @media (min-width: 1280px) {
     .rf-list--side .rf-flies--list {
         grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+
+// Quick order (order-list.js): the page's patterns as an order sheet, every size's quantity in a
+// row, typed straight into the box
+// -----------------------------------------------------------------------------
+
+.rf-olist__hint {
+    margin: 0 0 var(--rf-space-3);
+    color: var(--rf-ink-muted);
+    font-size: 14px;
+}
+
+.rf-olist {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--rf-limestone-300);
+}
+
+.rf-olist__row {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    grid-template-areas: "thumb what" "sizes sizes";
+    align-items: center;
+    gap: var(--rf-space-2) var(--rf-space-3);
+    padding: var(--rf-space-3) 0;
+    border-bottom: 1px solid var(--rf-limestone-300);
+}
+
+.rf-olist__thumb {
+    grid-area: thumb;
+    display: block;
+    width: 72px;
+    height: 48px;
+    overflow: hidden;
+    border-radius: var(--rf-radius-sm);
+    background: var(--rf-paper);
+    box-shadow: var(--rf-shadow-plain);
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+}
+
+.rf-olist__what {
+    grid-area: what;
+    min-width: 0;
+}
+
+.rf-olist__name {
+    color: var(--rf-ink);
+    font: 650 15px / 1.3 var(--rf-font-text);
+    text-decoration: none;
+
+    &:hover {
+        color: var(--rf-ink);
+        text-decoration: underline;
+        text-underline-offset: 0.2em;
+    }
+}
+
+.rf-olist__price {
+    margin: 2px 0 0;
+    color: var(--rf-ink-muted);
+    font-size: 13px;
+
+    .rf-num {
+        color: var(--rf-ink);
+        font-size: 16px;
+        font-weight: 700;
+    }
+}
+
+.rf-olist__sizes {
+    grid-area: sizes;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.rf-olist__elsewhere {
+    grid-area: sizes;
+    margin: 0;
+
+    .rf-more {
+        color: var(--rf-ink);
+        font-size: 14px;
+    }
+}
+
+.rf-olist__cell {
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    width: 52px;
+}
+
+.rf-olist__size {
+    color: var(--rf-ink-muted);
+    font: 700 14px / 1.2 var(--rf-font-numerals);
+    font-variant-numeric: tabular-nums lining-nums;
+    white-space: nowrap;
+}
+
+.rf-qty__input.rf-olist__input {
+    width: 52px;
+    height: var(--rf-tap-min);
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-md);
+    background: var(--rf-paper);
+}
+
+.rf-olist__input:hover {
+    border-color: var(--rf-ink);
+}
+
+.rf-olist__cell.has-qty {
+    .rf-olist__size {
+        color: var(--rf-copper);
+    }
+
+    .rf-olist__input {
+        border-color: var(--rf-copper);
+        box-shadow: inset 0 0 0 1px var(--rf-copper);
+        color: var(--rf-copper);
+    }
+}
+
+.rf-olist__cell.is-sold .rf-olist__size {
+    color: var(--rf-ink-muted);
+    text-decoration: line-through;
+}
+
+.rf-olist__none {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: var(--rf-tap-min);
+    border: 1px dashed var(--rf-limestone-300);
+    border-radius: var(--rf-radius-md);
+    color: var(--rf-shale-400);
+}
+
+@media (min-width: 900px) {
+    .rf-olist__row {
+        grid-template-columns: 72px minmax(180px, 16rem) minmax(0, 1fr);
+        grid-template-areas: "thumb what sizes";
+        gap: var(--rf-space-4);
     }
 }
 
