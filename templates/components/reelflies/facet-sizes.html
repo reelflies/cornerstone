@@ -1,0 +1,40 @@
+{{!--
+    The Fly size filter (ticket 33; redesign step 3; SEO-6, SEO-12, UX-21): stock
+    faceted-search/facets/multi.html's hook renders this for the Fly Sizes facet
+    (size-facet-name.html), with the facet as its context. Every other facet stays stock.
+
+    - BigCommerce's own facet links, untouched: each value's href is the facet context's URL
+      (with _bc_fsnf=1, which robots.txt blocks), with rel="nofollow" and
+      data-faceted-search-facet, as stock. Theme code never builds or edits a facet URL.
+    - Each value is a size cell (DESIGN.md "Size Strip"): the hook number in condensed numerals,
+      no product count, named "Size 14". The chosen one is ink, with aria-current: copper is for
+      buying, never for a filter.
+    - Stock's structure, ids and classes stay (the accordion, the list with its data-facet and
+      data-has-more-results, "Show more"): stock faceted-search.js finds the list by them, and
+      size-filter.js puts the cells in hook order on load and after every refresh. The items
+      alone lose navList-item: stock's "Show more" search box hides every .navList-item in the
+      document, the sidebar's too, and no stock script needs the class on these.
+    - "What do sizes mean?" under the cells, to the hook size chart (rf_hook_chart_url; a refresh
+      renders without the page variables, so it falls back to the chart's own address).
+--}}
+{{#if items}}
+<div class="accordion-block rf-size-facet">
+    {{> components/faceted-search/faceted-search-navigation}}
+
+    <div id="facetedSearch-content--{{dashcase facet}}" class="accordion-content{{#unless start_collapsed}} is-open{{/unless}}">
+        <ul id="facetedSearch-navList--{{dashcase facet}}" data-facet="{{facet}}" class="navList rf-size-pills" data-has-more-results="{{has_more_results}}">
+            {{#each items}}
+            <li class="rf-size-pills__item"><a href="{{url}}" class="navList-action rf-size-pill{{#if selected}} is-selected{{/if}}" rel="nofollow" aria-label="{{lang 'reelflies.listing.size' size=title}}"{{#if selected}} aria-current="true"{{/if}} data-faceted-search-facet>{{{sanitize title}}}</a></li>
+            {{/each}}
+        </ul>
+
+        {{#if show_more_toggle}}
+            <a href="#facetedSearch-navList--{{dashcase facet}}" role="button" class="toggleLink rf-size-facet__more">
+                <span class="toggleLink-text toggleLink-text--off">{{lang 'search.faceted.show-more'}}</span>
+            </a>
+        {{/if}}
+
+        <p class="rf-size-facet__help"><a class="rf-more" href="{{#if (getVar 'rf_hook_chart')}}{{getVar 'rf_hook_chart'}}{{else}}/fly-hook-size-chart/{{/if}}">{{lang 'reelflies.listing.sizes_help'}}{{> components/reelflies/icon name='arrow'}}</a></p>
+    </div>
+</div>
+{{/if}}

@@ -1,0 +1,29 @@
+{{!--
+    Whether a category page gets the banner (ticket 32; O10, CD-10). Renders nothing; sets the
+    variable rf_category_banner to 1 when the category has an image and is a top-level Fly Type
+    (its id in rf_type_ids, the rf_menu_type_ids setting) or a Species page (a child of
+    rf_species_root, the rf_menu_species_root_id setting, which the categories data holds at the
+    top level or one level down, as the menu finds it), and to 0 otherwise:
+
+        {{> components/reelflies/category-banner-rule rf_category=category rf_type_ids=… rf_species_root=… rf_categories=categories}}
+        {{#if (getVar 'rf_category_banner')}} … {{/if}}
+
+    Every other page (a sub-type, a Species × Fly Type page, a More from ReelFlies category, the
+    Species root itself) gets the plain header, so a product photo never becomes a banner. With
+    both settings empty (ReelFlies CA until wave R1) no page gets one. Ids are compared trimmed,
+    with ==, because the store gives them as numbers and the settings as comma-separated text.
+--}}
+{{~assignVar 'rf_category_banner' 0~}}
+{{~#if rf_category.image.data~}}
+{{~#each (split rf_type_ids ',') as |rfId|~}}
+{{~#if ../rf_category.id '==' (trim rfId)~}}{{~assignVar 'rf_category_banner' 1~}}{{~/if~}}
+{{~/each~}}
+{{~#if (trim rf_species_root)~}}
+{{~#each rf_categories as |rfTop|~}}
+{{~#if rfTop.id '==' (trim ../rf_species_root)~}}{{> components/reelflies/category-banner-kids rf_id=../rf_category.id rf_kids=rfTop.children}}{{~/if~}}
+{{~#each rfTop.children as |rfChild|~}}
+{{~#if rfChild.id '==' (trim ../../rf_species_root)~}}{{> components/reelflies/category-banner-kids rf_id=../../rf_category.id rf_kids=rfChild.children}}{{~/if~}}
+{{~/each~}}
+{{~/each~}}
+{{~/if~}}
+{{~/if~}}

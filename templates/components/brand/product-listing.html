@@ -1,6 +1,8 @@
+{{!-- ReelFlies hook (redesign step 3; ticket 36; CUSTOMIZATIONS.md): the category listing's row above the grid (components/reelflies/listing-top.html; a brand has no total, so the row names the page), stock's grid and pager, and the listing's empty states. brand.js renders this alone after a filter, sort or page link, so both say the same. --}}
 {{inject 'noCompareMessage' (lang 'compare.no_compare')}}
 
-{{> components/products/filter sort=pagination.brand.sort}}
+{{#if brand.products}}
+{{> components/reelflies/listing-top category=brand rf_sort=pagination.brand.sort rf_count=(lang 'reelflies.listing.page' page=pagination.brand.current)}}
 
 <div data-list-name="Brand: {{brand.name}}">
     {{#if theme_settings.product_list_display_mode '===' 'grid'}}
@@ -11,3 +13,10 @@
 </div>
 
 {{> components/common/paginator pagination.brand}}
+{{else}}
+{{#if brand.search_error}}
+<p>{{lang 'search.errorMessage'}}</p>
+{{else}}
+{{> components/reelflies/listing-empty category=brand rf_sort=pagination.brand.sort rf_none=(lang 'brands.no_products')}}
+{{/if}}
+{{/if}}

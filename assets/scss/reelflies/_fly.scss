@@ -59,11 +59,12 @@
     font: 650 15px/1.25 var(--rf-font-text);
 }
 
-.rf-fly__name a {
+.rf-fly .rf-fly__name a {
+    color: inherit;
     text-decoration: none;
 }
 
-.rf-fly__name a:hover {
+.rf-fly .rf-fly__name a:hover {
     text-decoration: underline;
     text-underline-offset: 0.18em;
 }

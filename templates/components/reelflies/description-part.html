@@ -1,0 +1,33 @@
+{{!--
+    One part of a listing's description, split at its <!--more--> marker (ticket 32), in the
+    template and never in the browser:
+
+        {{> components/reelflies/description-part rf_description=category.description rf_part='intro'}}
+        {{> components/reelflies/description-part rf_description=category.description rf_part='rest' rf_title=(lang …)}}
+
+    - intro: the part before the marker, in <div class="rf-list-head__intro">, for the head under
+      the H1. With no marker there is no intro (the owner's choice, 2026-11-07: the first flies
+      stay on a phone's first screen).
+    - rest: everything after the marker, or the whole description when it has none, after the
+      listing on dry limestone, under rf_title ("About Dry Flies") as its H2.
+    - A part that is empty prints nothing, wrapper and all.
+    - A marker the editor wrapped in its own paragraph, <p><!--more--></p>, counts as the bare
+      marker, so neither half is left with half a paragraph. The marker itself is never printed.
+--}}
+{{~#if rf_description~}}
+{{~#contains rf_description '<!--more-->'~}}
+{{~#each (split (strReplace rf_description '<p><!--more--></p>' '<!--more-->') '<!--more-->')~}}
+{{~#if @first~}}
+{{~#if ../rf_part '==' 'intro'~}}{{~#if (trim this)~}}<div class="rf-list-head__intro">{{{this}}}</div>{{~/if~}}{{~/if~}}
+{{~else~}}
+{{~#if ../rf_part '==' 'rest'~}}{{~#if (trim this)~}}
+<section class="rf-list-about" aria-labelledby="rf-list-about-title"><div class="rf-list-about__inner"><h2 class="rf-list-about__title" id="rf-list-about-title">{{../rf_title}}</h2><div class="rf-list-about__text" data-rf-description>{{{this}}}</div></div></section>
+{{~/if~}}{{~/if~}}
+{{~/if~}}
+{{~/each~}}
+{{~else~}}
+{{~#if rf_part '==' 'rest'~}}
+<section class="rf-list-about" aria-labelledby="rf-list-about-title"><div class="rf-list-about__inner"><h2 class="rf-list-about__title" id="rf-list-about-title">{{rf_title}}</h2><div class="rf-list-about__text" data-rf-description>{{{rf_description}}}</div></div></section>
+{{~/if~}}
+{{~/contains~}}
+{{~/if~}}

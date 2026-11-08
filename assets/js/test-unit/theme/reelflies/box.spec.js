@@ -8,6 +8,7 @@ function fakeStore() {
     let cart = null;
     let next = 1;
     const calls = [];
+    const store = { calls, refuseNext: null };
     const view = () => cart && { id: 'c1', lineItems: { physicalItems: cart.map(item => ({ ...item })), digitalItems: [] } };
     const item = (line) => ({
         id: `i${next++}`, productId: line.productId, variantId: line.variantId, quantity: line.quantity, name: `Fly ${line.productId}`, salePrice: 1, brand: 'ReelFlies', options: [{ name: 'Fly Sizes', value: String(line.variantId) }],
@@ -43,7 +44,7 @@ function fakeStore() {
         }
         return Promise.resolve(json(view()));
     });
-    const store = { fetch, calls, refuseNext: null };
+    store.fetch = fetch;
     return store;
 }
 
@@ -73,12 +74,21 @@ describe('the box', () => {
     it('shows an add before the store answers, then the store\'s line', async () => {
         await box.load('');
         const done = box.change({
-            productId: 10, variantId: 14, delta: 1, meta: { name: 'Adams', size: '14', price: 0.95, brand: 'ReelFlies' },
+            productId: 10,
+            variantId: 14,
+            delta: 1,
+            meta: {
+                name: 'Adams', size: '14', price: 0.95, brand: 'ReelFlies',
+            },
         });
-        expect(box.lines()).toMatchObject([{ productId: '10', variantId: 14, quantity: 1, name: 'Adams', itemId: null }]);
+        expect(box.lines()).toMatchObject([{
+            productId: '10', variantId: 14, quantity: 1, name: 'Adams', itemId: null,
+        }]);
         await done;
         expect(store.calls).toEqual(['POST /']);
-        expect(box.lines()).toMatchObject([{ productId: '10', variantId: 14, quantity: 1, itemId: 'i1' }]);
+        expect(box.lines()).toMatchObject([{
+            productId: '10', variantId: 14, quantity: 1, itemId: 'i1',
+        }]);
     });
 
     it('runs quick taps one call at a time, each from the cart the last returned, so they add up', async () => {

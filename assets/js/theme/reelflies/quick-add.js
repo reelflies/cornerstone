@@ -151,7 +151,10 @@ async function openStrip(card) {
     panel.classList.remove('is-flip');
     if (panel.getBoundingClientRect().right > document.documentElement.clientWidth - 8) panel.classList.add('is-flip');
     const first = panel.querySelector('.rf-sz__btn:not(:disabled)') || panel.querySelector('a, button');
-    if (first) first.focus();
+    if (first) first.focus({ preventScroll: true });
+    // the whole strip in view, clear of the order line (the page's scroll-padding, _order-line.scss)
+    const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    panel.scrollIntoView({ block: 'nearest', behavior: still ? 'auto' : 'smooth' });
 }
 
 function what(product, size) {

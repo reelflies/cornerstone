@@ -1,0 +1,30 @@
+{{!--
+    A category's subcategories as chips (ticket 32; DESIGN.md "Chips"), in place of the stock
+    sidebar's list (components/category/sidebar.html's hook):
+
+        {{> components/reelflies/category-chips rf_category=category rf_on='stone'}}
+
+    - One link per subcategory, in the store's order, with its product count while rf_counts is
+      on (count.html). On a Species page they are its Species × Fly Type pages. Every link is in
+      the HTML, hidden or not, so a crawler finds them all.
+    - rf_on 'stone': the home page's ways in, translucent shale with a mist outline; 'light': the
+      same pill outlined in edge on limestone.
+    - At most two rows, never a sideways scroll (category-chips.js): the chips that don't fit
+      are hidden, and the last item, the "more" chip, shows them all: "+N more" from 640px,
+      "Show all N" on phones. Until the script lays the list out, CSS clips it to two rows, so
+      nothing below it moves; with no script every chip shows once the clip lifts after 5s.
+    - No subcategories, no list.
+--}}
+{{#if rf_category.subcategories.length}}
+<ul class="rf-chips rf-chips--{{rf_on}}" aria-label="{{lang 'reelflies.listing.chips' name=rf_category.name}}" data-rf-chips>
+    {{#each rf_category.subcategories}}
+    <li class="rf-chips__item"><a class="rf-chip" href="{{url}}"><span class="rf-chip__name">{{name}}</span>{{> components/reelflies/count n=product_count class='rf-chip__n'}}</a></li>
+    {{/each}}
+    <li class="rf-chips__item rf-chips__more" data-rf-chips-more hidden>
+        <button class="rf-chip rf-chip--more" type="button" data-rf-more-label="{{lang 'reelflies.listing.chips_more' count='#'}}">
+            <span class="rf-chips__wide" data-rf-chips-more-wide></span>
+            <span class="rf-chips__narrow">{{lang 'reelflies.listing.chips_all' count=rf_category.subcategories.length}}</span>
+        </button>
+    </li>
+</ul>
+{{/if}}

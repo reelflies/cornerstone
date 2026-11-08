@@ -1063,7 +1063,9 @@
             "choose": "Choose a size",
             "view": "View",
             "sizes": "Sizes {from}–{to}",
-            "size": "Size {size}"
+            "size": "Size {size}",
+            "from": "from",
+            "sold_out": "Sold out"
         },
         "home": {
             "title": "Nearly 2,000 patterns, sold by the fly.",
@@ -1189,7 +1191,9 @@
             "see_all": "See all",
             "showing_best": "Showing best sellers.",
             "and": "and",
-            "quiet": "Quiet water this month."
+            "quiet": "Quiet water this month.",
+            "sold_out_line": "Sold out",
+            "choose_one": "Choose one"
         },
         "months": {
             "m0": "January",
@@ -1241,6 +1245,37 @@
             "empty_long": "Nothing in your box yet. Tap + Add on any fly to start.",
             "checkout": "Check out",
             "ship_rule": "Free standard shipping in Canada on fly orders over"
+        },
+        "sort": {
+            "label": "Sort by",
+            "featured": "Featured",
+            "newest": "Newest",
+            "top_sellers": "Best selling",
+            "alpha_asc": "Name, A to Z",
+            "alpha_desc": "Name, Z to A",
+            "reviews": "Top rated",
+            "price_asc": "Price, low to high",
+            "price_desc": "Price, high to low",
+            "relevance": "Best match"
+        },
+        "listing": {
+            "heading_patterns": "Patterns",
+            "heading_products": "Products",
+            "chips": "{name} categories",
+            "chips_more": "+{count} more",
+            "chips_all": "Show all {count}",
+            "pattern": "pattern",
+            "patterns": "patterns",
+            "product": "product",
+            "products": "products",
+            "none_flies": "No flies match these filters",
+            "none_products": "No products match these filters",
+            "clear": "Clear filters",
+            "filter": "Filter",
+            "size": "Size {size}",
+            "sizes_help": "What do sizes mean?",
+            "about": "About {name}",
+            "page": "Page {page}"
         }
     },
     "consent_manager": {

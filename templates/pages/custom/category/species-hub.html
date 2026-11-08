@@ -1,0 +1,26 @@
+---
+category:
+    products:
+        limit: {{theme_settings.categorypage_products_per_page}}
+---
+{{!--
+    The Species hub's template name (ticket 34): the custom category template the Species root
+    takes, "Flies by Species" at /species/, through a template association with no theme push.
+    The Streamside Stone rebuild hasn't designed the hub yet, so until it does the template renders
+    the category page (components/reelflies/category-page.html), as pages/category.html does, and a
+    category associated with it never breaks. Locally config.stencil.json maps it to channel 1's
+    Saltwater, Warmwater & Salmon page.
+--~}}
+{{inject "categoryProductsPerPage" theme_settings.categorypage_products_per_page}}
+{{#partial "head"}}
+    {{#if pagination.category.previous}}
+        <link rel="prev" href="{{{pagination.category.previous}}}">
+    {{/if}}
+    {{#if pagination.category.next}}
+        <link rel="next" href="{{{pagination.category.next}}}">
+    {{/if}}
+{{/partial}}
+{{#partial "hero"}}
+{{> components/reelflies/category-page}}
+{{/partial}}
+{{> layout/base}}

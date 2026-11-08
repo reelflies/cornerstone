@@ -1,0 +1,54 @@
+{{!--
+    The row above a listing's product grid (ticket 33; redesign step 3): the count, then Filter
+    and the sort. Stock components/category/product-listing.html's hook includes it with the
+    page's own context, so faceted search renders it again with every refresh.
+
+    - The count: "389 patterns" on a fly listing, else "24 products", from category.total_products,
+      which counts the filtered listing's unique products. A pattern is a product; "flies" stays
+      the word for what is in the box (PRODUCT.md, Voice). A listing whose context has no total
+      passes rf_count, its own text for the row (BigCommerce gives brand pages no total). When
+      applied filters match nothing (listing-empty.html): "No flies match these filters", or
+      "No products …". size-filter.js announces it after each refresh, and focuses it when the
+      control the shopper used is gone, so it is never empty.
+    - A fly listing is one with the Fly Sizes facet (size-facet-name.html), or with a size among
+      its applied filters, in case BigCommerce drops the facet when nothing matches, and whose
+      root (the breadcrumbs' second step) isn't one rf_price_unit_exclude names: Fly Gear's
+      hooks have sizes, but they aren't patterns.
+    - Filter, on phones: it opens the facets above through stock's own toggle (size-filter.js),
+      which the stylesheet hides. It shows only when a facet is visible.
+    - Stock's sort bar (components/products/filter), when there are products, with rf_sort, the
+      listing's sort.
+    - A visually hidden H2, "Patterns" or "Products", so the cards' H3 names follow a heading
+      when the facets (H2 each) are folded away on phones.
+--}}
+{{> components/reelflies/size-facet-name}}
+{{~assignVar 'rf_fly_listing' 0~}}
+{{~#each category.facets}}{{#if facet '===' (getVar 'rf_size_facet')}}{{assignVar 'rf_fly_listing' 1}}{{/if}}{{/each~}}
+{{~#each category.selected.items}}{{#if facet '===' (getVar 'rf_size_facet')}}{{assignVar 'rf_fly_listing' 1}}{{/if}}{{/each~}}
+{{~assignVar 'rf_list_root' ''~}}
+{{~#each breadcrumbs}}{{#if @index '==' 1}}{{assignVar 'rf_list_root' name}}{{/if}}{{/each~}}
+{{~#each (split theme_settings.rf_price_unit_exclude ',')}}{{#if (trim this)}}{{#if (trim this) '===' (getVar 'rf_list_root')}}{{assignVar 'rf_fly_listing' 0}}{{/if}}{{/if}}{{/each~}}
+<div class="rf-list-top">
+    <h2 class="is-srOnly">{{#if (getVar 'rf_fly_listing')}}{{lang 'reelflies.listing.heading_patterns'}}{{else}}{{lang 'reelflies.listing.heading_products'}}{{/if}}</h2>
+    <p class="rf-list-top__count" data-rf-list-count tabindex="-1">
+        {{~#if category.products~}}
+            {{~#if category.total_products~}}
+                <span class="rf-num">{{addCommas category.total_products}}</span> {{#if (getVar 'rf_fly_listing')}}{{#if category.total_products '==' 1}}{{lang 'reelflies.listing.pattern'}}{{else}}{{lang 'reelflies.listing.patterns'}}{{/if}}{{else}}{{#if category.total_products '==' 1}}{{lang 'reelflies.listing.product'}}{{else}}{{lang 'reelflies.listing.products'}}{{/if}}{{/if}}
+            {{~else~}}
+                {{~rf_count~}}
+            {{~/if~}}
+        {{~else~}}
+            {{~#if (getVar 'rf_fly_listing')}}{{lang 'reelflies.listing.none_flies'}}{{else}}{{lang 'reelflies.listing.none_products'}}{{/if~}}
+        {{~/if~}}
+    </p>
+    <div class="rf-list-top__tools">
+        {{#if category.faceted_search_enabled}}
+        {{#any category.facets visible=true}}
+        <button type="button" class="rf-list-top__filter" aria-controls="facetedSearch-navList" aria-expanded="false" data-rf-filter-button>{{> components/reelflies/icon name='filter'}}{{lang 'reelflies.listing.filter'}}</button>
+        {{/any}}
+        {{/if}}
+        {{#if category.products}}
+        {{> components/products/filter sort=rf_sort}}
+        {{/if}}
+    </div>
+</div>

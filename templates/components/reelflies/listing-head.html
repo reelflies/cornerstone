@@ -1,0 +1,44 @@
+{{!--
+    A listing's head (redesign step 3; ticket 32): the breadcrumbs, the page's one H1, the
+    description's intro and the subcategories as chips. The brand listing can reuse it as it is.
+
+        {{> components/reelflies/listing-head rf_name=category.name rf_description=category.description rf_image=category.image rf_category=category}}
+        {{> components/reelflies/listing-head rf_name=category.name rf_description=category.description rf_category=category}}
+
+    - With rf_image (category-page.html passes it only where category-banner-rule.html allows):
+      the stone (DESIGN.md "The Scrim Rule"). The category's banner photograph fills the band
+      under the shale scrim, lit from the upper left, with the words in mist and the chips as the
+      home page's ways in. The photograph is the page's one high-priority image: eager,
+      fetchpriority="high", with a srcset, sizes and its dimensions (stock's responsive-img
+      escapes fetchpriority, so the <img> is written here); alt="" because the H1 on it names the
+      category. It sets the variable rf_banner, so the grid's first card gives up its own
+      fetchpriority. The warm grade (.rf-graded) is the stand-in slate photographs' until the
+      commissioned shoot, as on the home page's stone.
+    - Without: the plain head on limestone, the chips outlined in edge.
+    - The intro is the description before its <!--more--> marker (description-part.html). With
+      no marker the head holds the H1 alone and the description follows the products.
+
+    A <div>, not a <header>: inside <main> a <header> means nothing, outside it a second banner.
+--}}
+{{#if rf_image.data}}
+{{~assignVar 'rf_banner' 1~}}
+<div class="rf-list-head rf-list-head--stone">
+    <div class="rf-list-head__photo"><img class="rf-graded" src="{{getImageSrcset rf_image 1x='1280w'}}" srcset="{{getImageSrcset rf_image 640w='640w' 960w='960w' 1280w='1280w' 1600w='1600w'}}" sizes="100vw" width="1600" height="700" alt="" fetchpriority="high" decoding="async"></div>
+    <div class="rf-list-head__inner">
+        {{> components/common/breadcrumbs breadcrumbs=breadcrumbs}}
+        <h1 class="rf-list-head__title">{{rf_name}}</h1>
+        {{> components/reelflies/description-part rf_description=rf_description rf_part='intro'}}
+        {{> components/reelflies/category-chips rf_category=rf_category rf_on='stone'}}
+    </div>
+</div>
+{{else}}
+{{~assignVar 'rf_banner' 0~}}
+<div class="rf-list-head rf-list-head--plain">
+    <div class="rf-list-head__inner">
+        {{> components/common/breadcrumbs breadcrumbs=breadcrumbs}}
+        <h1 class="rf-list-head__title">{{rf_name}}</h1>
+        {{> components/reelflies/description-part rf_description=rf_description rf_part='intro'}}
+        {{> components/reelflies/category-chips rf_category=rf_category rf_on='light'}}
+    </div>
+</div>
+{{/if}}

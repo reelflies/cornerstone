@@ -14,6 +14,11 @@ body:has(.rf-orderline) {
     padding-bottom: var(--rf-orderline-height);
 }
 
+// whatever takes focus or is scrolled to (an opened size strip) stops clear of the bar
+html:has(.rf-orderline) {
+    scroll-padding-bottom: calc(var(--rf-orderline-height) + var(--rf-space-2));
+}
+
 .rf-orderline {
     position: fixed;
     left: 0;

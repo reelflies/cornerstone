@@ -18,7 +18,7 @@
 // these regions. Each reset is a :where() (no weight) and an element, so it weighs the same as
 // Cornerstone's element selectors and wins by coming later, and loses to every rf- class.
 
-$rf-regions: ".rf-strip, .rf-head, .rf-mega-scrim, .rf-drawer, .rf-foot, .rf-orderline, .rf-stone, .rf-types, .rf-hatch, .rf-species, .rf-signature, .rf-selections, .rf-shop";
+$rf-regions: ".rf-strip, .rf-head, .rf-mega-scrim, .rf-drawer, .rf-foot, .rf-orderline, .rf-stone, .rf-types, .rf-hatch, .rf-species, .rf-signature, .rf-selections, .rf-shop, .rf-list-head, .rf-list";
 
 :where(#{$rf-regions}) {
     h1, h2, h3, h4, h5, h6, p, ul, ol, dl, dd, figure, address, blockquote {

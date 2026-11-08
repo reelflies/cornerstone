@@ -1,7 +1,7 @@
-<ul class="productGrid">
+{{!-- ReelFlies hook (tickets 31 and 43; redesign step 3; CUSTOMIZATIONS.md): every listing's grid (category, brand, search) is the specimen cards (components/reelflies/fly-listing.html), numbered for their photos' loading. A refresh renders this without the page's head, so the quick-add switch is read here from the theme_settings each caller passes. --}}
+{{#if theme_settings.rf_quick_add}}{{assignVar 'rf_quick_add' 1}}{{else}}{{assignVar 'rf_quick_add' 0}}{{/if}}
+<ul class="rf-flies rf-flies--list" data-rf-grid>
     {{#each products}}
-    <li class="product">
-            {{>components/products/card settings=../settings show_compare=../show_compare show_rating=../settings.show_product_rating theme_settings=../theme_settings customer=../customer event=../event position=(add @index 1)}}
-    </li>
+    {{> components/reelflies/fly-listing rf_card=this rf_pos=(add @index 1) rf_exclude=../theme_settings.rf_price_unit_exclude rf_event=../event}}
     {{/each}}
 </ul>

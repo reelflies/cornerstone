@@ -1,0 +1,1070 @@
+// =============================================================================
+// REELFLIES LISTINGS (Streamside Stone)
+// =============================================================================
+//
+// The category page (redesign step 3; tickets 31-33) and every listing that shares its pieces:
+// the head (the stone on a Fly Type or Species page, plain limestone elsewhere) with its
+// breadcrumbs, H1 and chips; the row above the grid; the facets, the Fly size cells first; the
+// grid of specimen cards on limestone; the pager; the empty states; and the description under
+// "About …" on dry limestone. Markup: components/reelflies/category-page.html, listing-head.html,
+// category-chips.html, listing-top.html, facet-sizes.html, listing-empty.html,
+// description-part.html, and stock's faceted search, sort and pager, restyled here.
+// Behaviour: category-chips.js, size-filter.js, listing.js.
+//
+// -----------------------------------------------------------------------------
+
+$rf-list-side: 248px;
+$rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
+
+// The page's bands run full bleed from the header to the footer
+.body:has(> .rf-list-head),
+.body:has(> .rf-list) {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+
+// The head
+// -----------------------------------------------------------------------------
+
+.rf-list-head {
+    position: relative;
+    isolation: isolate;
+    background: var(--rf-limestone-100);
+    color: var(--rf-ink);
+}
+
+.rf-list-head__inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+    gap: var(--rf-space-3);
+    max-width: calc(var(--rf-column-max) + 2 * var(--rf-gutter));
+    margin: 0 auto;
+    padding: var(--rf-space-4) var(--rf-gutter) var(--rf-space-6);
+}
+
+.rf-list-head__title {
+    max-width: 22ch;
+    font: #{"800 clamp(30px, 2.2vw + 16px, 52px) / 1.02 var(--rf-font-display)"};
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+}
+
+.rf-list-head__intro {
+    max-width: 40rem;
+    font-size: 17px;
+    line-height: 1.5;
+
+    p + p {
+        margin-top: var(--rf-space-2);
+    }
+
+    a {
+        text-decoration: underline;
+        text-underline-offset: 0.2em;
+    }
+}
+
+// The breadcrumbs (stock components/common/breadcrumbs.html, its BreadcrumbList kept): one quiet
+// line above the H1, left-aligned, each step a 24px target
+.rf-list-head .breadcrumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font: 400 13px / 1.4 var(--rf-font-text);
+    text-align: left;
+}
+
+.rf-list-head .breadcrumb {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    font-size: inherit;
+
+    &::before {
+        display: none;
+    }
+
+    &:not(:first-child)::before {
+        content: "/";
+        display: inline;
+        margin: 0 var(--rf-space-2);
+        color: var(--rf-edge);
+    }
+}
+
+.rf-list-head .breadcrumb-label {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    color: var(--rf-ink-muted);
+    text-decoration: none;
+
+    &:hover {
+        color: var(--rf-ink);
+        text-decoration: underline;
+        text-underline-offset: 0.2em;
+    }
+}
+
+.rf-list-head .breadcrumb.is-active .breadcrumb-label {
+    color: var(--rf-ink);
+}
+
+// The stone: the category's banner photograph under the shale scrim, lit from the upper left
+// (DESIGN.md "The Scrim Rule"): top to bottom while the head is stacked, left to right from 1040px
+.rf-list-head--stone {
+    --rf-ring: var(--rf-mist);
+    overflow: hidden;
+    background: var(--rf-shale-900);
+    color: var(--rf-mist);
+
+    &::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background: radial-gradient(120% 90% at 8% -10%, rgba(255, 214, 160, 0.2), rgba(255, 214, 160, 0) 55%), linear-gradient(180deg, rgba(28, 25, 22, 0.78), rgba(28, 25, 22, 0.58) 40%, rgba(28, 25, 22, 0.72) 75%, rgba(28, 25, 22, 0.86));
+    }
+
+    .rf-list-head__inner {
+        padding-top: var(--rf-space-4);
+        padding-bottom: var(--rf-space-8);
+    }
+
+    .rf-list-head__title {
+        color: var(--rf-mist);
+    }
+
+    .breadcrumb::before {
+        color: var(--rf-shale-400);
+    }
+
+    .breadcrumb-label {
+        color: var(--rf-limestone-300);
+
+        &:hover {
+            color: var(--rf-mist);
+        }
+    }
+
+    .breadcrumb.is-active .breadcrumb-label {
+        color: var(--rf-mist);
+    }
+}
+
+.rf-list-head__photo {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: 50% 50%;
+    }
+}
+
+.rf-list-head--plain {
+    border-bottom: 1px solid var(--rf-limestone-300);
+}
+
+
+// Chips: the subcategories, at most two rows (category-chips.js)
+// -----------------------------------------------------------------------------
+
+// positioned, so category-chips.js measures each chip's row within the list, which holds still
+// while the head around it changes height
+.rf-chips {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: var(--rf-space-2);
+    width: 100%;
+    max-width: 100%;
+    margin-top: var(--rf-space-2);
+
+    // until category-chips.js lays the list out, two rows; with no script the clip lifts after 5s
+    &:not([data-rf-chips-ready]) {
+        max-height: $rf-two-rows;
+        overflow: hidden;
+        animation: rf-chips-unclip 0s linear 5s forwards;
+    }
+
+    // a laid-out list with chips hidden keeps two rows' height, so nothing below it moves
+    &[data-rf-chips-clipped] {
+        min-height: $rf-two-rows;
+    }
+}
+
+@keyframes rf-chips-unclip {
+    to {
+        max-height: none;
+        overflow: visible;
+    }
+}
+
+.rf-chips__item {
+    display: flex;
+    max-width: 100%;
+}
+
+.rf-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--rf-space-2);
+    max-width: 100%;
+    min-height: var(--rf-tap-min);
+    padding: 0 14px;
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-pill);
+    background: transparent;
+    color: var(--rf-ink);
+    font: 650 15px / 1.2 var(--rf-font-text);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color var(--rf-settle), color var(--rf-settle), border-color var(--rf-settle);
+
+    &:hover {
+        border-color: var(--rf-ink);
+        background: var(--rf-limestone-200);
+        color: var(--rf-ink);
+    }
+}
+
+.rf-chip__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rf-chip__n {
+    color: var(--rf-ink-muted);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.rf-chip--more {
+    border-style: dashed;
+}
+
+// on the stone: the home page's ways in
+.rf-chips--stone .rf-chip {
+    border-color: rgba(235, 228, 216, 0.42);
+    background: rgba(28, 25, 22, 0.42);
+    color: var(--rf-mist);
+
+    .rf-chip__n {
+        color: var(--rf-limestone-300);
+    }
+
+    &:hover {
+        border-color: var(--rf-paper);
+        background: var(--rf-paper);
+        color: var(--rf-ink);
+
+        .rf-chip__n {
+            color: var(--rf-ink-muted);
+        }
+    }
+}
+
+.rf-chips__narrow {
+    display: inline;
+}
+
+.rf-chips__wide {
+    display: none;
+}
+
+@media (min-width: $rf-bp-tablet) {
+    .rf-chips__narrow {
+        display: none;
+    }
+
+    .rf-chips__wide {
+        display: inline;
+    }
+}
+
+
+// The listing: facets beside the grid from 1040px
+// -----------------------------------------------------------------------------
+
+.rf-list {
+    background: var(--rf-limestone-100);
+    color: var(--rf-ink);
+}
+
+.rf-list__inner {
+    max-width: calc(var(--rf-column-max) + 2 * var(--rf-gutter));
+    margin: 0 auto;
+    padding: var(--rf-space-4) var(--rf-gutter) var(--rf-space-16);
+}
+
+.rf-list__main {
+    min-width: 0;
+}
+
+@media (min-width: $rf-bp-desktop) {
+    .rf-list__inner {
+        padding-top: var(--rf-space-6);
+        padding-bottom: var(--rf-space-24);
+    }
+
+    .rf-list--side .rf-list__inner {
+        display: grid;
+        grid-template-columns: $rf-list-side minmax(0, 1fr);
+        column-gap: var(--rf-space-12);
+        align-items: start;
+    }
+}
+
+
+// The row above the grid: the count, Filter (phones) and the sort
+// -----------------------------------------------------------------------------
+
+.rf-list-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--rf-space-3) var(--rf-space-4);
+    margin-bottom: var(--rf-space-4);
+    padding-bottom: var(--rf-space-3);
+    border-bottom: 1px solid var(--rf-limestone-300);
+}
+
+.rf-list-top__count {
+    margin: 0;
+    color: var(--rf-ink-muted);
+    font: 400 15px / 1.3 var(--rf-font-text);
+
+    .rf-num {
+        color: var(--rf-ink);
+        font-size: 17px;
+        font-weight: 700;
+    }
+
+    &:focus {
+        outline: none;
+    }
+
+    &:focus-visible {
+        @include rf-focus-ring;
+    }
+}
+
+.rf-list-top__tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--rf-space-2);
+}
+
+.rf-list-top__filter {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--rf-space-2);
+    min-height: var(--rf-tap-min);
+    padding: 0 16px;
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-pill);
+    background: transparent;
+    color: var(--rf-ink);
+    font: 650 15px / 1 var(--rf-font-text);
+    cursor: pointer;
+
+    &:hover,
+    &[aria-expanded="true"] {
+        border-color: var(--rf-ink);
+        background: var(--rf-limestone-200);
+    }
+}
+
+// stock's sort bar (components/products/filter.html, category/sort-box.html)
+.rf-list-top .actionBar {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.rf-list-top .actionBar-section,
+.rf-list-top .form-fieldset {
+    min-width: 0; // a fieldset is min-content wide by default, wider than a 320px row
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.rf-list-top .form-field {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--rf-space-2);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+}
+
+.rf-list-top .form-label {
+    display: inline;
+    margin: 0;
+    padding: 0;
+    color: var(--rf-ink-muted);
+    font: 400 15px / 1.2 var(--rf-font-text);
+    white-space: nowrap;
+}
+
+.rf-list-top .form-select {
+    width: auto;
+    min-width: 0;
+    height: var(--rf-tap-min);
+    margin: 0;
+    padding: 0 36px 0 12px;
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-md);
+    background-color: var(--rf-paper);
+    color: var(--rf-ink);
+    font: 650 16px / 1 var(--rf-font-text);
+    cursor: pointer;
+
+    &:hover {
+        border-color: var(--rf-ink);
+    }
+
+    &:focus {
+        border-color: var(--rf-ink);
+        box-shadow: none;
+    }
+}
+
+@media (min-width: $rf-bp-desktop) {
+    .rf-list-top__filter {
+        display: none;
+    }
+
+    .rf-list-top .form-select {
+        font-size: 15px;
+    }
+}
+
+// the narrowest phones: "Sort by" stays for screen readers, and the select gets its room
+@media (max-width: 399px) {
+    .rf-list-top .form-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+}
+
+// phones: the count on its own line, then Filter and the sort sharing one
+@media (max-width: $rf-bp-tablet - 1) {
+    .rf-list-top__tools {
+        flex-wrap: nowrap;
+        width: 100%;
+    }
+
+    .rf-list-top .actionBar {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .rf-list-top .form-field {
+        justify-content: flex-end;
+    }
+
+    .rf-list-top .form-select {
+        min-width: 0;
+        max-width: 100%;
+        flex: 1 1 auto;
+    }
+}
+
+
+// The facets (stock faceted-search/index.html), the Fly size cells first
+// -----------------------------------------------------------------------------
+
+// stock's own toggle stays for its record of what is open; Filter (listing-top.html) drives it
+.rf-list .facetedSearch-toggle {
+    display: none !important;
+}
+
+.rf-list .facetedSearch {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.rf-list .facetedSearch-navList {
+    margin-top: 0;
+}
+
+// stock opens the list from 801px; here it waits behind Filter until the sidebar at 1040px
+@media (max-width: $rf-bp-desktop - 1) {
+    .rf-list .facetedSearch-navList {
+        display: none !important;
+        margin: 0 0 var(--rf-space-4);
+        padding: var(--rf-space-2) var(--rf-space-4) var(--rf-space-4);
+        border-radius: var(--rf-radius-md);
+        background: var(--rf-limestone-200);
+    }
+
+    .rf-list .facetedSearch-navList.is-open {
+        display: block !important;
+    }
+
+    .rf-list__side {
+        margin-bottom: 0;
+    }
+}
+
+// "Refine by": only once a filter applies
+.rf-list .facetedSearch-refineFilters {
+    margin: 0 0 var(--rf-space-4);
+    padding: 0 0 var(--rf-space-4);
+    border-bottom: 1px solid var(--rf-limestone-300);
+
+    &:not(:has(.facetLabel)) {
+        display: none;
+    }
+
+    .sidebarBlock-heading {
+        margin: 0 0 var(--rf-space-2);
+        color: var(--rf-ink);
+        font: 650 15px / 1.3 var(--rf-font-text);
+        text-transform: none;
+        letter-spacing: 0;
+    }
+
+    .inlineList {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--rf-space-2);
+        margin: 0 0 var(--rf-space-2);
+        padding: 0;
+        list-style: none;
+
+        li {
+            margin: 0;
+        }
+    }
+
+    .facetLabel {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 36px;
+        padding: 0 10px 0 14px;
+        border: 1px solid var(--rf-ink);
+        border-radius: var(--rf-radius-pill);
+        background: var(--rf-paper);
+        color: var(--rf-ink);
+        font: 650 14px / 1 var(--rf-font-text);
+        text-decoration: none;
+
+        .icon {
+            width: 14px;
+            height: 14px;
+            margin: 0;
+            fill: currentColor;
+        }
+
+        &:hover {
+            background: var(--rf-limestone-200);
+        }
+    }
+
+    > a {
+        @include rf-link-more;
+        font-size: 14px;
+        color: var(--rf-ink);
+    }
+}
+
+.rf-list .accordion {
+    margin: 0;
+    border: 0;
+    box-shadow: none;
+    background: none;
+}
+
+.rf-list .accordion-block {
+    margin: 0;
+    padding: var(--rf-space-2) 0 var(--rf-space-4);
+    border: 0;
+    border-bottom: 1px solid var(--rf-limestone-300);
+
+    &:last-child {
+        border-bottom: 0;
+    }
+}
+
+.rf-list .accordion-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--rf-space-2);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: inherit;
+}
+
+.rf-list .accordion-navigation {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--rf-space-2);
+    min-height: var(--rf-tap-min);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--rf-ink);
+    text-align: left;
+    cursor: pointer;
+
+    .icon {
+        width: 16px;
+        height: 16px;
+        margin: 0;
+        fill: var(--rf-ink-muted);
+    }
+}
+
+.rf-list .accordion-title {
+    margin: 0;
+    padding: 0;
+    color: var(--rf-ink);
+    font: 650 16px / 1.25 var(--rf-font-text);
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.rf-list .facetedSearch-clearLink {
+    color: var(--rf-ink-muted);
+    font: 400 13px / 1 var(--rf-font-text);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+}
+
+.rf-list .accordion-content {
+    margin: 0;
+    padding: var(--rf-space-1) 0 0;
+    border: 0;
+}
+
+// any other facet: a checklist on limestone
+.rf-list .navList:not(.rf-size-pills) {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    .navList-item {
+        margin: 0;
+    }
+
+    .navList-action {
+        position: relative;
+        display: flex;
+        align-items: center;
+        min-height: var(--rf-tap-min);
+        padding: 0 0 0 30px;
+        color: var(--rf-ink);
+        font: 400 15px / 1.3 var(--rf-font-text);
+        text-decoration: none;
+
+        &::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 18px;
+            height: 18px;
+            margin-top: -9px;
+            border: 1px solid var(--rf-edge);
+            border-radius: var(--rf-radius-sm);
+            background: var(--rf-paper);
+        }
+
+        &::after {
+            display: none;
+        }
+
+        span {
+            margin-left: 6px;
+            color: var(--rf-ink-muted);
+        }
+
+        &:hover {
+            text-decoration: underline;
+            text-underline-offset: 0.2em;
+        }
+
+        &.is-selected::before {
+            border-color: var(--rf-ink);
+            background: var(--rf-ink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5' fill='none' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 14px no-repeat;
+        }
+    }
+
+    .navList-action-close {
+        display: none;
+    }
+}
+
+// the Fly size cells: the size strip's cell, as a filter. Chosen is ink, never copper.
+.rf-size-pills {
+    display: grid;
+
+    // stock's clearfix would take the grid's first and last cells
+    &::before,
+    &::after {
+        display: none;
+    }
+
+    grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.rf-size-pills__item {
+    margin: 0;
+}
+
+.rf-size-pill {
+    display: grid;
+    place-items: center;
+    min-height: var(--rf-tap-min);
+    padding: 0 4px;
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-md);
+    background: var(--rf-paper);
+    color: var(--rf-ink);
+    font: 700 17px / 1 var(--rf-font-numerals);
+    font-variant-numeric: tabular-nums lining-nums;
+    text-decoration: none;
+    transition: background-color var(--rf-settle), border-color var(--rf-settle);
+
+    &:hover {
+        border-color: var(--rf-ink);
+        background: var(--rf-limestone-200);
+        color: var(--rf-ink);
+    }
+
+    &.is-selected {
+        border-color: var(--rf-ink);
+        background: var(--rf-ink);
+        color: var(--rf-paper);
+    }
+}
+
+.rf-size-facet__more {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--rf-tap-min);
+    color: var(--rf-ink);
+    font: 650 14px / 1 var(--rf-font-text);
+    text-decoration: underline;
+    text-decoration-color: var(--rf-edge);
+    text-underline-offset: 0.25em;
+}
+
+.rf-size-facet__help {
+    margin: var(--rf-space-1) 0 0;
+    font-size: 14px;
+
+    .rf-more {
+        color: var(--rf-ink);
+    }
+}
+
+// "Show more" (stock show-more-facets.html, in stock's modal): the Fly size values as cells too
+#modal [data-facet="Fly Sizes"] {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+    gap: 6px;
+    columns: auto;
+
+    .navList-item {
+        display: block !important;
+        margin: 0;
+        break-inside: avoid;
+    }
+
+    .navList-action {
+        display: grid;
+        place-items: center;
+        min-height: var(--rf-tap-min);
+        padding: 0;
+        border: 1px solid var(--rf-edge);
+        border-radius: var(--rf-radius-md);
+        background: var(--rf-paper);
+        color: var(--rf-ink);
+        font: 700 17px / 1 var(--rf-font-numerals);
+        text-decoration: none;
+
+        &::before,
+        &::after,
+        span {
+            display: none;
+        }
+
+        &:hover {
+            border-color: var(--rf-ink);
+        }
+
+        &.is-active {
+            background: var(--rf-ink);
+            border-color: var(--rf-ink);
+            color: var(--rf-paper);
+        }
+    }
+}
+
+
+// The grid: specimen cards on limestone, on a true grid
+// -----------------------------------------------------------------------------
+
+.rf-flies--list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--rf-space-4) var(--rf-space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+// li.product for stock search.js; stock's .product clips, which would cut off the size strip
+.rf-fly.product {
+    overflow: visible;
+}
+
+.rf-fly__from {
+    color: var(--rf-ink-muted);
+    font-size: 13px;
+}
+
+.rf-fly.is-sold .rf-fly__sizes {
+    color: var(--rf-ink);
+    font-weight: 650;
+}
+
+.rf-fly.is-sold .rf-add--link {
+    border: 1px solid var(--rf-edge);
+    background: transparent;
+    color: var(--rf-ink);
+
+    &:hover {
+        border-color: var(--rf-ink);
+        background: var(--rf-limestone-200);
+        color: var(--rf-ink);
+    }
+}
+
+@media (min-width: $rf-bp-tablet) {
+    .rf-flies--list {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--rf-space-6) var(--rf-space-4);
+    }
+}
+
+@media (min-width: $rf-bp-desktop) {
+    .rf-list:not(.rf-list--side) .rf-flies--list {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+// a working shop's density: four beside the facets once the column is wide enough
+@media (min-width: 1280px) {
+    .rf-list--side .rf-flies--list {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+
+// The pager (stock common/paginator.html): numbered links, the current page in ink
+// -----------------------------------------------------------------------------
+
+.rf-list .pagination {
+    margin: var(--rf-space-12) 0 0;
+    text-align: left;
+}
+
+.rf-list .pagination-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--rf-space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.rf-list .pagination-item {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font: 700 17px / 1 var(--rf-font-numerals);
+    font-variant-numeric: tabular-nums lining-nums;
+}
+
+.rf-list .pagination-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: var(--rf-tap-min);
+    min-height: var(--rf-tap-min);
+    padding: 0 12px;
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-md);
+    background: var(--rf-paper);
+    color: var(--rf-ink);
+    text-decoration: none;
+
+    &:hover {
+        border-color: var(--rf-ink);
+        background: var(--rf-limestone-200);
+        color: var(--rf-ink);
+    }
+
+    .icon {
+        width: 16px;
+        height: 16px;
+        margin: 0;
+        fill: currentColor;
+    }
+}
+
+.rf-list .pagination-item--previous .pagination-link,
+.rf-list .pagination-item--next .pagination-link {
+    font: 650 15px / 1 var(--rf-font-text);
+}
+
+.rf-list .pagination-item--current .pagination-link {
+    border-color: var(--rf-ink);
+    background: var(--rf-ink);
+    color: var(--rf-paper);
+}
+
+
+// Nothing to show
+// -----------------------------------------------------------------------------
+
+.rf-list-empty {
+    padding: var(--rf-space-8) 0;
+    color: var(--rf-ink-muted);
+    font-size: 16px;
+}
+
+.rf-list-empty__clear {
+    @include rf-link-more;
+    color: var(--rf-ink);
+}
+
+
+// About: the rest of the description on dry limestone
+// -----------------------------------------------------------------------------
+
+.rf-list-about {
+    background: var(--rf-limestone-200);
+    color: var(--rf-ink);
+}
+
+.rf-list-about__inner {
+    max-width: calc(var(--rf-column-max) + 2 * var(--rf-gutter));
+    margin: 0 auto;
+    padding: var(--rf-space-12) var(--rf-gutter) var(--rf-space-16);
+}
+
+.rf-list-about__title {
+    @include rf-type-title;
+    margin: 0 0 var(--rf-space-4);
+    color: var(--rf-ink);
+    text-transform: none;
+}
+
+.rf-list-about__text {
+    max-width: 44rem;
+    font: 400 16px / 1.6 var(--rf-font-text);
+
+    p,
+    ul,
+    ol {
+        margin: 0 0 var(--rf-space-4);
+    }
+
+    h2,
+    h3,
+    h4 {
+        margin: var(--rf-space-6) 0 var(--rf-space-2);
+        color: var(--rf-ink);
+        font: 650 18px / 1.3 var(--rf-font-text);
+        text-transform: none;
+        letter-spacing: 0;
+    }
+
+    a {
+        color: var(--rf-ink);
+        text-decoration: underline;
+        text-decoration-color: var(--rf-edge);
+        text-underline-offset: 0.2em;
+
+        &:hover {
+            text-decoration-color: currentColor;
+        }
+    }
+
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+
+    > :last-child {
+        margin-bottom: 0;
+    }
+}
+
+@media (min-width: $rf-bp-desktop) {
+    .rf-list-head__inner {
+        padding-top: var(--rf-space-6);
+        padding-bottom: var(--rf-space-8);
+    }
+
+    .rf-list-head--stone {
+        min-height: 340px;
+
+        &::before {
+            background: radial-gradient(90% 110% at 4% -20%, rgba(255, 214, 160, 0.22), rgba(255, 214, 160, 0) 52%), linear-gradient(90deg, rgba(28, 25, 22, 0.88), rgba(28, 25, 22, 0.7) 42%, rgba(28, 25, 22, 0.3) 72%, rgba(28, 25, 22, 0.32));
+        }
+
+        .rf-list-head__inner {
+            align-content: end;
+            min-height: 340px;
+            padding-top: var(--rf-space-8);
+            padding-bottom: 40px;
+        }
+
+        .rf-list-head__title,
+        .rf-chips,
+        .rf-list-head__intro {
+            max-width: 46rem;
+        }
+    }
+}

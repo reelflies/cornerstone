@@ -1,0 +1,22 @@
+{{!--
+    A brand's page (redesign step 3; ticket 36): the category page's plain head (listing-head.html:
+    breadcrumbs and the brand's name as the H1; a brand has no description or subcategories) and
+    its listing, the facets beside the grid from 1040px. Stock brand.js refreshes
+    #product-listing-container and #faceted-search-container in place on every filter, sort and
+    page, with components/brand/product-listing.html and components/brand/sidebar.html.
+    The Page Builder regions stay where stock had them: brand_below_header under the head,
+    brand_below_content after the listing (outside the container brand.js replaces).
+--}}
+{{> components/reelflies/listing-head rf_name=brand.name rf_category=brand}}
+{{{region name="brand_below_header"}}}
+<div class="rf-list rf-list--side">
+    <div class="rf-list__inner">
+        <aside class="rf-list__side" id="faceted-search-container">
+            {{> components/brand/sidebar}}
+        </aside>
+        <div class="rf-list__main" id="product-listing-container">
+            {{> components/brand/product-listing}}
+        </div>
+    </div>
+</div>
+{{{region name="brand_below_content"}}}

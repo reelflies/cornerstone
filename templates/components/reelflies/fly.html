@@ -6,7 +6,11 @@
     rf_id, rf_name, rf_url, rf_price (formatted), rf_unit ('fly', 'set' or empty), rf_src,
     rf_srcset (optional), rf_photo_sizes, rf_eager (first viewport), rf_range (the size range
     line, "Sizes 8–20", or empty), rf_multi (1 when the shopper picks a size), rf_size (sm, md
-    or lg).
+    or lg). Optional: rf_priority (the page's one fetchpriority="high" image), rf_from (the
+    price is the lowest of a range: "from $1.25"), rf_sold (sold out: the reserved line says so
+    and the button is a link to the page), and for a listing's analytics rf_event, rf_pos,
+    rf_brand, rf_price_value and rf_cats (stock card's list attributes). A listing's card is also
+    li.product, which stock search.js counts to open its products tab.
 
     - The reserved line holds the size range, and once the fly is in the box, what is in it
       (quick-add.js writes it). It is always there, so adding never moves the layout.
@@ -14,17 +18,19 @@
       adds it). Off, a link takes the shopper to the product page to choose.
     - Nothing is ever set over the photo: its bottom-left corner holds the baked-in logo.
 --}}
-<li class="rf-fly rf-fly--{{rf_size}}" data-rf-product="{{rf_id}}">
-    <article class="rf-fly__card">
-        <a class="rf-fly__photo" href="{{rf_url}}" tabindex="-1" aria-hidden="true">{{#if rf_src}}<img src="{{rf_src}}"{{#if rf_srcset}} srcset="{{rf_srcset}}" sizes="{{rf_photo_sizes}}"{{/if}} width="720" height="480" alt=""{{#unless rf_eager}} loading="lazy"{{/unless}} decoding="async">{{/if}}</a>
+<li class="rf-fly rf-fly--{{rf_size}}{{#if rf_event}} product{{/if}}{{#if rf_sold}} is-sold{{/if}}" data-rf-product="{{rf_id}}">
+    <article class="rf-fly__card"{{#if rf_event}} data-event-type="{{rf_event}}" data-entity-id="{{rf_id}}" data-position="{{rf_pos}}" data-name="{{rf_name}}" data-product-category="{{join rf_cats ', '}}" data-product-brand="{{rf_brand}}" data-product-price="{{rf_price_value}}"{{/if}}>
+        <a class="rf-fly__photo" href="{{rf_url}}" tabindex="-1" aria-hidden="true">{{#if rf_src}}<img src="{{rf_src}}"{{#if rf_srcset}} srcset="{{rf_srcset}}" sizes="{{rf_photo_sizes}}"{{/if}} width="720" height="480" alt=""{{#unless rf_eager}} loading="lazy"{{/unless}}{{#if rf_priority}} fetchpriority="high"{{/if}} decoding="async">{{/if}}</a>
         <div class="rf-fly__body">
             <h3 class="rf-fly__name"><a href="{{rf_url}}">{{rf_name}}</a></h3>
             <div class="rf-fly__buy">
                 <div class="rf-fly__meta">
-                    <p class="rf-fly__price"><span class="rf-num">{{rf_price}}</span>{{#if rf_unit}} <span class="rf-fly__unit">{{lang (concat 'reelflies.card.per_' rf_unit)}}</span>{{/if}}</p>
-                    <p class="rf-fly__line"><span class="rf-fly__sizes">{{rf_range}}</span><span class="rf-fly__inbox" data-rf-inbox hidden></span></p>
+                    <p class="rf-fly__price">{{#if rf_from}}<span class="rf-fly__from">{{lang 'reelflies.card.from'}}</span> {{/if}}<span class="rf-num">{{rf_price}}</span>{{#if rf_unit}} <span class="rf-fly__unit">{{lang (concat 'reelflies.card.per_' rf_unit)}}</span>{{/if}}</p>
+                    <p class="rf-fly__line"><span class="rf-fly__sizes">{{#if rf_sold}}{{lang 'reelflies.card.sold_out'}}{{else}}{{rf_range}}{{/if}}</span><span class="rf-fly__inbox" data-rf-inbox hidden></span></p>
                 </div>
-                {{#if (getVar 'rf_quick_add')}}
+                {{#if rf_sold}}
+                <a class="rf-add rf-add--link" href="{{rf_url}}">{{lang 'reelflies.card.view'}}<span class="is-srOnly">: {{rf_name}}</span></a>
+                {{else if (getVar 'rf_quick_add')}}
                 <button class="rf-add" type="button" data-rf-add="{{#if rf_multi}}sizes{{else}}one{{/if}}" aria-expanded="false">{{#if rf_multi}}{{lang 'reelflies.card.add'}}{{else}}{{lang 'reelflies.card.add_one'}}{{/if}}<span class="is-srOnly">: {{rf_name}}</span></button>
                 {{else}}
                 <a class="rf-add rf-add--link" href="{{rf_url}}">{{#if rf_multi}}{{lang 'reelflies.card.choose'}}{{else}}{{lang 'reelflies.card.view'}}{{/if}}<span class="is-srOnly">: {{rf_name}}</span></a>

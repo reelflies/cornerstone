@@ -1,0 +1,68 @@
+{{!--
+    A specimen card (fly.html) in a listing's grid (components/products/grid.html's hook), from a
+    Stencil product card (rf_card) at position rf_pos:
+
+    - Its photo at Stencil's sizes, measured for the grid: two across on phones, three from
+      640px, three beside the facets from 1040px. The first three load eagerly; the first takes
+      fetchpriority="high" only when the page has no banner (the variable rf_banner,
+      listing-head.html), so each page has one high-priority image.
+    - Its price, the lowest of a price range with "from", and "/ fly" by the fly rule
+      (fly-rule.html, with rf_exclude, theme setting rf_price_unit_exclude).
+    - Sold out (stock_level 0): the reserved line says so and the button is a link to its page
+      (the owner's choice, 2026-11-07: nothing is set over the photo). listing.js says the same of
+      a product whose every size the Storefront API reports sold out.
+    - Its size range is filled in by listing.js from one Storefront API read for the whole grid;
+      the reserved line holds its place, so nothing moves when it arrives.
+    - Stock's list attributes for the store's analytics (rf_event, the grid's event).
+--}}
+{{~assignVar 'rf_card_sold' 0~}}{{~#if rf_card.stock_level '===' 0}}{{assignVar 'rf_card_sold' 1}}{{/if~}}
+{{~assignVar 'rf_card_eager' 0~}}{{~#if rf_pos '<=' 3}}{{assignVar 'rf_card_eager' 1}}{{/if~}}
+{{~assignVar 'rf_card_priority' 0~}}{{~#if rf_pos '==' 1}}{{#unless (getVar 'rf_banner')}}{{assignVar 'rf_card_priority' 1}}{{/unless}}{{/if~}}
+{{> components/reelflies/fly-rule rf_categories=rf_card.category rf_exclude=rf_exclude}}
+{{~#if (getVar 'rf_fly')}}{{assignVar 'rf_card_unit' 'fly'}}{{else}}{{assignVar 'rf_card_unit' ''}}{{/if~}}
+{{#if rf_card.price.price_range}}
+{{> components/reelflies/fly
+    rf_id=rf_card.id
+    rf_name=rf_card.name
+    rf_url=rf_card.url
+    rf_price=rf_card.price.price_range.min.without_tax.formatted
+    rf_from=1
+    rf_unit=(getVar 'rf_card_unit')
+    rf_src=(getImageSrcset rf_card.image 1x='360w')
+    rf_srcset=(getImageSrcset rf_card.image use_default_sizes=true)
+    rf_photo_sizes='(min-width: 1280px) 250px, (min-width: 1040px) 230px, (min-width: 640px) 31vw, 46vw'
+    rf_eager=(getVar 'rf_card_eager')
+    rf_priority=(getVar 'rf_card_priority')
+    rf_range=''
+    rf_multi=rf_card.has_options
+    rf_sold=(getVar 'rf_card_sold')
+    rf_size='md'
+    rf_event=rf_event
+    rf_pos=rf_pos
+    rf_brand=rf_card.brand.name
+    rf_price_value=rf_card.price.price_range.min.without_tax.value
+    rf_cats=rf_card.category
+}}
+{{else}}
+{{> components/reelflies/fly
+    rf_id=rf_card.id
+    rf_name=rf_card.name
+    rf_url=rf_card.url
+    rf_price=rf_card.price.without_tax.formatted
+    rf_unit=(getVar 'rf_card_unit')
+    rf_src=(getImageSrcset rf_card.image 1x='360w')
+    rf_srcset=(getImageSrcset rf_card.image use_default_sizes=true)
+    rf_photo_sizes='(min-width: 1280px) 250px, (min-width: 1040px) 230px, (min-width: 640px) 31vw, 46vw'
+    rf_eager=(getVar 'rf_card_eager')
+    rf_priority=(getVar 'rf_card_priority')
+    rf_range=''
+    rf_multi=rf_card.has_options
+    rf_sold=(getVar 'rf_card_sold')
+    rf_size='md'
+    rf_event=rf_event
+    rf_pos=rf_pos
+    rf_brand=rf_card.brand.name
+    rf_price_value=rf_card.price.without_tax.value
+    rf_cats=rf_card.category
+}}
+{{/if}}
