@@ -22,7 +22,7 @@
 import * as box from './box';
 import { boxWords as wordsFor } from './box-words';
 import { flyBrandList } from './cart-count';
-import { CARDS_EVENT, escapeHtml } from './card-html';
+import { CARDS_EVENT, VIEW_EVENT, escapeHtml } from './card-html';
 import { bump, fly } from './flight';
 import { compareHookSizes, hookRank } from './hook-order';
 import { announce } from './live-region';
@@ -272,5 +272,8 @@ export function start(context = {}) {
     });
     box.subscribe(() => syncCards());
     document.addEventListener(CARDS_EVENT, event => syncCards(event.target));
+    // a line measured while Quick order hid the grid had no width, so it kept its longest form;
+    // measure again when Photos returns
+    document.addEventListener(VIEW_EVENT, event => { if (event.detail && event.detail.view === 'grid') syncCards(event.target); });
     syncCards();
 }

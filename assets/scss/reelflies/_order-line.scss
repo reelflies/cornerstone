@@ -127,11 +127,16 @@ html:has(.rf-orderline) {
         min-width: 0;
     }
 
+    // the count wraps to two lines inside the 44px toggle ("12 flies," over "4 patterns") rather
+    // than being cut to "12 flies, 4 pa…" beside the thumbnails (step 4 critique)
     .rf-orderline__sum {
-        overflow: hidden;
-        text-overflow: ellipsis;
+        flex: 1 1 auto;
+        min-width: 0;
+        font-size: 0.875rem;
+        line-height: 1.2;
+        white-space: normal;
+        text-wrap: balance;
     }
-
 }
 
 .rf-box {
@@ -217,16 +222,41 @@ html:has(.rf-orderline) {
     text-align: right;
 }
 
+// At 320px (and 200% zoom) a 44px stepper, the size and the line's price don't share one row:
+// the size and price take the first, the stepper the second, at the right
+@media (max-width: 359px) {
+    .rf-box__line {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .rf-box__size {
+        grid-row: 1;
+        grid-column: 1;
+    }
+
+    .rf-box__lt {
+        grid-row: 1;
+        grid-column: 2;
+    }
+
+    .rf-box__line .rf-stepper {
+        grid-row: 2;
+        grid-column: 1 / -1;
+        justify-self: end;
+    }
+}
+
+// 44px buttons, as every other stepper's (step 4 critique: these were 36px)
 .rf-stepper {
     display: inline-grid;
-    grid-template-columns: 36px 32px 36px;
+    grid-template-columns: var(--rf-tap-min) 40px var(--rf-tap-min);
     align-items: center;
     border: 1px solid var(--rf-edge);
     border-radius: var(--rf-radius-md);
 }
 
 .rf-stepper button {
-    height: 36px;
+    height: var(--rf-tap-min);
     border: 0;
     background: none;
     font-size: 1.125rem;
@@ -303,13 +333,20 @@ html:has(.rf-orderline) {
     object-fit: cover;
 }
 
-// The narrowest phones keep two thumbnails, so the count and Check out still fit at 320px
+// Narrow phones keep two thumbnails, so the count and Check out still fit
 @media (max-width: 399px) {
     .rf-orderline__bar {
         gap: var(--rf-space-3);
     }
 
     .rf-orderline__thumb:nth-child(n+3) {
+        display: none;
+    }
+}
+
+// At 320px the thumbnails go, so the count still reads in two lines beside Check out
+@media (max-width: 359px) {
+    .rf-orderline__thumbs {
         display: none;
     }
 }

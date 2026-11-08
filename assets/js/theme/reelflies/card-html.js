@@ -8,6 +8,9 @@ import { word } from './words';
 // Sent on a list (bubbling) after the scripts lay new cards in it, so quick-add.js brings them
 // in step with the box.
 export const CARDS_EVENT = 'rf:cards-laid';
+// Sent on the grid (bubbling) when order-list.js shows Photos again after Quick order, with
+// { view } in detail: a card line measured while the grid was hidden had no width to fit.
+export const VIEW_EVENT = 'rf:view-set';
 
 export const escapeHtml = text => String(text ?? '').replace(/[&<>"']/g, c => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',

@@ -17,7 +17,7 @@
 // - The choice is remembered in this browser (localStorage; a private window simply starts on
 //   Photos), and the sheet is drawn again after every filter, sort or page (CARDS_EVENT).
 
-import { CARDS_EVENT, escapeHtml } from './card-html';
+import { CARDS_EVENT, VIEW_EVENT, escapeHtml } from './card-html';
 import { flyBrandList } from './cart-count';
 import { sortByHookOrder } from './hook-order';
 import { bindQuantities, followBox, syncQuantities } from './quantity';
@@ -129,6 +129,7 @@ export async function setView(next) {
         grid.hidden = false;
         const sheet = grid.parentNode.querySelector('[data-rf-olist]');
         if (sheet) sheet.hidden = true;
+        grid.dispatchEvent(new CustomEvent(VIEW_EVENT, { bubbles: true, detail: { view } }));
     }
 }
 
