@@ -6139,6 +6139,9 @@
   "i18n.RfPriceUnitExclude": {
     "default": "Gear and Assortment category names, comma-separated: no \"/ fly\" on their products"
   },
+  "i18n.RfFlyRoots": {
+    "default": "Fly category root names, comma-separated: their listings count patterns even without the Fly Sizes facet"
+  },
   "i18n.RfQuickAdd": {
     "default": "\"+ Add\" on cards (each size with its quantity) and the listings' quick order"
   },

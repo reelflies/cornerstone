@@ -369,6 +369,11 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
     display: inline-flex;
 }
 
+// in place but invisible until order-list.js takes the mark off, so its room is held
+.rf-view[data-rf-view-pending] {
+    visibility: hidden;
+}
+
 .rf-view__btn {
     display: inline-flex;
     align-items: center;
@@ -409,7 +414,10 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
 
 // the narrowest phones: the switch's two icons, so it shares the count's line; the words stay for
 // screen readers
-@media (max-width: 379px) {
+// phones: icons alone, so the sort beside the switch shows its whole word ("Best selling", not
+// "Best s…" at 390: step 4 critique; with the words the select had 111px at 460 and needs 136);
+// the buttons keep their aria-pressed state and names
+@media (max-width: 499px) {
     .rf-view__btn {
         padding: 0 12px;
     }
@@ -551,11 +559,43 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
     }
 }
 
-// phones: the count on its own line, then Filter and the sort sharing one
+// phones: the count alone on its first line (22px, not the switch's 44), then the view switch and
+// the tools (Filter, the sort) sharing the second, so the first cards' "+ Add" clear the order line
+// on first paint at 390×844 (step 4 critique: they sat 19px under it). The lead's children join
+// the grid directly; the sort's row is 44px whether or not order-list.js has shown the switch yet,
+// so nothing moves when it appears.
 @media (max-width: $rf-bp-tablet - 1) {
+    .rf-list-top {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        margin-bottom: var(--rf-space-3);
+        padding-bottom: var(--rf-space-2);
+    }
+
+    .rf-list-top__lead {
+        display: contents;
+    }
+
+    .rf-list-top__count {
+        grid-column: 1 / -1;
+    }
+
     .rf-list-top__tools {
+        grid-column: 2;
         flex-wrap: nowrap;
-        width: 100%;
+        justify-content: flex-end;
+        min-width: 0;
+    }
+
+    // beside a Filter button the switch keeps its icons alone, as it does under 380px
+    .rf-list-top:has(.rf-list-top__filter) .rf-view__word {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
     }
 
     .rf-list-top .actionBar {

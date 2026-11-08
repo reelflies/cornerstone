@@ -1156,6 +1156,8 @@
             "in_box_count": "{n} in your box",
             "hint": "Choose a size to add one. Choose it again for more.",
             "largest_first": "Largest hook first.",
+            "sizes_gloss": "Bigger number, smaller hook.",
+            "sizes_help": "What do sizes mean?",
             "sold_one": "Size {size} is sold out.",
             "sold_many": "Sizes {sizes} are sold out.",
             "sold_out": "{name} is sold out.",

@@ -11,8 +11,10 @@
       with the variant in rf_variants whose option value it is, and its stock
       (product-picker-row.html). product-buy.js redraws them with size-picker.js's markup, in hook
       order and with their step bars, before the shopper can use them.
-    - The foot names the sold-out sizes and leads to the hook size chart (on a fly). Under it the
-      reserved line says what of this product is in the box ("In your box: 3 × 12, 1 × 14").
+    - The foot names the sold-out sizes, then on a fly says "Bigger number, smaller hook." and leads
+      to the hook size chart, so the scale is explained even where the chart page isn't published
+      (step 4 critique). Under it the reserved line says what of this product is in the box
+      ("In your box: 3 × 12, 1 × 14").
     - The data-rf-* attributes describe the product for the box's line until the store answers.
 --}}
 {{~assignVar 'rf_pick_sold' ''~}}{{~assignVar 'rf_pick_sold_n' 0~}}{{~assignVar 'rf_pick_n' 0~}}
@@ -37,6 +39,7 @@
             {{~else if (getVar 'rf_pick_sold_n') '>' 1}}{{lang 'reelflies.js.sold_many' sizes=(getVar 'rf_pick_sold')}}
             {{~/if~}}
         </span>
+        {{#if (getVar 'rf_pdp_fly')}}<span>{{lang 'reelflies.js.sizes_gloss'}}</span>{{/if}}
         {{#if (getVar 'rf_pdp_fly')}}<a class="rf-more" href="{{#if (trim theme_settings.rf_hook_chart_url)}}{{trim theme_settings.rf_hook_chart_url}}{{else}}/fly-hook-size-chart/{{/if}}">{{lang 'reelflies.listing.sizes_help'}}{{> components/reelflies/icon name='arrow'}}</a>{{/if}}
     </div>
     {{/unless}}

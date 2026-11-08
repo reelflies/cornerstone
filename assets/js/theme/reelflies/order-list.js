@@ -107,6 +107,7 @@ async function build(grid) {
 function showSwitch() {
     document.querySelectorAll(SWITCH).forEach(group => {
         group.removeAttribute('hidden');
+        group.removeAttribute('data-rf-view-pending'); // drawn invisible, in place, until now
         group.querySelectorAll('[data-rf-view-set]').forEach(button => {
             button.setAttribute('aria-pressed', String(button.dataset.rfViewSet === view));
         });

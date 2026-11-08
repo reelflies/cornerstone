@@ -47,7 +47,7 @@ function pickerHtml(product) {
 <div class="rf-pick__head"><p class="rf-pick__title" id="rf-pick-${product.id}">${name}</p><button class="rf-pick__close" type="button" data-rf-done aria-label="${escapeHtml(word('close'))}">${icon('close')}</button></div>
 <p class="rf-pick__hint" id="rf-hint-${product.id}">${word(sized ? 'pick_hint' : 'pick_hint_choice')}</p>
 <ul class="rf-pick__rows" aria-labelledby="rf-pick-${product.id}" aria-describedby="rf-hint-${product.id}">${rowsHtml(product)}</ul>
-<div class="rf-sizes__foot"><span>${escapeHtml(footWords(product.sizes))}</span><button class="rf-sizes__done" type="button" data-rf-done>${word('done')}</button></div>
+<div class="rf-sizes__foot"><span>${escapeHtml(footWords(product.sizes))}${sized ? ` ${escapeHtml(word('sizes_gloss'))}` : ''}${sized && settings.hookChart ? ` <a class="rf-more" href="${escapeHtml(settings.hookChart)}">${escapeHtml(word('sizes_help'))}</a>` : ''}</span><button class="rf-sizes__done" type="button" data-rf-done>${word('done')}</button></div>
 </div>`;
 }
 
@@ -249,7 +249,8 @@ function prefetch(event) {
 }
 
 export function start(context = {}) {
-    settings = { cartState: context.rfCartState !== false, flyBrands: flyBrandList(context.rfFlyBrands) };
+    // hookChart: the hook size chart's URL (theme setting rf_hook_chart_url), for the picker's foot
+    settings = { cartState: context.rfCartState !== false, flyBrands: flyBrandList(context.rfFlyBrands), hookChart: typeof context.rfHookChart === 'string' ? context.rfHookChart.trim() : '' };
     const seedEl = document.querySelector('[data-rf-sizes-seed]');
     if (seedEl) {
         try {
