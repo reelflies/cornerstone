@@ -10,8 +10,9 @@
 // Order line and box
 // -----------------------------------------------------------------------------
 
-// room under the footer for the bar, in the footer's own shale (on the body it showed limestone)
-body:has(.rf-orderline) .rf-foot {
+// room under the footer for the bar, in the footer's own shale (on the body it showed limestone);
+// the footer carries the class from the server (footer.html), so nothing moves as the page parses
+.rf-foot--orderline {
     padding-bottom: calc(var(--rf-space-8) + var(--rf-orderline-height));
 }
 

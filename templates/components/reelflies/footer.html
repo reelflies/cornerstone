@@ -12,9 +12,11 @@
       hook size chart) and Help (the channel's own Web Pages, page-link.html, and the blog).
     - The base row: the copyright and trademark line, and the other storefront (rf_alt_store_url,
       rf_alt_store_foot), a real link for every visitor.
-    Then the order line (order-line.html), on every page but the cart.
+    Then the order line (order-line.html), on every page but the cart. The footer says so itself
+    (rf-foot--orderline, the same condition), so its room for the bar is there from the first
+    paint: a rule on the order line, which follows the footer, applied only once it was parsed.
 --}}
-<footer class="rf-foot" data-rf-foot>
+<footer class="rf-foot{{#if theme_settings.rf_order_line}}{{#if template '!==' 'pages/cart'}} rf-foot--orderline{{/if}}{{/if}}" data-rf-foot>
     <h2 class="is-srOnly">{{lang 'footer.title'}}</h2>
     {{#if settings.show_newsletter_box}}
     <div class="rf-wrap rf-foot__news">

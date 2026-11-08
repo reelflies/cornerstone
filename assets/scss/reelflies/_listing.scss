@@ -1151,6 +1151,12 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
     text-align: left;
 }
 
+// a pager with no pages (stock renders an empty one for a search that found nothing) takes no room:
+// stock search.js hid it a moment after load and the page moved (step 4 audit)
+:is(.rf-list, .rf-blog) .pagination:not(:has(.pagination-item)) {
+    display: none;
+}
+
 :is(.rf-list, .rf-blog) .pagination-list {
     display: flex;
     flex-wrap: wrap;
