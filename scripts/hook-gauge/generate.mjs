@@ -39,10 +39,11 @@ const CHART_HEADER = `{{!--
     from 6/0 to 24 drawn as the authored hook at one scale, largest first, its bend on one line,
     each linking to its row below (#size-6-0 … #size-24). Server-rendered; no script.
 
-    Not master's generated hook-gauge.html (scripts/hook-gauge/generate.mjs writes that path), so the
-    generator never overwrites it. The lengths are scripts/hook-gauge/calibration.json's (mm, a standard-length hook, eye to
-    bend; "provisional" until the owner checks them against the Mustad chart). Change both
-    together. The caption says the drawing is relative, not actual size.
+    Written by scripts/hook-gauge/generate.mjs from scripts/hook-gauge/calibration.json (the lengths
+    in mm, a standard-length hook, eye to bend; "provisional" until the owner checks them against
+    the Mustad chart): change the calibration or the generator, run it, and commit the result
+    (\`generate.mjs --check\` fails a copy that differs). The caption says the drawing is relative,
+    not actual size.
 --}}`;
 
 // One size's include: the hook partial with the size, its row's anchor slug and its length.

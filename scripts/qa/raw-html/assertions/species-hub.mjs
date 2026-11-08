@@ -14,9 +14,11 @@
 // - No "no products" message (stock's alert, or ticket 33's listing-empty paragraph), no
 //   <!--more--> marker, no robots noindex (refactor 11: the hub is indexed), and the canonical,
 //   when the page has one (one-canonical counts them), on the page's own path.
-// - The grid, when there is one (data-rf-hub-products): after the tiles, at most a page of cards
-//   (config.json's categorypage_products_per_page), every card photo lazy with no fetchpriority,
-//   and a numbered pager when its count runs past the cards listed.
+// - The grid, when there is one (data-rf-hub-products, the redesign's listing-body.html with a
+//   title): after the tiles, at most a page of cards (config.json's
+//   categorypage_products_per_page; li.rf-fly, the redesign's specimen cards), every card photo
+//   lazy with no fetchpriority, and a numbered pager when the count the listing's row states
+//   ([data-rf-list-count], "605 patterns") runs past the cards listed.
 // - On every pin but channel 1's stand-in (STAND_IN), what criteria 1 and 2 wait for on prelaunch:
 //   the root's intro under the H1, each tile's count and intro, and Fly Type links on some tile
 //   (a Menu Display Depth below 3 leaves none).
@@ -33,7 +35,7 @@ const HEADING = JSON.parse(fs.readFileSync(fileURLToPath(new URL('lang/en.json',
 const PER_PAGE = Number(JSON.parse(fs.readFileSync(fileURLToPath(new URL('config.json', THEME)), 'utf8')).settings.categorypage_products_per_page);
 
 // The tile photos that load eagerly: the phones' first row, and the first two of the desktop's
-// three (components/reelflies/category-tile.html).
+// three (components/reelflies/hub-tiles.html, the redesign's tiles; master's category-tile.html).
 export const EAGER = 2;
 
 const hasClass = name => attrs => new RegExp(`(^|\\s)${name}(\\s|$)`).test(attrs.class || '');
@@ -80,9 +82,12 @@ function tileProblems(tile, index) {
     return problems;
 }
 
+// The redesign's cards are li.rf-fly (components/reelflies/fly.html) in ul[data-rf-grid]; master's
+// were article.card. The count is the listing row's ([data-rf-list-count], listing-top.html),
+// master's a paragraph marked data-rf-hub-count.
 function gridProblems(grid) {
     const problems = [];
-    const cards = elementsHtml(grid, 'article', hasClass('card'));
+    const cards = [...elementsHtml(grid, 'li', hasClass('rf-fly')), ...elementsHtml(grid, 'article', hasClass('card'))];
     if (cards.length > PER_PAGE) problems.push(`the grid has ${cards.length} cards: ${PER_PAGE} a page`);
     cards.forEach((card, index) => {
         const img = findTags(card, 'img')[0];
@@ -90,7 +95,8 @@ function gridProblems(grid) {
         if (img.attrs.loading !== 'lazy') problems.push(`card ${index + 1}'s photo isn't lazy: the tiles fill the first screen above the grid`);
         if (img.attrs.fetchpriority) problems.push(`card ${index + 1}'s photo has fetchpriority="${img.attrs.fetchpriority}": the first tile's photo holds the page's one`);
     });
-    const total = Number((textOf(outerHtml(grid, 'p', attrs => 'data-rf-hub-count' in attrs) || '').match(/\d[\d,]*/) || ['0'])[0].replace(/,/g, ''));
+    const countEl = outerHtml(grid, 'p', attrs => 'data-rf-list-count' in attrs) || outerHtml(grid, 'p', attrs => 'data-rf-hub-count' in attrs) || '';
+    const total = Number((textOf(countEl).match(/\d[\d,]*/) || ['0'])[0].replace(/,/g, ''));
     const pager = outerHtml(grid, 'nav', hasClass('pagination'));
     const numbered = pager ? findTags(pager, 'a').filter(link => /[?&]page=\d+/.test(decodeHtml(link.attrs.href || ''))).length : 0;
     if (total > cards.length && numbered < 2) problems.push(`the grid lists ${cards.length} of ${total} patterns with no numbered pager`);
@@ -132,7 +138,8 @@ export function speciesHubProblems(html, pagePath) {
     if (high.length > 1) problems.push(`${high.length} images have fetchpriority="high": only the first tile's photo`);
     else if (high.length === 1 && firstPhoto && high[0].raw !== firstPhoto.raw) problems.push(`the page's fetchpriority="high" is on ${high[0].attrs.src || 'an image'}, not the first tile's photo`);
     const tags = findTags(html);
-    if (tags.some(tag => 'data-no-products-notification' in tag.attrs || hasClass('rf-listing-empty')(tag.attrs))) problems.push('a "no products" message: the hub never shows one (R8)');
+    // stock's alert, master's listing-empty paragraph (rf-listing-empty) and the redesign's (rf-list-empty)
+    if (tags.some(tag => 'data-no-products-notification' in tag.attrs || hasClass('rf-listing-empty')(tag.attrs) || hasClass('rf-list-empty')(tag.attrs))) problems.push('a "no products" message: the hub never shows one (R8)');
     if (html.includes('<!--more-->')) problems.push('the description\'s <!--more--> marker is in the page');
     if (findTags(html, 'meta').some(meta => (meta.attrs.name || '').toLowerCase() === 'robots' && /noindex/i.test(meta.attrs.content || ''))) problems.push('a robots meta says noindex: the hub is indexed (refactor 11)');
     const canonicals = findTags(html, 'link').filter(link => (link.attrs.rel || '').toLowerCase().split(/\s+/).includes('canonical'));

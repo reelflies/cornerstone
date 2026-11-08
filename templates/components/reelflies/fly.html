@@ -17,10 +17,13 @@
     - With rf_quick_add on, "+ Add" opens the size strip in [data-rf-sizes] (one size: "Add 1"
       adds it). Off, a link takes the shopper to the product page to choose.
     - Nothing is ever set over the photo: its bottom-left corner holds the baked-in logo.
+    - A product with no photo (rf_src empty) shows the ReelFlies default product image, the file
+      config.json's default_image_product names (theme_settings can't be reached inside a loop),
+      so the card keeps its 3:2 box and the listing's card-images check finds a photo on every card.
 --}}
 <li class="rf-fly rf-fly--{{rf_size}}{{#if rf_event}} product{{/if}}{{#if rf_sold}} is-sold{{/if}}" data-rf-product="{{rf_id}}">
     <article class="rf-fly__card"{{#if rf_event}} data-event-type="{{rf_event}}" data-entity-id="{{rf_id}}" data-position="{{rf_pos}}" data-name="{{rf_name}}" data-product-category="{{join rf_cats ', '}}" data-product-brand="{{rf_brand}}" data-product-price="{{rf_price_value}}"{{/if}}>
-        <a class="rf-fly__photo" href="{{rf_url}}" tabindex="-1" aria-hidden="true">{{#if rf_src}}<img src="{{rf_src}}"{{#if rf_srcset}} srcset="{{rf_srcset}}" sizes="{{rf_photo_sizes}}"{{/if}} width="720" height="480" alt=""{{#unless rf_eager}} loading="lazy"{{/unless}}{{#if rf_priority}} fetchpriority="high"{{/if}} decoding="async">{{/if}}</a>
+        <a class="rf-fly__photo" href="{{rf_url}}" tabindex="-1" aria-hidden="true">{{#if rf_src}}<img src="{{rf_src}}"{{#if rf_srcset}} srcset="{{rf_srcset}}" sizes="{{rf_photo_sizes}}"{{/if}} width="720" height="480" alt=""{{#unless rf_eager}} loading="lazy"{{/unless}}{{#if rf_priority}} fetchpriority="high"{{/if}} decoding="async">{{else}}<img src="{{cdn 'img/reelflies/default-product.png'}}" width="720" height="480" alt=""{{#unless rf_eager}} loading="lazy"{{/unless}} decoding="async">{{/if}}</a>
         <div class="rf-fly__body">
             <h3 class="rf-fly__name"><a href="{{rf_url}}">{{rf_name}}</a></h3>
             <div class="rf-fly__buy">

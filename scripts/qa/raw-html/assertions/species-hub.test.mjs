@@ -134,11 +134,6 @@ test('fails a canonical to another page', async () => {
     assert.match(speciesHub.check(await page({ head: '<link rel="canonical" href="https://reelflies.ca/flies/">' })).join('\n'), /the canonical points at \/flies\/, not the page's own path \/species\//);
 });
 
-// The module's grid checks read master's card (article.card) and the grid's total from
-// data-rf-hub-count, the tiles' mark; the redesign's cards are article.rf-fly__card and its row
-// counts in data-rf-list-count, so 25 cards, an eager card photo and a missing pager go
-// unreported until the module reads them (card-images checks the card photos on the listing
-// pins). Only the grid's place is checked here.
 test('fails a grid before the tiles', async () => {
     const good = await page();
     const card = cardPhoto(good.html, 0);
@@ -148,6 +143,29 @@ test('fails a grid before the tiles', async () => {
     const moved = good.html.replace(gridHtml, '').replace('<ul class="rf-hub__tiles"', `${gridHtml}<ul class="rf-hub__tiles"`);
     assert.ok(tilesStart > 0);
     assert.match(speciesHub.check({ ...good, html: moved }).join('\n'), /the grid comes before the tiles/);
+});
+
+// The grid's cards are the redesign's li.rf-fly (components/reelflies/fly.html), its count the
+// listing row's [data-rf-list-count]: a page of them at most, every photo lazy with no priority,
+// and a numbered pager once the count runs past the cards listed.
+test('fails a grid with more than a page of cards, an eager or high-priority card photo, or a count past the cards with no numbered pager', async () => {
+    const good = await page();
+    const grid = outerHtml(good.html, 'div', attrs => 'data-rf-hub-products' in attrs);
+    const cards = elementsHtml(grid, 'li', hasClass('rf-fly'));
+    assert.ok(cards.length >= 1 && cards.length <= 24, `the fixture lists ${cards.length} cards`);
+    assert.deepEqual(speciesHub.check(good).filter(problem => /grid|card \d/.test(problem)), [], 'the fixture\'s grid passes');
+    const list = outerHtml(grid, 'ul', attrs => 'data-rf-grid' in attrs);
+    const crowded = list.replace(cards[0], cards[0].repeat(26 - cards.length));
+    assert.match(problems(good, list, crowded), /the grid has 25 cards: 24 a page/);
+    const photo = cardPhoto(good.html, 0);
+    assert.match(retag(good, photo, tag => tag.replace(' loading="lazy"', '')), /card 1's photo isn't lazy: the tiles fill the first screen above the grid/);
+    assert.match(retag(good, photo, tag => tag.replace('<img', '<img fetchpriority="high"')), /card 1's photo has fetchpriority="high": the first tile's photo holds the page's one/);
+    const count = outerHtml(grid, 'p', attrs => 'data-rf-list-count' in attrs);
+    assert.ok(count, 'the listing row counts the grid');
+    const counted = count.replace(/>[\s\S]*?<\/p>$/, '><span class="rf-num">605</span> patterns</p>');
+    const withoutPager = grid.replace(count, counted).replace(/<nav class="pagination[\s\S]*?<\/nav>/, '');
+    assert.match(problems(good, grid, withoutPager), new RegExp(`the grid lists ${cards.length} of 605 patterns with no numbered pager`));
+    assert.match(problems(good, HUB_OPEN, `${HUB_OPEN}<p class="rf-list-empty">No flies match these filters.</p>`), /a "no products" message/);
 });
 
 test('fails a hub on any pin but channel 1\'s stand-in with no root intro, a tile with no count or no intro, or no Fly Type links on any tile (criteria 1 and 2 on prelaunch)', async () => {
