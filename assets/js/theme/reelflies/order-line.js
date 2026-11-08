@@ -137,7 +137,9 @@ function step(target) {
     box.change({
         productId: line.productId, variantId: line.variantId, delta, meta: line,
     }).then(() => {
-        announce(word(delta > 0 ? 'added' : 'removed', { what: label, count: boxWords() }));
+        let key = 'added';
+        if (delta < 0) key = box.lines().length ? 'removed' : 'removed_empty';
+        announce(word(key, { what: label, count: boxWords() }));
     }, error => {
         announce(`${word('change_failed', { what: label })} ${error.storeWords ? error.message : word('try_again')}`);
     });
@@ -145,6 +147,7 @@ function step(target) {
 
 export function start(context = {}) {
     brands = flyBrandList(context.rfFlyBrands);
+    box.setChannel(context.rfChannelId); // for the data layer (box.js)
     const root = document.querySelector('[data-rf-orderline]');
     const button = document.querySelector('[data-rf-box-btn]');
     box.subscribe(() => render(root));

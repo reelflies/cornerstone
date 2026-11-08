@@ -1,0 +1,21 @@
+{{!--
+    Whether a product sits under one of a list of categories, by its Placements' full paths. Sets
+    the variable rf_match to 1 or 0 and renders nothing:
+
+        {{> components/reelflies/category-match rf_categories=product.category rf_paths=theme_settings.rf_no_box_note_paths}}
+        {{#if (getVar 'rf_match')}} … {{/if}}
+
+    rf_paths is comma-separated; a path matches as a whole: the Placement is the path itself or
+    starts with the path and "/". Empty, nothing matches.
+--}}
+{{~assignVar 'rf_match' 0~}}
+{{~#if rf_categories.length~}}
+{{~#each (split rf_paths ',') as |rfPath|~}}
+{{~#if (trim rfPath)~}}
+{{~#each ../rf_categories as |rfPlace|~}}
+{{~#if rfPlace '===' (trim rfPath)~}}{{~assignVar 'rf_match' 1~}}{{~/if~}}
+{{~#startsWith (concat (trim rfPath) '/') rfPlace~}}{{~assignVar 'rf_match' 1~}}{{~/startsWith~}}
+{{~/each~}}
+{{~/if~}}
+{{~/each~}}
+{{~/if~}}

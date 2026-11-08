@@ -1,0 +1,42 @@
+{{!--
+    The reviews (ticket 40): one rule drives the section, the summary (review-summary.html) and the
+    JSON-LD (components/products/schema.html's hook): the store's and the theme's review settings
+    on, and reviews to show.
+
+    - With reviews: "Reviews (3)" and "Write a review", then up to productpage_reviews_count
+      reviews, each its title, its stars, stock's "Posted by" line and its text; stock's pager
+      only when there are more.
+    - With none: "No reviews yet for this fly." (or "No reviews yet." off a fly) and "Write a
+      review". With the theme's setting off, the button alone; with the store's off, nothing.
+    - Stock's review form, once per page.
+--}}
+{{#all settings.show_product_reviews theme_settings.show_product_reviews product.reviews.list.length}}
+<section class="rf-reviews" id="product-reviews" aria-labelledby="rf-reviews-heading">
+    <div class="rf-reviews__head">
+        <h2 class="rf-reviews__heading" id="rf-reviews-heading">{{lang 'reelflies.reviews.heading' total=product.reviews.total}}</h2>
+        {{> components/reelflies/review-write}}
+    </div>
+    <ol class="rf-reviews__list">
+        {{#each product.reviews.list}}
+        <li class="rf-review">
+            <h3 class="rf-review__title">{{{sanitize title}}}</h3>
+            <p class="rf-review__meta">{{> components/reelflies/stars rating=rating}}<span class="rf-review__by">{{#if name}}{{{lang 'products.reviews.post_on_by' date=date name=(sanitize name)}}}{{else}}{{lang 'products.reviews.post_on_by' date=date name=(lang 'products.reviews.anonymous_poster')}}{{/if}}</span></p>
+            <p class="rf-review__body">{{{sanitize text}}}</p>
+        </li>
+        {{/each}}
+    </ol>
+    {{#or pagination.reviews.previous pagination.reviews.next}}
+    {{> components/common/paginator pagination.reviews reload=true}}
+    {{/or}}
+</section>
+{{else}}
+{{#if settings.show_product_reviews}}
+<div class="rf-reviews rf-reviews--none" id="product-reviews">
+    {{#if theme_settings.show_product_reviews}}<p class="rf-reviews__none">{{#if (getVar 'rf_pdp_fly')}}{{lang 'reelflies.reviews.none_fly'}}{{else}}{{lang 'reelflies.reviews.none'}}{{/if}}</p>{{/if}}
+    {{> components/reelflies/review-write}}
+</div>
+{{/if}}
+{{/all}}
+{{#if settings.show_product_reviews}}
+{{> components/products/modals/writeReview}}
+{{/if}}

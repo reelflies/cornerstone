@@ -1,0 +1,7 @@
+{{!--
+    A rating as five stars in ink (gold fails 3:1 on limestone; ticket 40), one image with its
+    words: "Rated 4 out of 5".
+
+        {{> components/reelflies/stars rating=product.rating}}
+--}}
+<span class="rf-stars" role="img" aria-label="{{lang 'reelflies.reviews.rated' rating=rating}}">{{#for 1 5}}{{#if ../rating '>=' $index}}{{> components/reelflies/icon name='star' class='rf-star'}}{{else}}{{> components/reelflies/icon name='star-empty' class='rf-star rf-star--empty'}}{{/if}}{{/for}}</span>

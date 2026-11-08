@@ -6,35 +6,11 @@ product:
         limit: {{theme_settings.productpage_reviews_count}}
     related_products:
         limit: {{theme_settings.productpage_related_products_count}}
-    similar_by_views:
-        limit: {{theme_settings.productpage_similar_by_views_count}}
+gql: "query RfProductSizes($productId: Int!) { site { product(entityId: $productId) { entityId productOptions(first: 3) { edges { node { entityId displayName ... on MultipleChoiceOption { values(first: 50) { edges { node { entityId label } } } } } } } variants(first: 50) { edges { node { entityId isPurchasable inventory { isInStock } options(first: 2) { edges { node { entityId values(first: 1) { edges { node { entityId label } } } } } } } } } } } }"
 ---
 {{inject 'productId' product.id}}
-
-{{#partial "page"}}
-
-    {{> components/common/breadcrumbs breadcrumbs=breadcrumbs}}
-
-    {{#each product.shipping_messages}}
-        {{> components/common/alert/alert-info message}}
-    {{/each}}
-
-    <div>
-        {{> components/products/product-view}}
-
-        {{{region name="product_below_content"}}}
-
-        {{#if product.videos.list.length}}
-            {{> components/products/videos product.videos}}
-        {{/if}}
-
-        {{#all settings.show_product_reviews theme_settings.show_product_reviews (if theme_settings.show_product_details_tabs '!==' true)}}
-            {{> components/products/reviews reviews=product.reviews product=product urls=urls}}
-        {{/all}}
-
-        {{> components/products/tabs}}
-    </div>
-
-    {{> components/products/schema}}
+{{!-- ReelFlies hook (redesign step 3; tickets 37-40; CUSTOMIZATIONS.md): the page is components/reelflies/product-page.html, in the hero block so its bands run full bleed. The front matter drops similar_by_views (no "Customers also viewed", ticket 39) and adds a GraphQL query: each choice's variant and stock, for the size strip drawn on the server. --}}
+{{#partial "hero"}}
+{{> components/reelflies/product-page}}
 {{/partial}}
 {{> layout/base}}

@@ -1,0 +1,17 @@
+{{!--
+    The product page's main photograph (ticket 39): the page's one high-priority image, eager,
+    with a srcset, its sizes and its dimensions, and the alt text the store holds, else the
+    product's name. Stock's responsive-img partial escapes fetchpriority, so the <img> is written
+    here. data-main-image is the hook stock image-gallery.js swaps the photo by.
+
+        {{> components/reelflies/product-image image=product.main_image size=theme_settings.product_size name=product.title default_image=theme_settings.default_image_product}}
+
+    The photo is shot at 3:2 on white and shown as shot (DESIGN.md): product_size is 760x507.
+--}}
+{{~assignVar 'rf_image_w' 760~}}{{~assignVar 'rf_image_h' 507~}}
+{{~#each (split size 'x')~}}{{~#if @first~}}{{~assignVar 'rf_image_w' this~}}{{~else~}}{{~assignVar 'rf_image_h' this~}}{{~/if~}}{{~/each~}}
+{{#if image}}
+<img class="productView-image--default rf-pdp__photo" src="{{getImageSrcset image 1x=size}}" srcset="{{getImageSrcset image 480w='480w' 640w='640w' 760w='760w' 960w='960w' 1280w='1280w' 1520w='1520w'}}" sizes="(min-width: 1040px) 54vw, calc(100vw - 32px)" width="{{getVar 'rf_image_w'}}" height="{{getVar 'rf_image_h'}}" alt="{{#if image.alt}}{{image.alt}}{{else}}{{name}}{{/if}}" fetchpriority="high" decoding="async" data-main-image>
+{{else}}
+<img class="productView-image--default rf-pdp__photo" src="{{cdn default_image}}" width="760" height="507" alt="{{lang 'products.card_default_image_alt'}}" fetchpriority="high" data-main-image>
+{{/if}}

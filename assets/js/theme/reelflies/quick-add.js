@@ -22,44 +22,23 @@ import { boxWords as wordsFor } from './box-words';
 import { flyBrandList } from './cart-count';
 import { CARDS_EVENT, escapeHtml } from './card-html';
 import { bump, fly } from './flight';
-import { compareHookSizes } from './hook-order';
+import { compareHookSizes, hookRank } from './hook-order';
 import { announce } from './live-region';
 import { productById, seed } from './storefront';
+import { cellHtml, footWords } from './strip-html';
 import { word } from './words';
 
-const HOOK_ORDER = ['6/0', '5/0', '4/0', '3/0', '2/0', '1/0', '2', '4', '6', '8', '10', '12', '14', '16', '18', '20', '22', '24'];
-const stepFor = label => {
-    const i = HOOK_ORDER.indexOf(label);
-    return i < 0 ? 0.5 : (1 - (i / (HOOK_ORDER.length - 1)) * 0.82).toFixed(2);
-};
-
 let settings = { cartState: true, flyBrands: [] };
-
-// Every cell keeps the "−1" row, empty until its size is in the box, so the strip never changes
-// shape as flies go in (the Reserved Line rule, inside the strip).
-const RESERVED = '<span class="rf-sz__minus rf-sz__minus--none" aria-hidden="true"></span>';
 
 const cardOf = el => el.closest('.rf-fly[data-rf-product]');
 const linesFor = productId => box.lines().filter(line => line.productId === String(productId));
 
 function stripHtml(product) {
     const counts = new Map(linesFor(product.id).map(line => [String(line.variantId), line.quantity]));
-    const cells = product.sizes.map(size => {
-        const n = counts.get(String(size.variantId)) || 0;
-        const step = `<span class="rf-sz__step" style="--rf-k:${stepFor(size.label)}"></span>`;
-        if (!size.inStock) {
-            return `<li class="rf-sz"><button class="rf-sz__btn" type="button" disabled aria-label="${escapeHtml(word('size_sold', { size: size.label }))}">${step}<span>${escapeHtml(size.label)}</span></button>${RESERVED}</li>`;
-        }
-        const label = n ? word('size_label_in', { size: size.label, n }) : word('size_label', { size: size.label });
-        return `<li class="rf-sz"><button class="rf-sz__btn${n ? ' has-count' : ''}" type="button" data-rf-size="${escapeHtml(size.label)}" data-rf-variant="${size.variantId}" aria-label="${escapeHtml(label)}">${step}<span>${escapeHtml(size.label)}</span>${n ? `<span class="rf-sz__count">${n}</span>` : ''}</button>${n ? `<button class="rf-sz__minus" type="button" data-rf-minus="${escapeHtml(size.label)}" data-rf-variant="${size.variantId}" aria-label="${escapeHtml(word('minus_label', { size: size.label }))}">${word('minus')}</button>` : RESERVED}</li>`;
-    }).join('');
-    const sold = product.sizes.filter(size => !size.inStock).map(size => size.label);
-    let foot = word('largest_first');
-    if (sold.length === 1) foot = word('sold_one', { size: sold[0] });
-    else if (sold.length) foot = word('sold_many', { sizes: sold.join(', ') });
+    const cells = product.sizes.map(size => cellHtml(size, counts.get(String(size.variantId)) || 0)).join('');
     return `<p class="rf-sizes__hint" id="rf-hint-${product.id}">${word('hint')}</p>
 <ol class="rf-sizes__strip" aria-describedby="rf-hint-${product.id}">${cells}</ol>
-<div class="rf-sizes__foot"><span>${escapeHtml(foot)}</span><button class="rf-sizes__done" type="button" data-rf-done>${word('done')}</button></div>`;
+<div class="rf-sizes__foot"><span>${escapeHtml(footWords(product.sizes))}</span><button class="rf-sizes__done" type="button" data-rf-done>${word('done')}</button></div>`;
 }
 
 function elsewhereHtml(product, url) {
@@ -158,7 +137,8 @@ async function openStrip(card) {
 }
 
 function what(product, size) {
-    return size ? word('what_size', { size, name: product.name }) : product.name;
+    if (!size) return product.name;
+    return word(hookRank(size) === null ? 'what_choice' : 'what_size', { size, choice: size, name: product.name });
 }
 
 function add(card, product, size, delta) {
@@ -176,7 +156,9 @@ function add(card, product, size, delta) {
         fly(card, product.id);
     }
     result.then(() => {
-        announce(word(delta > 0 ? 'added' : 'removed', { what: what(product, size && size.label), count: wordsFor(settings.flyBrands) }));
+        let key = 'added';
+        if (delta < 0) key = box.lines().length ? 'removed' : 'removed_empty';
+        announce(word(key, { what: what(product, size && size.label), count: wordsFor(settings.flyBrands) }));
     }, error => {
         announce(`${word(delta > 0 ? 'add_failed' : 'change_failed', { what: what(product, size && size.label) })} ${error.storeWords ? error.message : word('try_again')}`);
     });

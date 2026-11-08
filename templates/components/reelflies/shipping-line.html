@@ -1,0 +1,12 @@
+{{!--
+    The product page's shipping line (ticket 39; decisions 2 and 12), under the buying: the free
+    shipping promise from the threshold (rf_ship_free_threshold), with the standard rate and the
+    Expedited "from" price once the owner gives them (rf_ship_standard_rate,
+    rf_ship_expedited_from; empty until then, so the line is the free-shipping sentence alone). A
+    storefront with no threshold (ReelFlies US) has no line.
+
+        {{> components/reelflies/shipping-line threshold=… rate=… expedited=…}}
+--}}
+{{#if (trim threshold)}}
+<p class="rf-pdp__ship">{{#if (trim rate)}}{{lang 'reelflies.product.ship_rate' rate=(trim rate) threshold=(trim threshold)}}{{else}}{{lang 'reelflies.product.ship_free_lead'}} <span class="rf-num">{{settings.money.currency_token}}{{trim threshold}}</span>{{lang 'reelflies.product.ship_free_tail'}}{{/if}}{{#if (trim expedited)}} {{lang 'reelflies.product.ship_expedited' amount=(trim expedited)}}{{/if}}</p>
+{{/if}}

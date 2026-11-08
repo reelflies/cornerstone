@@ -6145,6 +6145,12 @@
   "i18n.RfCartState": {
     "default": "Show what's in the box on the cards"
   },
+  "i18n.RfSizeStrip": {
+    "default": "The size strip on the product page: a tap adds one (off: the store's own form)"
+  },
+  "i18n.RfNoBoxNotePaths": {
+    "default": "\"Fly box not included.\" under the price of products in these categories (full paths, comma-separated)"
+  },
   "i18n.RfOrderLine": {
     "default": "The order line pinned at the foot, with the box sheet"
   },
@@ -6153,6 +6159,12 @@
   },
   "i18n.RfShipFreeThreshold": {
     "default": "Free standard shipping on fly orders over this many dollars, in Canada (empty: no shipping line)"
+  },
+  "i18n.RfShipStandardRate": {
+    "default": "Standard shipping rate in Canada, in dollars, for the product page's shipping line (empty: the free-shipping sentence alone)"
+  },
+  "i18n.RfShipExpeditedFrom": {
+    "default": "Tracked Expedited \"from\" price, in dollars (empty: not shown)"
   },
   "i18n.RfStoreDetails": {
     "default": "Store details"

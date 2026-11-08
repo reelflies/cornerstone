@@ -1,0 +1,8 @@
+{{!--
+    The reviews' summary beside the price (ticket 40): the stars and "3 reviews", linking to the
+    reviews below. It shows by the reviews section's own rule (product-reviews.html), so it never
+    points at reviews the page doesn't show.
+--}}
+{{#all settings.show_product_reviews theme_settings.show_product_reviews product.reviews.list.length}}
+<p class="rf-review-sum"><a class="rf-review-sum__link" href="#product-reviews">{{> components/reelflies/stars rating=product.rating}}<span class="rf-review-sum__count">{{lang 'reelflies.reviews.count' total=product.reviews.total}}</span></a></p>
+{{/all}}

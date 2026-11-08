@@ -14,6 +14,11 @@
 //
 // No size is ever added that the caller didn't name: change() only ever sends the variant it was
 // given.
+//
+// The store's data layer (BigCommerce's BODL, window.bodlEvents, which feeds the store's GA4 and
+// other analytics) hears of the store's own adds and removals from stencil-utils. Changes made
+// here go round it, so each one that the store accepts tells it the same way: an add or a removal
+// of that line's quantity, with the line as the store returned it (setChannel names the channel).
 
 const API = '/api/storefront/carts';
 const INCLUDE = 'include=lineItems.physicalItems.options,lineItems.digitalItems.options';
@@ -24,7 +29,54 @@ const waiting = [];
 const listeners = new Set();
 let running = Promise.resolve();
 
+let channelId = null;
+
 const keyOf = (productId, variantId) => `${productId}:${variantId || ''}`;
+
+export function setChannel(id) {
+    channelId = Number(id) || null;
+}
+
+const itemsOf = found => (found && found.lineItems ? [...(found.lineItems.physicalItems || []), ...(found.lineItems.digitalItems || [])] : []);
+const itemIn = (found, productId, variantId) => itemsOf(found).find(item => !item.parentId
+    && String(item.productId) === String(productId) && (!variantId || Number(item.variantId) === Number(variantId)));
+
+function eventId() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+// One add or removal for the data layer, in the shape stencil-utils sends for the store's own.
+export function tellDataLayer(added, item, quantity, currency) {
+    const bodl = window.bodlEvents;
+    const kind = added ? 'AddCartItemEvent' : 'RemoveCartItemEvent';
+    if (!item || !quantity || !bodl || !bodl.cart || typeof bodl.cart.emit !== 'function' || !bodl[kind]) return;
+    const price = Number(item.salePrice || item.listPrice || 0);
+    const base = Number(item.listPrice || price);
+    try {
+        bodl.cart.emit(bodl[kind].CREATE, {
+            event_id: eventId(),
+            channel_id: channelId,
+            currency,
+            product_value: base * quantity,
+            line_items: [{
+                product_id: String(item.productId),
+                variant_id: item.variantId,
+                sku: item.sku,
+                product_name: item.name,
+                brand_name: item.brand,
+                quantity,
+                base_price: base,
+                sale_price: price,
+                purchase_price: price,
+                discount: 0,
+                currency,
+            }],
+        });
+    } catch (error) {
+        // analytics never stops a change
+    }
+}
 
 function notify() {
     listeners.forEach(listener => {
@@ -141,6 +193,7 @@ export async function load(cartId) {
 }
 
 async function send({ productId, variantId, delta }) {
+    const before = cart;
     const line = storeLines().find(found => found.key === keyOf(productId, variantId));
     const target = (line ? line.quantity : 0) + delta;
     const item = { productId: Number(productId), quantity: target };
@@ -157,6 +210,9 @@ async function send({ productId, variantId, delta }) {
     }
     if (cart && Array.isArray(cart)) cart = cart[0] || null;
     if (cart && !cart.lineItems) cart = null;
+    const currencyOf = found => (found && found.currency ? found.currency.code : undefined);
+    if (delta > 0) tellDataLayer(true, itemIn(cart, productId, variantId), delta, currencyOf(cart));
+    else tellDataLayer(false, itemIn(before, productId, variantId), -delta, currencyOf(before));
 }
 
 export function change(request) {

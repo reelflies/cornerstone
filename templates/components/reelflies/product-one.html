@@ -1,0 +1,18 @@
+{{!--
+    Buying a product with no options on the product page (an Assortment, a hook pack): "Add 1 to
+    your box", one per tap through the box (product-strip.js), with "−1" beside it once one is in,
+    and the reserved line saying how many are. rf_variant is the product's one variant, from the
+    page's GraphQL front matter. Sold out, the button says so and does nothing.
+--}}
+{{~assignVar 'rf_one_stock' 0~}}{{~#if rf_variant.isPurchasable}}{{#if rf_variant.inventory.isInStock}}{{assignVar 'rf_one_stock' 1}}{{/if}}{{/if~}}
+<div class="rf-pdp-one" data-rf-strip data-rf-mode="one" data-rf-product="{{product.id}}" data-rf-variant="{{rf_variant.entityId}}" data-rf-stock="{{getVar 'rf_one_stock'}}" data-rf-name="{{product.title}}" data-rf-url="{{product.url}}" data-rf-price="{{product.price.without_tax.value}}" data-rf-brand="{{product.brand.name}}" data-rf-img="{{#if product.main_image}}{{getImageSrcset product.main_image 1x='160w'}}{{/if}}">
+    <div class="rf-pdp-one__row">
+        {{#if (getVar 'rf_one_stock')}}
+        <button class="rf-buy rf-pdp-one__add" type="button" data-rf-one>{{lang 'reelflies.js.add_one_box'}}</button>
+        {{else}}
+        <button class="rf-buy rf-pdp-one__add" type="button" aria-disabled="true" disabled>{{lang 'reelflies.card.sold_out'}}</button>
+        {{/if}}
+        <button class="rf-pdp-one__minus" type="button" data-rf-one-minus aria-label="{{lang 'reelflies.js.remove_one'}}" disabled aria-hidden="true">{{lang 'reelflies.js.minus'}}</button>
+    </div>
+    <p class="rf-pdp-strip__inbox" data-rf-strip-inbox></p>
+</div>

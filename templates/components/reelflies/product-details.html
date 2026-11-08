@@ -1,0 +1,53 @@
+{{!--
+    The product's details (ticket 39), under the photographs from 1040px and after the buying on
+    phones: native disclosures, the first open.
+
+    - "About this fly" (or "Description" off a fly): the store's description.
+    - "Shipping and delivery", where the storefront has a free-shipping threshold. Its words are
+      ticket 39's drafts, still awaiting the owner.
+    - "Hooks and tying", on a fly: the hooks it's tied on and the hook size chart. The second
+      paragraph is a draft awaiting the owner.
+    - The store's warranty and custom fields, where it has them.
+    Then the reviews (product-reviews.html).
+--}}
+<div class="rf-details">
+    {{#if product.description}}
+    <details class="rf-details__item" open>
+        <summary class="rf-details__summary">{{#if (getVar 'rf_pdp_fly')}}{{lang 'reelflies.product.about'}}{{else}}{{lang 'reelflies.product.description'}}{{/if}}{{> components/reelflies/icon name='chevron' class='rf-details__chev'}}</summary>
+        <div class="rf-details__body rf-details__body--text">
+            {{{product.description}}}
+        </div>
+    </details>
+    {{/if}}
+    {{#if (trim theme_settings.rf_ship_free_threshold)}}
+    <details class="rf-details__item">
+        <summary class="rf-details__summary">{{lang 'reelflies.product.shipping'}}{{> components/reelflies/icon name='chevron' class='rf-details__chev'}}</summary>
+        <div class="rf-details__body">
+            <p>{{lang 'reelflies.product.shipping_free' threshold=(trim theme_settings.rf_ship_free_threshold)}} {{lang 'reelflies.product.shipping_standard'}}</p>
+            <p>{{lang 'reelflies.product.shipping_expedited'}}</p>
+        </div>
+    </details>
+    {{/if}}
+    {{#if (getVar 'rf_pdp_fly')}}
+    <details class="rf-details__item">
+        <summary class="rf-details__summary">{{lang 'reelflies.product.hooks'}}{{> components/reelflies/icon name='chevron' class='rf-details__chev'}}</summary>
+        <div class="rf-details__body">
+            <p>{{lang 'reelflies.product.hooks_body'}}</p>
+            <p>{{lang 'reelflies.product.hooks_chart'}} <a class="rf-more" href="{{#if (trim theme_settings.rf_hook_chart_url)}}{{trim theme_settings.rf_hook_chart_url}}{{else}}/fly-hook-size-chart/{{/if}}">{{lang 'reelflies.product.hooks_chart_link'}}{{> components/reelflies/icon name='arrow'}}</a></p>
+        </div>
+    </details>
+    {{/if}}
+    {{#if product.warranty}}
+    <details class="rf-details__item">
+        <summary class="rf-details__summary">{{lang 'products.warranty'}}{{> components/reelflies/icon name='chevron' class='rf-details__chev'}}</summary>
+        <div class="rf-details__body rf-details__body--text">{{{product.warranty}}}</div>
+    </details>
+    {{/if}}
+    {{#all product.custom_fields theme_settings.show_custom_fields_tabs}}
+    <details class="rf-details__item">
+        <summary class="rf-details__summary">{{#if theme_settings.pdp-custom-fields-tab-label}}{{sanitize theme_settings.pdp-custom-fields-tab-label}}{{else}}{{lang 'page_builder.pdp-custom-fields-tab-label'}}{{/if}}{{> components/reelflies/icon name='chevron' class='rf-details__chev'}}</summary>
+        <div class="rf-details__body"><dl class="productView-info">{{> components/products/custom-fields}}</dl></div>
+    </details>
+    {{/all}}
+</div>
+{{> components/reelflies/product-reviews}}

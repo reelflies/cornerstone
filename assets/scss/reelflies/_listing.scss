@@ -68,7 +68,8 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
 
 // The breadcrumbs (stock components/common/breadcrumbs.html, its BreadcrumbList kept): one quiet
 // line above the H1, left-aligned, each step a 24px target
-.rf-list-head .breadcrumbs {
+.rf-list-head .breadcrumbs,
+.rf-pdp .breadcrumbs {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -79,7 +80,8 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
     text-align: left;
 }
 
-.rf-list-head .breadcrumb {
+.rf-list-head .breadcrumb,
+.rf-pdp .breadcrumb {
     display: inline-flex;
     align-items: center;
     margin: 0;
@@ -98,7 +100,8 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
     }
 }
 
-.rf-list-head .breadcrumb-label {
+.rf-list-head .breadcrumb-label,
+.rf-pdp .breadcrumb-label {
     display: inline-flex;
     align-items: center;
     min-height: 24px;
@@ -112,7 +115,8 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
     }
 }
 
-.rf-list-head .breadcrumb.is-active .breadcrumb-label {
+.rf-list-head .breadcrumb.is-active .breadcrumb-label,
+.rf-pdp .breadcrumb.is-active .breadcrumb-label {
     color: var(--rf-ink);
 }
 
@@ -512,8 +516,31 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
     margin-top: 0;
 }
 
-// stock opens the list from 801px; here it waits behind Filter until the sidebar at 1040px
+// stock opens the list from 801px; here it waits behind Filter until the sidebar at 1040px, and
+// opens under the row that holds Filter: the listing's own box steps aside (display: contents) so
+// the row, the facets and the grid stack in that order
 @media (max-width: $rf-bp-desktop - 1) {
+    .rf-list--side .rf-list__inner {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .rf-list--side .rf-list__main {
+        display: contents;
+    }
+
+    .rf-list--side .rf-list__main > * {
+        order: 3;
+    }
+
+    .rf-list--side .rf-list__main > .rf-list-top {
+        order: 1;
+    }
+
+    .rf-list--side .rf-list__side {
+        order: 2;
+    }
+
     .rf-list .facetedSearch-navList {
         display: none !important;
         margin: 0 0 var(--rf-space-4);
@@ -656,6 +683,10 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
 }
 
 .rf-list .facetedSearch-clearLink {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--rf-tap-min);
+    padding: 0 var(--rf-space-2);
     color: var(--rf-ink-muted);
     font: 400 13px / 1 var(--rf-font-text);
     text-decoration: underline;
@@ -862,18 +893,6 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
 .rf-fly.is-sold .rf-fly__sizes {
     color: var(--rf-ink);
     font-weight: 650;
-}
-
-.rf-fly.is-sold .rf-add--link {
-    border: 1px solid var(--rf-edge);
-    background: transparent;
-    color: var(--rf-ink);
-
-    &:hover {
-        border-color: var(--rf-ink);
-        background: var(--rf-limestone-200);
-        color: var(--rf-ink);
-    }
 }
 
 @media (min-width: $rf-bp-tablet) {

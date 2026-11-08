@@ -1,0 +1,78 @@
+{{!--
+    How the product page buys (redesign step 3; the owner's choice, 2026-11-07: "a tap adds one").
+
+    - The strip (product-strip.html): a product with exactly one option, a list of choices (Fly
+      Sizes, a colour, a leader weight), drawn open on the page from the page's GraphQL front
+      matter with each choice's variant and stock. Each tap puts one in the box at once through the
+      Cart API (product-strip.js, box.js), the way quick add does on a card.
+    - One (product-one.html): a product with no options (an Assortment, a hook pack): "Add 1 to
+      your box", again one per tap.
+    - The form: everything else, and every product while rf_size_strip is off. Stock's own form
+      (two options, such as Fat Albert's Colour and Fly Sizes; a pre-order; a minimum quantity
+      over 1; prices hidden from guests), restyled: the options visible from the server, the
+      quantity, and Add to cart through stock product-details.js.
+
+    The strip and One keep stock's form on the page, hidden (data-rf-pdp-form): stock's
+    ProductDetails reads it on every product page, and should product-strip.js fail to load,
+    page-modules.js shows it in their place.
+--}}
+{{~assignVar 'rf_pdp_mode' 'form'~}}
+{{~#if theme_settings.rf_size_strip~}}
+{{~#or customer (unless settings.hide_price_from_guests)~}}
+{{~#unless product.pre_order~}}
+{{~#if product.min_purchase_quantity '>' 1~}}{{~else~}}
+{{~#if product.options.length '==' 0~}}
+{{~#if gql.data.site.product.variants.edges.length '==' 1}}{{assignVar 'rf_pdp_mode' 'one'}}{{/if~}}
+{{~/if~}}
+{{~#if product.options.length '==' 1~}}
+{{~#if gql.data.site.product.productOptions.edges.length '==' 1~}}
+{{~#if gql.data.site.product.productOptions.edges.[0].node.values.edges.length}}{{assignVar 'rf_pdp_mode' 'strip'}}{{/if~}}
+{{~/if~}}
+{{~/if~}}
+{{~/if~}}
+{{~/unless~}}
+{{~/or~}}
+{{~/if~}}
+{{#if (getVar 'rf_pdp_mode') '===' 'strip'}}
+{{> components/reelflies/product-strip rf_option=gql.data.site.product.productOptions.edges.[0].node rf_variants=gql.data.site.product.variants.edges}}
+{{/if}}
+{{#if (getVar 'rf_pdp_mode') '===' 'one'}}
+{{> components/reelflies/product-one rf_variant=gql.data.site.product.variants.edges.[0].node}}
+{{/if}}
+<div class="rf-pdp__form"{{#if (getVar 'rf_pdp_mode') '!==' 'form'}} hidden data-rf-pdp-form{{/if}}>
+    {{#if product.release_date}}
+        <p class="rf-pdp__release">{{product.release_date}}</p>
+    {{/if}}
+    <form class="form" method="post" action="{{product.cart_url}}" enctype="multipart/form-data" data-cart-item-add>
+        <input type="hidden" name="action" value="add">
+        <input type="hidden" name="product_id" value="{{product.id}}"/>
+        {{#if product.cart_order_source}}
+            <input type="hidden" name="cart_order_source" value="{{product.cart_order_source}}"/>
+        {{/if}}
+        <div data-product-option-change>
+            {{inject 'showSwatchNames' theme_settings.show_product_swatch_names}}
+            {{#each product.options}}
+                {{{dynamicComponent 'components/products/options'}}}
+            {{/each}}
+        </div>
+        <div class="form-field form-field--stock{{#unless product.stock_level}} u-hiddenVisually{{/unless}}">
+            <label class="form-label form-label--alternate">
+                <span class="productView-stock-message">
+                    <span data-product-stock>{{product.stock_level}}</span>
+                    {{lang 'products.in_stock'}}
+                </span>
+                {{#all product.show_backorder_availability_prompt product.available_to_sell product.available_for_backorder}}
+                    <span class="productView-backorder-availability-prompt" data-backorder-prompt>{{product.backorder_availability_prompt}}</span>
+                {{else}}
+                    <span class="productView-backorder-availability-prompt" data-backorder-prompt style="display:none;"></span>
+                {{/all}}
+            </label>
+            <p class="form-label form-label--alternate" data-product-backordered style="display:none;">
+                <span data-qty-backordered-message></span>
+                <span data-backorder-message></span>
+            </p>
+            <ul class="productView-picklist-backorder" data-picklist-backorder-list style="display:none;"></ul>
+        </div>
+        {{> components/products/add-to-cart with_wallet_buttons=true}}
+    </form>
+</div>

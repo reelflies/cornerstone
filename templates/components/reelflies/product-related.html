@@ -1,0 +1,19 @@
+{{!--
+    "Related patterns" (tickets 39 and 43): the store's related products (product.related_products,
+    productpage_related_products_count, 4) as specimen cards on dry limestone, every photo lazy.
+    No quick add here (ticket 43): each card links to its own page to choose. Their size lines
+    come from listing.js, as a listing's do.
+--}}
+{{#if product.related_products.length}}
+<section class="rf-pdp-related" aria-labelledby="rf-pdp-related-title">
+    <div class="rf-pdp-related__inner">
+        <h2 class="rf-pdp-related__title" id="rf-pdp-related-title">{{lang 'reelflies.product.related'}}</h2>
+        {{~assignVar 'rf_quick_add' 0~}}
+        <ul class="rf-flies rf-flies--list rf-flies--related" data-rf-grid data-list-name="Related Products">
+            {{#each product.related_products}}
+            {{> components/reelflies/fly-listing rf_card=this rf_pos=(add @index 1) rf_lazy=1 rf_exclude=../theme_settings.rf_price_unit_exclude rf_event='list'}}
+            {{/each}}
+        </ul>
+    </div>
+</section>
+{{/if}}

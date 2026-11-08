@@ -11,9 +11,10 @@ export function bump() {
     requestAnimationFrame(() => button.classList.add('is-bumped')); // a frame apart, so it restarts
 }
 
+// From a card's photo, or from an image itself (the product page's main photo).
 export function fly(fromCard, productId) {
     const thumbs = document.querySelector('[data-rf-thumbs]');
-    const image = fromCard && fromCard.querySelector('.rf-fly__photo img');
+    const image = fromCard && (fromCard.tagName === 'IMG' ? fromCard : fromCard.querySelector('.rf-fly__photo img'));
     if (!thumbs || !image || reduced()) return;
     const target = thumbs.querySelector(`[data-rf-thumb="${productId}"]`) || thumbs;
     const a = image.getBoundingClientRect();

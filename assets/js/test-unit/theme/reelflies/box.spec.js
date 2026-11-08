@@ -137,6 +137,22 @@ describe('the box', () => {
         expect(box.totals([]).flies).toBe(false);
     });
 
+    it('tells the store\'s data layer of each add and removal the store accepts, and of none it refuses', async () => {
+        const emit = jest.fn();
+        window.bodlEvents = { cart: { emit }, AddCartItemEvent: { CREATE: 'add' }, RemoveCartItemEvent: { CREATE: 'remove' } };
+        box.setChannel('1');
+        await box.load('');
+        await box.change({ productId: 10, variantId: 14, delta: 2 });
+        await box.change({ productId: 10, variantId: 14, delta: -1 });
+        store.refuseNext = refused(422, 'Only 1 left in stock.');
+        await expect(box.change({ productId: 10, variantId: 14, delta: 1 })).rejects.toBeTruthy();
+        expect(emit.mock.calls.map(([kind, payload]) => [kind, payload.line_items[0].quantity, payload.channel_id])).toEqual([['add', 2, 1], ['remove', 1, 1]]);
+        expect(emit.mock.calls[0][1].line_items[0]).toMatchObject({
+            product_id: '10', variant_id: 14, product_name: 'Fly 10', brand_name: 'ReelFlies', sale_price: 1,
+        });
+        delete window.bodlEvents;
+    });
+
     it('tells its listeners after every change', async () => {
         await box.load('');
         const heard = jest.fn();

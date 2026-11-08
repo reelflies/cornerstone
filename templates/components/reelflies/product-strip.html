@@ -1,0 +1,36 @@
+{{!--
+    The product page's size strip (DESIGN.md "Size Strip", open on the page; the owner's choice,
+    2026-11-07): one cell per choice of the product's one option, from the page's GraphQL front
+    matter (rf_option, its values in catalogue order; rf_variants, each with its option value,
+    stock and purchasability). Each tap puts one of that choice in the box (product-strip.js),
+    with its count on the cell and a "−1" beneath; nothing is ever preselected, and a choice is
+    only ever added by its own cell.
+
+    - The cells are strip-html.js's markup (keep the two together). Their step bars wait for the
+      script (product-strip.js sets each one's height by its hook size), and so does hook order:
+      a catalogue that lists a size out of order is put right before the bars show.
+    - A sold-out choice is struck through and named in the foot ("Size 20 is sold out.").
+    - Under the cells, the reserved line says what of this product is in the box ("In your box:
+      3 × 12, 3 × 14"), so the panel never moves as flies go in.
+    - The data-rf-* attributes describe the product for the box's line until the store answers.
+--}}
+{{~assignVar 'rf_strip_sizes' 1~}}
+{{~assignVar 'rf_strip_sold' ''~}}{{~assignVar 'rf_strip_sold_n' 0~}}{{~assignVar 'rf_strip_n' 0~}}
+<div class="rf-pdp-strip" data-rf-strip data-rf-mode="strip" data-rf-product="{{product.id}}" data-rf-name="{{product.title}}" data-rf-url="{{product.url}}" data-rf-price="{{product.price.without_tax.value}}" data-rf-brand="{{product.brand.name}}" data-rf-img="{{#if product.main_image}}{{getImageSrcset product.main_image 1x='160w'}}{{/if}}">
+    <p class="rf-sizes__hint" id="rf-pdp-hint">{{#if (getVar 'rf_pdp_fly')}}{{lang 'reelflies.product.strip_hint'}}{{else}}{{lang 'reelflies.product.strip_hint_choice'}}{{/if}}</p>
+    <ol class="rf-sizes__strip rf-pdp-strip__cells" data-rf-cells aria-describedby="rf-pdp-hint" aria-label="{{rf_option.displayName}}">
+        {{#each rf_option.values.edges as |rfValue|}}
+        {{> components/reelflies/product-strip-cell rf_value=rfValue.node rf_variants=../rf_variants}}
+        {{/each}}
+    </ol>
+    <div class="rf-sizes__foot rf-pdp-strip__foot">
+        <span data-rf-strip-foot>
+            {{~#if (getVar 'rf_strip_sold_n') '==' (getVar 'rf_strip_n')}}{{#if (getVar 'rf_strip_n')}}{{lang 'reelflies.js.sold_all'}}{{/if}}
+            {{~else if (getVar 'rf_strip_sold_n') '==' 1}}{{lang 'reelflies.js.sold_one' size=(getVar 'rf_strip_sold')}}
+            {{~else if (getVar 'rf_strip_sold_n') '>' 1}}{{lang 'reelflies.js.sold_many' sizes=(getVar 'rf_strip_sold')}}
+            {{~/if~}}
+        </span>
+        {{#if (getVar 'rf_pdp_fly')}}<a class="rf-more" href="{{#if (trim theme_settings.rf_hook_chart_url)}}{{trim theme_settings.rf_hook_chart_url}}{{else}}/fly-hook-size-chart/{{/if}}">{{lang 'reelflies.listing.sizes_help'}}{{> components/reelflies/icon name='arrow'}}</a>{{/if}}
+    </div>
+    <p class="rf-pdp-strip__inbox" data-rf-strip-inbox></p>
+</div>

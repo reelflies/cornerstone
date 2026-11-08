@@ -1,0 +1,31 @@
+{{!--
+    The product page (redesign step 3; tickets 37-40; DESIGN.md): pages/product.html renders it in
+    its hero block.
+
+    - The breadcrumbs and the store's shipping messages, then the product (product-view.html):
+      the photograph on a paper plate beside the buy panel, which stays in view from 1040px, and
+      under the photographs the details and the reviews.
+    - The Page Builder region product_below_content and stock's videos, then "Related patterns"
+      (product-related.html), then stock's Product JSON-LD (components/products/schema.html).
+
+    Inside a page's {{#partial}} block @root is empty: the partials read the page's own context.
+--}}
+<div class="rf-pdp">
+    <div class="rf-pdp__inner">
+        {{> components/common/breadcrumbs breadcrumbs=breadcrumbs}}
+        {{#each product.shipping_messages}}
+            {{> components/common/alert/alert-info message}}
+        {{/each}}
+        {{> components/reelflies/product-view}}
+    </div>
+</div>
+{{{region name="product_below_content"}}}
+{{#if product.videos.list.length}}
+<div class="rf-pdp-videos">
+    <div class="rf-pdp__inner">
+        {{> components/products/videos product.videos}}
+    </div>
+</div>
+{{/if}}
+{{> components/reelflies/product-related}}
+{{> components/products/schema}}

@@ -15,6 +15,7 @@
 //   - rf-menu           the grouped menu and phone drawer (ticket 28)        8,000 B
 //   - rf-size-filter    the Fly size filter (ticket 33)                      3,000 B
 //   - rf-listing        listing cards' size lines and the chips (redesign)   3,000 B
+//   - rf-product        the product page's size strip, over the box (redesign) 12,000 B
 //   - rf-size-pills     the product page's size pills (ticket 37)            3,000 B
 //   - rf-add-flow       the add flow and sticky phone bar (ticket 38)        7,000 B
 //   - rf-cart-state     the cart state's marks and lines (ticket 42)         2,500 B
@@ -51,6 +52,7 @@ export const CHUNK_GZIP_LIMITS = {
     'theme-bundle.chunk.rf-menu.js': 8000,
     'theme-bundle.chunk.rf-size-filter.js': 3000,
     'theme-bundle.chunk.rf-listing.js': 3000,
+    'theme-bundle.chunk.rf-product.js': 12000,
     'theme-bundle.chunk.rf-size-pills.js': 3000,
     'theme-bundle.chunk.rf-add-flow.js': 7000,
     'theme-bundle.chunk.rf-cart-state.js': 2500,
