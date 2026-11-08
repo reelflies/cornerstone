@@ -1,0 +1,280 @@
+// =============================================================================
+// REELFLIES SPECIES HUB (Streamside Stone)
+// =============================================================================
+//
+// The Species hub (ticket 34; spec module 10): the species field, moss (DESIGN.md "Species Band
+// (moss)", "The Three Grounds Rule"), holding the H1, the root's intro and a tile per Species
+// page: its own photograph (the store's 16:7 banner) with the Seat shadow, its name in Expanded,
+// its count and intro in lichen, and its Fly Type pages as chips outlined in lichen. Then the
+// listing on limestone under "All flies". Markup: components/reelflies/hub-head.html, hub-tiles,
+// hub-tile, hub-types; the listing's in _listing.scss.
+//
+// -----------------------------------------------------------------------------
+
+$rf-hub-rule: rgba(215, 219, 180, 0.28); // lichen at 28%, the moss ground's rules
+$rf-hub-chip: rgba(215, 219, 180, 0.45);
+
+.body:has(> .rf-hub) {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.rf-hub {
+    --rf-ring: var(--rf-mist);
+    background: var(--rf-moss-700);
+    color: var(--rf-mist);
+}
+
+.rf-hub__inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+    gap: var(--rf-space-3);
+    max-width: calc(var(--rf-column-max) + 2 * var(--rf-gutter));
+    margin: 0 auto;
+    padding: var(--rf-space-4) var(--rf-gutter) var(--rf-space-16);
+
+    > .rf-hub__tiles,
+    > .rf-hub__group {
+        justify-self: stretch;
+    }
+}
+
+.rf-hub .breadcrumb::before,
+.rf-hub .breadcrumb:not(:first-child)::before {
+    color: $rf-hub-chip;
+}
+
+.rf-hub .breadcrumb-label {
+    color: var(--rf-lichen);
+
+    &:hover {
+        color: var(--rf-mist);
+    }
+}
+
+.rf-hub .breadcrumb.is-active .breadcrumb-label {
+    color: var(--rf-mist);
+}
+
+.rf-hub__title {
+    max-width: 18ch;
+    color: var(--rf-mist);
+    font: #{"800 clamp(30px, 2.2vw + 16px, 52px) / 1.02 var(--rf-font-display)"};
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+}
+
+.rf-hub__lead:empty {
+    display: none;
+}
+
+.rf-hub__lead .rf-list-head__intro {
+    max-width: 40rem;
+    color: var(--rf-lichen);
+    font-size: 17px;
+    line-height: 1.5;
+}
+
+.rf-hub__group {
+    margin-top: var(--rf-space-8);
+
+    & + & {
+        margin-top: var(--rf-space-16);
+    }
+}
+
+.rf-hub__group-title {
+    padding-bottom: var(--rf-space-3);
+    border-bottom: 1px solid $rf-hub-rule;
+    color: var(--rf-mist);
+    font: #{"760 clamp(22px, 0.8vw + 17px, 28px) / 1.15 var(--rf-font-display)"};
+    letter-spacing: -0.01em;
+}
+
+.rf-hub__tiles {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--rf-space-8) var(--rf-space-6);
+    margin-top: var(--rf-space-6);
+}
+
+.rf-hub-tile {
+    display: grid;
+    align-content: start;
+    gap: var(--rf-space-4);
+}
+
+.rf-hub-tile__media {
+    display: block;
+    overflow: hidden;
+    border-radius: var(--rf-radius-md);
+    background: var(--rf-shale-900);
+    box-shadow: var(--rf-shadow-seat);
+
+    img {
+        width: 100%;
+        aspect-ratio: 16 / 7;
+        object-fit: cover;
+        transition: transform var(--rf-settle);
+    }
+}
+
+.rf-hub-tile:has(.rf-hub-tile__name a:hover) .rf-hub-tile__media img,
+.rf-hub-tile__media:hover img {
+    transform: scale(1.03);
+}
+
+.rf-hub-tile__text {
+    display: grid;
+    justify-items: start;
+    gap: var(--rf-space-2);
+}
+
+.rf-hub-tile__name {
+    font: #{"760 21px / 1.15 var(--rf-font-display)"};
+    letter-spacing: -0.01em;
+
+    a {
+        color: var(--rf-mist);
+        text-decoration: none;
+
+        &:hover {
+            color: var(--rf-mist);
+            text-decoration: underline;
+            text-decoration-thickness: 2px;
+            text-underline-offset: 0.2em;
+        }
+    }
+}
+
+.rf-hub-tile__n {
+    color: var(--rf-lichen);
+    font-size: 14px;
+
+    .rf-num {
+        font-size: 15px;
+    }
+}
+
+.rf-hub-tile .rf-list-head__intro {
+    max-width: 36rem;
+    color: var(--rf-lichen);
+    font-size: 15px;
+    line-height: 1.5;
+
+    p + p {
+        margin-top: var(--rf-space-2);
+    }
+}
+
+.rf-hub-tile__types {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--rf-space-2);
+    margin-top: var(--rf-space-1);
+
+    a {
+        display: inline-flex;
+        align-items: center;
+        min-height: var(--rf-tap-min);
+        padding: 0 14px;
+        border: 1px solid $rf-hub-chip;
+        border-radius: var(--rf-radius-pill);
+        color: var(--rf-mist);
+        font: 650 15px / 1.2 var(--rf-font-text);
+        text-decoration: none;
+
+        &:hover {
+            border-color: var(--rf-mist);
+            background: rgba(215, 219, 180, 0.12);
+            color: var(--rf-mist);
+            text-decoration: none;
+        }
+    }
+}
+
+// The listing under it, named
+.rf-list--titled .rf-list__title {
+    max-width: calc(var(--rf-column-max) + 2 * var(--rf-gutter));
+    margin: 0 auto;
+    padding: var(--rf-space-12) var(--rf-gutter) 0;
+    font: #{"760 clamp(24px, 1vw + 18px, 32px) / 1.1 var(--rf-font-display)"};
+    letter-spacing: -0.01em;
+}
+
+
+// On phones each species is a compact row, an index to scan: the photograph small beside its name
+// and count, then the intro and its Fly Types across the width, a lichen rule between species
+@media (max-width: 639px) {
+    .rf-hub__tiles {
+        gap: 0;
+
+        > li + li {
+            margin-top: var(--rf-space-6);
+            padding-top: var(--rf-space-6);
+            border-top: 1px solid $rf-hub-rule;
+        }
+    }
+
+    .rf-hub-tile {
+        grid-template-columns: 104px minmax(0, 1fr);
+        align-items: center;
+        gap: var(--rf-space-2) var(--rf-space-4);
+    }
+
+    .rf-hub-tile__media {
+        grid-row: span 2;
+
+        img {
+            aspect-ratio: 4 / 3;
+        }
+    }
+
+    .rf-hub-tile__text {
+        display: contents;
+    }
+
+    .rf-hub-tile__name,
+    .rf-hub-tile__n {
+        grid-column: 2;
+    }
+
+    // the name and count close together, centred beside the photograph
+    .rf-hub-tile__name {
+        align-self: end;
+    }
+
+    .rf-hub-tile__n {
+        align-self: start;
+    }
+
+    .rf-hub-tile .rf-list-head__intro,
+    .rf-hub-tile__types {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (min-width: 640px) {
+    .rf-hub__tiles {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1040px) {
+    .rf-hub__inner {
+        padding-top: var(--rf-space-6);
+        padding-bottom: var(--rf-space-24);
+    }
+
+    .rf-hub__tiles {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--rf-space-12) var(--rf-space-8);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rf-hub-tile__media img {
+        transition: none;
+    }
+}

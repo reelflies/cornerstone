@@ -28,7 +28,7 @@
             {{~#if settings.store_logo.image~}}
             <img src="{{getImage settings.store_logo.image 'logo_size'}}" srcset="{{getImageSrcset1x2x settings.store_logo.image theme_settings.logo_size}}" width="{{settings.store_logo.image.width}}" height="{{settings.store_logo.image.height}}" alt="{{lang 'reelflies.header.logo_alt' store=settings.store_logo.title}}">
             {{~else~}}
-            <span class="rf-brand__text">{{settings.store_logo.title}}</span>
+            <span class="rf-brand__text">{{#if settings.store_logo.title}}{{settings.store_logo.title}}{{else}}{{settings.store_name}}{{/if}}</span>
             {{~/if~}}
         </a>
         <nav class="rf-nav" aria-label="{{lang 'reelflies.nav.label'}}">
@@ -63,13 +63,7 @@
                 {{/if}}
             </ul>
         </nav>
-        <form class="rf-search" role="search" action="{{urls.search}}" method="get" data-rf-search>
-            <label class="is-srOnly" for="rf-search-q">{{lang 'reelflies.search.label'}}</label>
-            {{> components/reelflies/icon name='search'}}
-            <input id="rf-search-q" name="search_query" type="search" placeholder="{{lang 'reelflies.search.placeholder'}}" autocomplete="off" spellcheck="false" enterkeyhint="search">
-            <button class="rf-search__go" type="submit">{{lang 'reelflies.search.go'}}</button>
-            <div class="rf-suggest" data-rf-suggest hidden></div>
-        </form>
+        {{> components/reelflies/search-form rf_id='rf-search-q'}}
         <a class="rf-head__link" href="{{#if customer}}{{urls.account.index}}{{else}}{{urls.auth.login}}{{/if}}">{{> components/reelflies/icon name='user'}}<span class="rf-head__label">{{lang 'reelflies.header.account'}}</span></a>
         <a class="rf-box-btn" href="{{urls.cart}}" data-rf-box-btn>{{> components/reelflies/icon name='box'}}<span class="rf-head__label">{{lang 'reelflies.header.box'}}</span><span class="rf-box-btn__count rf-num" data-rf-count>0</span><span class="is-srOnly" data-rf-count-label>{{lang 'reelflies.header.count_flies'}}</span></a>
     </div>

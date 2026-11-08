@@ -1,0 +1,26 @@
+{{!--
+    The contact page (redesign step 3; webpages ticket 07), from pages/contact-us.html's hero
+    block: the head, then the page's words and stock's contact form (components/page/
+    contact-us-form.html, unchanged: stock contact-us.js validates form[data-contact-form]), and
+    beside them the shop's address, walk-ins and phone number with the help pages
+    (help-aside.html). Sent, the form gives way to the store's thank-you line, which keeps stock's
+    #contact-us-success.
+--}}
+<div class="rf-page rf-contact">
+    {{#if theme_settings.hide_contact_us_page_heading}}
+    {{> components/reelflies/page-head}}
+    {{else}}
+    {{> components/reelflies/page-head rf_title=page.title}}
+    {{/if}}
+    <div class="rf-page__body">
+        <div class="rf-page__main" id="contact-us-page">
+            {{#if forms.contact.success}}
+            <div class="rf-prose rf-contact__sent" id="contact-us-success">{{{lang 'forms.contact_us.successful' shopPath=urls.home}}}</div>
+            {{else}}
+            {{#if (trim page.content)}}<div class="rf-prose rf-contact__intro">{{{page.content}}}</div>{{/if}}
+            {{> components/page/contact-us-form}}
+            {{/if}}
+        </div>
+        {{> components/reelflies/help-aside rf_pages=pages rf_current=page.title rf_contact=1}}
+    </div>
+</div>

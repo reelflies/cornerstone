@@ -12,16 +12,22 @@
       subcategories as chips (category-chips.html).
     - The Page Builder region category_below_header, under the head while
       hide_category_page_heading is off, as stock.
-    - The listing: the facets in the stock sidebar beside the product grid from 1040px, above it
-      on phones behind the Filter button (listing-top.html). The sidebar shows only when the
-      category has a visible facet, so a listing with none takes the full width. Stock category.js
-      finds both by their ids and refreshes them in place on every filter, sort and page.
+    - The listing (listing-body.html): the facets beside the product grid from 1040px, behind
+      Filter on phones, refreshed in place by stock category.js.
+    - With rf_hub (the Species hub, pages/custom/category/species-hub.html): the hub's moss head
+      and its tiles (hub-head.html) in place of the head, and the listing, under "All flies",
+      only while the root lists products: the hub is never an empty listing (spec module 10).
     - The Page Builder region category_below_content, then the rest of the description under
       "About {name}" (description-part.html).
 
     Inside a page's {{#partial}} block @root is empty: this reads the page's own context and passes
     what each partial needs as hash arguments.
 --}}
+{{#if rf_hub}}
+{{> components/reelflies/hub-head}}
+{{{region name="category_below_header"}}}
+{{#if category.products.length}}{{> components/reelflies/listing-body rf_title=(lang 'reelflies.hub.products')}}{{/if}}
+{{else}}
 {{> components/reelflies/category-banner-rule rf_category=category rf_type_ids=theme_settings.rf_menu_type_ids rf_species_root=theme_settings.rf_menu_species_root_id rf_categories=categories}}
 {{#unless theme_settings.hide_category_page_heading}}
 {{#if (getVar 'rf_category_banner')}}
@@ -31,19 +37,7 @@
 {{/if}}
 {{{region name="category_below_header"}}}
 {{/unless}}
-{{assignVar 'rf_listing_sidebar' 0}}
-{{#if category.faceted_search_enabled}}{{#any category.facets visible=true}}{{assignVar 'rf_listing_sidebar' 1}}{{/any}}{{#if category.selected.items.length}}{{assignVar 'rf_listing_sidebar' 1}}{{/if}}{{/if}}
-<div class="rf-list{{#if (getVar 'rf_listing_sidebar')}} rf-list--side{{/if}}">
-    <div class="rf-list__inner">
-        {{#if (getVar 'rf_listing_sidebar')}}
-        <aside class="rf-list__side" id="faceted-search-container">
-            {{> components/category/sidebar}}
-        </aside>
-        {{/if}}
-        <div class="rf-list__main" id="product-listing-container">
-            {{> components/category/product-listing}}
-        </div>
-    </div>
-</div>
+{{> components/reelflies/listing-body}}
+{{/if}}
 {{{region name="category_below_content"}}}
 {{> components/reelflies/description-part rf_description=category.description rf_part='rest' rf_title=(lang 'reelflies.listing.about' name=category.name)}}

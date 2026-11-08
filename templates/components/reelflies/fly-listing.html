@@ -6,7 +6,8 @@
       640px, three beside the facets from 1040px. The first three load eagerly; the first takes
       fetchpriority="high" only when the page has no banner (the variable rf_banner,
       listing-head.html), so each page has one high-priority image. rf_lazy (the product page's
-      related patterns): every photo lazy, none high-priority.
+      related patterns), or the page variable rf_cards_lazy (the Species hub, whose tiles fill the
+      first screen): every photo lazy, none high-priority.
     - Its price, the lowest of a price range with "from", and "/ fly" by the fly rule
       (fly-rule.html, with rf_exclude, theme setting rf_price_unit_exclude).
     - Sold out (stock_level 0): the reserved line says so and the button is a link to its page
@@ -17,8 +18,8 @@
     - Stock's list attributes for the store's analytics (rf_event, the grid's event).
 --}}
 {{~assignVar 'rf_card_sold' 0~}}{{~#if rf_card.stock_level '===' 0}}{{assignVar 'rf_card_sold' 1}}{{/if~}}
-{{~assignVar 'rf_card_eager' 0~}}{{~#unless rf_lazy}}{{#if rf_pos '<=' 3}}{{assignVar 'rf_card_eager' 1}}{{/if}}{{/unless~}}
-{{~assignVar 'rf_card_priority' 0~}}{{~#unless rf_lazy}}{{#if rf_pos '==' 1}}{{#unless (getVar 'rf_banner')}}{{assignVar 'rf_card_priority' 1}}{{/unless}}{{/if}}{{/unless~}}
+{{~assignVar 'rf_card_eager' 0~}}{{~#unless rf_lazy}}{{#unless (getVar 'rf_cards_lazy')}}{{#if rf_pos '<=' 3}}{{assignVar 'rf_card_eager' 1}}{{/if}}{{/unless}}{{/unless~}}
+{{~assignVar 'rf_card_priority' 0~}}{{~#unless rf_lazy}}{{#unless (getVar 'rf_cards_lazy')}}{{#if rf_pos '==' 1}}{{#unless (getVar 'rf_banner')}}{{assignVar 'rf_card_priority' 1}}{{/unless}}{{/if}}{{/unless}}{{/unless~}}
 {{> components/reelflies/fly-rule rf_categories=rf_card.category rf_exclude=rf_exclude}}
 {{~#if (getVar 'rf_fly')}}{{assignVar 'rf_card_unit' 'fly'}}{{else}}{{assignVar 'rf_card_unit' ''}}{{/if~}}
 {{#if rf_card.price.price_range}}

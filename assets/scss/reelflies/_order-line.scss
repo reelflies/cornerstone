@@ -10,8 +10,9 @@
 // Order line and box
 // -----------------------------------------------------------------------------
 
-body:has(.rf-orderline) {
-    padding-bottom: var(--rf-orderline-height);
+// room under the footer for the bar, in the footer's own shale (on the body it showed limestone)
+body:has(.rf-orderline) .rf-foot {
+    padding-bottom: calc(var(--rf-space-8) + var(--rf-orderline-height));
 }
 
 // whatever takes focus or is scrolled to (an opened size picker) stops clear of the bar

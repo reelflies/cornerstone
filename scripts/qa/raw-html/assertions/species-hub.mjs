@@ -38,6 +38,8 @@ export const EAGER = 2;
 
 const hasClass = name => attrs => new RegExp(`(^|\\s)${name}(\\s|$)`).test(attrs.class || '');
 const isLazysizes = attrs => hasClass('lazyload')(attrs) || 'data-srcset' in attrs || 'data-sizes' in attrs;
+// master's intro class, and the Streamside Stone redesign's (components/reelflies/description-part.html)
+const isIntro = attrs => hasClass('rf-listing-intro')(attrs) || hasClass('rf-list-head__intro')(attrs);
 const pathOf = href => new URL(decodeHtml(href), 'http://species-hub.invalid').pathname;
 
 // Channel 1's stand-in pin (pages.mjs): tree 1's Saltwater, Warmwater & Salmon, rendered with the
@@ -102,13 +104,13 @@ function gridProblems(grid) {
 // shows none of the last three.
 function prelaunchProblems(html, tileHtml) {
     const problems = [];
-    const header = outerHtml(html, 'div', hasClass('rf-listing-header')) || '';
-    if (!findTags(header, 'div').some(tag => hasClass('rf-listing-intro')(tag.attrs))) problems.push('the root has no intro under the H1 (.rf-listing-intro): its description is empty (refactor 10 writes it)');
+    const header = outerHtml(html, 'div', attrs => hasClass('rf-listing-header')(attrs) || hasClass('rf-hub__lead')(attrs)) || '';
+    if (!findTags(header, 'div').some(tag => isIntro(tag.attrs))) problems.push('the root has no intro under the H1 (.rf-listing-intro, the redesign\'s .rf-list-head__intro): its description is empty (refactor 10 writes it)');
     tileHtml.forEach((tile, index) => {
         const label = `tile ${index + 1} (${textOf(outerHtml(tile, 'h2') || '')})`;
         const tags = findTags(tile);
         if (!tags.some(tag => 'data-rf-hub-count' in tag.attrs)) problems.push(`${label} has no count: its Species page lists no products of its own (refactor 14 places every fly on it)`);
-        if (!tags.some(tag => tag.name === 'div' && hasClass('rf-listing-intro')(tag.attrs))) problems.push(`${label} has no intro: its Species page's description has no <!--more--> marker (refactor 10's copy)`);
+        if (!tags.some(tag => tag.name === 'div' && isIntro(tag.attrs))) problems.push(`${label} has no intro: its Species page's description has no <!--more--> marker (refactor 10's copy)`);
     });
     if (!tileHtml.some(tile => elementsHtml(tile, 'ul', hasClass('rf-hub-tile__types')).length)) problems.push('no tile lists its Species × Fly Type pages: the categories data stops at the Species pages (Menu Display Depth below 3?)');
     return problems;

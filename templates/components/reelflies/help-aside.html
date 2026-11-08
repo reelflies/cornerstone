@@ -1,0 +1,32 @@
+{{!--
+    The help column beside a Web Page and the contact page (redesign step 3): the channel's help
+    pages, as the footer's Help column lists them (page-link.html), the one being read marked as
+    current, then the phone number. With rf_contact (the contact page) the shop's address and
+    walk-ins come first, from the Store details settings, as in the footer.
+
+        {{> components/reelflies/help-aside rf_pages=pages rf_current=page.title}}
+
+    rf_pages is the page's pages data (inside a page's {{#partial}} block @root is empty);
+    rf_current the page's own title, which page-link.html matches against each page's name.
+--}}
+<aside class="rf-help" aria-labelledby="rf-help-title">
+    {{#if rf_contact}}
+    <h2 class="rf-help__title" id="rf-help-title">{{lang 'reelflies.page.visit'}}</h2>
+    {{#if (trim theme_settings.rf_store_street)}}
+    <address class="rf-help__address">{{lang 'reelflies.footer.address_name' legal=theme_settings.rf_store_legal_name}}<br>{{theme_settings.rf_store_street}}<br>{{theme_settings.rf_store_locality}}, {{theme_settings.rf_store_region}} {{theme_settings.rf_store_postal_code}}</address>
+    {{/if}}
+    <p class="rf-help__line">{{lang 'reelflies.footer.walk_ins'}}</p>
+    {{#if settings.phone_number}}<p class="rf-help__call"><a href="tel:{{#if (trim theme_settings.rf_store_phone)}}{{trim theme_settings.rf_store_phone}}{{else}}{{settings.phone_number}}{{/if}}">{{settings.phone_number}}</a> {{lang 'reelflies.footer.toll_free'}}</p>{{/if}}
+    <h2 class="rf-help__title rf-help__title--more">{{lang 'reelflies.footer.help'}}</h2>
+    {{else}}
+    <h2 class="rf-help__title" id="rf-help-title">{{lang 'reelflies.footer.help'}}</h2>
+    {{/if}}
+    <ul class="rf-help__links">
+        {{> components/reelflies/page-link path='/shipping-returns/' rf_pages=rf_pages rf_current=rf_current}}
+        {{> components/reelflies/page-link path='/help/' rf_pages=rf_pages rf_current=rf_current}}
+        {{> components/reelflies/page-link path='/contact-us/' rf_pages=rf_pages rf_current=rf_current}}
+        {{> components/reelflies/page-link path='/about-us/' rf_pages=rf_pages rf_current=rf_current}}
+        {{> components/reelflies/page-link path='/privacy-policy/' rf_pages=rf_pages rf_current=rf_current}}
+    </ul>
+    {{#unless rf_contact}}{{#if settings.phone_number}}<p class="rf-help__call">{{lang 'reelflies.page.call'}} <a href="tel:{{#if (trim theme_settings.rf_store_phone)}}{{trim theme_settings.rf_store_phone}}{{else}}{{settings.phone_number}}{{/if}}">{{settings.phone_number}}</a> {{lang 'reelflies.footer.toll_free'}}</p>{{/if}}{{/unless}}
+</aside>

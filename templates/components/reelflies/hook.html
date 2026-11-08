@@ -1,6 +1,12 @@
 {{!--
-    One size on the hook scale (hatch-chart.html): the authored hook drawn at its relative height
-    (h, in px, 64 for 2/0 down to 12 for 24), its size in the numerals' cut, and a link to that
-    size on the hook size chart (rf_hook_chart_url, the page variable rf_hook_chart; #size-<slug>). A plain item without the chart.
+    One size on a hook scale: the authored hook (the icon sheet's #rf-i-hook), its size in the
+    numerals' cut, and a link to that size's row on the hook size chart (#size-<slug>).
+
+    - The home page's scale (hatch-chart.html): h, its height in px, 64 for 2/0 down to 12 for 24,
+      and a link to the chart page (rf_hook_chart_url, the page variable rf_hook_chart); a plain
+      item without the chart.
+    - The chart page's gauge (chart-gauge.html): len, the hook's length in mm, which the style
+      layer draws at one scale (--rf-len times _chart.scss's --rf-gauge-k), and here, a link to the
+      row on the same page.
 --}}
-<li>{{#if (getVar 'rf_hook_chart')}}<a href="{{getVar 'rf_hook_chart'}}#size-{{slug}}">{{else}}<span>{{/if}}<svg class="rf-hook" viewBox="0 0 32 64" style="height:{{h}}px" aria-hidden="true" focusable="false"><use href="#rf-i-hook"></use></svg><span class="rf-num">{{size}}</span><span class="is-srOnly"> {{lang 'reelflies.home.hook_size'}}</span>{{#if (getVar 'rf_hook_chart')}}</a>{{else}}</span>{{/if}}</li>
+<li{{#if len}} style="--rf-len: {{len}}"{{/if}}>{{#if here}}<a href="#size-{{slug}}">{{else}}{{#if (getVar 'rf_hook_chart')}}<a href="{{getVar 'rf_hook_chart'}}#size-{{slug}}">{{else}}<span>{{/if}}{{/if}}<svg class="rf-hook" viewBox="0 0 32 64"{{#if h}} style="height:{{h}}px"{{/if}} aria-hidden="true" focusable="false"><use href="#rf-i-hook"></use></svg><span class="rf-num">{{size}}</span><span class="is-srOnly"> {{lang 'reelflies.home.hook_size'}}</span>{{#if here}}</a>{{else}}{{#if (getVar 'rf_hook_chart')}}</a>{{else}}</span>{{/if}}{{/if}}</li>

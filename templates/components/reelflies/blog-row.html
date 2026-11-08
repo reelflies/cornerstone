@@ -1,0 +1,19 @@
+{{!--
+    One article in the blog's list (blog-page.html): its thumbnail at 3:2, cropped to fill, as a
+    second link out of the tab order (the title is the link a keyboard or screen reader meets);
+    the title as an H2; the author and date; the summary; and "Read more", named for its article.
+    The first row's photo is eager, the rest lazy.
+
+        {{> components/reelflies/blog-row post=this rf_first=@first}}
+--}}
+<article class="rf-post-row">
+    {{#if post.thumbnail}}
+    <a class="rf-post-row__photo" href="{{post.url}}" tabindex="-1" aria-hidden="true"><img src="{{getImageSrcset post.thumbnail 1x='480w'}}" srcset="{{getImageSrcset post.thumbnail 320w='320w' 480w='480w' 640w='640w' 960w='960w'}}" sizes="(min-width: 640px) 280px, calc(100vw - 32px)" width="480" height="320" alt=""{{#if rf_first}} decoding="async"{{else}} loading="lazy" decoding="async"{{/if}}></a>
+    {{/if}}
+    <div class="rf-post-row__text">
+        <h2 class="rf-post-row__title"><a href="{{post.url}}">{{post.title}}</a></h2>
+        <p class="rf-post-row__meta">{{#if post.author}}{{post.author}} · {{/if}}{{post.date_published}}</p>
+        <div class="rf-post-row__summary">{{{post.summary}}}{{#if post.show_read_more}}&hellip;{{/if}}</div>
+        <a class="rf-more" href="{{post.url}}" aria-label="{{lang 'reelflies.blog.read_named' title=post.title}}">{{lang 'reelflies.blog.read_more'}}{{> components/reelflies/icon name='arrow'}}</a>
+    </div>
+</article>

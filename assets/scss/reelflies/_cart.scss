@@ -614,8 +614,9 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
         min-height: var(--rf-tap-min);
     }
 
-    body:has(.rf-cartbar) {
-        padding-bottom: var(--rf-orderline-height);
+    // room under the footer for the bar, in the footer's shale (_order-line.scss does the same)
+    body:has(.rf-cartbar) .rf-foot {
+        padding-bottom: calc(var(--rf-space-8) + var(--rf-orderline-height));
     }
 
     html:has(.rf-cartbar) {
@@ -645,32 +646,6 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
     margin: 0;
     color: var(--rf-ink-muted);
     font-size: 16px;
-}
-
-.rf-cart-empty__types ul {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--rf-space-2);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.rf-cart .rf-cart-empty__types a {
-    display: inline-flex;
-    align-items: center;
-    min-height: var(--rf-tap-min);
-    padding: 0 14px;
-    border: 1px solid var(--rf-edge);
-    border-radius: var(--rf-radius-pill);
-    color: var(--rf-ink);
-    font: 650 15px / 1.2 var(--rf-font-text);
-    text-decoration: none;
-
-    &:hover {
-        border-color: var(--rf-ink);
-        background: var(--rf-limestone-200);
-    }
 }
 
 .rf-cart-empty .rf-more {

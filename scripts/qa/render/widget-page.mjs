@@ -125,6 +125,9 @@ export function respond(url, {
         if (url.pathname === '/') return { status: 200, contentType: 'text/html; charset=utf-8', body: html };
         if (url.pathname === THEME_CSS_PATH) return { status: 200, contentType: 'text/css; charset=utf-8', body: css };
         if (url.pathname.startsWith('/assets/')) return serveFile(path.join(themeDir, 'assets'), url.pathname.slice('/assets/'.length));
+        // {{cdn 'img/…'}} and the CSS's fonts, at the versioned path the cdn helper writes
+        const versioned = /^\/stencil\/[^/]+\/(.+)$/.exec(url.pathname);
+        if (versioned) return serveFile(path.join(themeDir, 'assets'), versioned[1]);
     }
     return serveFile(filesDir, path.posix.basename(url.pathname));
 }

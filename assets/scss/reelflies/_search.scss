@@ -226,32 +226,6 @@
     font-size: 16px;
 }
 
-.rf-search-empty__types {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--rf-space-2);
-    margin: var(--rf-space-1) 0 0;
-    padding: 0;
-    list-style: none;
-
-    a {
-        display: inline-flex;
-        align-items: center;
-        min-height: var(--rf-tap-min);
-        padding: 0 14px;
-        border: 1px solid var(--rf-edge);
-        border-radius: var(--rf-radius-pill);
-        color: var(--rf-ink);
-        font: 650 15px / 1.2 var(--rf-font-text);
-        text-decoration: none;
-
-        &:hover {
-            border-color: var(--rf-ink);
-            background: var(--rf-limestone-200);
-        }
-    }
-}
-
 // the store's pages and posts that matched (stock content-listing), in the listing's column
 .rf-list #search-results-content {
     font-size: 16px;

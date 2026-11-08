@@ -1,0 +1,46 @@
+{{!--
+    One article (redesign step 3), from pages/blog-post.html's hero block.
+
+    - The head (page-head.html): the breadcrumbs, the title as the page's one H1, the author and
+      date under it.
+    - The thumbnail at the top of the column, at 3:2 and the page's one high-priority image, then
+      the article's own markup in the reading column (.rf-prose).
+    - Its tags as chips, stock's share links, restyled, and the way back to every article.
+    - More articles: the store's recent posts but this one, up to three, as title links.
+--}}
+<article class="rf-page rf-post">
+    {{#if blog.post.author}}
+    {{> components/reelflies/page-head rf_title=blog.post.title rf_meta=(concat blog.post.author (concat ' · ' blog.post.date_published))}}
+    {{else}}
+    {{> components/reelflies/page-head rf_title=blog.post.title rf_meta=blog.post.date_published}}
+    {{/if}}
+    <div class="rf-post__body">
+        {{#if blog.post.thumbnail}}
+        <figure class="rf-post__photo"><img src="{{getImageSrcset blog.post.thumbnail 1x='960w'}}" srcset="{{getImageSrcset blog.post.thumbnail 480w='480w' 720w='720w' 960w='960w' 1280w='1280w'}}" sizes="(min-width: 800px) 720px, calc(100vw - 32px)" width="960" height="640" alt="" fetchpriority="high" decoding="async"></figure>
+        {{/if}}
+        <div class="rf-prose">{{{blog.post.body}}}</div>
+        {{#if blog.post.tags}}
+        <ul class="rf-post__tags" aria-label="{{lang 'reelflies.blog.tags'}}">
+            {{#each blog.post.tags}}<li><a href="{{url}}">{{name}}</a></li>{{/each}}
+        </ul>
+        {{/if}}
+        <div class="rf-post__share">{{> components/common/share url=blog.post.url}}</div>
+        <a class="rf-more rf-post__back" href="{{blog.url}}">{{lang 'reelflies.blog.all'}}{{> components/reelflies/icon name='arrow'}}</a>
+    </div>
+    {{#if blog.recent_posts.length}}
+    {{assignVar 'rf_more_posts' 0}}
+    <section class="rf-post__more" aria-labelledby="rf-post-more-title">
+        <div class="rf-post__more-inner">
+            <h2 class="rf-post__more-title" id="rf-post-more-title">{{lang 'reelflies.blog.more'}}</h2>
+            <ul class="rf-post__more-list">
+                {{#each blog.recent_posts}}
+                {{#if url '!==' ../blog.post.url}}{{#if (getVar 'rf_more_posts') '<' 3}}
+                {{assignVar 'rf_more_posts' (add (getVar 'rf_more_posts') 1)}}
+                <li><a href="{{url}}">{{title}}</a></li>
+                {{/if}}{{/if}}
+                {{/each}}
+            </ul>
+        </div>
+    </section>
+    {{/if}}
+</article>

@@ -1,0 +1,19 @@
+{{!--
+    The ways on from a dead end (ticket 51; spec module 24): the Fly Types (rf_menu_type_ids, as
+    the footer lists them), then, with rf_species, the Species hub, as outlined chips. A list, not
+    a second navigation landmark beside the footer's. Used by the empty cart (cart-empty.html), a
+    search with no results (search-empty.html) and the 404 page (not-found.html).
+
+        {{> components/reelflies/dead-end-links rf_tree=categories rf_label=(lang 'reelflies.cart.empty_types') rf_species=1}}
+
+    rf_tree is the page's categories data (inside a page's {{#partial}} block @root is empty).
+    The data-rf-* marks are what the dead-ends check reads (scripts/qa/raw-html/assertions/
+    dead-ends.mjs): the list declares the ids its links must be, in order, and each link names
+    its own. With no Fly Type ids there is no list at all, never an empty one.
+--}}
+{{#if (trim theme_settings.rf_menu_type_ids)}}
+<ul class="rf-dead-links" aria-label="{{rf_label}}" data-rf-dead-end-links data-rf-menu-type-ids="{{theme_settings.rf_menu_type_ids}}"{{#if rf_species}} data-rf-menu-species-root-id="{{theme_settings.rf_menu_species_root_id}}"{{/if}}>
+    {{> components/reelflies/cats rf_tree=rf_tree ids=theme_settings.rf_menu_type_ids view='dead-end'}}
+    {{#if rf_species}}{{> components/reelflies/species rf_tree=rf_tree view='dead-end'}}{{/if}}
+</ul>
+{{/if}}

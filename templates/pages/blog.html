@@ -14,21 +14,9 @@ blog:
     {{/if}}
 {{/partial}}
 
-{{#partial "page"}}
-
-{{> components/common/breadcrumbs breadcrumbs=breadcrumbs}}
-
-<main class="page">
-    {{#unless theme_settings.hide_blog_page_heading }}
-        <h1 class="page-heading">{{ blog.name }}</h1>
-    {{/unless}}
-
-    {{#each blog.posts}}
-        {{> components/blog/post post=this theme_settings=../theme_settings}}
-    {{/each}}
-
-    {{> components/common/paginator pagination.blog}}
-</main>
-
+{{!-- ReelFlies hook (redesign step 3; CUSTOMIZATIONS.md): the articles (components/reelflies/blog-page.html), in the hero block: the plain head, a row per article, stock's pager. Front matter and the head block stay stock. --}}
+{{#partial "hero"}}
+{{> components/reelflies/blog-page}}
 {{/partial}}
+
 {{> layout/base}}

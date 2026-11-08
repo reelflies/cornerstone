@@ -1,0 +1,14 @@
+{{!--
+    A Species page's Fly Type links on its hub tile (hub-tile.html): under rf_root, the Species
+    root found in the categories data, the child whose id is the page variable rf_hub_sp, and its
+    children as links, in the store's order. Nothing when it has none: no empty list.
+--}}
+{{~#each rf_root.children as |rfSp|~}}
+{{~#if rfSp.id '==' (getVar 'rf_hub_sp')~}}
+{{~#if rfSp.children.length~}}
+<ul class="rf-hub-tile__types" aria-label="{{lang 'reelflies.hub.types' name=rfSp.name}}">
+    {{#each rfSp.children}}<li><a href="{{url}}">{{name}}</a></li>{{/each}}
+</ul>
+{{~/if~}}
+{{~/if~}}
+{{~/each~}}

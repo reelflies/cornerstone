@@ -1,0 +1,46 @@
+{{!--
+    A Web Page (redesign step 3; spec module 24; DESIGN.md "Region mapping"): About Us, Shipping &
+    Returns, the privacy policy and every other page the store's Web Pages hold, from
+    pages/page.html's hero block.
+
+    - The head (page-head.html): the breadcrumbs and the page's title as its one H1, unless Theme
+      Styles hides page headings.
+    - Page Builder's stock region, page_builder_content, under the head, as stock.
+    - The page's words in one reading column (.rf-prose, _pages.scss): the store's own markup,
+      styled, at a reading measure. Its sub-pages, when it has any, first, as links.
+    - Beside it from 1040px, below it on phones, the help column (help-aside.html).
+    - Stock's RSS syndication stays: %%Syndicate%% in the content renders stock's feed partial,
+      and a page's feed is listed after the words.
+--}}
+<div class="rf-page">
+    {{#if theme_settings.hide_page_heading}}
+    {{> components/reelflies/page-head}}
+    {{else}}
+    {{> components/reelflies/page-head rf_title=page.title}}
+    {{/if}}
+    {{{region name="page_builder_content"}}}
+    <div class="rf-page__body">
+        <div class="rf-page__main">
+            {{#if page.sub_pages}}
+            <ul class="rf-page__subs" aria-label="{{lang 'reelflies.page.sub_pages' name=page.title}}">
+                {{#each page.sub_pages}}<li><a href="{{url}}">{{title}}</a></li>{{/each}}
+            </ul>
+            {{/if}}
+            <div class="rf-prose">
+                {{#replace '%%Syndicate%%' page.content}}
+                    {{> components/page/rss_feed}}
+                {{else}}
+                    {{{page.content}}}
+                {{/replace}}
+            </div>
+            {{#if page.feed}}
+            <ul class="rf-page__feed">
+                {{#each page.feed}}
+                <li><h2><a href="{{url}}">{{title}}</a></h2><p>{{content}}</p></li>
+                {{/each}}
+            </ul>
+            {{/if}}
+        </div>
+        {{> components/reelflies/help-aside rf_pages=pages rf_current=page.title}}
+    </div>
+</div>

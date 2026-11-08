@@ -5,13 +5,24 @@
     the channel lacks.
 
         {{> components/reelflies/page-link path='/shipping-returns/'}}
+        {{> components/reelflies/page-link path='/about-us/' rf_pages=pages rf_current=page.title}}
 
     `path` is the page's path with both slashes. A page matches when its URL contains it (the
     store gives each URL in full, with the channel's host), so pass a path no other page's URL
-    contains.
+    contains. From inside a page's {{#partial}} block, where @root is empty, pass the page list
+    as rf_pages (help-aside.html); rf_current, the page being read's title, marks its own link
+    aria-current="page".
 --}}
+{{~#if rf_pages~}}
+{{~#each rf_pages as |rfPage|~}}
+{{~#contains rfPage.url ../path~}}
+<li><a href="{{rfPage.url}}"{{#if rfPage.name '===' ../rf_current}} aria-current="page"{{/if}}>{{rfPage.name}}</a></li>
+{{~/contains~}}
+{{~/each~}}
+{{~else~}}
 {{~#each @root.pages as |rfPage|~}}
 {{~#contains rfPage.url ../path~}}
 <li><a href="{{rfPage.url}}">{{rfPage.name}}</a></li>
 {{~/contains~}}
 {{~/each~}}
+{{~/if~}}

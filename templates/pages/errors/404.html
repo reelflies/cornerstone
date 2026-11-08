@@ -1,17 +1,6 @@
-{{#partial "page"}}
-
-{{> components/common/breadcrumbs breadcrumbs=breadcrumbs}}
-
-<main class="page">
-    <section class="page-content page-content--centered">
-        <h1 class="page-heading">{{lang 'page_not_found.page_heading'}}</h1>
-        <p class="u-textAlignCenter">
-            {{lang 'page_not_found.message'}}
-        </p>
-
-        {{> components/common/search-box}}
-    </section>
-</main>
-
+{{!-- ReelFlies hook (ticket 51; redesign step 3; CUSTOMIZATIONS.md): the 404 page (components/reelflies/not-found.html), in the hero block inside the page's one <main>: the heading, the line, the search form, the Fly Types and the Species hub, the hook size chart and the rf_404_note region. --}}
+{{#partial "hero"}}
+{{> components/reelflies/not-found}}
 {{/partial}}
+
 {{> layout/base}}

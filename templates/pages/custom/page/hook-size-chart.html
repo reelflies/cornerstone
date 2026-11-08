@@ -1,0 +1,12 @@
+{{!--
+    The hook size chart (ticket 35; spec module 22): the custom page template the Web Page at
+    /fly-hook-size-chart/ takes, set on the page in the control panel, with no theme push. A new
+    file, not a hook. It renders components/reelflies/chart-page.html in the hero block: the head,
+    the words, the gauge from 6/0 to 24, and the size rows scripts/hook-chart/rows.mjs writes into
+    the page. Locally the fixture page scripts/qa/render/pages/hook-chart-page renders it.
+--}}
+{{#partial "hero"}}
+{{> components/reelflies/chart-page}}
+{{/partial}}
+
+{{> layout/base}}

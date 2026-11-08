@@ -1,34 +1,6 @@
-{{#partial "page"}}
-
-{{> components/common/breadcrumbs breadcrumbs=breadcrumbs}}
-
-<main class="page">
-    {{#unless theme_settings.hide_contact_us_page_heading }}
-        <h1 class="page-heading">{{page.title}}</h1>
-    {{/unless}}
-
-    {{#if page.sub_pages}}
-        <nav class="navBar navBar--sub">
-            <ul class="navBar-section account-navigation">
-                {{#each page.sub_pages}}
-                    <li class="navBar-item"><a class="navBar-action" href="{{url}}">{{title}}</a></li>
-                {{/each}}
-            </ul>
-        </nav>
-    {{/if}}
-
-    <div id="contact-us-page" class="page-content page-content--centered">
-        {{#if forms.contact.success}}
-            <div id="contact-us-success">{{{lang 'forms.contact_us.successful' shopPath=urls.home}}}</div>
-        {{else}}
-            <p>{{{page.content}}}</p>
-            {{> components/page/contact-us-form}}
-        {{/if}}
-
-    </div>
-
-</main>
-
+{{!-- ReelFlies hook (redesign step 3; CUSTOMIZATIONS.md): the contact page (components/reelflies/contact-page.html), in the hero block: the page's words and stock's contact form, unchanged, beside the shop's address, phone and the help pages. --}}
+{{#partial "hero"}}
+{{> components/reelflies/contact-page}}
 {{/partial}}
 
 {{> layout/base}}

@@ -553,14 +553,14 @@
     "forms": {
         "range": "You need to enter numbers only between: {limitTo} and {limitFrom}",
         "contact_us": {
-            "full_name": "Full Name",
-            "email": "Email Address",
-            "company": "Company Name",
-            "phone": "Phone Number",
-            "order": "Order Number",
-            "rma": "RMA Number",
-            "question": "Comments/Questions",
-            "submit": "Submit Form",
+            "full_name": "Full name",
+            "email": "Email address",
+            "company": "Company name",
+            "phone": "Phone number",
+            "order": "Order number",
+            "rma": "RMA number",
+            "question": "Comments or questions",
+            "submit": "Send",
             "successful": "We've received your feedback and will respond shortly if required. <a href=\"{shopPath}\">Continue</a>.",
             "manual_captcha_instruction": "Please answer the question below for additional verification."
         },
@@ -894,7 +894,7 @@
             "quick_count": "{ count, plural, one {# product result} other {# product results} } for '{ search_query }'",
             "quick_count_live": "product results for",
             "product_count": "Products ({count})",
-            "content_count": "News & Information ({count})"
+            "content_count": "Articles ({count})"
         },
         "faceted": {
             "selected": {
@@ -1379,6 +1379,34 @@
             "view": "View",
             "view_grid": "Photos",
             "view_list": "Quick order"
+        },
+        "page": {
+            "visit": "Visit or call",
+            "call": "Questions? Call",
+            "sub_pages": "Pages under {name}"
+        },
+        "blog": {
+            "read_more": "Read more",
+            "read_named": "Read more: {title}",
+            "all": "All articles",
+            "more": "More articles",
+            "tags": "Tags",
+            "none": "No articles yet."
+        },
+        "not_found": {
+            "heading": "Sorry, we can't find that page",
+            "message": "It may have moved, or the address may be out of date. Search for a fly, or start from a fly type.",
+            "links_label": "Shop flies"
+        },
+        "hub": {
+            "heading": "Fly Fishing Flies by Species",
+            "tiles": "Species",
+            "types": "{name} by fly type",
+            "products": "All flies"
+        },
+        "chart": {
+            "gauge_label": "Hook sizes 6/0 to 24, drawn to relative scale",
+            "gauge_caption": "Drawn to relative scale on a standard-length hook, not actual size."
         }
     },
     "consent_manager": {

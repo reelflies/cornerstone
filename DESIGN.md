@@ -411,9 +411,11 @@ A dry-limestone band. The intro (heading, this month's hatches in 650 19px, a ge
 
 ### Hook Scale
 Hook sizes from 2/0 to 24 in hook order, each drawn as one authored SVG hook (eye, shank, bend, point, barb) in `currentColor` at its relative size, with the size in condensed numerals beneath; seven to a row on phones, fourteen from 900px.
+- **The chart's gauge** (the hook size chart page): 6/0 to 24 on a paper card with the Plain shadow, each hook's height its length in millimetres at one scale (1.5px a millimetre on phones, 2px from 640px, 2.6px from 1040px), bends on one line; seven to a row on phones, ten from 640px, one row from 1040px. Each size links to its row below, which lands outlined in ink on dry limestone. A caption says it is relative, not actual size.
 
 ### Species Band (moss)
 A moss band: the Expanded heading in mist, a lichen intro, species grouped under lichen labels ("Freshwater", "Saltwater") as Expanded 760 19px names with condensed counts over 24% lichen rules, underlining on hover and when lit. From 1040px, pointing at a species lays three of its flies on the moss beside the list, seated and laid, under a Kalam title and an "All …" link. On phones the band shows the list only; each species links straight to its page.
+- **The Species hub** grows the band into a page: the H1 in Expanded mist, the intro in lichen, then a tile per species: its photograph at 16:7 with the Seat shadow (the graded stone when it has none), its name in Expanded 760 21px, its count and intro in lichen, its Fly Type pages as chips outlined in lichen. Three across from 1040px, two from 640px; on phones a compact row, the photograph at 104px beside the name, with lichen rules between species.
 
 ### Hand Notes
 - **Bin label:** a paper tag in Kalam 700 22px, 2px corners, Seat shadow, rotated −2°, naming the lay on the stone ("Best sellers"); on moss the lay title is the same hand straight on the ground.
@@ -441,6 +443,10 @@ The base is Cornerstone 6.22, rebuilt fresh rather than ported from the old skin
 - **Search results:** `components/reelflies/search-page.html`: the plain limestone head with the count as the H1, "Did you mean", the matched categories as chips and the store's two tabs (products; pages and posts) as label-weight tabs underlined in ink; then the listing as on a category. Nothing found: the help and the Fly Types on limestone. Stock search.js keeps its refreshes and tabs.
 - **Search suggestions:** the header's form (`header.html`) and `quick-search.js`, over the Storefront GraphQL API (`searchProducts`, the results page's own search; a named size as its Fly Sizes filter). The categories come from the menu the header already rendered.
 - **Cart ("Your box"):** `components/reelflies/cart-page.html` in stock's containers: the lines on a paper sheet, grouped by pattern; the order summary (stock's totals, coupons and estimator in the new type) beside them from 1040px and held in view, with the order line's shipping line and meter above the copper Check out; below 1040px a riverbed-shale bar at the foot with the count, the total and Check out. Stock cart.js does every update. Empty: "Your box is empty." and the Fly Types as chips.
+- **Species hub:** `pages/custom/category/species-hub.html` renders the category page in its hub mode (`components/reelflies/hub-head.html`): the moss field with the tiles, then the listing on limestone under "All flies", its cards all lazy.
+- **Hook size chart:** `pages/custom/page/hook-size-chart.html` (`components/reelflies/chart-page.html`): the Web Page's words, the gauge (`chart-gauge.html`), then the size rows `scripts/hook-chart/rows.mjs` writes into the page's content.
+- **Reading pages:** Web Pages, the contact page, the blog and its articles (`web-page.html`, `contact-page.html`, `blog-page.html`, `blog-post-page.html`): the listings' plain head, the words in one reading column at about 68 characters (the store's own markup styled in the new type), and from 1040px the help pages beside them (`help-aside.html`).
+- **404 and dead ends:** `components/reelflies/not-found.html`: the H1, the search form with its suggestions, the Fly Types and Species hub as outlined chips (`dead-end-links.html`, shared with the empty cart and the empty search), the hook size chart and a Page Builder note region.
 
 ## Do's and Don'ts
 

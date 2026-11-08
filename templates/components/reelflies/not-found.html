@@ -1,0 +1,19 @@
+{{!--
+    The 404 page (ticket 51; spec module 24; O20, O24; stories 66 and 68), from
+    pages/errors/404.html's hero block, inside the page's one <main>: plain words as the one H1
+    and a line under it, the search form with its suggestions (search-form.html), the Fly Types
+    and the Species hub (dead-end-links.html), the hook size chart, then the rf_404_note region,
+    where each channel can leave a note in Page Builder ("We've reorganised our flies").
+    data-rf-not-found is what the dead-ends check reads (scripts/qa/raw-html/assertions/
+    dead-ends.mjs). The words wait for the owner with the webpages repo's site copy (its ticket 13).
+--}}
+<div class="rf-not-found" data-rf-not-found>
+    <div class="rf-not-found__inner">
+        <h1 class="rf-not-found__title">{{lang 'reelflies.not_found.heading'}}</h1>
+        <p class="rf-not-found__line">{{lang 'reelflies.not_found.message'}}</p>
+        {{> components/reelflies/search-form rf_id='rf-not-found-q' rf_class='rf-search--page'}}
+        {{> components/reelflies/dead-end-links rf_tree=categories rf_label=(lang 'reelflies.not_found.links_label') rf_species=1}}
+        {{#if (trim theme_settings.rf_hook_chart_url)}}<a class="rf-more" href="{{trim theme_settings.rf_hook_chart_url}}">{{lang 'reelflies.menu.hook_chart'}}{{> components/reelflies/icon name='arrow'}}</a>{{/if}}
+        {{{region name="rf_404_note"}}}
+    </div>
+</div>

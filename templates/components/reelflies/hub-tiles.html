@@ -1,0 +1,15 @@
+{{!--
+    The Species hub's tiles for one group (hub-head.html): the root's subcategories (rf_subs) that
+    rf_species_salt_ids names (rf_salt 1), doesn't (0), or every one ('any'), in the store's order,
+    each a hub-tile.html. The page variable rf_hub_n counts tiles across both groups, so only the
+    page's first two photos load eagerly.
+--}}
+{{~#each rf_subs as |rfSp|~}}
+{{~assignVar 'rf_hub_salt' 0~}}
+{{~#each (split (getVar 'rf_salt_ids') ',')}}{{#if (trim this) '==' rfSp.id}}{{assignVar 'rf_hub_salt' 1}}{{/if}}{{/each~}}
+{{~#if ../rf_salt '==' 'any'}}{{assignVar 'rf_hub_show' 1}}{{else}}{{#if (getVar 'rf_hub_salt') '==' ../rf_salt}}{{assignVar 'rf_hub_show' 1}}{{else}}{{assignVar 'rf_hub_show' 0}}{{/if}}{{/if~}}
+{{~#if (getVar 'rf_hub_show')~}}
+{{~assignVar 'rf_hub_n' (add (getVar 'rf_hub_n') 1)~}}
+{{> components/reelflies/hub-tile rf_tile=rfSp rf_n=(getVar 'rf_hub_n') rf_categories=../rf_categories rf_h=../rf_h}}
+{{~/if~}}
+{{~/each~}}

@@ -1,0 +1,42 @@
+{{!--
+    The Species hub's head (ticket 34; spec module 10; R8, SEO-2; stories 13, 14, 70 and 72;
+    DESIGN.md "Species Band (moss)"), for category-page.html in its hub mode: the species field,
+    moss, under the header.
+
+    - The breadcrumbs, the H1 "Fly Fishing Flies by Species" and the root's intro (the description
+      before its <!--more--> marker), in mist and lichen.
+    - A tile per Species page (hub-tile.html), every one server-rendered, in the order the store
+      sends them. With rf_species_salt_ids set they fall into Freshwater and Saltwater, as on the
+      home page's band, each under its own H2 with the species' names as H3s; without, one
+      list with the names as H2s. Under the hub every grid card loads lazily (rf_cards_lazy,
+      fly-listing.html): the first tile's photo is the page's one high-priority image.
+    - data-rf-hub-tiles and data-rf-hub-count are what the species-hub check reads
+      (scripts/qa/raw-html/assertions/species-hub.mjs).
+
+    The tiles come from the root's own subcategories (their image, count and intro), their Fly Type
+    links from the categories data (rf_categories), found by the root's id at its first two levels.
+--}}
+{{~assignVar 'rf_hub_root' category.id~}}
+{{~assignVar 'rf_hub_n' 0~}}
+{{~assignVar 'rf_cards_lazy' 1~}}
+<div class="rf-hub">
+    <div class="rf-hub__inner">
+        {{> components/common/breadcrumbs breadcrumbs=breadcrumbs}}
+        <h1 class="rf-hub__title">{{lang 'reelflies.hub.heading'}}</h1>
+        <div class="rf-hub__lead">{{> components/reelflies/description-part rf_description=category.description rf_part='intro'}}</div>
+        {{#if category.subcategories.length}}
+        {{#if (getVar 'rf_salt_ids')}}
+        <section class="rf-hub__group" aria-labelledby="rf-hub-fresh">
+            <h2 class="rf-hub__group-title" id="rf-hub-fresh">{{lang 'reelflies.species.fresh'}}</h2>
+            <ul class="rf-hub__tiles" data-rf-hub-tiles>{{> components/reelflies/hub-tiles rf_subs=category.subcategories rf_categories=categories rf_salt=0 rf_h=3}}</ul>
+        </section>
+        <section class="rf-hub__group" aria-labelledby="rf-hub-salt">
+            <h2 class="rf-hub__group-title" id="rf-hub-salt">{{lang 'reelflies.species.salt'}}</h2>
+            <ul class="rf-hub__tiles" data-rf-hub-tiles>{{> components/reelflies/hub-tiles rf_subs=category.subcategories rf_categories=categories rf_salt=1 rf_h=3}}</ul>
+        </section>
+        {{else}}
+        <ul class="rf-hub__tiles" aria-label="{{lang 'reelflies.hub.tiles'}}" data-rf-hub-tiles>{{> components/reelflies/hub-tiles rf_subs=category.subcategories rf_categories=categories rf_salt='any' rf_h=2}}</ul>
+        {{/if}}
+        {{/if}}
+    </div>
+</div>

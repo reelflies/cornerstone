@@ -1,0 +1,25 @@
+{{!--
+    The blog's list of articles (redesign step 3), from pages/blog.html's hero block, also for a
+    tag's list (/blog/tag/…): the head with the blog's own name (the store's, renamed in the
+    control panel), then a row per article (blog-row.html) at a reading width, newest first as the
+    store sends them, and stock's numbered pager, restyled as the listings'.
+--}}
+<div class="rf-page rf-blog">
+    {{#if theme_settings.hide_blog_page_heading}}
+    {{> components/reelflies/page-head}}
+    {{else}}
+    {{> components/reelflies/page-head rf_title=blog.name}}
+    {{/if}}
+    <div class="rf-blog__body">
+        {{#if blog.posts.length}}
+        <ul class="rf-blog__list">
+            {{#each blog.posts}}
+            <li>{{> components/reelflies/blog-row post=this rf_first=@first}}</li>
+            {{/each}}
+        </ul>
+        <div class="rf-blog__pager">{{> components/common/paginator pagination.blog}}</div>
+        {{else}}
+        <p class="rf-blog__none">{{lang 'reelflies.blog.none'}}</p>
+        {{/if}}
+    </div>
+</div>

@@ -1,0 +1,35 @@
+{{!--
+    One Species page's tile on the hub (hub-tiles.html): rf_tile is one of the root's
+    subcategories, rf_n its place on the page from 1, rf_categories the page's categories data,
+    rf_h its name's heading level (2, or 3 under a Freshwater or Saltwater heading).
+
+    - The photograph: the Species page's own image, the store's 16:7 banner, as a second link to
+      the page, out of the tab order (the name is the link a keyboard or screen reader meets).
+      The first two are eager and the first takes fetchpriority="high"; the rest are lazy. A page
+      with no image shows the stone (the home page's slate, graded), so every tile keeps its shape.
+    - The name, an H3 holding the link; the count of patterns while counts are on (count.html);
+      the intro, the description before its <!--more--> marker.
+    - Its Fly Type pages as links (hub-types.html), from the categories data, which needs the
+      channel's Menu Display Depth at 3 or more; with none, no list.
+--}}
+{{~assignVar 'rf_hub_sp' rf_tile.id~}}
+<li class="rf-hub-tile">
+    <a class="rf-hub-tile__media" href="{{rf_tile.url}}" tabindex="-1" aria-hidden="true">
+        {{#if rf_tile.image}}
+        <img src="{{getImageSrcset rf_tile.image 1x='640w'}}" srcset="{{getImageSrcset rf_tile.image 320w='320w' 480w='480w' 640w='640w' 960w='960w'}}" sizes="(min-width: 1040px) 360px, (min-width: 640px) calc(50vw - 40px), 104px" width="640" height="280" alt=""{{#if rf_n '==' 1}} fetchpriority="high"{{/if}}{{#if rf_n '>' 2}} loading="lazy"{{/if}} decoding="async">
+        {{else}}
+        <img class="rf-graded" src="{{cdn 'img/reelflies/stone/hero-stone-1600.jpg'}}" srcset="{{cdn 'img/reelflies/stone/hero-stone-1600.jpg'}} 1600w" sizes="(min-width: 1040px) 360px, (min-width: 640px) calc(50vw - 40px), 104px" width="1600" height="700" alt=""{{#if rf_n '==' 1}} fetchpriority="high"{{/if}}{{#if rf_n '>' 2}} loading="lazy"{{/if}} decoding="async">
+        {{/if}}
+    </a>
+    <div class="rf-hub-tile__text">
+        <h{{rf_h}} class="rf-hub-tile__name"><a href="{{rf_tile.url}}">{{rf_tile.name}}</a></h{{rf_h}}>
+        {{#if (getVar 'rf_counts')}}{{#if rf_tile.product_count}}<p class="rf-hub-tile__n" data-rf-hub-count>{{> components/reelflies/count n=rf_tile.product_count}} {{lang 'reelflies.menu.patterns'}}</p>{{/if}}{{/if}}
+        {{> components/reelflies/description-part rf_description=rf_tile.description rf_part='intro'}}
+        {{~#each rf_categories as |rfC1|~}}
+        {{~#if rfC1.id '==' (getVar 'rf_hub_root')}}{{> components/reelflies/hub-types rf_root=rfC1}}{{/if~}}
+        {{~#each rfC1.children as |rfC2|~}}
+        {{~#if rfC2.id '==' (getVar 'rf_hub_root')}}{{> components/reelflies/hub-types rf_root=rfC2}}{{/if~}}
+        {{~/each~}}
+        {{~/each~}}
+    </div>
+</li>

@@ -1,0 +1,16 @@
+{{!--
+    The search form (ticket 30; DESIGN.md "Inputs / Fields", Search): the header's, and the 404
+    page's (not-found.html). quick-search.js binds every [data-rf-search] form, so each gets the
+    suggestions; an empty search goes nowhere.
+
+        {{> components/reelflies/search-form rf_id='rf-search-q'}}
+
+    rf_id is the field's id, unique on the page; rf_class an extra class on the form.
+--}}
+<form class="rf-search{{#if rf_class}} {{rf_class}}{{/if}}" role="search" action="{{urls.search}}" method="get" data-rf-search>
+    <label class="is-srOnly" for="{{rf_id}}">{{lang 'reelflies.search.label'}}</label>
+    {{> components/reelflies/icon name='search'}}
+    <input id="{{rf_id}}" name="search_query" type="search" placeholder="{{lang 'reelflies.search.placeholder'}}" autocomplete="off" spellcheck="false" enterkeyhint="search">
+    <button class="rf-search__go" type="submit">{{lang 'reelflies.search.go'}}</button>
+    <div class="rf-suggest" data-rf-suggest hidden></div>
+</form>

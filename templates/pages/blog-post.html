@@ -1,8 +1,6 @@
-{{#partial "page"}}
-
-{{> components/common/breadcrumbs breadcrumbs=breadcrumbs}}
-
-{{> components/blog/post post=blog.post show_tags=true is_blog_post=true}}
-
+{{!-- ReelFlies hook (redesign step 3; CUSTOMIZATIONS.md): one article (components/reelflies/blog-post-page.html), in the hero block: the plain head with the title and date, the article in a reading column, its tags, share links and more articles. --}}
+{{#partial "hero"}}
+{{> components/reelflies/blog-post-page}}
 {{/partial}}
+
 {{> layout/base}}

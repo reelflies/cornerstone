@@ -5,7 +5,8 @@
 
     nav: the header's Species item and its mega menu, with the hatch card. drawer: the phone
     drawer's Species group. ways: the stone's "What it catches" (five). band: the moss band's
-    lists (home). foot: one link to the root, in the footer.
+    lists (home). foot: one link to the root, in the footer. dead-end: the same link, naming its
+    id for the dead-ends check (dead-end-links.html).
 --}}
 {{~#if rf_view '===' 'nav'~}}
 <li class="rf-nav__item" data-rf-mega>
@@ -54,4 +55,8 @@
 
 {{~#if rf_view '===' 'foot'~}}
 <li><a href="{{rf_root.url}}">{{rf_root.name}}</a></li>
+{{~/if~}}
+
+{{~#if rf_view '===' 'dead-end'~}}
+<li><a href="{{rf_root.url}}" data-rf-menu-id="{{rf_root.id}}">{{rf_root.name}}</a></li>
 {{~/if~}}

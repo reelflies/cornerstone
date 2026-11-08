@@ -1,0 +1,169 @@
+// =============================================================================
+// REELFLIES HOOK SIZE CHART (Streamside Stone)
+// =============================================================================
+//
+// The hook size chart page (ticket 35; spec module 22; DESIGN.md "Hook Scale"): the words in the
+// reading column (_pages.scss), the gauge on a paper card with the Plain shadow, every size from
+// 6/0 to 24 drawn as the authored hook at one scale (each hook's height is its length in mm,
+// --rf-len, times --rf-gauge-k, which grows with the screen), bends on one line, sizes beneath
+// in condensed numerals; then the size rows rows.mjs writes into the page, as a table on
+// limestone, the row a gauge link lands on lit. Markup: components/reelflies/chart-page.html,
+// chart-gauge, hook.
+//
+// -----------------------------------------------------------------------------
+
+$rf-chart-pinned: 52px; // the header's nav row, pinned from 1040px
+
+.rf-chart__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--rf-space-8);
+    max-width: calc(var(--rf-column-max) + 2 * var(--rf-gutter));
+    margin: 0 auto;
+    padding: var(--rf-space-8) var(--rf-gutter) var(--rf-space-16);
+}
+
+// The gauge
+.rf-gauge {
+    --rf-gauge-k: 1.5px;
+    margin: 0;
+    padding: var(--rf-space-6) var(--rf-space-4) var(--rf-space-4);
+    border-radius: var(--rf-radius-md);
+    background: var(--rf-paper);
+    box-shadow: var(--rf-shadow-plain);
+}
+
+// seven to a row on phones and ten from 640px (DESIGN.md "Hook Scale"), one row from 1040px
+.rf-gauge__hooks {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    align-items: end;
+    gap: var(--rf-space-4) 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+        margin: 0;
+    }
+
+    a {
+        display: grid;
+        justify-items: center;
+        gap: 6px;
+        min-width: var(--rf-tap-min);
+        padding: 6px 0;
+        border-radius: var(--rf-radius-sm);
+        color: var(--rf-ink);
+        text-decoration: none;
+
+        &:hover {
+            background: var(--rf-limestone-100);
+
+            .rf-num {
+                text-decoration: underline;
+                text-underline-offset: 0.2em;
+            }
+        }
+    }
+
+    .rf-hook {
+        display: block;
+        width: auto;
+        height: calc(var(--rf-len) * var(--rf-gauge-k));
+        overflow: visible;
+    }
+
+    .rf-num {
+        font: 700 15px / 1 var(--rf-font-numerals);
+        font-variant-numeric: tabular-nums lining-nums;
+    }
+}
+
+.rf-gauge__caption {
+    margin-top: var(--rf-space-4);
+    color: var(--rf-ink-muted);
+    font-size: 14px;
+}
+
+// The size rows (scripts/hook-chart/rows.mjs's table.rf-chart-rows, in the page's content)
+.rf-chart__rows {
+    max-width: 60rem;
+}
+
+.rf-chart-rows {
+    font-size: 16px;
+
+    thead th {
+        padding-top: 0;
+        border-bottom-color: var(--rf-edge);
+        color: var(--rf-ink-muted);
+        font: 650 14px / 1.3 var(--rf-font-text);
+    }
+
+    tbody th {
+        width: 4.5rem;
+        font: 700 20px / 1.2 var(--rf-font-numerals);
+        font-variant-numeric: tabular-nums lining-nums;
+    }
+
+    tbody th,
+    tbody td {
+        padding-top: 14px;
+        padding-bottom: 14px;
+    }
+
+    td:last-child {
+        width: 40%;
+    }
+
+    td:last-child:not(:has(a)) {
+        color: var(--rf-ink-muted);
+    }
+
+    tr[id] {
+        scroll-margin-top: var(--rf-space-4);
+    }
+
+    tr:target {
+        background: var(--rf-limestone-200);
+        box-shadow: inset 0 0 0 2px var(--rf-ink);
+    }
+
+    tr:target > :first-child {
+        padding-left: 12px;
+    }
+}
+
+
+@media (min-width: 640px) {
+    .rf-gauge {
+        --rf-gauge-k: 2px;
+        padding: var(--rf-space-8) var(--rf-space-6) var(--rf-space-6);
+    }
+
+    .rf-gauge__hooks {
+        grid-template-columns: repeat(10, minmax(0, 1fr));
+        gap: var(--rf-space-6) 0;
+    }
+}
+
+@media (min-width: 1040px) {
+    .rf-chart__body {
+        padding-top: var(--rf-space-12);
+    }
+
+    .rf-gauge {
+        --rf-gauge-k: 2.6px;
+    }
+
+    .rf-gauge__hooks {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+    }
+
+    .rf-chart-rows tr[id] {
+        scroll-margin-top: calc(#{$rf-chart-pinned} + var(--rf-space-4));
+    }
+}

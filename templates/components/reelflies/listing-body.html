@@ -1,0 +1,27 @@
+{{!--
+    A category's listing (category-page.html): the facets in the stock sidebar beside the product
+    grid from 1040px, above it on phones behind the Filter button (listing-top.html). The sidebar
+    shows only when the category has a visible facet, so a listing with none takes the full width.
+    Stock category.js finds both by their ids and refreshes them in place on every filter, sort
+    and page. With rf_title (the Species hub), the listing is a section named by a visible H2,
+    data-rf-hub-products for the species-hub check.
+--}}
+{{assignVar 'rf_listing_sidebar' 0}}
+{{#if category.faceted_search_enabled}}{{#any category.facets visible=true}}{{assignVar 'rf_listing_sidebar' 1}}{{/any}}{{#if category.selected.items.length}}{{assignVar 'rf_listing_sidebar' 1}}{{/if}}{{/if}}
+{{#if rf_title}}
+<section class="rf-list{{#if (getVar 'rf_listing_sidebar')}} rf-list--side{{/if}} rf-list--titled" aria-labelledby="rf-list-title" data-rf-hub-products>
+    <h2 class="rf-list__title" id="rf-list-title">{{rf_title}}</h2>
+{{else}}
+<div class="rf-list{{#if (getVar 'rf_listing_sidebar')}} rf-list--side{{/if}}">
+{{/if}}
+    <div class="rf-list__inner">
+        {{#if (getVar 'rf_listing_sidebar')}}
+        <aside class="rf-list__side" id="faceted-search-container">
+            {{> components/category/sidebar}}
+        </aside>
+        {{/if}}
+        <div class="rf-list__main" id="product-listing-container">
+            {{> components/category/product-listing}}
+        </div>
+    </div>
+{{#if rf_title}}</section>{{else}}</div>{{/if}}

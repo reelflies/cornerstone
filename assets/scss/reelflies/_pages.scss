@@ -1,0 +1,662 @@
+// =============================================================================
+// REELFLIES READING PAGES (Streamside Stone)
+// =============================================================================
+//
+// The pages people read rather than shop (redesign step 3): Web Pages, the contact page, the
+// blog and its articles, and the 404 page, on limestone where reading happens (DESIGN.md "The
+// Three Grounds Rule"). Each opens with the listings' plain head (page-head.html, _listing.scss),
+// then the words in one reading column (.rf-prose), the store's own markup styled at a reading
+// measure. Also the outlined chips every dead end shares (dead-end-links.html). Markup:
+// components/reelflies/web-page.html, contact-page, help-aside, blog-page, blog-row,
+// blog-post-page, not-found, dead-end-links.
+//
+// -----------------------------------------------------------------------------
+
+$rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
+
+.body:has(> .rf-page),
+.body:has(> .rf-not-found) {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.rf-page {
+    background: var(--rf-limestone-100);
+    color: var(--rf-ink);
+}
+
+.rf-page-head .rf-list-head__inner {
+    padding-bottom: var(--rf-space-6);
+}
+
+.rf-page-head__meta {
+    color: var(--rf-ink-muted);
+    font-size: 15px;
+}
+
+// The page beside its help column (help-aside.html)
+.rf-page__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--rf-space-12);
+    max-width: calc(var(--rf-column-max) + 2 * var(--rf-gutter));
+    margin: 0 auto;
+    padding: var(--rf-space-8) var(--rf-gutter) var(--rf-space-16);
+}
+
+.rf-page__main {
+    min-width: 0;
+}
+
+.rf-page__subs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--rf-space-2);
+    margin-bottom: var(--rf-space-8);
+}
+
+.rf-page__subs a,
+.rf-dead-links a,
+.rf-post__tags a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--rf-tap-min);
+    padding: 0 14px;
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-pill);
+    color: var(--rf-ink);
+    font: 650 15px / 1.2 var(--rf-font-text);
+    text-decoration: none;
+
+    &:hover {
+        border-color: var(--rf-ink);
+        background: var(--rf-limestone-200);
+        color: var(--rf-ink);
+        text-decoration: none;
+    }
+}
+
+.rf-page__feed {
+    display: grid;
+    gap: var(--rf-space-6);
+    max-width: 68ch;
+    margin-top: var(--rf-space-8);
+
+    h2 {
+        font: 650 19px / 1.3 var(--rf-font-text);
+    }
+
+    a {
+        color: var(--rf-ink);
+    }
+}
+
+
+// The reading column: the store's own markup (Web Pages, articles, the hook chart's words)
+// -----------------------------------------------------------------------------
+
+.rf-prose {
+    max-width: 68ch;
+    color: var(--rf-ink);
+    font-size: 17px;
+    line-height: 1.6;
+    overflow-wrap: break-word;
+
+    :where(p, ul, ol, dl, h1, h2, h3, h4, h5, h6, table, blockquote, figure, pre, hr) {
+        margin: 0;
+    }
+
+    // between blocks at any depth: the store's editor often wraps the words in a <div>
+    > * + *,
+    :where(p, ul, ol, dl, table, blockquote, figure, pre, div) + :where(p, ul, ol, dl, table, blockquote, figure, pre, div) {
+        margin-top: 1em;
+    }
+
+    :where(h1, h2) {
+        margin-top: 1.8em;
+        color: var(--rf-ink);
+        font: #{"760 clamp(22px, 0.8vw + 17px, 28px) / 1.15 var(--rf-font-display)"};
+        letter-spacing: -0.01em;
+        text-transform: none;
+        text-wrap: balance;
+    }
+
+    h3 {
+        margin-top: 1.6em;
+        color: var(--rf-ink);
+        font: 650 20px / 1.3 var(--rf-font-text);
+        text-transform: none;
+    }
+
+    :where(h4, h5, h6) {
+        margin-top: 1.4em;
+        color: var(--rf-ink);
+        font: 650 17px / 1.4 var(--rf-font-text);
+        letter-spacing: 0;
+        text-transform: none;
+    }
+
+    :where(h1, h2, h3, h4, h5, h6) + * {
+        margin-top: 0.5em;
+    }
+
+    > :first-child {
+        margin-top: 0;
+    }
+
+    a {
+        color: var(--rf-ink);
+        text-decoration: underline;
+        text-decoration-color: var(--rf-edge);
+        text-decoration-thickness: 1px;
+        text-underline-offset: 0.2em;
+
+        &:hover {
+            color: var(--rf-ink);
+            text-decoration-color: currentColor;
+            text-decoration-thickness: 2px;
+        }
+    }
+
+    :where(b, strong) {
+        font-weight: 650;
+    }
+
+    ul,
+    ol {
+        padding-left: 1.4em;
+    }
+
+    ul {
+        list-style: disc;
+    }
+
+    ol {
+        list-style: decimal;
+    }
+
+    li + li {
+        margin-top: 0.4em;
+    }
+
+    li::marker {
+        color: var(--rf-ink-muted);
+    }
+
+    img,
+    video,
+    iframe {
+        display: block;
+        max-width: 100%;
+        height: auto;
+    }
+
+    img {
+        border-radius: var(--rf-radius-md);
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 16px;
+    }
+
+    th,
+    td {
+        padding: 10px 12px 10px 0;
+        border-bottom: 1px solid var(--rf-limestone-300);
+        text-align: left;
+        vertical-align: top;
+    }
+
+    th {
+        font-weight: 650;
+    }
+
+    hr {
+        margin: 2em 0;
+        border: 0;
+        border-top: 1px solid var(--rf-limestone-300);
+    }
+
+    blockquote {
+        padding-left: 1.2em;
+        color: var(--rf-ink-muted);
+    }
+}
+
+
+// The help column
+// -----------------------------------------------------------------------------
+
+.rf-help {
+    display: grid;
+    align-content: start;
+    gap: var(--rf-space-3);
+    padding-top: var(--rf-space-6);
+    border-top: 1px solid var(--rf-limestone-300);
+    font-size: 16px;
+}
+
+.rf-help__title {
+    color: var(--rf-ink);
+    font: 650 15px / 1.3 var(--rf-font-text);
+}
+
+.rf-help__title--more {
+    margin-top: var(--rf-space-4);
+}
+
+.rf-help__links li + li {
+    border-top: 1px solid var(--rf-limestone-300);
+}
+
+.rf-help__links a {
+    display: flex;
+    align-items: center;
+    min-height: var(--rf-tap-min);
+    color: var(--rf-ink);
+    text-decoration: none;
+
+    &:hover {
+        text-decoration: underline;
+        text-underline-offset: 0.2em;
+    }
+
+    &[aria-current="page"] {
+        font-weight: 700;
+    }
+}
+
+.rf-help__address {
+    font-style: normal;
+    line-height: 1.5;
+}
+
+.rf-help__line,
+.rf-help__call {
+    color: var(--rf-ink-muted);
+    line-height: 1.5;
+
+    a {
+        color: var(--rf-ink);
+        font-weight: 650;
+        text-decoration: underline;
+        text-decoration-color: var(--rf-edge);
+        text-underline-offset: 0.2em;
+    }
+}
+
+
+// The contact form (stock components/page/contact-us-form.html, restyled)
+// -----------------------------------------------------------------------------
+
+.rf-contact__intro {
+    margin-bottom: var(--rf-space-6);
+}
+
+.rf-contact .form {
+    max-width: 44rem;
+    margin: 0;
+}
+
+.rf-contact .form-row--half {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: var(--rf-space-4);
+    margin: 0;
+
+    // stock's clearfix would take the first grid cell
+    &::before,
+    &::after {
+        display: none;
+    }
+
+    > .form-field {
+        width: auto;
+        float: none;
+        padding: 0;
+    }
+}
+
+.rf-contact .form-field {
+    margin: 0 0 var(--rf-space-4);
+}
+
+.rf-contact .form-label {
+    display: block;
+    margin: 0 0 6px;
+    color: var(--rf-ink);
+    font: 650 15px / 1.3 var(--rf-font-text);
+
+    small {
+        float: none;
+        margin-left: 6px;
+        color: var(--rf-ink-muted);
+        font: 400 13px / 1 var(--rf-font-text);
+        letter-spacing: 0;
+        text-transform: none;
+    }
+}
+
+.rf-contact .form-input,
+.rf-contact .form-textarea {
+    width: 100%;
+    min-height: 46px;
+    padding: 0 12px;
+    border: 1px solid var(--rf-edge);
+    border-radius: var(--rf-radius-sm);
+    background: var(--rf-paper);
+    color: var(--rf-ink);
+    font: 400 16px / 1.4 var(--rf-font-text);
+}
+
+.rf-contact .form-textarea,
+.rf-contact textarea.form-input {
+    min-height: 160px;
+    padding: 10px 12px;
+}
+
+.rf-contact .form-field--error .form-input {
+    border-color: var(--rf-error);
+}
+
+.rf-contact .form-inlineMessage {
+    color: var(--rf-error);
+    font-size: 14px;
+}
+
+.rf-contact .form-actions {
+    margin-top: var(--rf-space-2);
+    text-align: left;
+}
+
+.rf-contact .form-actions .button {
+    min-height: 46px;
+    margin: 0;
+    padding: 0 28px;
+    border-radius: var(--rf-radius-sm);
+    font: 650 16px / 1 var(--rf-font-text);
+}
+
+.rf-contact__sent {
+    font-size: 18px;
+}
+
+
+// The blog
+// -----------------------------------------------------------------------------
+
+.rf-blog__body {
+    max-width: calc(var(--rf-column-max) + 2 * var(--rf-gutter));
+    margin: 0 auto;
+    padding: 0 var(--rf-gutter) var(--rf-space-16);
+}
+
+.rf-blog__list {
+    max-width: 60rem;
+
+    > li {
+        padding: var(--rf-space-8) 0;
+        border-bottom: 1px solid var(--rf-limestone-300);
+    }
+}
+
+.rf-blog__none {
+    padding-top: var(--rf-space-8);
+    color: var(--rf-ink-muted);
+}
+
+.rf-post-row {
+    display: grid;
+    gap: var(--rf-space-4);
+}
+
+.rf-post-row__photo {
+    display: block;
+    overflow: hidden;
+    border-radius: var(--rf-radius-md);
+    background: var(--rf-limestone-200);
+
+    img {
+        width: 100%;
+        aspect-ratio: 3 / 2;
+        object-fit: cover;
+    }
+}
+
+.rf-post-row__text {
+    display: grid;
+    justify-items: start;
+    gap: var(--rf-space-2);
+    min-width: 0;
+}
+
+.rf-post-row__title {
+    font: #{"760 clamp(21px, 0.6vw + 18px, 26px) / 1.15 var(--rf-font-display)"};
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+
+    a {
+        color: var(--rf-ink);
+        text-decoration: none;
+
+        &:hover {
+            text-decoration: underline;
+            text-decoration-thickness: 2px;
+            text-underline-offset: 0.18em;
+        }
+    }
+}
+
+.rf-post-row__meta {
+    color: var(--rf-ink-muted);
+    font-size: 14px;
+}
+
+.rf-post-row__summary {
+    max-width: 60ch;
+    font-size: 16px;
+    line-height: 1.55;
+}
+
+.rf-post-row .rf-more {
+    margin-top: var(--rf-space-1);
+}
+
+// One article
+.rf-post .rf-page-head__title {
+    max-width: 28ch;
+    font-size: #{"clamp(28px, 1.4vw + 18px, 42px)"};
+}
+
+.rf-post__body {
+    display: grid;
+    justify-items: start;
+    gap: var(--rf-space-8);
+    max-width: calc(var(--rf-column-max) + 2 * var(--rf-gutter));
+    margin: 0 auto;
+    padding: var(--rf-space-8) var(--rf-gutter) var(--rf-space-12);
+}
+
+.rf-post__photo {
+    width: 100%;
+    max-width: 720px;
+    overflow: hidden;
+    border-radius: var(--rf-radius-md);
+    background: var(--rf-limestone-200);
+
+    img {
+        width: 100%;
+        aspect-ratio: 3 / 2;
+        object-fit: cover;
+    }
+}
+
+.rf-post__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--rf-space-2);
+}
+
+// stock's share links (components/common/share.html), as outlined rounds
+.rf-post__share {
+    .socialLinks {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--rf-space-2);
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .socialLinks-item {
+        margin: 0;
+    }
+
+    .socialLinks__link {
+        display: grid;
+        place-items: center;
+        width: var(--rf-tap-min);
+        height: var(--rf-tap-min);
+        border: 1px solid var(--rf-edge);
+        border-radius: var(--rf-radius-pill);
+        color: var(--rf-ink);
+
+        &:hover {
+            border-color: var(--rf-ink);
+            background: var(--rf-limestone-200);
+        }
+    }
+
+    svg {
+        width: 18px;
+        height: 18px;
+        fill: currentColor;
+    }
+}
+
+.rf-post__back {
+    color: var(--rf-ink);
+}
+
+.rf-post__more {
+    background: var(--rf-limestone-200);
+}
+
+.rf-post__more-inner {
+    display: grid;
+    gap: var(--rf-space-4);
+    max-width: calc(var(--rf-column-max) + 2 * var(--rf-gutter));
+    margin: 0 auto;
+    padding: var(--rf-space-12) var(--rf-gutter) var(--rf-space-16);
+}
+
+.rf-post__more-title {
+    font: #{"760 clamp(22px, 0.8vw + 17px, 28px) / 1.15 var(--rf-font-display)"};
+    letter-spacing: -0.01em;
+}
+
+.rf-post__more-list {
+    max-width: 60rem;
+
+    li + li {
+        border-top: 1px solid var(--rf-limestone-300);
+    }
+
+    a {
+        display: flex;
+        align-items: center;
+        min-height: 52px;
+        padding: var(--rf-space-2) 0;
+        color: var(--rf-ink);
+        font: 650 17px / 1.35 var(--rf-font-text);
+        text-decoration: none;
+
+        &:hover {
+            text-decoration: underline;
+            text-underline-offset: 0.2em;
+        }
+    }
+}
+
+
+// The 404 page
+// -----------------------------------------------------------------------------
+
+.rf-not-found {
+    background: var(--rf-limestone-100);
+    color: var(--rf-ink);
+}
+
+.rf-not-found__inner {
+    display: grid;
+    justify-items: start;
+    gap: var(--rf-space-4);
+    max-width: calc(var(--rf-column-max) + 2 * var(--rf-gutter));
+    margin: 0 auto;
+    padding: var(--rf-space-12) var(--rf-gutter) var(--rf-space-16);
+}
+
+.rf-not-found__title {
+    max-width: 18ch;
+    font: #{"800 clamp(32px, 2.4vw + 18px, 56px) / 1.02 var(--rf-font-display)"};
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+}
+
+.rf-not-found__line {
+    max-width: 40rem;
+    font-size: 18px;
+    line-height: 1.5;
+}
+
+.rf-search--page {
+    grid-area: auto;
+    justify-self: start; // the header's form is centred from 1040px
+    width: 100%;
+    max-width: 40rem;
+    margin: var(--rf-space-2) 0 var(--rf-space-4);
+}
+
+.rf-not-found .rf-more,
+.rf-search-empty .rf-more {
+    color: var(--rf-ink);
+}
+
+
+// The dead ends' ways on (dead-end-links.html): outlined chips, as above
+// -----------------------------------------------------------------------------
+
+.rf-dead-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--rf-space-2);
+}
+
+
+@media (min-width: 640px) {
+    .rf-contact .form-row--half {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .rf-post-row {
+        grid-template-columns: 280px minmax(0, 1fr);
+        gap: var(--rf-space-6);
+        align-items: start;
+    }
+}
+
+@media (min-width: 1040px) {
+    .rf-page__body {
+        grid-template-columns: minmax(0, 46rem) minmax(0, 18rem);
+        justify-content: space-between;
+        gap: var(--rf-space-16);
+        padding-top: var(--rf-space-12);
+    }
+
+    .rf-help {
+        position: sticky;
+        top: calc(#{$rf-pages-pinned} + var(--rf-space-6));
+    }
+}

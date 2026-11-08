@@ -1,0 +1,40 @@
+{{!--
+    The hook size chart page (ticket 35; spec module 22; R9, SEO-7; stories 15, 16 and 71), from
+    pages/custom/page/hook-size-chart.html's hero block: the one place every "What do sizes mean?"
+    and "Hook size chart" link leads (rf_hook_chart_url, /fly-hook-size-chart/).
+
+    The Web Page holds the words, and the size rows that scripts/hook-chart/rows.mjs writes
+    between its two markers (<!-- rf:hook-chart-rows start --> and its end): one anchored row per
+    size, 6/0 to 24, each linking to the Fly Type pages that stock it through BigCommerce's own
+    facet URLs. So rows change with no theme push.
+
+    - The head (page-head.html) and Page Builder's stock region, as on any Web Page.
+    - The content splits at the start marker: the words before it in the reading column, then the
+      gauge (chart-gauge.html), each size linking to its row, then the rows and any words after
+      them. With no rows yet, the words alone: the gauge's links would lead nowhere. The marker is
+      never printed; the end marker stays as a comment.
+    - The markers go between top-level blocks, as rows.mjs writes them. One inside an element
+      splits that element, as a category's <!--more--> does.
+--}}
+<div class="rf-page rf-chart">
+    {{#if theme_settings.hide_page_heading}}
+    {{> components/reelflies/page-head}}
+    {{else}}
+    {{> components/reelflies/page-head rf_title=page.title}}
+    {{/if}}
+    {{{region name="page_builder_content"}}}
+    <div class="rf-chart__body">
+        {{#contains page.content '<!-- rf:hook-chart-rows start -->'}}
+        {{#each (split page.content '<!-- rf:hook-chart-rows start -->')}}
+        {{#if @first}}
+        <div class="rf-prose rf-chart__copy">{{{this}}}</div>
+        {{> components/reelflies/chart-gauge}}
+        {{else}}
+        <div class="rf-prose rf-chart__rows">{{{this}}}</div>
+        {{/if}}
+        {{/each}}
+        {{else}}
+        <div class="rf-prose rf-chart__copy">{{{page.content}}}</div>
+        {{/contains}}
+    </div>
+</div>

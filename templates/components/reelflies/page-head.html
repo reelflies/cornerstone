@@ -1,0 +1,19 @@
+{{!--
+    A reading page's head (redesign step 3): the listings' plain limestone head (listing-head.html,
+    _listing.scss) with the breadcrumbs, the page's one H1 and, under it, an optional line (a blog
+    post's author and date). Web Pages, the contact page, the blog, a blog post and the hook size
+    chart use it.
+
+        {{> components/reelflies/page-head rf_title=page.title}}
+        {{> components/reelflies/page-head rf_title=blog.post.title rf_meta=…}}
+
+    Without rf_title (a page whose heading Theme Styles hides) the head holds the breadcrumbs only.
+    A <div>, not a <header>: inside <main> a <header> means nothing.
+--}}
+<div class="rf-list-head rf-list-head--plain rf-page-head">
+    <div class="rf-list-head__inner">
+        {{> components/common/breadcrumbs breadcrumbs=breadcrumbs}}
+        {{#if rf_title}}<h1 class="rf-list-head__title rf-page-head__title">{{rf_title}}</h1>{{/if}}
+        {{#if rf_meta}}<p class="rf-page-head__meta">{{rf_meta}}</p>{{/if}}
+    </div>
+</div>

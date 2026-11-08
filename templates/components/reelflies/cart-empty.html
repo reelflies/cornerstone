@@ -1,19 +1,12 @@
 {{!--
     An empty box (ticket 51): plain words, never stock's focusable heading, then where most orders
-    start, and the Fly Types (the menu's rf_menu_type_ids, as the footer lists them): a list, not
-    a second navigation landmark beside the footer's. The data-rf-* marks are what the dead-ends
-    check reads (scripts/qa/raw-html/assertions/dead-ends.mjs): the block, its one way forward,
-    and the list declaring the ids its links must be.
+    start, the Fly Types (dead-end-links.html) and the way back to the shop. data-rf-cart-empty and
+    data-rf-cart-empty-shop are what the dead-ends check reads (scripts/qa/raw-html/assertions/
+    dead-ends.mjs): the block and its one way forward.
 --}}
 <div class="rf-cart-empty" data-rf-cart-empty>
     <p class="rf-cart-empty__lead">{{lang 'reelflies.cart.empty'}}</p>
     <p class="rf-cart-empty__hint">{{lang 'reelflies.cart.empty_hint'}}</p>
-    {{#if (trim theme_settings.rf_menu_type_ids)}}
-    <div class="rf-cart-empty__types">
-        <ul aria-label="{{lang 'reelflies.cart.empty_types'}}" data-rf-dead-end-links data-rf-menu-type-ids="{{theme_settings.rf_menu_type_ids}}">
-            {{> components/reelflies/cats rf_tree=categories ids=theme_settings.rf_menu_type_ids view='dead-end'}}
-        </ul>
-    </div>
-    {{/if}}
+    {{> components/reelflies/dead-end-links rf_tree=categories rf_label=(lang 'reelflies.cart.empty_types')}}
     <a class="rf-more" href="{{urls.home}}" data-rf-cart-empty-shop>{{lang 'reelflies.cart.keep_shopping'}}{{> components/reelflies/icon name='arrow'}}</a>
 </div>

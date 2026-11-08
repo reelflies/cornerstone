@@ -4,12 +4,15 @@ category:
         limit: {{theme_settings.categorypage_products_per_page}}
 ---
 {{!--
-    The Species hub's template name (ticket 34): the custom category template the Species root
-    takes, "Flies by Species" at /species/, through a template association with no theme push.
-    The Streamside Stone rebuild hasn't designed the hub yet, so until it does the template renders
-    the category page (components/reelflies/category-page.html), as pages/category.html does, and a
-    category associated with it never breaks. Locally config.stencil.json maps it to channel 1's
-    Saltwater, Warmwater & Salmon page.
+    The Species hub (ticket 34; spec module 10; R8, SEO-2): the custom category template the
+    Species root, "Flies by Species" at /species/, takes through a template association, with no
+    theme push. It renders the category page in its hub mode (components/reelflies/
+    category-page.html with rf_hub): the H1 "Fly Fishing Flies by Species", the root's intro and a
+    server-rendered tile per Species page with its Fly Type links, on moss (hub-head.html), then
+    every pattern on those pages under "All flies" while the root lists any, then the rest of the
+    description. Front matter, the inject and the head block stay as pages/category.html has them.
+    Locally config.stencil.json maps it to channel 1's Saltwater, Warmwater & Salmon page, and the
+    fixture page scripts/qa/render/pages/species-hub renders it on tree 4's data.
 --~}}
 {{inject "categoryProductsPerPage" theme_settings.categorypage_products_per_page}}
 {{#partial "head"}}
@@ -21,6 +24,6 @@ category:
     {{/if}}
 {{/partial}}
 {{#partial "hero"}}
-{{> components/reelflies/category-page}}
+{{> components/reelflies/category-page rf_hub=1}}
 {{/partial}}
 {{> layout/base}}
