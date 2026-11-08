@@ -260,6 +260,7 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    min-height: 36px; // the strip's whole height, so each link is a 36px target (step 4 audit: 20px)
     color: var(--rf-mist);
     text-decoration: none;
 }
