@@ -11,7 +11,7 @@ import path from 'path';
 import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    CHUNK_GZIP_LIMITS, MAIN_JS_LIMIT, checkChunks, checkMainJs, measureCssLayer,
+    CHUNK_GZIP_LIMITS, CSS_LAYER_GZIP_LIMIT, MAIN_JS_LIMIT, checkChunks, checkMainJs, measureCssLayer,
 } from './check-bundle.mjs';
 
 const SCRIPT = path.resolve('scripts/check-bundle.mjs');
@@ -63,6 +63,11 @@ const ADD_FLOW = 'theme-bundle.chunk.rf-add-flow.js';
 const CART_STATE = 'theme-bundle.chunk.rf-cart-state.js';
 const QUICK_ADD = 'theme-bundle.chunk.rf-quick-add.js';
 const REGION = 'theme-bundle.chunk.rf-region-prompt.js';
+const LISTING = 'theme-bundle.chunk.rf-listing.js';
+const PRODUCT = 'theme-bundle.chunk.rf-product.js';
+const ORDER_LIST = 'theme-bundle.chunk.rf-order-list.js';
+const QUICK_SEARCH = 'theme-bundle.chunk.rf-quick-search.js';
+const CART = 'theme-bundle.chunk.rf-cart.js';
 
 describe('the main.js limit', () => {
     it('is 300 KiB raw', () => {
@@ -85,9 +90,9 @@ describe('the main.js limit', () => {
 });
 
 describe('the per-chunk gzip limits', () => {
-    it('limit the menu to 8,000 B, the size filter and the size pills to 3,000 B each, the add flow to 7,000 B, the cart state to 2,500 B, quick add to 15,000 B and the region prompt to 1,000 B', () => {
+    it('limit the menu to 8,000 B, the size filter, the size pills and the listing to 3,000 B each, the add flow and the cart to 7,000 B each, the cart state to 2,500 B, quick add to 15,000 B, the product page and quick order to 12,000 B each, quick search to 4,000 B and the region prompt to 1,000 B', () => {
         assert.deepEqual(CHUNK_GZIP_LIMITS, {
-            [MENU]: 8000, [SIZE_FILTER]: 3000, [SIZE_PILLS]: 3000, [ADD_FLOW]: 7000, [CART_STATE]: 2500, [QUICK_ADD]: 15000, [REGION]: 1000,
+            [MENU]: 8000, [SIZE_FILTER]: 3000, [LISTING]: 3000, [PRODUCT]: 12000, [ORDER_LIST]: 12000, [QUICK_SEARCH]: 4000, [CART]: 7000, [SIZE_PILLS]: 3000, [ADD_FLOW]: 7000, [CART_STATE]: 2500, [QUICK_ADD]: 15000, [REGION]: 1000,
         });
     });
 
@@ -212,6 +217,12 @@ describe('the CSS layer report', () => {
 
     const stock = '.stock { color: red; }\n';
     const rules = count => Array.from({ length: count }, (_, i) => `.rf-rule-${i} { margin: ${i}px; padding: ${i}px; }`).join('\n');
+    // Random hex in each rule, so the layer doesn't gzip away: about 48 B gzip a rule.
+    const noisyRules = count => Array.from({ length: count }, (_, i) => `.rf-rule-${i}::after { content: "${crypto.randomBytes(24).toString('hex')}"; }`).join('\n');
+
+    it('is 28,000 B gzip', () => {
+        assert.equal(CSS_LAYER_GZIP_LIMIT, 28000);
+    });
 
     it('says plainly that there is no layer yet', async () => {
         const result = await measureCssLayer(writeTheme(stock));
@@ -219,16 +230,19 @@ describe('the CSS layer report', () => {
         assert.match(result.message, /no ReelFlies CSS layer yet/);
     });
 
-    it('reports a small layer as ok', async () => {
-        const result = await measureCssLayer(writeTheme(`${stock}@import "reelflies/index";\n`, rules(10)));
+    it('reports a layer within the limit as ok, with its raw and gzip sizes', async () => {
+        const result = await measureCssLayer(writeTheme(`${stock}@import "reelflies/index";\n`, rules(400)));
         assert.equal(result.level, 'ok');
-        assert.ok(result.size > 0 && result.size < 12000, `size ${result.size}`);
+        assert.ok(result.size > 12000, `size ${result.size}`);
+        assert.ok(result.gzip > 0 && result.gzip < 28000, `gzip ${result.gzip}`);
+        assert.match(result.message, /\(limit 28,000 B gzip\)/);
     });
 
-    it('warns, and never fails, on a layer over the estimate', async () => {
-        const result = await measureCssLayer(writeTheme(`${stock}@import "reelflies/index";\n`, rules(400)));
-        assert.equal(result.level, 'warn');
-        assert.ok(result.size > 12000, `size ${result.size}`);
+    it('fails a layer over its gzip limit', async () => {
+        const result = await measureCssLayer(writeTheme(`${stock}@import "reelflies/index";\n`, noisyRules(1200)));
+        assert.equal(result.level, 'fail');
+        assert.ok(result.gzip > 28000, `gzip ${result.gzip}`);
+        assert.match(result.message, /over its 28,000 B gzip limit/);
     });
 });
 

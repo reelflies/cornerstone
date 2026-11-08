@@ -481,17 +481,6 @@
     object-fit: cover;
 }
 
-.rf-row-plate__thumb--rf-paper {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    background: var(--rf-paper);
-    box-shadow: var(--rf-shadow-plain);
-}
-
-.rf-row-plate__thumb--rf-paper img {
-    object-fit: contain;
-}
-
 .rf-row-plate__words {
     display: grid;
     gap: 2px;

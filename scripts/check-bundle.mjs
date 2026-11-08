@@ -31,9 +31,10 @@
 //   gzipped on its own, as it is served. A shared chunk the page may have loaded already
 //   still counts, so the figure can be high but never low. When two imports load the
 //   chunk with different shared chunks, the larger total counts.
-// - Reports the compiled ReelFlies CSS layer (the reelflies/ imports in theme.scss)
-//   against the design's estimate of about 12 KB. It warns and never fails, until
-//   ticket 26's spike sets a real figure.
+// - Fails when the compiled ReelFlies CSS layer (the reelflies/ imports in theme.scss) is
+//   over CSS_LAYER_GZIP_LIMIT, 28,000 B gzip. The redesign's layer measured 24,316 B gzip
+//   (193,271 B raw) on 2026-11-08, so the limit holds about 15% of headroom. The design's
+//   first estimate, about 12 KB raw for a small skin on stock, predates the redesign.
 // - Fails when config.json is over CONFIG_LIMIT (the store rejects larger uploads).
 // - Fails when the zip contains the bundle analyser's report or a secrets file.
 // - Fails when the zip ships a dev-build script: one under assets/dist whose source map,
@@ -66,7 +67,7 @@ export const CHUNK_GZIP_LIMITS = {
     'theme-bundle.chunk.rf-quick-add.js': 15000,
     'theme-bundle.chunk.rf-region-prompt.js': 1000,
 };
-export const CSS_LAYER_ESTIMATE = 12000;
+export const CSS_LAYER_GZIP_LIMIT = 28000;
 const CONFIG_LIMIT = 64000; // the handoff's "64 KB" upload limit, read conservatively
 // stencil-cli zips a fixed list of paths (PATHS_TO_ZIP in lib/stencil-bundle.js) and generates
 // parsed/ and manifest.json itself, so those belong in the zip. Junk gets in only under assets/.
@@ -210,7 +211,7 @@ export async function measureCssLayer(themeDir = '.') {
     const scssDir = path.join(themeDir, 'assets/scss');
     const themeScss = fs.readFileSync(path.join(scssDir, 'theme.scss'), 'utf8');
     if (!themeScss.match(REELFLIES_IMPORT)) {
-        return { level: 'info', message: `no ReelFlies CSS layer yet: theme.scss imports nothing from reelflies/ (estimate about ${formatBytes(CSS_LAYER_ESTIMATE)})` };
+        return { level: 'info', message: `no ReelFlies CSS layer yet: theme.scss imports nothing from reelflies/ (limit ${formatBytes(CSS_LAYER_GZIP_LIMIT)} gzip)` };
     }
 
     const config = JSON.parse(fs.readFileSync(path.join(themeDir, 'config.json'), 'utf8'));
@@ -227,9 +228,9 @@ export async function measureCssLayer(themeDir = '.') {
         const size = withLayer.length - stock.length;
         const gzip = zlib.gzipSync(withLayer).length - zlib.gzipSync(stock).length;
         const detail = `the ReelFlies CSS layer compiles to ${formatBytes(size)} (${formatBytes(gzip)} gzip)`;
-        return size > CSS_LAYER_ESTIMATE
-            ? result('warn', `${detail}, over the design's estimate of about ${formatBytes(CSS_LAYER_ESTIMATE)}`, { size, gzip })
-            : result('ok', `${detail} (estimate about ${formatBytes(CSS_LAYER_ESTIMATE)})`, { size, gzip });
+        return gzip > CSS_LAYER_GZIP_LIMIT
+            ? result('fail', `${detail}, over its ${formatBytes(CSS_LAYER_GZIP_LIMIT)} gzip limit`, { size, gzip })
+            : result('ok', `${detail} (limit ${formatBytes(CSS_LAYER_GZIP_LIMIT)} gzip)`, { size, gzip });
     } finally {
         fs.rmSync(stockDir, { recursive: true, force: true });
     }

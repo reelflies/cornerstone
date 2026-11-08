@@ -91,30 +91,10 @@
 // -----------------------------------------------------------------------------
 //
 // Each ground sets the colours of what is drawn on it: text, muted text, rules, and the focus
-// ring (--rf-ring, read by rf-focus-ring). Limestone is the page itself. The strip, footer and
-// order line set the same values on their own classes (_shell.scss).
-
-.rf-ground--limestone {
-    --rf-ring: var(--rf-ink);
-    background-color: var(--rf-limestone-100);
-    color: var(--rf-ink);
-}
-
-.rf-ground--shale {
-    --rf-ring: var(--rf-mist);
-    --rf-on-ground-muted: var(--rf-shale-400);
-    --rf-on-ground-rule: var(--rf-shale-800);
-    background-color: var(--rf-shale-950);
-    color: var(--rf-mist);
-}
-
-.rf-ground--moss {
-    --rf-ring: var(--rf-mist);
-    --rf-on-ground-muted: var(--rf-lichen);
-    --rf-on-ground-rule: #{rgba($rf-lichen, 0.28)};
-    background-color: var(--rf-moss-700);
-    color: var(--rf-mist);
-}
+// ring (--rf-ring, read by rf-focus-ring). Limestone is the page itself (body, above); the stone
+// and species bands, the strip, footer and order line set the same values on their own classes
+// (_home.scss, _shell.scss). There are no general ground classes: the three the layer once
+// declared (rf-ground--limestone, --shale, --moss) had no template using them (step 4 re-audit).
 
 // Type
 // -----------------------------------------------------------------------------

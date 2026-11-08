@@ -212,8 +212,10 @@
     box-shadow: var(--rf-shadow-seat);
 }
 
-.rf-flies--stone .rf-fly:not(.rf-is-open) .rf-fly__card:hover,
-.rf-flies--moss .rf-fly:not(.rf-is-open) .rf-fly__card:hover {
+// not while its picker is open (quick-add.js marks the card is-open; the layer once read rf-is-open,
+// which nothing set, so the card lifted under the open panel: step 4 re-audit)
+.rf-flies--stone .rf-fly:not(.is-open) .rf-fly__card:hover,
+.rf-flies--moss .rf-fly:not(.is-open) .rf-fly__card:hover {
     box-shadow: var(--rf-shadow-lift);
     transform: translateY(-3px);
 }

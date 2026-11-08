@@ -774,22 +774,6 @@ body {
     font: 720 1.0625rem/1.2 var(--rf-font-text);
 }
 
-.rf-mega__plate--rf-paper {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--rf-space-2);
-    padding: var(--rf-space-3) var(--rf-space-3) var(--rf-space-12);
-    background: var(--rf-paper);
-}
-
-.rf-mega__plate--rf-paper img {
-    object-fit: contain;
-}
-
-.rf-mega__plate--rf-paper::after {
-    background: linear-gradient(0deg, rgba($rf-shale-950, 0.86) 0, rgba($rf-shale-950, 0.86) 44px, rgba($rf-shale-950, 0) 44px);
-}
-
 .rf-mega__more {
     border-top: 1px solid var(--rf-limestone-300);
     background: var(--rf-limestone-200);
