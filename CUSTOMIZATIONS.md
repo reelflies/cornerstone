@@ -9,7 +9,7 @@ The owner chose a clean fork for the redesign (2026-11-06). On this branch the b
 - **[Upstream files changed](#upstream-files-changed)** lists only what this branch has hooked so far.
 - **[On master, to carry back](#on-master-to-carry-back)** is master's register as it stood at the fork (62e7afe5). Each feature comes back with the page it belongs to, redrawn in the new look wherever it draws anything, and its rows move up when it lands. Decisions the redesign replaced (the sage buy colour, Onest, the Hook Gauge tiles, bands and footer) don't come back.
 - **The slots** in the next sections (`page-modules.js`, `global.js`, `js-settings.html`, the `rf_*` settings groups) return with the first module that needs them.
-- **`npm run test:scripts`** fails on this branch until then: 557 of 3,115 tests fail, asserting features or values from master's skin (2026-11-07, after step 3's Species hub, hook chart and reading pages; 576 of 3,103, with 66 cancelled, after its listings, product page, cart and search; 612 failed after step 2; 515 of 2,967 after step 1). Each module's tests return or are rewritten with it. Don't release from this branch before they pass.
+- **`npm run test:scripts`** fails on this branch until then: 557 of 3,115 tests fail, asserting features or values from master's skin (2026-11-07, after step 4's fixes, as after step 3's Species hub, hook chart and reading pages; 576 of 3,103, with 66 cancelled, after its listings, product page, cart and search; 612 failed after step 2; 515 of 2,967 after step 1). Each module's tests return or are rewritten with it. Don't release from this branch before they pass.
 
 ### Step 2: the shell and the home page
 
@@ -46,6 +46,19 @@ The listings (category, brand, the noindex and species-hub category templates, a
   - The picker keeps stock's form on the page, hidden; should `rf-product` fail to load, `page-modules.js` shows the form instead.
 - **The data layer.** Stock adds tell BigCommerce's data layer (BODL, which feeds the store's GA4) through stencil-utils; the box's Cart API adds and removals didn't, so home quick add (step 2) sent GA4 no add_to_cart. `box.js` now emits the same `bodlEvents.cart` events for every change the store accepts, with the channel from `settings.channel_id` (`rfChannelId`).
 - **Words and settings.** "Fly box not included." under the price of a product in `rf_no_box_note_paths` (channel 1: Bulk and Mini Fly Selections). The shipping line and "Shipping and delivery" are ticket 39's drafts, still the owner's to approve, and the rate settings (`rf_ship_standard_rate`, `rf_ship_expedited_from`) stay empty until decision 12. The promise line is in the Kalam hand, the panel's one. `product_size` 760x507, 4 related, 5 reviews, no weight (ticket 39).
+
+### Step 4: audit, then the fixes it called for (2026-11-07)
+
+The audit (impeccable audit: axe, the design detector, and scripted checks of every page type at 320, 390, 768, 1024 and 1440px and of the interactive states, the Cart API mocked) scored 15/20. The owner asked for every recommended fix, in order; each is its own commit.
+
+- **Text on photographs** (WCAG 1.4.3) is measured against the lightest 5% of the photograph behind each line, not its average: the stacked stone scrims stay at 58% or more where words sit, labels and breadcrumbs on the stone are mist, the way pills' ground is 56% shale, and a plate's shade belongs to its caption, so it lies under every line however far a name wraps. Every measured line is 5.1:1 or more.
+- **Reduced motion**: nothing travels, but colour, light and opacity keep a 120ms fade, and the two no-script fallbacks (a category's chips, the cart's rows) keep their 5s wait; zeroing it had shifted a category page 0.47 on phones.
+- **Layout shift**: a pager with no pages takes no room (stock's empty one on a search that found nothing moved the page when stock search.js hid it); the footer's room for the order line is a server class (`rf-foot--orderline`).
+- **Reading measure**: 65–75 characters (60ch at 17px; Archivo's `ch` is wide), paragraphs `text-wrap: pretty`.
+- **The box sheet** closes when focus arrives or a press lands outside it; a change the store refuses shows at the foot of its picker or quick-order row as well as in the live region; the hub's listing is a `<div>`, so the facets' `<aside>` is a top-level landmark.
+- **Targets**: the utility strip's links are 36px, the strip's height.
+- **Tokens**: the translucent palette colours are `rgba()` of their tokens, and the warm radial is a token, `warm-glow`; the compiled CSS is unchanged.
+- **Left as they are**: About Us holds the privacy policy and a second H1 (store content, the webpages repo); "Ask about a trade account" is an inline link (WCAG's inline exception); stock search.js focuses its hidden results count on load (stock's announcement, kept); the stock review modal's image has no dimensions and its brand heading can be empty (hidden until opened; the reviews ticket). Not measured: LCP and INP on a production preview, Safari and Firefox, real touch, a real cart.
 
 ## Where ReelFlies code goes
 
