@@ -111,7 +111,7 @@
 .rf-ground--moss {
     --rf-ring: var(--rf-mist);
     --rf-on-ground-muted: var(--rf-lichen);
-    --rf-on-ground-rule: rgba(215, 219, 180, 0.28);
+    --rf-on-ground-rule: #{rgba($rf-lichen, 0.28)};
     background-color: var(--rf-moss-700);
     color: var(--rf-mist);
 }

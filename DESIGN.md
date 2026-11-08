@@ -23,6 +23,7 @@ colors:
   copper-lit: "#e39a6c"
   on-copper: "#ffffff"
   light-warm: "#ffe9c9"
+  warm-glow: "#ffd6a0"
   error: "#a3262a"
 typography:
   display:
@@ -313,6 +314,7 @@ A warm mineral palette in three grounds (shale, limestone, moss) with paper for 
 
 ### Tertiary
 - **Low Warm Light** (`light-warm`): the raking light itself: the lit edge and pool around the card in hand, the current-month column and ring on the hatch chart, and matched text in search suggestions. Never a fill for text.
+- **Warm Glow** (`warm-glow`): the raking light's warm radial from the upper left over a stone photograph, only ever at low opacity inside a scrim (22–24%). Never a fill, never text.
 
 ### Neutral: wet shale
 - **Riverbed Shale** (`shale-950`): the utility strip, the footer and the pinned order line; the darkest ground.

@@ -249,7 +249,7 @@
     inset: -80px -10px 10px -80px;
     z-index: -1;
     pointer-events: none;
-    background: radial-gradient(closest-side, rgba(255, 233, 201, 0.42), rgba(255, 233, 201, 0.14) 55%, rgba(255, 233, 201, 0));
+    background: radial-gradient(closest-side, rgba($rf-light-warm, 0.42), rgba($rf-light-warm, 0.14) 55%, rgba($rf-light-warm, 0));
 }
 
 .rf-fly.is-shade .rf-fly__card {
@@ -524,7 +524,7 @@
     position: fixed;
     inset: 0;
     z-index: 92;
-    background: rgba(28, 25, 22, 0.45);
+    background: rgba($rf-shale-950, 0.45);
 }
 
 // phones: the card's picker is a sheet from the foot of the screen, over the order line.

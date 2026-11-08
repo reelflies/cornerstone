@@ -377,6 +377,22 @@
           "#ffb3ad",
           "#ffe8e5"
         ]
+      },
+      "warm-glow": {
+        "role": "tertiary",
+        "displayName": "Warm Glow",
+        "canonical": "#ffd6a0",
+        "purpose": "The raking light's warm radial inside the stone scrims, at 22–24% opacity; never a fill or text.",
+        "tonalRamp": [
+          "#4a2c08",
+          "#6e4719",
+          "#93652f",
+          "#b88548",
+          "#d9a766",
+          "#f2c487",
+          "#ffd6a0",
+          "#fff1de"
+        ]
       }
     },
     "typographyMeta": {

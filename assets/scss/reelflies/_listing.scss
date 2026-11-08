@@ -137,7 +137,7 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
         position: absolute;
         inset: 0;
         z-index: -1;
-        background: radial-gradient(120% 90% at 8% -10%, rgba(255, 214, 160, 0.2), rgba(255, 214, 160, 0) 55%), linear-gradient(180deg, rgba(28, 25, 22, 0.82), rgba(28, 25, 22, 0.64) 40%, rgba(28, 25, 22, 0.72) 75%, rgba(28, 25, 22, 0.86));
+        background: radial-gradient(120% 90% at 8% -10%, rgba($rf-warm-glow, 0.2), rgba($rf-warm-glow, 0) 55%), linear-gradient(180deg, rgba($rf-shale-950, 0.82), rgba($rf-shale-950, 0.64) 40%, rgba($rf-shale-950, 0.72) 75%, rgba($rf-shale-950, 0.86));
     }
 
     .rf-list-head__inner {
@@ -262,8 +262,8 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
 
 // on the stone: the home page's ways in
 .rf-chips--stone .rf-chip {
-    border-color: rgba(235, 228, 216, 0.42);
-    background: rgba(28, 25, 22, 0.56);
+    border-color: rgba($rf-mist, 0.42);
+    background: rgba($rf-shale-950, 0.56);
     color: var(--rf-mist);
 
     .rf-chip__n {
@@ -1303,7 +1303,7 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
         min-height: 340px;
 
         &::before {
-            background: radial-gradient(90% 110% at 4% -20%, rgba(255, 214, 160, 0.22), rgba(255, 214, 160, 0) 52%), linear-gradient(90deg, rgba(28, 25, 22, 0.88), rgba(28, 25, 22, 0.7) 42%, rgba(28, 25, 22, 0.3) 72%, rgba(28, 25, 22, 0.32));
+            background: radial-gradient(90% 110% at 4% -20%, rgba($rf-warm-glow, 0.22), rgba($rf-warm-glow, 0) 52%), linear-gradient(90deg, rgba($rf-shale-950, 0.88), rgba($rf-shale-950, 0.7) 42%, rgba($rf-shale-950, 0.3) 72%, rgba($rf-shale-950, 0.32));
         }
 
         .rf-list-head__inner {

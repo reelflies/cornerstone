@@ -11,8 +11,8 @@
 //
 // -----------------------------------------------------------------------------
 
-$rf-hub-rule: rgba(215, 219, 180, 0.28); // lichen at 28%, the moss ground's rules
-$rf-hub-chip: rgba(215, 219, 180, 0.45);
+$rf-hub-rule: rgba($rf-lichen, 0.28); // lichen at 28%, the moss ground's rules
+$rf-hub-chip: rgba($rf-lichen, 0.45);
 
 .body:has(> .rf-hub) {
     margin-top: 0;
@@ -187,7 +187,7 @@ $rf-hub-chip: rgba(215, 219, 180, 0.45);
 
         &:hover {
             border-color: var(--rf-mist);
-            background: rgba(215, 219, 180, 0.12);
+            background: rgba($rf-lichen, 0.12);
             color: var(--rf-mist);
             text-decoration: none;
         }

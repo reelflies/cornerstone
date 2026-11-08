@@ -751,7 +751,7 @@ body {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(0deg, rgba(28, 25, 22, 0.85), rgba(28, 25, 22, 0) 55%);
+    background: linear-gradient(0deg, rgba($rf-shale-950, 0.85), rgba($rf-shale-950, 0) 55%);
 }
 
 .rf-mega__plate-name {
@@ -776,7 +776,7 @@ body {
 }
 
 .rf-mega__plate--rf-paper::after {
-    background: linear-gradient(0deg, rgba(28, 25, 22, 0.86) 0, rgba(28, 25, 22, 0.86) 44px, rgba(28, 25, 22, 0) 44px);
+    background: linear-gradient(0deg, rgba($rf-shale-950, 0.86) 0, rgba($rf-shale-950, 0.86) 44px, rgba($rf-shale-950, 0) 44px);
 }
 
 .rf-mega__more {
@@ -899,7 +899,7 @@ body {
     position: fixed;
     inset: 0;
     z-index: 40;
-    background: rgba(28, 25, 22, 0.32);
+    background: rgba($rf-shale-950, 0.32);
     animation: rf-fade 220ms ease-out;
 }
 
@@ -919,7 +919,7 @@ body {
     position: fixed;
     inset: 0;
     z-index: 80;
-    background: rgba(28, 25, 22, 0.45);
+    background: rgba($rf-shale-950, 0.45);
 }
 
 .rf-drawer__panel {

@@ -47,7 +47,7 @@
     position: absolute;
     inset: 0;
     z-index: -1;
-    background: radial-gradient(120% 90% at 8% -10%, rgba(255, 214, 160, 0.22), rgba(255, 214, 160, 0) 55%), linear-gradient(180deg, rgba(28, 25, 22, 0.78), rgba(28, 25, 22, 0.6) 34%, rgba(28, 25, 22, 0.58) 70%, rgba(28, 25, 22, 0.84));
+    background: radial-gradient(120% 90% at 8% -10%, rgba($rf-warm-glow, 0.22), rgba($rf-warm-glow, 0) 55%), linear-gradient(180deg, rgba($rf-shale-950, 0.78), rgba($rf-shale-950, 0.6) 34%, rgba($rf-shale-950, 0.58) 70%, rgba($rf-shale-950, 0.84));
 }
 
 .rf-stone__inner {
@@ -121,9 +121,9 @@
     gap: var(--rf-space-2);
     min-height: var(--rf-tap-min);
     padding: 0 14px;
-    border: 1px solid rgba(235, 228, 216, 0.42);
+    border: 1px solid rgba($rf-mist, 0.42);
     border-radius: var(--rf-radius-pill);
-    background: rgba(28, 25, 22, 0.56);
+    background: rgba($rf-shale-950, 0.56);
     color: var(--rf-mist);
     font: 650 15px/1 var(--rf-font-text);
     text-decoration: none;
@@ -298,7 +298,7 @@
     }
 
     .rf-stone::before {
-        background: radial-gradient(90% 110% at 4% -20%, rgba(255, 214, 160, 0.24), rgba(255, 214, 160, 0) 52%), linear-gradient(90deg, rgba(28, 25, 22, 0.84), rgba(28, 25, 22, 0.6) 38%, rgba(28, 25, 22, 0.22) 64%, rgba(28, 25, 22, 0.3));
+        background: radial-gradient(90% 110% at 4% -20%, rgba($rf-warm-glow, 0.24), rgba($rf-warm-glow, 0) 52%), linear-gradient(90deg, rgba($rf-shale-950, 0.84), rgba($rf-shale-950, 0.6) 38%, rgba($rf-shale-950, 0.22) 64%, rgba($rf-shale-950, 0.3));
     }
 
     .rf-stone__inner {
@@ -393,7 +393,7 @@
     // the shade belongs to the caption, so it lies as deep under every line however many lines
     // the name takes, feathered out above it (DESIGN.md "The Scrim Rule"; step 4 audit: a fixed
     // fade left a wrapped name and its count on the slate's palest patches)
-    background: linear-gradient(0deg, rgba(28, 25, 22, 0.86), rgba(28, 25, 22, 0.86) calc(100% - var(--rf-space-12)), rgba(28, 25, 22, 0));
+    background: linear-gradient(0deg, rgba($rf-shale-950, 0.86), rgba($rf-shale-950, 0.86) calc(100% - var(--rf-space-12)), rgba($rf-shale-950, 0));
     color: var(--rf-mist);
 }
 
@@ -637,7 +637,7 @@
 .rf-months__m.is-now abbr {
     color: var(--rf-ink);
     font-weight: 800;
-    background: rgba(255, 233, 201, 0.8);
+    background: rgba($rf-light-warm, 0.8);
     border-radius: var(--rf-radius-sm) var(--rf-radius-sm) 0 0;
 }
 
@@ -686,11 +686,11 @@
 }
 
 .rf-hatch__sum:hover {
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba($rf-paper, 0.5);
 }
 
 .rf-hatch__d[open] > .rf-hatch__sum {
-    background: rgba(255, 255, 255, 0.38);
+    background: rgba($rf-paper, 0.38);
     border-radius: var(--rf-radius-md) var(--rf-radius-md) 0 0;
 }
 
@@ -740,7 +740,7 @@
 .rf-track__m {
     position: relative;
     height: 18px;
-    background: rgba(255, 255, 255, 0.45);
+    background: rgba($rf-paper, 0.45);
 }
 
 .rf-track__m:first-child {
@@ -779,7 +779,7 @@
     bottom: -80px;
     left: calc((100% + 2px) / 12 * var(--rf-now, 10) - 4px);
     width: calc((100% - 22px) / 12 + 8px);
-    background: rgba(255, 233, 201, 0.8);
+    background: rgba($rf-light-warm, 0.8);
 }
 
 // the cue sits above this month's light where a phone row stacks it over the track
@@ -854,7 +854,7 @@
 
 .rf-hatch__flies {
     padding: var(--rf-space-3) var(--rf-hpad) var(--rf-space-6);
-    background: rgba(255, 255, 255, 0.38);
+    background: rgba($rf-paper, 0.38);
     border-radius: 0 0 var(--rf-radius-md) var(--rf-radius-md);
 }
 
@@ -1043,7 +1043,7 @@
     display: grid;
     gap: 2px;
     padding: 10px 0;
-    border-bottom: 1px solid rgba(215, 219, 180, 0.24);
+    border-bottom: 1px solid rgba($rf-lichen, 0.24);
     text-decoration: none;
 }
 
@@ -1155,7 +1155,7 @@
     position: absolute;
     inset: 0;
     z-index: -1;
-    background: radial-gradient(70% 90% at 0% 0%, rgba(255, 214, 160, 0.2), rgba(255, 214, 160, 0) 60%), linear-gradient(90deg, rgba(28, 25, 22, 0.86), rgba(28, 25, 22, 0.66) 45%, rgba(28, 25, 22, 0.4));
+    background: radial-gradient(70% 90% at 0% 0%, rgba($rf-warm-glow, 0.2), rgba($rf-warm-glow, 0) 60%), linear-gradient(90deg, rgba($rf-shale-950, 0.86), rgba($rf-shale-950, 0.66) 45%, rgba($rf-shale-950, 0.4));
 }
 
 .rf-signature__grid {
