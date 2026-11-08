@@ -293,7 +293,7 @@ describe('the widget fixtures', () => {
         const [renderOnly, twoInStock] = cases;
         assert.equal(renderOnly.shot, false);
         assert.equal(twoInStock.shot, true);
-        assert.equal(twoInStock.fixture.region, 'home_below_top_products');
+        assert.equal(twoInStock.fixture.region, 'category_below_header');
         assert.equal(twoInStock.root, WIDGETS);
     });
 

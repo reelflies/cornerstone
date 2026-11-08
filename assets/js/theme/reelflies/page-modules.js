@@ -3,8 +3,8 @@
 // importer's default it calls load(context) on. Each loader is a dynamic import, its own chunk,
 // never part of main.js. A template with no loader runs exactly as stock.
 //
-// - pages/home: quick add (+ Add and the size strip on every card) and the home page's ways in,
-//   moss lay and month (home.js).
+// - pages/home: the home page's ways in, moss lay and month (home.js), and while rf_quick_add is
+//   on, quick add (+ Add's size picker on every card), as the listings gate it.
 // - pages/cart: the box's sizes in hook order, steppers whose taps add up, the free-shipping line
 //   and the phone bar (cart-page.js), round stock cart.js.
 // - pages/product: the size picker, through the box (product-buy.js), and the related patterns'
@@ -24,6 +24,18 @@ const load = importers => () => Promise.resolve({
 });
 
 const quickAdd = () => import(/* webpackChunkName: "rf-quick-add" */ './quick-add');
+
+const home = () => Promise.resolve({
+    default: {
+        load: context => [
+            () => import(/* webpackChunkName: "rf-home" */ './home'),
+            context.rfQuickAdd ? quickAdd : null,
+        ].filter(Boolean).forEach(importer => importer()
+            .then(module => module.start(context))
+            // eslint-disable-next-line no-console
+            .catch(error => console.error('ReelFlies page module failed', error))),
+    },
+});
 
 const listing = () => Promise.resolve({
     default: {
@@ -70,10 +82,7 @@ export default {
         () => import(/* webpackChunkName: "rf-cart" */ './cart-page'),
     ]),
     'pages/product': product,
-    'pages/home': load([
-        quickAdd,
-        () => import(/* webpackChunkName: "rf-home" */ './home'),
-    ]),
+    'pages/home': home,
     'pages/category': listing,
     'pages/custom/category/rf-noindex': listing,
     'pages/custom/category/species-hub': listing,

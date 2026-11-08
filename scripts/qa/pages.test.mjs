@@ -456,8 +456,8 @@ describe('overlays (W0-8)', () => {
         assert.ok(fs.existsSync(OVERLAYS_DIR));
     });
 
-    it('has the switch-off and empty-id overlays waves 2 and 3 render', () => {
-        assert.deepEqual(readOverlay('rf_rise-off').settings, { rf_rise: false });
+    it('has the switch-off and empty-id overlays the matrix renders', () => {
+        assert.deepEqual(readOverlay('rf_counts-off').settings, { rf_counts: false });
         assert.deepEqual(readOverlay('menu-ids-empty').settings, { rf_menu_type_ids: '', rf_menu_species_root_id: '' });
         assert.deepEqual(readOverlay('species-empty').settings, { rf_menu_species_root_id: '' });
     });

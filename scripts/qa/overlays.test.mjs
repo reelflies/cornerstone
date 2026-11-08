@@ -117,8 +117,8 @@ describe('an overlay file', () => {
     });
 
     it('is read from scripts/qa/overlays/ by name, and an unknown name lists the ones there are', () => {
-        assert.equal(readOverlay('rf_rise-off').name, 'rf_rise-off');
-        assert.throws(() => readOverlay('rf-rise-off'), /isn't an overlay in scripts\/qa\/overlays\/ \(.*rf_rise-off.*\)/);
+        assert.equal(readOverlay('rf_counts-off').name, 'rf_counts-off');
+        assert.throws(() => readOverlay('rf-counts-off'), /isn't an overlay in scripts\/qa\/overlays\/ \(.*rf_counts-off.*\)/);
         assert.ok(listOverlays().includes('menu-ids-empty'));
     });
 

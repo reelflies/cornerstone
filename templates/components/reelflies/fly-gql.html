@@ -12,6 +12,13 @@
 {{~assignVar 'rf_sz_n' (add (getVar 'rf_sz_n') 1)~}}
 {{~/each~}}{{~/if~}}{{~/each~}}
 {{> components/reelflies/fly-range}}
+{{!-- the srcset names only the files the product has: no "…, " tail without the large one, and
+     none at all without a photo (fly.html then shows the default product image). concat joins
+     two values, so the candidates are nested (one flat concat had dropped the 720w since step 2) --}}
+{{~assignVar 'rf_gql_srcset' ''~}}
+{{~#if rf_node.defaultImage.card~}}
+{{~#if rf_node.defaultImage.large~}}{{~assignVar 'rf_gql_srcset' (concat (concat (concat rf_node.defaultImage.card ' 360w, ') rf_node.defaultImage.large) ' 720w')~}}{{~else~}}{{~assignVar 'rf_gql_srcset' (concat rf_node.defaultImage.card ' 360w')~}}{{~/if~}}
+{{~/if~}}
 {{> components/reelflies/fly
     rf_id=rf_node.entityId
     rf_name=rf_node.name
@@ -19,7 +26,7 @@
     rf_price=(concat (getVar 'rf_money') (toFixed rf_node.prices.price.value 2))
     rf_unit=rf_unit
     rf_src=rf_node.defaultImage.card
-    rf_srcset=(concat rf_node.defaultImage.card ' 360w, ' rf_node.defaultImage.large ' 720w')
+    rf_srcset=(getVar 'rf_gql_srcset')
     rf_photo_sizes='(min-width: 1040px) 240px, (min-width: 640px) 30vw, 46vw'
     rf_eager=rf_eager
     rf_range=(getVar 'rf_range_text')
