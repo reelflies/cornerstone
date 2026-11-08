@@ -1,6 +1,6 @@
 ---
 name: ReelFlies
-description: Hand-tied flies laid out on a riverside stone in low, warm light, picked up and added a fly at a time.
+description: Hand-tied flies laid out on a riverside stone in low, warm light, every size with its count beside it.
 colors:
   shale-950: "#1c1916"
   shale-900: "#29241f"
@@ -23,6 +23,7 @@ colors:
   copper-lit: "#e39a6c"
   on-copper: "#ffffff"
   light-warm: "#ffe9c9"
+  error: "#a3262a"
 typography:
   display:
     fontFamily: "Archivo Expanded, Archivo Expanded Fallback, Arial Black, Arial, sans-serif"
@@ -157,12 +158,41 @@ components:
     textColor: "{colors.ink}"
     typography: "{typography.size}"
     rounded: "{rounded.md}"
-    height: "54px"
-  size-count-badge:
-    backgroundColor: "{colors.copper}"
-    textColor: "{colors.on-copper}"
+    height: "44px"
+  size-cell-chosen:
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.paper}"
+  stepper:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    typography: "{typography.size}"
+    rounded: "{rounded.md}"
+    height: "44px"
+    width: "132px"
+  stepper-in-box:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.copper}"
+  quick-order-field:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    typography: "{typography.size}"
+    rounded: "{rounded.md}"
+    height: "44px"
+    width: "52px"
+  chip-outline:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink}"
+    typography: "{typography.label}"
     rounded: "{rounded.pill}"
-    height: "22px"
+    padding: "0 14px"
+    height: "44px"
+  chip-on-moss:
+    backgroundColor: "transparent"
+    textColor: "{colors.mist}"
+    typography: "{typography.label}"
+    rounded: "{rounded.pill}"
+    padding: "0 14px"
+    height: "44px"
   count-badge:
     backgroundColor: "{colors.limestone-300}"
     textColor: "{colors.ink}"
@@ -225,6 +255,26 @@ components:
     rounded: "{rounded.md}"
     padding: "16px 16px 24px"
     width: "420px"
+  lines-sheet:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.md}"
+  gauge-card:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.md}"
+    padding: "32px 24px 24px"
+  reading-column:
+    textColor: "{colors.ink}"
+    typography: "{typography.body}"
+    width: "68ch"
+  form-field:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    typography: "{typography.body}"
+    rounded: "{rounded.md}"
+    padding: "0 12px"
+    height: "46px"
 ---
 
 # Design System: ReelFlies
@@ -252,7 +302,7 @@ The density is that of a working shop, not a gallery: prices, sizes and counts a
 A warm mineral palette in three grounds (shale, limestone, moss) with paper for products, one copper reserved for buying, one halo blue for water and season, and one warm light.
 
 ### Primary
-- **Beadhead Copper** (`copper`): every buy action and every figure that counts what is being bought: + Add, Add to cart, Check out, the header box count once flies are in it, the box total, the quantities of sizes in the box and outlines in the size strip, the in-box line on a card, and the shipping meter's fill in the box sheet. Labels on it are `on-copper` (AA at button size).
+- **Beadhead Copper** (`copper`): every buy action and every figure that counts what is being bought: + Add, Add to cart, Check out, the header box count once flies are in it, the box total, the quantities of sizes in the box (a stepper's outline and number, a quick-order field's outline), the in-box line on a card, and the shipping meter's fill in the box sheet. Labels on it are `on-copper` (AA at button size).
 - **Deep Copper** (`copper-deep`): hover and press for copper fills only.
 - **Lit Copper** (`copper-lit`): copper seen on shale or as light: the 2px ring around a card whose fly is in the box, and buy figures on the order line, including the distance to free shipping. Never a fill, never body text.
 
@@ -276,7 +326,7 @@ A warm mineral palette in three grounds (shale, limestone, moss) with paper for 
 - **Limestone** (`limestone-100`): the page ground, the header, the mega menu and the drawer.
 - **Dry Limestone** (`limestone-200`): the alternate band (hatch chart, shop story), the mega menu's "Also" row, opened drawer groups, hover ground on limestone.
 - **Limestone Rule** (`limestone-300`): hairlines and row rules on limestone; the empty box count; muted counts on shale pills. Never text on light grounds.
-- **Specimen Paper** (`paper`): specimen cards, size cells, fields, the box sheet, the bin label, the logo plate: every surface that holds a product photo shot on white.
+- **Specimen Paper** (`paper`): specimen cards, size cells, steppers, fields, the box sheet and the cart's lines sheet, the bin label, the logo plate: every surface that holds a product photo shot on white, and the hook gauge's card, the one specimen that isn't a fly.
 - **Ink** (`ink`): text on limestone and paper; focus rings on light grounds; the Search button and the + Add of the card in hand; the hatch chevrons.
 - **Ink Muted** (`ink-muted`): secondary text, units ("/ fly"), sizes, hints, counts and Latin names.
 - **Edge** (`edge`): control borders on light grounds (search field, size cells, steppers, outline pills) and quiet underlines.
@@ -284,6 +334,9 @@ A warm mineral palette in three grounds (shale, limestone, moss) with paper for 
 ### Neutral: moss
 - **Moss** (`moss-700`): the species band.
 - **Lichen** (`lichen`): secondary text and rules on moss; the newsletter confirmation; text selection everywhere.
+
+### Feedback
+- **Hook Rust** (`error`): a form's error outline and message, nothing else. Never a sale, a sold-out size or a warning about stock.
 
 ### Named Rules
 **The Copper Is For Buying Rule.** Copper marks an action that puts flies in the box or spends money, or a figure that counts what is in the box. Links, headings, navigation, active filters, the Search button, Subscribe and decoration never take it.
@@ -326,9 +379,11 @@ A centred column of at most 1344px with a gutter of 16px on phones, 24px from 64
 
 - **Breakpoints:** 640px (header goes to one row, stone cards three up, way lists wrap instead of scrolling), 900px (utility strip links, hatch rows on one line, split section heads, footer grid, Signature note beside its card), 1040px (two-row header with the nav row pinned, stone and species split, laid cards, utility strip's middle line).
 - **Header:** on phones the menu button, logo, Account and Box share a row and search runs full width beneath. From 1040px the header is two rows (76px brand row with logo, search, Account and Box; 52px nav row) and only the nav row stays pinned as the page scrolls; scroll padding keeps focus clear of it.
-- **The order line** is fixed at the foot (64px); the body pads its foot by the same height so nothing hides beneath it.
+- **The order line** is fixed at the foot (64px); the footer pads its foot by the same height, in its own shale, so nothing hides beneath it. The cart's phone bar does the same.
 - **On phones** way lists become single swipe rows bleeding to the screen edge, labelled at the left; the hero stack is tightened so the first two cards and their + Add sit above the order line at 390×844; buy rows stack with a full-width + Add.
-- **Touch:** every pill, nav row and control is at least 44px; size cells are 54px tall.
+- **Touch:** every pill, nav row and control is at least 44px; size cells, steppers and quick-order fields are 44px tall.
+- **Grids:** specimen cards two across on phones, three from 640px, three beside the facets from 1040px and four from 1280px, on a true grid on limestone. Species hub tiles one, two, then three across (a compact row on phones). The hook gauge seven to a row, ten from 640px, one row from 1040px.
+- **Reading pages:** the words in one column at about 68 characters (17px, line height 1.6), left-aligned under the head, never centred. From 1040px the column (up to 46rem) sits beside an 18rem help column held in view below the pinned nav row.
 
 **The Laid, Not Filed Rule.** From 1040px, specimen cards on stone and on moss are each nudged a few pixels off the grid (up to 5px across, 10px down) so they read as set down by hand. Reading order never changes, and cards on limestone sit on a true grid.
 
@@ -373,17 +428,22 @@ Corners are small and honest: 4px (`rounded.md`) on cards, buttons, fields, size
 - **Toggles (on light ground):** transparent with an `edge` outline, 36px, turning ink-outlined on hover.
 - **Subcategory chips:** a listing's subcategories, at most two rows with a dashed "+N more" (never a sideways scroll): on the stone they are the ways in; on limestone the same 44px pill outlined in `edge`, ink text, a condensed count in ink-muted, limestone-200 on hover.
 - **Size filter:** a size cell as a filter (44px, condensed numerals, `edge` outline), in hook order; the chosen size is an ink cell with paper numerals. Never copper: a filter isn't a buy.
+- **Ways on (dead ends, tags, sub-pages):** the same 44px pill outlined in `edge` on limestone, ink label: the Fly Types and the Species hub on the 404, the empty box and the empty search; an article's tags; a Web Page's sub-pages.
+- **On moss:** a Species hub tile's Fly Type pages, outlined in lichen at 45% with mist labels, a mist outline and a faint lichen wash on hover.
 
 ### Cards / Containers
 - **Specimen card:** paper, 4px corners, 8px padding (12px below). The product photo fills the top at its native 3:2, as shot. Below: product name (label), price in condensed numerals with "/ fly" in ink-muted, the reserved line, and + Add at the right (full width below on phones).
 - **Sold out:** the reserved line says "Sold out" in ink and + Add becomes an outlined "View" link to the product page; nothing is set over the photo (owner, 2026-11-07).
 - **In-box line:** copper, 650, 13px. It says which sizes are in the box in the longest form the reserved line holds: "In your box: 1 × 12, 2 × 14", then "In box: 12, 14 ×2", then "2 in your box". The full form stays in the title.
 - **On stone and moss:** seated, with the full light vocabulary (see Elevation). **On limestone** (selections grid, hatch rows): plain shadow and the copper-lit ring when in the box.
+- **Lines sheet:** the cart page's lines on one paper sheet with the Plain shadow, a group per pattern (a 96×64 photograph, its name and "each" price, then its sizes as stepper rows in hook order), rules between groups.
+- **Gauge card:** the hook size chart's gauge on paper with the Plain shadow, 4px corners, generous padding (32px above, 24px around).
 - **Plates:** fly-type photographs at 16:9 with 4px corners, a bottom shale fade, the name in Expanded 780 and a condensed count in mist; a 3% zoom on hover. Sub-links sit below the plate, not on it. Row plates pair a 112px thumbnail (88px on phones) with an Expanded name and an arrow.
 
 ### Inputs / Fields
 - **Search:** paper, 1px `edge` outline, 4px corners, 46px tall, search icon inset left and the ink Search button inset right. Focus is a 2px ink outline offset 1px. Suggestions open as a paper sheet with Drop shadow: group titles in caption weight 650, 48×32 photo thumbnails, matched text on low warm light, limestone hover rows.
 - **On shale** (newsletter): wet-shale field, `shale-600` outline, mist text and caret, 48px.
+- **Form fields** (the contact form): paper, 1px `edge` outline, 4px corners, 46px tall (160px for a message); the label above in 650 15px ink with "Required" beside it in 13px ink-muted, never capitals. An error outlines the field in `error` with its message beneath. The send button is ink, 4px corners, 46px.
 - **Focus everywhere:** a 2px ink outline offset 3px on light grounds; mist on shale, moss, the utility strip and the order line; back to ink on paper cards inside dark bands.
 
 ### Navigation
@@ -392,6 +452,9 @@ Corners are small and honest: 4px (`rounded.md`) on cards, buttons, fields, size
 - **Nav row (from 1040px):** label-weight items, a 3px ink underline that grows from the left on hover and when a menu is open, a chevron that turns 180°. Wholesale sits alone at the right in ink-muted.
 - **Mega menu:** full width under the header on limestone with Drop shadow and a 32% shale scrim over the page. Flies: a 272px rail of fly types (the active one on paper with Plain shadow and an arrow), a two-column list of subcategories with condensed counts on limestone rules, and a graded stone plate named in mist; a dry-limestone "Also" row beneath. Species: grouped lists of species in 700 17px with counts, and a dry-limestone hatch-chart card.
 - **Phone drawer:** a limestone panel from the left (up to 420px, 90vw) over a 45% shale scrim, with an Expanded "Menu" heading. Top groups are 56px rows in 700 18px; fly types open as 52px dry-limestone rows with condensed counts and chevrons; their children are 44px limestone rows ending in an underlined "All …" link. The phone number sits at the foot.
+- **Breadcrumbs:** one quiet 13px line above every H1, ink-muted steps with a slash in `edge`, the current page in ink; lichen and mist on moss.
+- **Tabs** (search results): label weight 15px in ink-muted, the selected tab in ink over a 3px ink underline, 44px targets.
+- **Help column** (Web Pages, the contact page): the channel's help pages as 44px rows on limestone rules, the page being read in 700, then the phone number; on the contact page the shop's address, walk-ins and phone first.
 - **Footer:** riverbed shale; newsletter row, the logo on a paper plate, column heads in 650 14px weathered shale, mist links that underline on hover, fine print in weathered shale above a shaded-shale rule.
 
 ### Size Picker (signature)
@@ -459,6 +522,8 @@ The base is Cornerstone 6.22, rebuilt fresh rather than ported from the old skin
 - **Do** treat the warm `.graded` filter on the stand-in slate photographs as temporary: it comes off when the commissioned warm-light shoot replaces them, and it is never applied to product photos.
 - **Do** give every lit, lifted or dropping state an instant equivalent under reduced motion.
 - **Do** keep every touch target at least 44px on phones.
+- **Do** set a reading page's words in one left-aligned column at about 68 characters, the store's own markup styled in the system's type.
+- **Do** give every dead end a way on: the 404, the empty box and the empty search each carry the Fly Types.
 
 ### Don't:
 - **Don't** use copper for anything that is not buying or a count of what is being bought. The distance to free shipping counts; a sale badge or a promo banner does not.

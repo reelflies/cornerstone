@@ -345,7 +345,7 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
     min-height: 46px;
     padding: 0 12px;
     border: 1px solid var(--rf-edge);
-    border-radius: var(--rf-radius-sm);
+    border-radius: var(--rf-radius-md);
     background: var(--rf-paper);
     color: var(--rf-ink);
     font: 400 16px / 1.4 var(--rf-font-text);
@@ -375,7 +375,7 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
     min-height: 46px;
     margin: 0;
     padding: 0 28px;
-    border-radius: var(--rf-radius-sm);
+    border-radius: var(--rf-radius-md);
     font: 650 16px / 1 var(--rf-font-text);
 }
 
