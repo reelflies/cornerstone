@@ -60,7 +60,7 @@
 
 .rf-stone h1 {
     max-width: 13ch;
-    font: #{"820 clamp(38px, 3.4vw + 19px, 68px)/0.98 var(--rf-font-display)"};
+    font: #{"820 clamp(2.375rem, 3.4vw + 1.1875rem, 4.25rem)/0.98 var(--rf-font-display)"};
     letter-spacing: -0.025em;
     text-wrap: balance;
     color: var(--rf-mist);
@@ -69,13 +69,13 @@
 .rf-stone__line {
     max-width: 34rem;
     margin-top: var(--rf-space-4);
-    font-size: 18px;
+    font-size: 1.125rem;
     line-height: 1.5;
     color: var(--rf-mist);
 }
 
 .rf-stone__line .rf-num {
-    font-size: 20px;
+    font-size: 1.25rem;
 }
 
 .rf-ways {
@@ -92,7 +92,7 @@
 }
 
 .rf-ways__title {
-    font: 650 14px/1.3 var(--rf-font-text);
+    font: 650 0.875rem/1.3 var(--rf-font-text);
     color: var(--rf-mist);
 }
 
@@ -125,7 +125,7 @@
     border-radius: var(--rf-radius-pill);
     background: rgba($rf-shale-950, 0.56);
     color: var(--rf-mist);
-    font: 650 15px/1 var(--rf-font-text);
+    font: 650 0.9375rem/1 var(--rf-font-text);
     text-decoration: none;
     white-space: nowrap;
     transition: background-color var(--rf-settle), color var(--rf-settle), border-color var(--rf-settle);
@@ -133,7 +133,7 @@
 
 .rf-way__n {
     color: var(--rf-limestone-300);
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 600;
 }
 
@@ -170,7 +170,7 @@
     color: var(--rf-ink);
     border-radius: var(--rf-radius-sm);
     box-shadow: var(--rf-shadow-seat);
-    font: 700 22px/1.1 var(--rf-font-hand);
+    font: 700 1.375rem/1.1 var(--rf-font-hand);
     transform: rotate(-2deg);
     transform-origin: left center;
 }
@@ -181,7 +181,7 @@
     border: 1px solid var(--rf-edge);
     border-radius: var(--rf-radius-pill);
     background: none;
-    font: 650 13px/1 var(--rf-font-text);
+    font: 650 0.8125rem/1 var(--rf-font-text);
     transform: rotate(2deg);
 }
 
@@ -219,12 +219,12 @@
     }
 
     .rf-stone h1 {
-        font-size: 32px;
+        font-size: 2rem;
     }
 
     .rf-stone__line {
         margin-top: var(--rf-space-2);
-        font-size: 15px;
+        font-size: 0.9375rem;
         line-height: 1.45;
     }
 
@@ -240,7 +240,7 @@
     }
 
     .rf-ways__title {
-        font-size: 13px;
+        font-size: 0.8125rem;
         line-height: 1.2;
     }
 
@@ -258,7 +258,7 @@
     }
 
     .rf-lay__label {
-        font-size: 20px;
+        font-size: 1.25rem;
         padding: 4px 12px 5px;
     }
 
@@ -310,7 +310,7 @@
     }
 
     .rf-stone__line {
-        font-size: 19px;
+        font-size: 1.1875rem;
     }
 
     .rf-ways {
@@ -398,18 +398,18 @@
 }
 
 .rf-plate__name {
-    font: 780 26px/1.05 var(--rf-font-display);
+    font: 780 1.625rem/1.05 var(--rf-font-display);
     letter-spacing: -0.015em;
 }
 
 .rf-plate__n {
-    font-size: 14px;
+    font-size: 0.875rem;
     color: var(--rf-mist);
     white-space: nowrap;
 }
 
 .rf-plate__n .rf-num {
-    font-size: 16px;
+    font-size: 1rem;
     color: var(--rf-mist);
 }
 
@@ -418,7 +418,7 @@
     flex-wrap: wrap;
     gap: var(--rf-space-1) var(--rf-space-4);
     margin-top: var(--rf-space-3);
-    font-size: 15px;
+    font-size: 0.9375rem;
 }
 
 .rf-plate__kids a {
@@ -497,13 +497,13 @@
 }
 
 .rf-row-plate__name {
-    font: 760 20px/1.15 var(--rf-font-display);
+    font: 760 1.25rem/1.15 var(--rf-font-display);
     letter-spacing: -0.01em;
 }
 
 .rf-row-plate__n {
     color: var(--rf-ink-muted);
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 
 .rf-row-plate__go {
@@ -525,7 +525,7 @@
     flex-wrap: wrap;
     gap: 0 var(--rf-space-4);
     padding-left: calc(112px + var(--rf-space-4));
-    font-size: 14px;
+    font-size: 0.875rem;
     color: var(--rf-ink-muted);
 }
 
@@ -541,7 +541,7 @@
     }
 
     .rf-plate__name {
-        font-size: 22px;
+        font-size: 1.375rem;
     }
 
 }
@@ -587,7 +587,7 @@
 
 .rf-hatch__intro .rf-hatch__now {
     color: var(--rf-ink);
-    font: 650 19px/1.4 var(--rf-font-text);
+    font: 650 1.1875rem/1.4 var(--rf-font-text);
 }
 
 .rf-hatch__how {
@@ -625,7 +625,7 @@
 .rf-months__m {
     position: relative;
     text-align: center;
-    font: 600 13px/1 var(--rf-font-numerals);
+    font: 600 0.8125rem/1 var(--rf-font-numerals);
     color: var(--rf-ink-muted);
 }
 
@@ -647,7 +647,7 @@
     left: 50%;
     bottom: calc(100% + 2px);
     transform: translateX(-50%) rotate(-4deg);
-    font: 700 19px/1 var(--rf-font-hand);
+    font: 700 1.1875rem/1 var(--rf-font-hand);
     color: var(--rf-ink);
     white-space: nowrap;
 }
@@ -702,24 +702,24 @@
 }
 
 .rf-hatch__title {
-    font: 720 16px/1.2 var(--rf-font-text);
+    font: 720 1rem/1.2 var(--rf-font-text);
 }
 
 .rf-hatch__latin {
     font-style: italic;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--rf-ink-muted);
 }
 
 .rf-hatch__sizes {
     grid-area: hooks;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--rf-ink-muted);
     white-space: nowrap;
 }
 
 .rf-hatch__sizes .rf-num {
-    font-size: 15px;
+    font-size: 0.9375rem;
     color: var(--rf-ink);
 }
 
@@ -792,7 +792,7 @@
     align-items: center;
     gap: var(--rf-space-2);
     font-weight: 650;
-    font-size: 14px;
+    font-size: 0.875rem;
     white-space: nowrap;
 }
 
@@ -849,7 +849,7 @@
 }
 
 .rf-hatch__count .rf-num {
-    font-size: 15px;
+    font-size: 0.9375rem;
 }
 
 .rf-hatch__flies {
@@ -950,7 +950,7 @@
 }
 
 .rf-hooks h3 {
-    font: 760 22px/1.15 var(--rf-font-display);
+    font: 760 1.375rem/1.15 var(--rf-font-display);
     letter-spacing: -0.01em;
 }
 
@@ -985,7 +985,7 @@
 }
 
 .rf-hookstep .rf-num {
-    font-size: 15px;
+    font-size: 0.9375rem;
 }
 
 @media (min-width: 900px) {
@@ -1029,7 +1029,7 @@
 
 .rf-species__group {
     margin-bottom: var(--rf-space-2);
-    font: 650 14px/1.3 var(--rf-font-text);
+    font: 650 0.875rem/1.3 var(--rf-font-text);
     color: var(--rf-lichen);
 }
 
@@ -1048,18 +1048,18 @@
 }
 
 .rf-sp__name {
-    font: 760 19px/1.15 var(--rf-font-display);
+    font: 760 1.1875rem/1.15 var(--rf-font-display);
     letter-spacing: -0.01em;
     transition: color var(--rf-settle);
 }
 
 .rf-sp__n {
-    font-size: 14px;
+    font-size: 0.875rem;
     color: var(--rf-lichen);
 }
 
 .rf-sp__n .rf-num {
-    font-size: 15px;
+    font-size: 0.9375rem;
 }
 
 .rf-sp:hover .rf-sp__name,
@@ -1075,7 +1075,7 @@
 
 .rf-species__lay-title {
     display: inline-block;
-    font: 700 22px/1.1 var(--rf-font-hand);
+    font: 700 1.375rem/1.1 var(--rf-font-hand);
     color: var(--rf-mist);
 }
 
@@ -1172,7 +1172,7 @@
 
 .rf-signature__text p {
     color: var(--rf-mist);
-    font-size: 17px;
+    font-size: 1.0625rem;
 }
 
 .rf-signature__lay {
@@ -1186,7 +1186,7 @@
     right: calc(100% - 24px);
     top: -12px;
     width: 11rem;
-    font: 700 21px/1.15 var(--rf-font-hand);
+    font: 700 1.3125rem/1.15 var(--rf-font-hand);
     color: var(--rf-mist);
     transform: rotate(-4deg);
 }
@@ -1211,11 +1211,11 @@
 }
 
 .rf-fly--lg .rf-fly__name {
-    font-size: 18px;
+    font-size: 1.125rem;
 }
 
 .rf-fly--lg .rf-fly__price .rf-num {
-    font-size: 22px;
+    font-size: 1.375rem;
 }
 
 @media (max-width: 899px) {
@@ -1298,7 +1298,7 @@
 .rf-shop__photo figcaption {
     margin-top: var(--rf-space-3);
     color: var(--rf-ink-muted);
-    font-size: 13px;
+    font-size: 0.8125rem;
 }
 
 .rf-shop__text {
@@ -1309,7 +1309,7 @@
 }
 
 .rf-shop__lead {
-    font-size: 18px;
+    font-size: 1.125rem;
 }
 
 .rf-facts {
@@ -1341,7 +1341,7 @@
 }
 
 .rf-promise {
-    font: 760 21px/1.25 var(--rf-font-display);
+    font: 760 1.3125rem/1.25 var(--rf-font-display);
     letter-spacing: -0.01em;
 }
 
@@ -1365,7 +1365,7 @@
 
 .rf-signoff {
     margin-top: var(--rf-space-2);
-    font: 400 26px/1.2 var(--rf-font-hand);
+    font: 400 1.625rem/1.2 var(--rf-font-hand);
     color: var(--rf-ink);
     transform: rotate(-1.5deg);
     transform-origin: left;
@@ -1397,6 +1397,6 @@
 // the plates' names back at full size once three plates are wide enough to hold them in two lines
 @media (min-width: 1280px) {
     .rf-plate__name {
-        font-size: 26px;
+        font-size: 1.625rem;
     }
 }

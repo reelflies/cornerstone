@@ -191,7 +191,7 @@ body {
 
     p {
         color: var(--rf-ink-muted);
-        font-size: 17px;
+        font-size: 1.0625rem;
         max-width: 38rem;
     }
 }
@@ -224,7 +224,7 @@ body {
 .rf-strip {
     background: var(--rf-shale-950);
     color: var(--rf-mist);
-    font-size: 13px;
+    font-size: 0.8125rem;
 }
 
 .rf-strip__inner {
@@ -243,7 +243,7 @@ body {
 }
 
 .rf-strip .rf-num {
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 
 .rf-strip__mid,
@@ -338,7 +338,7 @@ body {
 }
 
 .rf-brand__text {
-    font: 780 20px/1 var(--rf-font-display);
+    font: 780 1.25rem/1 var(--rf-font-display);
 }
 
 .rf-brand img {
@@ -374,7 +374,7 @@ body {
     border: 1px solid var(--rf-edge);
     border-radius: var(--rf-radius-md);
     background: var(--rf-paper);
-    font-size: 16px;
+    font-size: 1rem;
     color: var(--rf-ink);
 }
 
@@ -397,7 +397,7 @@ body {
     background: var(--rf-ink);
     color: var(--rf-paper);
     font-weight: 650;
-    font-size: 15px;
+    font-size: 0.9375rem;
 }
 
 .rf-search__go:hover {
@@ -416,7 +416,7 @@ body {
     background: none;
     text-decoration: none;
     font-weight: 650;
-    font-size: 15px;
+    font-size: 0.9375rem;
 }
 
 .rf-head__link {
@@ -452,7 +452,7 @@ body {
     border-radius: var(--rf-radius-pill);
     background: var(--rf-limestone-300);
     color: var(--rf-ink);
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 700;
 }
 
@@ -565,7 +565,7 @@ body {
     background: none;
     text-decoration: none;
     font-weight: 650;
-    font-size: 15px;
+    font-size: 0.9375rem;
     white-space: nowrap;
 }
 
@@ -644,12 +644,12 @@ body {
     border-radius: var(--rf-radius-md);
     text-decoration: none;
     font-weight: 650;
-    font-size: 16px;
+    font-size: 1rem;
 }
 
 .rf-mega__n {
     color: var(--rf-ink-muted);
-    font-size: 15px;
+    font-size: 0.9375rem;
 }
 
 .rf-mega__go {
@@ -685,7 +685,7 @@ body {
 }
 
 .rf-mega__head a {
-    font: 760 24px/1.15 var(--rf-font-display);
+    font: 760 1.5rem/1.15 var(--rf-font-display);
     letter-spacing: -0.01em;
     text-decoration: none;
 }
@@ -698,7 +698,7 @@ body {
 
 .rf-mega__head > span {
     color: var(--rf-ink-muted);
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 
 .rf-mega__kids {
@@ -717,12 +717,12 @@ body {
     padding: 9px 0;
     border-bottom: 1px solid var(--rf-limestone-300);
     text-decoration: none;
-    font-size: 15px;
+    font-size: 0.9375rem;
 }
 
 .rf-mega__kids a .rf-num {
     color: var(--rf-ink-muted);
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 600;
 }
 
@@ -760,7 +760,7 @@ body {
     left: var(--rf-space-4);
     bottom: var(--rf-space-3);
     color: var(--rf-mist);
-    font: 720 17px/1.2 var(--rf-font-text);
+    font: 720 1.0625rem/1.2 var(--rf-font-text);
 }
 
 .rf-mega__plate--rf-paper {
@@ -795,7 +795,7 @@ body {
 
 .rf-mega__more p {
     color: var(--rf-ink-muted);
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 
 .rf-mega__more ul {
@@ -805,14 +805,14 @@ body {
 }
 
 .rf-mega__more a {
-    font-size: 15px;
+    font-size: 0.9375rem;
     font-weight: 600;
     text-decoration: none;
 }
 
 .rf-mega__more a .rf-num {
     color: var(--rf-ink-muted);
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 
 .rf-mega__more a:hover {
@@ -829,7 +829,7 @@ body {
 .rf-mega__group {
     margin-bottom: var(--rf-space-3);
     color: var(--rf-ink-muted);
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 650;
 }
 
@@ -847,12 +847,12 @@ body {
     padding: 10px 0;
     border-bottom: 1px solid var(--rf-limestone-300);
     text-decoration: none;
-    font: 700 17px/1.25 var(--rf-font-text);
+    font: 700 1.0625rem/1.25 var(--rf-font-text);
 }
 
 .rf-mega__splist a .rf-num {
     color: var(--rf-ink-muted);
-    font-size: 15px;
+    font-size: 0.9375rem;
     font-weight: 600;
 }
 
@@ -872,7 +872,7 @@ body {
 }
 
 .rf-mega__hatch-title {
-    font: 760 22px/1.15 var(--rf-font-display);
+    font: 760 1.375rem/1.15 var(--rf-font-display);
     letter-spacing: -0.01em;
 }
 
@@ -956,7 +956,7 @@ body {
 }
 
 .rf-drawer__title {
-    font: 760 20px/1 var(--rf-font-display);
+    font: 760 1.25rem/1 var(--rf-font-display);
 }
 
 .rf-drawer__close {
@@ -977,7 +977,7 @@ body {
     min-height: 56px;
     padding: 0 var(--rf-space-4);
     border-bottom: 1px solid var(--rf-limestone-300);
-    font: 700 18px/1.2 var(--rf-font-text);
+    font: 700 1.125rem/1.2 var(--rf-font-text);
     text-decoration: none;
     list-style: none;
     cursor: pointer;
@@ -1014,7 +1014,7 @@ details[open] > summary .rf-drawer__chev {
 
 .rf-drawer__sub > summary .rf-num {
     color: var(--rf-ink-muted);
-    font-size: 15px;
+    font-size: 0.9375rem;
 }
 
 .rf-drawer__sub ul {
@@ -1040,7 +1040,7 @@ details[open] > summary .rf-drawer__chev {
 
 .rf-drawer__list--plain .rf-num {
     color: var(--rf-ink-muted);
-    font-size: 15px;
+    font-size: 0.9375rem;
 }
 
 .rf-drawer__all {
@@ -1055,7 +1055,7 @@ details[open] > summary .rf-drawer__chev {
     align-items: center;
     padding: var(--rf-space-6) var(--rf-space-4) 0;
     color: var(--rf-ink-muted);
-    font-size: 15px;
+    font-size: 0.9375rem;
 }
 
 .rf-drawer__call a {

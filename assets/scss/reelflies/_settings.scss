@@ -115,37 +115,37 @@ $rf-bp-desktop:     1040px;
 // and line height. Numbers always take rf-numerals.
 
 @mixin rf-type-display {
-    font: #{"820 clamp(38px, 3.4vw + 19px, 68px) / 0.98 var(--rf-font-display)"};
+    font: #{"820 clamp(2.375rem, 3.4vw + 1.1875rem, 4.25rem) / 0.98 var(--rf-font-display)"};
     letter-spacing: -0.025em;
     text-wrap: balance;
 }
 
 @mixin rf-type-headline {
-    font: #{"780 clamp(28px, 1.9vw + 13px, 44px) / 1.04 var(--rf-font-display)"};
+    font: #{"780 clamp(1.75rem, 1.9vw + 0.8125rem, 2.75rem) / 1.04 var(--rf-font-display)"};
     letter-spacing: -0.015em;
     text-wrap: balance;
 }
 
 @mixin rf-type-title {
-    font: 760 24px / 1.15 var(--rf-font-display);
+    font: 760 1.5rem / 1.15 var(--rf-font-display);
     letter-spacing: -0.01em;
     text-wrap: balance;
 }
 
 @mixin rf-type-lead {
-    font: 400 18px / 1.5 var(--rf-font-text);
+    font: 400 1.125rem / 1.5 var(--rf-font-text);
 }
 
 @mixin rf-type-body {
-    font: 400 16px / 1.55 var(--rf-font-text);
+    font: 400 1rem / 1.55 var(--rf-font-text);
 }
 
 @mixin rf-type-label {
-    font: 650 15px / 1.25 var(--rf-font-text);
+    font: 650 0.9375rem / 1.25 var(--rf-font-text);
 }
 
 @mixin rf-type-caption {
-    font: 400 13px / 1.4 var(--rf-font-text);
+    font: 400 0.8125rem / 1.4 var(--rf-font-text);
 }
 
 @mixin rf-numerals {
@@ -155,32 +155,32 @@ $rf-bp-desktop:     1040px;
 
 @mixin rf-type-price {
     @include rf-numerals;
-    font-size: 18px;
+    font-size: 1.125rem;
     font-weight: 700;
     line-height: 1.2;
 }
 
 @mixin rf-type-size {
     @include rf-numerals;
-    font-size: 17px;
+    font-size: 1.0625rem;
     font-weight: 700;
     line-height: 1;
 }
 
 @mixin rf-type-count {
     @include rf-numerals;
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 650;
     line-height: 1.2;
 }
 
 // The tier's hand: at most once per region, never for prices, buttons, sizes or headings
 @mixin rf-type-note {
-    font: 700 22px / 1.1 var(--rf-font-hand);
+    font: 700 1.375rem / 1.1 var(--rf-font-hand);
 }
 
 @mixin rf-type-signoff {
-    font: 400 26px / 1.2 var(--rf-font-hand);
+    font: 400 1.625rem / 1.2 var(--rf-font-hand);
 }
 
 
@@ -205,7 +205,7 @@ $rf-bp-desktop:     1040px;
     border-radius: var(--rf-radius-md);
     background: var(--rf-copper);
     color: var(--rf-on-copper);
-    font: 700 15px / 1 var(--rf-font-text);
+    font: 700 0.9375rem / 1 var(--rf-font-text);
     text-decoration: none;
     cursor: pointer;
     transition: background-color var(--rf-settle), transform 120ms ease;

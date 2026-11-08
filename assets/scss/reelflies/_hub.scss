@@ -60,7 +60,7 @@ $rf-hub-chip: rgba($rf-lichen, 0.45);
 .rf-hub__title {
     max-width: 18ch;
     color: var(--rf-mist);
-    font: #{"800 clamp(30px, 2.2vw + 16px, 52px) / 1.02 var(--rf-font-display)"};
+    font: #{"800 clamp(1.875rem, 2.2vw + 1rem, 3.25rem) / 1.02 var(--rf-font-display)"};
     letter-spacing: -0.02em;
     text-wrap: balance;
 }
@@ -72,7 +72,7 @@ $rf-hub-chip: rgba($rf-lichen, 0.45);
 .rf-hub__lead .rf-list-head__intro {
     max-width: 40rem;
     color: var(--rf-lichen);
-    font-size: 17px;
+    font-size: 1.0625rem;
     line-height: 1.5;
 }
 
@@ -88,7 +88,7 @@ $rf-hub-chip: rgba($rf-lichen, 0.45);
     padding-bottom: var(--rf-space-3);
     border-bottom: 1px solid $rf-hub-rule;
     color: var(--rf-mist);
-    font: #{"760 clamp(22px, 0.8vw + 17px, 28px) / 1.15 var(--rf-font-display)"};
+    font: #{"760 clamp(1.375rem, 0.8vw + 1.0625rem, 1.75rem) / 1.15 var(--rf-font-display)"};
     letter-spacing: -0.01em;
 }
 
@@ -132,7 +132,7 @@ $rf-hub-chip: rgba($rf-lichen, 0.45);
 }
 
 .rf-hub-tile__name {
-    font: #{"760 21px / 1.15 var(--rf-font-display)"};
+    font: #{"760 1.3125rem / 1.15 var(--rf-font-display)"};
     letter-spacing: -0.01em;
 
     a {
@@ -150,17 +150,17 @@ $rf-hub-chip: rgba($rf-lichen, 0.45);
 
 .rf-hub-tile__n {
     color: var(--rf-lichen);
-    font-size: 14px;
+    font-size: 0.875rem;
 
     .rf-num {
-        font-size: 15px;
+        font-size: 0.9375rem;
     }
 }
 
 .rf-hub-tile .rf-list-head__intro {
     max-width: 36rem;
     color: var(--rf-lichen);
-    font-size: 15px;
+    font-size: 0.9375rem;
     line-height: 1.5;
 
     p + p {
@@ -182,7 +182,7 @@ $rf-hub-chip: rgba($rf-lichen, 0.45);
         border: 1px solid $rf-hub-chip;
         border-radius: var(--rf-radius-pill);
         color: var(--rf-mist);
-        font: 650 15px / 1.2 var(--rf-font-text);
+        font: 650 0.9375rem / 1.2 var(--rf-font-text);
         text-decoration: none;
 
         &:hover {
@@ -199,7 +199,7 @@ $rf-hub-chip: rgba($rf-lichen, 0.45);
     max-width: calc(var(--rf-column-max) + 2 * var(--rf-gutter));
     margin: 0 auto;
     padding: var(--rf-space-12) var(--rf-gutter) 0;
-    font: #{"760 clamp(24px, 1vw + 18px, 32px) / 1.1 var(--rf-font-display)"};
+    font: #{"760 clamp(1.5rem, 1vw + 1.125rem, 2rem) / 1.1 var(--rf-font-display)"};
     letter-spacing: -0.01em;
 }
 

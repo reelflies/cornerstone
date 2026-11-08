@@ -31,7 +31,7 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
 
 .rf-page-head__meta {
     color: var(--rf-ink-muted);
-    font-size: 15px;
+    font-size: 0.9375rem;
 }
 
 // The page beside its help column (help-aside.html)
@@ -65,7 +65,7 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
     border: 1px solid var(--rf-edge);
     border-radius: var(--rf-radius-pill);
     color: var(--rf-ink);
-    font: 650 15px / 1.2 var(--rf-font-text);
+    font: 650 0.9375rem / 1.2 var(--rf-font-text);
     text-decoration: none;
 
     &:hover {
@@ -83,7 +83,7 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
     margin-top: var(--rf-space-8);
 
     h2 {
-        font: 650 19px / 1.3 var(--rf-font-text);
+        font: 650 1.1875rem / 1.3 var(--rf-font-text);
     }
 
     a {
@@ -98,7 +98,7 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
 .rf-prose {
     max-width: 60ch; // about 72 characters a line in Archivo at 17px (68ch measured 82)
     color: var(--rf-ink);
-    font-size: 17px;
+    font-size: 1.0625rem;
     line-height: 1.6;
     overflow-wrap: break-word;
 
@@ -115,7 +115,7 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
     :where(h1, h2) {
         margin-top: 1.8em;
         color: var(--rf-ink);
-        font: #{"760 clamp(22px, 0.8vw + 17px, 28px) / 1.15 var(--rf-font-display)"};
+        font: #{"760 clamp(1.375rem, 0.8vw + 1.0625rem, 1.75rem) / 1.15 var(--rf-font-display)"};
         letter-spacing: -0.01em;
         text-transform: none;
         text-wrap: balance;
@@ -124,14 +124,14 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
     h3 {
         margin-top: 1.6em;
         color: var(--rf-ink);
-        font: 650 20px / 1.3 var(--rf-font-text);
+        font: 650 1.25rem / 1.3 var(--rf-font-text);
         text-transform: none;
     }
 
     :where(h4, h5, h6) {
         margin-top: 1.4em;
         color: var(--rf-ink);
-        font: 650 17px / 1.4 var(--rf-font-text);
+        font: 650 1.0625rem / 1.4 var(--rf-font-text);
         letter-spacing: 0;
         text-transform: none;
     }
@@ -198,7 +198,7 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
     table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 16px;
+        font-size: 1rem;
     }
 
     th,
@@ -235,12 +235,12 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
     gap: var(--rf-space-3);
     padding-top: var(--rf-space-6);
     border-top: 1px solid var(--rf-limestone-300);
-    font-size: 16px;
+    font-size: 1rem;
 }
 
 .rf-help__title {
     color: var(--rf-ink);
-    font: 650 15px / 1.3 var(--rf-font-text);
+    font: 650 0.9375rem / 1.3 var(--rf-font-text);
 }
 
 .rf-help__title--more {
@@ -327,13 +327,13 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
     display: block;
     margin: 0 0 6px;
     color: var(--rf-ink);
-    font: 650 15px / 1.3 var(--rf-font-text);
+    font: 650 0.9375rem / 1.3 var(--rf-font-text);
 
     small {
         float: none;
         margin-left: 6px;
         color: var(--rf-ink-muted);
-        font: 400 13px / 1 var(--rf-font-text);
+        font: 400 0.8125rem / 1 var(--rf-font-text);
         letter-spacing: 0;
         text-transform: none;
     }
@@ -348,7 +348,7 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
     border-radius: var(--rf-radius-md);
     background: var(--rf-paper);
     color: var(--rf-ink);
-    font: 400 16px / 1.4 var(--rf-font-text);
+    font: 400 1rem / 1.4 var(--rf-font-text);
 }
 
 .rf-contact .form-textarea,
@@ -363,7 +363,7 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
 
 .rf-contact .form-inlineMessage {
     color: var(--rf-error);
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 
 .rf-contact .form-actions {
@@ -376,11 +376,11 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
     margin: 0;
     padding: 0 28px;
     border-radius: var(--rf-radius-md);
-    font: 650 16px / 1 var(--rf-font-text);
+    font: 650 1rem / 1 var(--rf-font-text);
 }
 
 .rf-contact__sent {
-    font-size: 18px;
+    font-size: 1.125rem;
 }
 
 
@@ -433,7 +433,7 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
 }
 
 .rf-post-row__title {
-    font: #{"760 clamp(21px, 0.6vw + 18px, 26px) / 1.15 var(--rf-font-display)"};
+    font: #{"760 clamp(1.3125rem, 0.6vw + 1.125rem, 1.625rem) / 1.15 var(--rf-font-display)"};
     letter-spacing: -0.01em;
     text-wrap: balance;
 
@@ -451,12 +451,12 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
 
 .rf-post-row__meta {
     color: var(--rf-ink-muted);
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 
 .rf-post-row__summary {
     max-width: 60ch;
-    font-size: 16px;
+    font-size: 1rem;
     line-height: 1.55;
 }
 
@@ -467,7 +467,7 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
 // One article
 .rf-post .rf-page-head__title {
     max-width: 28ch;
-    font-size: #{"clamp(28px, 1.4vw + 18px, 42px)"};
+    font-size: #{"clamp(1.75rem, 1.4vw + 1.125rem, 2.625rem)"};
 }
 
 .rf-post__body {
@@ -553,7 +553,7 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
 }
 
 .rf-post__more-title {
-    font: #{"760 clamp(22px, 0.8vw + 17px, 28px) / 1.15 var(--rf-font-display)"};
+    font: #{"760 clamp(1.375rem, 0.8vw + 1.0625rem, 1.75rem) / 1.15 var(--rf-font-display)"};
     letter-spacing: -0.01em;
 }
 
@@ -570,7 +570,7 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
         min-height: 52px;
         padding: var(--rf-space-2) 0;
         color: var(--rf-ink);
-        font: 650 17px / 1.35 var(--rf-font-text);
+        font: 650 1.0625rem / 1.35 var(--rf-font-text);
         text-decoration: none;
 
         &:hover {
@@ -600,14 +600,14 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
 
 .rf-not-found__title {
     max-width: 18ch;
-    font: #{"800 clamp(32px, 2.4vw + 18px, 56px) / 1.02 var(--rf-font-display)"};
+    font: #{"800 clamp(2rem, 2.4vw + 1.125rem, 3.5rem) / 1.02 var(--rf-font-display)"};
     letter-spacing: -0.02em;
     text-wrap: balance;
 }
 
 .rf-not-found__line {
     max-width: 40rem;
-    font-size: 18px;
+    font-size: 1.125rem;
     line-height: 1.5;
 }
 

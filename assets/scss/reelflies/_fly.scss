@@ -56,7 +56,7 @@
 }
 
 .rf-fly__name {
-    font: 650 15px/1.25 var(--rf-font-text);
+    font: 650 0.9375rem/1.25 var(--rf-font-text);
 }
 
 .rf-fly .rf-fly__name a {
@@ -90,14 +90,14 @@
 }
 
 .rf-fly__price .rf-num {
-    font-size: 18px;
+    font-size: 1.125rem;
     font-weight: 700;
 }
 
 .rf-fly__unit,
 .rf-fly__sizes {
     color: var(--rf-ink-muted);
-    font-size: 13px;
+    font-size: 0.8125rem;
 }
 
 .rf-fly__sizes {
@@ -111,7 +111,7 @@
     width: 0;
     min-width: 100%;
     min-height: 1.5em;
-    font-size: 13px;
+    font-size: 0.8125rem;
     line-height: 1.5;
     white-space: nowrap;
     overflow: hidden;
@@ -143,7 +143,7 @@
     border-radius: var(--rf-radius-md);
     background: var(--rf-copper);
     color: var(--rf-on-copper);
-    font: 700 15px/1 var(--rf-font-text);
+    font: 700 0.9375rem/1 var(--rf-font-text);
     white-space: nowrap;
     text-decoration: none;
     transition: background-color 160ms ease, transform 120ms ease;
@@ -323,7 +323,7 @@
 .rf-sizes__hint {
     margin-bottom: var(--rf-space-2);
     color: var(--rf-ink-muted);
-    font-size: 13px;
+    font-size: 0.8125rem;
     line-height: 1.35;
 }
 
@@ -334,7 +334,7 @@
     gap: var(--rf-space-2);
     margin-top: var(--rf-space-2);
     color: var(--rf-ink-muted);
-    font-size: 13px;
+    font-size: 0.8125rem;
 }
 
 .rf-sizes__done {
@@ -344,7 +344,7 @@
     border-radius: var(--rf-radius-pill);
     background: none;
     font-weight: 650;
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 
 .rf-sizes__done:hover {
@@ -362,7 +362,7 @@
 
 .rf-pick__title {
     min-width: 0;
-    font: 650 15px / 1.3 var(--rf-font-text);
+    font: 650 0.9375rem / 1.3 var(--rf-font-text);
 }
 
 .rf-pick__close {
@@ -408,13 +408,13 @@
     align-items: flex-end;
     gap: 8px;
     min-width: 0;
-    font: 700 19px / 1 var(--rf-font-numerals);
+    font: 700 1.1875rem / 1 var(--rf-font-numerals);
     font-variant-numeric: tabular-nums lining-nums;
 }
 
 .rf-pick__size--word {
     align-items: center;
-    font: 650 15px / 1.25 var(--rf-font-text);
+    font: 650 0.9375rem / 1.25 var(--rf-font-text);
 }
 
 .rf-pick__label {
@@ -441,7 +441,7 @@
 
 .rf-pick__sold {
     color: var(--rf-ink-muted);
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 
 // The quantity stepper (quantity.js): − / the box's quantity / +. Copper once flies are in the box.
@@ -491,7 +491,7 @@
     border-radius: 0;
     background: transparent;
     color: var(--rf-ink);
-    font: 700 18px / 1 var(--rf-font-numerals);
+    font: 700 1.125rem / 1 var(--rf-font-numerals);
     font-variant-numeric: tabular-nums lining-nums;
     text-align: center;
     -moz-appearance: textfield;
@@ -508,7 +508,7 @@
     grid-column: 1 / -1;
     margin: var(--rf-space-2) 0 0;
     color: var(--rf-error);
-    font: 650 14px / 1.35 var(--rf-font-text);
+    font: 650 0.875rem / 1.35 var(--rf-font-text);
 }
 
 .rf-qty.has-qty {

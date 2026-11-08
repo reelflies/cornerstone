@@ -203,7 +203,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
     }
 
     .rf-pdp .rf-pdp__title {
-        font-size: 26px;
+        font-size: 1.625rem;
     }
 
     .rf-pdp__thumbs .productView-thumbnail-link {
@@ -225,7 +225,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
 .rf-pdp .rf-pdp__title {
     margin: 0;
     color: var(--rf-ink);
-    font: #{"780 clamp(28px, 1.4vw + 18px, 40px) / 1.06 var(--rf-font-display)"};
+    font: #{"780 clamp(1.75rem, 1.4vw + 1.125rem, 2.5rem) / 1.06 var(--rf-font-display)"};
     letter-spacing: -0.015em;
     text-transform: none;
     text-wrap: balance;
@@ -252,7 +252,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
 .rf-pdp__price .price {
     @include rf-numerals;
     color: var(--rf-ink);
-    font-size: 28px;
+    font-size: 1.75rem;
     font-weight: 700;
     line-height: 1.1;
 }
@@ -260,19 +260,19 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
 .rf-pdp__price .price--rrp,
 .rf-pdp__price .price--non-sale {
     color: var(--rf-ink-muted);
-    font-size: 18px;
+    font-size: 1.125rem;
     text-decoration: line-through;
 }
 
 .rf-pdp__price .price-label,
 .rf-pdp__price .price-now-label {
     color: var(--rf-ink-muted);
-    font: 400 14px / 1.3 var(--rf-font-text);
+    font: 400 0.875rem / 1.3 var(--rf-font-text);
 }
 
 .rf-pdp__unit {
     color: var(--rf-ink-muted);
-    font-size: 15px;
+    font-size: 0.9375rem;
 }
 
 .rf-review-sum {
@@ -285,7 +285,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
     gap: var(--rf-space-2);
     min-height: 32px;
     color: var(--rf-ink);
-    font-size: 14px;
+    font-size: 0.875rem;
     text-decoration: none;
 
     &:hover .rf-review-sum__count {
@@ -313,7 +313,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
 .rf-pdp__note {
     margin: 0;
     color: var(--rf-ink);
-    font: 650 15px / 1.4 var(--rf-font-text);
+    font: 650 0.9375rem / 1.4 var(--rf-font-text);
 }
 
 // the size picker, open on the panel (product-picker.html): rows in two columns where they fit
@@ -326,7 +326,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
     .rf-pick__hint {
         margin: 0;
         color: var(--rf-ink-muted);
-        font-size: 14px;
+        font-size: 0.875rem;
     }
 
     .rf-pick__rows {
@@ -342,11 +342,11 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
     .rf-sizes__foot {
         flex-wrap: wrap;
         margin: 0;
-        font-size: 14px;
+        font-size: 0.875rem;
 
         .rf-more {
             color: var(--rf-ink);
-            font-size: 14px;
+            font-size: 0.875rem;
         }
     }
 }
@@ -361,7 +361,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
     min-height: 1.5em;
     margin: 0;
     color: var(--rf-copper);
-    font: 650 15px / 1.5 var(--rf-font-text);
+    font: 650 0.9375rem / 1.5 var(--rf-font-text);
 }
 
 .rf-pdp__ship {
@@ -369,13 +369,13 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
 
     .rf-num {
         color: var(--rf-ink);
-        font-size: 15px;
+        font-size: 0.9375rem;
     }
 
     padding-top: var(--rf-space-3);
     border-top: 1px solid var(--rf-limestone-300);
     color: var(--rf-ink-muted);
-    font-size: 14px;
+    font-size: 0.875rem;
     line-height: 1.45;
 }
 
@@ -383,7 +383,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
 .rf-pdp__promise {
     margin: 0;
     color: var(--rf-ink);
-    font: 400 21px / 1.2 var(--rf-font-hand);
+    font: 400 1.3125rem / 1.2 var(--rf-font-hand);
     transform: rotate(-1.5deg);
     transform-origin: left center;
 }
@@ -394,7 +394,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
     margin: 0;
     padding: 0;
     color: var(--rf-ink-muted);
-    font-size: 13px;
+    font-size: 0.8125rem;
 
     dt,
     dd,
@@ -425,7 +425,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
     border: 0;
     background: none;
     color: var(--rf-ink);
-    font-size: 14px;
+    font-size: 0.875rem;
     text-transform: none;
 
     .icon {
@@ -452,7 +452,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
     .form-label {
         margin: 0 0 var(--rf-space-2);
         color: var(--rf-ink);
-        font: 650 15px / 1.3 var(--rf-font-text);
+        font: 650 0.9375rem / 1.3 var(--rf-font-text);
         text-transform: none;
     }
 
@@ -482,7 +482,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
         border-radius: var(--rf-radius-md);
         background: var(--rf-paper);
         color: var(--rf-ink);
-        font: 700 16px / 1 var(--rf-font-numerals);
+        font: 700 1rem / 1 var(--rf-font-numerals);
         box-shadow: none;
         cursor: pointer;
 
@@ -537,7 +537,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
             height: var(--rf-tap-min);
             border: 0;
             text-align: center;
-            font: 700 17px / 1 var(--rf-font-numerals);
+            font: 700 1.0625rem / 1 var(--rf-font-numerals);
         }
     }
 
@@ -552,7 +552,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
         @include rf-button-buy;
         width: 100%;
         min-height: 48px;
-        font-size: 16px;
+        font-size: 1rem;
 
         &[disabled] {
             background: var(--rf-shale-800);
@@ -580,7 +580,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
     gap: var(--rf-space-3);
     min-height: 56px;
     color: var(--rf-ink);
-    font: 650 17px / 1.3 var(--rf-font-text);
+    font: 650 1.0625rem / 1.3 var(--rf-font-text);
     list-style: none;
     cursor: pointer;
 
@@ -605,7 +605,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
 .rf-details__body {
     max-width: 35rem; // about 72 characters a line at 16px (44rem measured 93)
     padding: 0 0 var(--rf-space-6);
-    font: 400 16px / 1.6 var(--rf-font-text);
+    font: 400 1rem / 1.6 var(--rf-font-text);
 
     p,
     ul,
@@ -639,7 +639,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
     h3,
     h4 {
         margin: var(--rf-space-4) 0 var(--rf-space-2);
-        font: 650 17px / 1.3 var(--rf-font-text);
+        font: 650 1.0625rem / 1.3 var(--rf-font-text);
     }
 
     img {
@@ -685,7 +685,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
     border-radius: var(--rf-radius-md);
     background: transparent;
     color: var(--rf-ink);
-    font: 650 15px / 1 var(--rf-font-text);
+    font: 650 0.9375rem / 1 var(--rf-font-text);
     cursor: pointer;
 
     &:hover {
@@ -720,7 +720,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
 .rf-review__title {
     margin: 0 0 var(--rf-space-1);
     color: var(--rf-ink);
-    font: 650 17px / 1.3 var(--rf-font-text);
+    font: 650 1.0625rem / 1.3 var(--rf-font-text);
     text-transform: none;
 }
 
@@ -731,13 +731,13 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
     gap: var(--rf-space-2);
     margin: 0 0 var(--rf-space-2);
     color: var(--rf-ink-muted);
-    font-size: 13px;
+    font-size: 0.8125rem;
 }
 
 .rf-review__body {
     max-width: 35rem;
     margin: 0;
-    font-size: 16px;
+    font-size: 1rem;
     line-height: 1.6;
 }
 

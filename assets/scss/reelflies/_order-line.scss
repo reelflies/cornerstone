@@ -90,7 +90,7 @@ html:has(.rf-orderline) {
 
 .rf-orderline__sum {
     font-weight: 650;
-    font-size: 15px;
+    font-size: 0.9375rem;
     white-space: nowrap;
     text-decoration: underline;
     text-decoration-color: var(--rf-shale-600);
@@ -101,7 +101,7 @@ html:has(.rf-orderline) {
     flex: 1;
     min-width: 0;
     color: var(--rf-shale-400);
-    font-size: 14px;
+    font-size: 0.875rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -160,7 +160,7 @@ html:has(.rf-orderline) {
 }
 
 .rf-box__head h2 {
-    font: 760 20px/1.2 var(--rf-font-display);
+    font: 760 1.25rem/1.2 var(--rf-font-display);
 }
 
 .rf-box__close {
@@ -206,7 +206,7 @@ html:has(.rf-orderline) {
     align-items: center;
     gap: var(--rf-space-2);
     margin-top: var(--rf-space-2);
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 
 .rf-box__size {
@@ -229,7 +229,7 @@ html:has(.rf-orderline) {
     height: 36px;
     border: 0;
     background: none;
-    font-size: 18px;
+    font-size: 1.125rem;
 }
 
 .rf-stepper button:hover {
@@ -238,7 +238,7 @@ html:has(.rf-orderline) {
 
 .rf-stepper output {
     text-align: center;
-    font: 700 16px/1 var(--rf-font-numerals);
+    font: 700 1rem/1 var(--rf-font-numerals);
 }
 
 .rf-box__total {
@@ -251,7 +251,7 @@ html:has(.rf-orderline) {
 }
 
 .rf-box__total .rf-num {
-    font-size: 20px;
+    font-size: 1.25rem;
     color: var(--rf-copper);
 }
 
@@ -272,7 +272,7 @@ html:has(.rf-orderline) {
 .rf-box__ship {
     margin-top: var(--rf-space-2);
     color: var(--rf-ink-muted);
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 
 .rf-box__ship strong {
@@ -283,7 +283,7 @@ html:has(.rf-orderline) {
     width: 100%;
     min-height: 48px;
     margin-top: var(--rf-space-4);
-    font-size: 16px;
+    font-size: 1rem;
 }
 
 .rf-flight {
@@ -321,6 +321,6 @@ html:has(.rf-orderline) {
 
     .rf-more {
         color: var(--rf-ink);
-        font-size: 14px;
+        font-size: 0.875rem;
     }
 }

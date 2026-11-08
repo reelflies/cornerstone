@@ -368,6 +368,8 @@ A warm mineral palette in three grounds (shale, limestone, moss) with paper for 
 - **Price / Size / Count** (Archivo Condensed, 700 18px / 700 17px / 650 14–15px, tabular): every price, hook size, count and month.
 - **Note / Signoff** (Kalam 700 19–22px / 400 26px): bin labels, the "Now" mark, one margin note, the sign-off.
 
+The sizes above are defaults at a 16px root: every type size in the style layer is written in rem (fluid sizes clamp rem bounds), so a browser's own font-size preference scales the words with the page. Spacing, radii, targets and breakpoints stay in px.
+
 ### Named Rules
 **The Cut Carries the Role Rule.** Expanded is for headings and names that act as headings. Controls and product names stay in Archivo even inside expanded contexts. Numbers are always Condensed. Hierarchy never comes from a fourth face.
 
@@ -385,7 +387,7 @@ A centred column of at most 1344px with a gutter of 16px on phones, 24px from 64
 - **On phones** way lists become single swipe rows bleeding to the screen edge, labelled at the left; the hero stack is tightened so the first two cards and their + Add sit above the order line at 390×844; buy rows stack with a full-width + Add.
 - **Touch:** every pill, nav row and control is at least 44px; size cells, steppers and quick-order fields are 44px tall.
 - **Grids:** specimen cards two across on phones, three from 640px, three beside the facets from 1040px and four from 1280px, on a true grid on limestone. Species hub tiles one, two, then three across (a compact row on phones). The hook gauge seven to a row, ten from 640px, one row from 1040px.
-- **Reading pages:** the words in one column of 65–75 characters (60ch at 17px, line height 1.6: Archivo's "0", the `ch` unit, is wider than its average letter, so 68ch ran to 82), left-aligned under the head, never centred. A category's About text, the product details and reviews hold the same measure at 16px (35rem); a listing's intro 37rem. Paragraphs wrap `pretty`, so no word sits alone on a last line. From 1040px the column (up to 46rem) sits beside an 18rem help column held in view below the pinned nav row.
+- **Reading pages:** the words in one column of 65–75 characters (60ch at 17px, line height 1.6: Archivo's "0", the `ch` unit, is wider than its average letter, so 68ch ran to 82), left-aligned under the head, never centred. A category's About text, the product details and reviews hold the same measure at 16px (35rem); a listing's intro 37rem. Paragraphs wrap `pretty`, and a listing's short intro paragraph balances its lines, so no word sits alone on a last line. From 1040px the column (up to 46rem) sits beside an 18rem help column held in view below the pinned nav row.
 
 **The Laid, Not Filed Rule.** From 1040px, specimen cards on stone and on moss are each nudged a few pixels off the grid (up to 5px across, 10px down) so they read as set down by hand. Reading order never changes, and cards on limestone sit on a true grid.
 

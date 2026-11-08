@@ -38,20 +38,20 @@
 .rf-suggest__count {
     margin: 0;
     padding: 0 var(--rf-space-4) var(--rf-space-1);
-    font: 650 15px / 1.35 var(--rf-font-text);
+    font: 650 0.9375rem / 1.35 var(--rf-font-text);
 }
 
 .rf-suggest__hint {
     margin: 0;
     padding: 0 var(--rf-space-4) var(--rf-space-2);
     color: var(--rf-ink-muted);
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 
 .rf-suggest__title {
     margin: var(--rf-space-2) var(--rf-space-4) var(--rf-space-1);
     color: var(--rf-ink-muted);
-    font: 650 13px / 1.4 var(--rf-font-text);
+    font: 650 0.8125rem / 1.4 var(--rf-font-text);
 }
 
 .rf-suggest__list {
@@ -96,7 +96,7 @@
     flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
-    font: 400 15px / 1.3 var(--rf-font-text);
+    font: 400 0.9375rem / 1.3 var(--rf-font-text);
     white-space: nowrap;
     text-overflow: ellipsis;
 
@@ -111,14 +111,14 @@
 
 .rf-suggest__price {
     flex: none;
-    font-size: 16px;
+    font-size: 1rem;
     font-weight: 700;
 }
 
 .rf-suggest__n {
     flex: none;
     color: var(--rf-ink-muted);
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 
 .rf-suggest__cat .rf-icon {
@@ -130,7 +130,7 @@
 .rf-suggest__all {
     margin: var(--rf-space-2) var(--rf-space-4) var(--rf-space-1);
     color: var(--rf-ink);
-    font-size: 15px;
+    font-size: 0.9375rem;
 }
 
 
@@ -147,12 +147,12 @@
 }
 
 .rf-search-head__title {
-    font-size: #{"clamp(26px, 1.6vw + 16px, 40px)"};
+    font-size: #{"clamp(1.625rem, 1.6vw + 1rem, 2.5rem)"};
 }
 
 .rf-search-head__mean {
     margin: 0;
-    font-size: 16px;
+    font-size: 1rem;
 
     a {
         color: var(--rf-ink);
@@ -185,7 +185,7 @@
     padding: 0;
     border-bottom: 3px solid transparent;
     color: var(--rf-ink-muted);
-    font: 650 15px / 1 var(--rf-font-text);
+    font: 650 0.9375rem / 1 var(--rf-font-text);
     text-decoration: none;
     text-transform: none;
     letter-spacing: 0;
@@ -217,18 +217,18 @@
 .rf-search-empty__lead {
     margin: 0;
     color: var(--rf-ink);
-    font: 650 20px / 1.3 var(--rf-font-text);
+    font: 650 1.25rem / 1.3 var(--rf-font-text);
 }
 
 .rf-search-empty__tip {
     margin: 0;
     color: var(--rf-ink-muted);
-    font-size: 16px;
+    font-size: 1rem;
 }
 
 // the store's pages and posts that matched (stock content-listing), in the listing's column
 .rf-list #search-results-content {
-    font-size: 16px;
+    font-size: 1rem;
 
     a {
         color: var(--rf-ink);

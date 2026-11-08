@@ -52,11 +52,11 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
 .rf-cart__count {
     margin: 0;
     color: var(--rf-ink-muted);
-    font-size: 16px;
+    font-size: 1rem;
 
     .rf-num {
         color: var(--rf-ink);
-        font-size: 18px;
+        font-size: 1.125rem;
         font-weight: 700;
     }
 }
@@ -71,7 +71,7 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
     border-radius: var(--rf-radius-md);
     background: var(--rf-limestone-200);
     color: var(--rf-ink);
-    font-size: 15px;
+    font-size: 0.9375rem;
 }
 
 .rf-cart__message + .rf-cart__message {
@@ -169,7 +169,7 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
 
 .rf-cart-group__name {
     margin: 0;
-    font: 650 16px / 1.3 var(--rf-font-text);
+    font: 650 1rem / 1.3 var(--rf-font-text);
     text-transform: none;
     letter-spacing: 0;
 }
@@ -189,11 +189,11 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
 .rf-cart-group__price {
     margin: 0;
     color: var(--rf-ink-muted);
-    font-size: 13px;
+    font-size: 0.8125rem;
 
     .rf-num {
         color: var(--rf-ink);
-        font-size: 16px;
+        font-size: 1rem;
         font-weight: 700;
     }
 }
@@ -238,7 +238,7 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
     align-items: baseline;
     gap: 2px var(--rf-space-2);
     min-width: 0;
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 
 .rf-cart-row__size {
@@ -246,7 +246,7 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
 
     .rf-num {
         color: var(--rf-ink);
-        font-size: 19px;
+        font-size: 1.1875rem;
         font-weight: 700;
     }
 }
@@ -258,7 +258,7 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
 
 .rf-cart-row__edit {
     color: var(--rf-ink);
-    font-size: 13px;
+    font-size: 0.8125rem;
     text-decoration: underline;
     text-decoration-color: var(--rf-edge);
     text-underline-offset: 0.2em;
@@ -269,7 +269,7 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
 }
 
 .rf-cart-row__qty-fixed {
-    font-size: 18px;
+    font-size: 1.125rem;
     font-weight: 700;
 }
 
@@ -281,18 +281,18 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
 
 .rf-cart-row__total {
     color: var(--rf-ink);
-    font-size: 17px;
+    font-size: 1.0625rem;
     font-weight: 700;
 }
 
 .rf-cart-row__was {
     color: var(--rf-ink-muted);
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 
 .rf-cart-row__each {
     color: var(--rf-ink-muted);
-    font-size: 13px;
+    font-size: 0.8125rem;
 }
 
 .rf-cart-row__remove {
@@ -315,7 +315,7 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
 
 // stock's gift-wrap link, where the store offers it
 .rf-cart-row__what .cart-item-option {
-    font-size: 13px;
+    font-size: 0.8125rem;
 }
 
 // phones: the rows span the group, under its photo and name
@@ -416,7 +416,7 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
     padding: 0;
     text-align: left;
     color: var(--rf-ink);
-    font-size: 15px;
+    font-size: 0.9375rem;
 
     strong {
         font-weight: 400;
@@ -426,14 +426,14 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
 .rf-cart__totals .cart-total-value {
     @include rf-numerals;
     margin-left: auto;
-    font-size: 17px;
+    font-size: 1.0625rem;
     font-weight: 700;
     text-align: right;
 }
 
 .rf-cart__totals .cart-total-grandTotal,
 .rf-cart__totals .cart-total:last-child .cart-total-value {
-    font-size: 24px;
+    font-size: 1.5rem;
 }
 
 .rf-cart__totals .cart-total:last-child {
@@ -449,7 +449,7 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
 .rf-cart__totals .cart-total-savings {
     display: block;
     color: var(--rf-ink-muted);
-    font: 400 13px / 1.4 var(--rf-font-text);
+    font: 400 0.8125rem / 1.4 var(--rf-font-text);
 }
 
 // the shipping estimator and the coupon form (stock): links to open, then plain fields
@@ -462,7 +462,7 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
     border: 0;
     background: none;
     color: var(--rf-ink);
-    font: 650 14px / 1.3 var(--rf-font-text);
+    font: 650 0.875rem / 1.3 var(--rf-font-text);
     text-decoration: underline;
     text-decoration-color: var(--rf-edge);
     text-underline-offset: 0.2em;
@@ -484,7 +484,7 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
 .rf-cart .form-label {
     margin: 0 0 4px;
     color: var(--rf-ink);
-    font: 650 14px / 1.3 var(--rf-font-text);
+    font: 650 0.875rem / 1.3 var(--rf-font-text);
 }
 
 .rf-cart .form-input,
@@ -495,7 +495,7 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
     border-radius: var(--rf-radius-md);
     background: var(--rf-paper);
     color: var(--rf-ink);
-    font-size: 16px;
+    font-size: 1rem;
 }
 
 .rf-cart .cart-form .button,
@@ -507,7 +507,7 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
     border-radius: var(--rf-radius-md);
     background: var(--rf-ink);
     color: var(--rf-paper);
-    font: 650 14px / 1 var(--rf-font-text);
+    font: 650 0.875rem / 1 var(--rf-font-text);
     text-transform: none;
 }
 
@@ -521,7 +521,7 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
     display: flex;
     align-items: center;
     gap: var(--rf-space-2);
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 
 .rf-cart .cart-discount-list {
@@ -535,13 +535,13 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
     display: flex;
     justify-content: space-between;
     color: var(--rf-ink-muted);
-    font-size: 13px;
+    font-size: 0.8125rem;
 }
 
 .rf-cart__ship .rf-box__ship {
     margin: 0 0 var(--rf-space-2);
     color: var(--rf-ink-muted);
-    font-size: 14px;
+    font-size: 0.875rem;
 
     strong {
         color: var(--rf-copper);
@@ -551,13 +551,13 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
 .rf-cart__checkout {
     width: 100%;
     min-height: 48px;
-    font-size: 16px;
+    font-size: 1rem;
 }
 
 .rf-cart__promise {
     margin: 0;
     color: var(--rf-ink);
-    font: 400 21px / 1.2 var(--rf-font-hand);
+    font: 400 1.3125rem / 1.2 var(--rf-font-hand);
     transform: rotate(-1.5deg);
     transform-origin: left center;
 }
@@ -604,7 +604,7 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
         min-width: 0;
         margin: 0;
         overflow: hidden;
-        font-size: 15px;
+        font-size: 0.9375rem;
         white-space: nowrap;
         text-overflow: ellipsis;
     }
@@ -639,13 +639,13 @@ $rf-cart-pinned: 52px; // the header's nav row, pinned from 1040px
 .rf-cart-empty__lead {
     margin: 0;
     color: var(--rf-ink);
-    font: 650 20px / 1.3 var(--rf-font-text);
+    font: 650 1.25rem / 1.3 var(--rf-font-text);
 }
 
 .rf-cart-empty__hint {
     margin: 0;
     color: var(--rf-ink-muted);
-    font-size: 16px;
+    font-size: 1rem;
 }
 
 .rf-cart-empty .rf-more {
