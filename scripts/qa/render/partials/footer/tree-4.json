@@ -1,5 +1,5 @@
 {
-    "description": "Tree 4 as ticket 28 lays it out: the six Fly Types and the Species root at the top level, listed by the store in another order than rf_menu_type_ids, with every Web Page ticket 22 drafts, the store profile and three social links. Ids are strings, as ?debug=context shows them.",
+    "description": "Tree 4 as ticket 28 lays it out: the six Fly Types and the Species root at the top level, listed by the store in another order than rf_menu_type_ids, with every Web Page ticket 22 drafts, the store profile and three social links. Ids are strings, as ?debug=context shows them. The store logo is the channel's (settings.store_logo); the redesign's footer draws it on its plate.",
     "theme_settings": {
         "rf_menu_type_ids": "601, 602,603,604 ,605,606",
         "rf_menu_species_root_id": "700"
@@ -31,6 +31,7 @@
     ],
     "settings": {
         "store_name": "ReelFlies.ca",
+        "store_logo": {"title": "ReelFlies.ca", "image": {"data": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/{:size}/new_logo_for_usa_site_white_background_1000dpi_1535389636__63856.original.png", "alt": "ReelFlies.ca", "width": 133, "height": 95}},
         "address": "Digital Barn Ltd.\n93 Broadway St.\nTillsonburg, ON N4G 3P5",
         "phone_number": "1 866 250 4071",
         "show_newsletter_box": 1,

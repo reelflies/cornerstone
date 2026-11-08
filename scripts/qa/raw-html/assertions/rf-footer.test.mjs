@@ -1,5 +1,7 @@
-// Tests the footer's raw-HTML assertion (ticket 50): rf-footer, on pages built from the footer's
-// own render and on pages broken one way at a time, so each rule is shown to fail.
+// Tests the footer's raw-HTML assertion (ticket 50, redrawn for the Streamside Stone redesign):
+// rf-footer, on pages built from the footer's own render and on pages broken one way at a time,
+// so each rule is shown to fail. The footer renders after head.html, as a page does, so the page
+// variables the Species link and the More column read are set.
 //
 //   node --test scripts/qa/raw-html/assertions/rf-footer.test.mjs
 
@@ -9,17 +11,19 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadAssertions } from '../../raw-html.mjs';
 import { readFixture, renderPartial } from '../../render/render.mjs';
-import { elementsHtml, textOf } from '../html.mjs';
-import rfFooter from './rf-footer.mjs';
+import { outerHtml } from '../html.mjs';
+import rfFooter, { ALT_STORES, NEWSLETTER, dialable } from './rf-footer.mjs';
 
 const FIXTURES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../render/partials/footer');
+const WITH_HEAD = { 'test/footer-page': '{{> components/reelflies/head}}{{> components/reelflies/footer}}' };
 
-const footer = (name = 'tree-4', themeSettings = {}) => {
+// The footer alone, as footer.html renders it after head.html.
+const footer = async (name = 'tree-4', themeSettings = {}, options = {}) => {
     const context = readFixture(path.join(FIXTURES, `${name}.json`));
     context.theme_settings = { ...context.theme_settings, ...themeSettings };
-    return renderPartial('components/reelflies/footer', context);
+    return outerHtml(await renderPartial('test/footer-page', context, { ...options, overrides: WITH_HEAD }), 'footer');
 };
-const frame = body => `<!DOCTYPE html><html lang="en-CA"><head><title>ReelFlies</title></head><body><header></header><div class="body" id="main-content"></div>${body}</body></html>`;
+const frame = body => `<!DOCTYPE html><html lang="en-CA"><head><title>ReelFlies</title></head><body><header class="rf-head"></header><main class="body" id="main-content"></main>${body}</body></html>`;
 const page = (body, kind = 'home') => ({
     kind, key: kind, path: '/', url: 'http://localhost:3601/', status: 200, html: frame(body),
 });
@@ -32,10 +36,12 @@ describe('rf-footer', () => {
         assert.equal(rfFooter.notOn, undefined);
     });
 
-    it('passes the footer as rendered, with the Shop column and with the stock fallback', async () => {
+    it('passes the footer as rendered: tree 4, channel 1\'s tree 1, and the prelaunch channel with no categories', async () => {
         assert.deepEqual(problems(await footer('tree-4')), []);
+        assert.deepEqual(problems(await footer('tree-1', {}, { variation: 'ReelFlies CA channel 1' })), []);
         assert.deepEqual(problems(await footer('prelaunch')), []);
-        assert.deepEqual(problems(await footer('tree-4', { rf_menu_type_ids: '', rf_menu_species_root_id: '' })), []);
+        assert.deepEqual(problems(await footer('tree-4', { rf_menu_type_ids: '', rf_menu_species_root_id: '' })), [], 'no Fly types column, and nothing fails');
+        assert.deepEqual(problems(await footer('tree-4', {}, { variation: 'ReelFlies US' })), [], 'the .com preview links to reelflies.ca');
     });
 
     it('fails a page without the ReelFlies footer, or with two footers', async () => {
@@ -44,17 +50,30 @@ describe('rf-footer', () => {
         assert.match(problems(html + html).join('\n'), /2 <footer> elements/);
     });
 
-    it('fails when the outside-Canada link isn\'t a real link to https://reelflies.com/', async () => {
-        const html = await footer();
-        assert.match(problems(html.replace('href="https://reelflies.com/"', 'href="#"')).join('\n'), /no link to https:\/\/reelflies\.com\//);
-        assert.match(problems(html.replace(/<a\b([^>]*)href="https:\/\/reelflies\.com\/"([^>]*)>/, '<button$1$2>').replace('ReelFlies.com</a>', 'ReelFlies.com</button>')).join('\n'), /no link to https:\/\/reelflies\.com\//);
-        assert.match(problems(html.replace('Ordering from outside Canada?', 'Outside Canada?')).join('\n'), /the outside-Canada line/);
+    it('knows the other storefronts config.json declares: reelflies.com from the .ca variations, reelflies.ca from the .com preview', () => {
+        assert.deepEqual(ALT_STORES.map(store => store.url).sort(), ['https://reelflies.ca/', 'https://reelflies.com/']);
+        assert.ok(ALT_STORES.every(store => store.text));
     });
 
-    it('fails without the promise line or the copyright', async () => {
+    it('fails when the other storefront\'s link isn\'t a real link to a declared storefront, in its declared words', async () => {
         const html = await footer();
-        assert.match(problems(html.replace('We stand behind every fly we sell.', '')).join('\n'), /the promise line/);
-        assert.match(problems(html.replace(/© \d{4} ReelFlies\.ca\./, '© ReelFlies.')).join('\n'), /the copyright/);
+        assert.match(html, /<a href="https:\/\/reelflies\.com\/">Ordering from outside Canada\? Shop ReelFlies\.com in US dollars<\/a>/);
+        assert.match(problems(html.replace('href="https://reelflies.com/"', 'href="#"')).join('\n'), /isn't an other storefront config\.json declares/);
+        assert.match(problems(html.replace('<a href="https://reelflies.com/">', '<button>').replace('in US dollars</a>', 'in US dollars</button>')).join('\n'), /no link in the base row/);
+        assert.match(problems(html.replace('Ordering from outside Canada?', 'Outside Canada?')).join('\n'), /isn't an other storefront config\.json declares/);
+        assert.match(problems(html.replace('<div class="rf-wrap rf-foot__base">', '<div class="rf-wrap rf-foot__base"><p><a href="https://reelflies.com/">Shop ReelFlies.com</a></p>')).join('\n'), /2 links in the base row/);
+        assert.match(problems(html.replace(/<div class="rf-wrap rf-foot__base">[\s\S]*?<\/div>/, '')).join('\n'), /no base row/);
+    });
+
+    it('accepts the declared URL with its origin stripped, as stencil start serves a channel\'s own URL', async () => {
+        const html = await footer('tree-4', {}, { variation: 'ReelFlies US' });
+        assert.deepEqual(problems(html.replace('href="https://reelflies.ca/"', 'href="/"')), []);
+    });
+
+    it('fails without the copyright line', async () => {
+        const html = await footer();
+        assert.match(problems(html.replace(/© \d{4} /, '© ')).join('\n'), /the copyright/);
+        assert.match(problems(html.replace('registered trademark', 'trademark')).join('\n'), /the copyright/);
     });
 
     it('fails "Powered by" anywhere on the page, and a Brands column', async () => {
@@ -63,35 +82,50 @@ describe('rf-footer', () => {
         assert.match(problems(`<article data-section-type="footer-brands"></article>${html}`).join('\n'), /a Brands column/);
     });
 
-    it('fails Shop links that aren\'t the declared ids in their order, or an id that didn\'t resolve', async () => {
+    it('fails a newsletter form that strays from stock\'s subscribe action and fields, or from the CASL wording of record', async () => {
         const html = await footer();
-        const swapped = html.replace('data-rf-menu-type-ids="601, 602,603,604 ,605,606"', 'data-rf-menu-type-ids="602,601,603,604,605,606"');
-        assert.match(problems(swapped).join('\n'), /the Shop links are 601, 602, 603, 604, 605, 606, 700, not the ids declared, 602, 601, 603, 604, 605, 606, 700/);
-        const missing = html.replace('data-rf-menu-species-root-id="700"', 'data-rf-menu-species-root-id="777"');
-        assert.match(problems(missing).join('\n'), /not the ids declared, 601, 602, 603, 604, 605, 606, 777/);
+        assert.match(html, /action="https:\/\/reelflies\.ca\/subscribe\.php" method="post"/);
+        assert.match(problems(html.replace('action="https://reelflies.ca/subscribe.php"', 'action="https://reelflies.ca/newsletter/"')).join('\n'), /not the store's subscribe\.php/);
+        assert.match(problems(html.replace('method="post"', 'method="get"')).join('\n'), /method is "get"/);
+        assert.match(problems(html.replace('name="nl_email"', 'name="email"')).join('\n'), /no email field named nl_email/);
+        assert.match(problems(html.replace('<input type="hidden" name="action" value="subscribe">', '')).join('\n'), /no hidden action=subscribe/);
+        assert.match(problems(html.replace(NEWSLETTER.line, 'Sign up for our newsletter.')).join('\n'), /heading isn't the line of record/);
+        assert.match(problems(html.replace(NEWSLETTER.consent, 'You can unsubscribe at any time.')).join('\n'), /consent isn't the wording of record/);
+        assert.match(problems(html.replace(' aria-describedby="rf-news-consent"', '')).join('\n'), /aria-describedby/);
+        assert.match(problems(html.replace('<label class="is-srOnly" for="nl_email">', '<label class="is-srOnly">')).join('\n'), /no <label for>/);
+        assert.deepEqual(problems(html.replace(/<div class="rf-wrap rf-foot__news">[\s\S]*?<\/form>\s*<\/div>/, '')), [], 'no form (the store\'s newsletter box off) is no problem');
     });
 
-    it('fails a Shop column with no links, as menu ids of only spaces would give it', async () => {
+    it('fails a footer nav with no heading of its own, or with no links, and any footer link with no URL', async () => {
         const html = await footer();
-        const empty = html.replace(/(<ul[^>]*data-rf-footer-shop[^>]*>)[\s\S]*?(<\/ul>)/, '$1$2')
-            .replace(/data-rf-menu-type-ids="[^"]*"/, 'data-rf-menu-type-ids=" "')
-            .replace(/data-rf-menu-species-root-id="[^"]*"/, 'data-rf-menu-species-root-id=" "');
-        assert.match(problems(empty).join('\n'), /a Shop column with no links/);
+        assert.match(problems(html.replace(' aria-labelledby="rf-foot-help"', '')).join('\n'), /nav isn't labelled by a heading in the footer \(aria-labelledby=""\)/);
+        assert.match(problems(html.replace('aria-labelledby="rf-foot-help"', 'aria-labelledby="rf-elsewhere"')).join('\n'), /aria-labelledby="rf-elsewhere"/);
+        const emptied = html.replace(/(<nav aria-labelledby="rf-foot-types"><h3 id="rf-foot-types">[^<]*<\/h3><ul>)[\s\S]*?(<\/ul><\/nav>)/, '$1$2');
+        assert.match(problems(emptied).join('\n'), /the footer nav "rf-foot-types" has no links/);
+        assert.match(problems(html.replace('<a href="https://reelflies.ca/fly-gear/">', '<a href="">')).join('\n'), /a footer link with no URL/);
     });
 
-    it('fails a phone link that isn\'t tel:+1 and ten digits, which a store phone in another form would give', async () => {
+    it('dials +1 and ten digits, with RFC 3966\'s separators, and nothing else', () => {
+        for (const link of ['tel:+18662504071', 'tel:+1-866-250-4071', 'tel:+1(866)250-4071', 'tel:+1.866.250.4071']) assert.ok(dialable(link), link);
+        for (const link of ['tel:1 866 250 4071', 'tel:++18662504071', 'tel:+(519)842-5555', 'tel:+18662504071ext.2', 'tel:+5198425555', 'tel:+1 866 250 4071', 'tel:']) assert.ok(!dialable(link), link);
+    });
+
+    it('fails a phone link that isn\'t tel:+1 and ten digits, as the footer dials when rf_store_phone is empty and the store profile\'s number stands in', async () => {
         const html = await footer();
-        assert.match(html, /href="tel:\+18662504071"/);
-        for (const href of ['tel:++18662504071', 'tel:+(519)842-5555', 'tel:+18662504071ext.2', 'tel:+5198425555', 'tel:']) {
-            assert.match(problems(html.replace('href="tel:+18662504071"', `href="${href}"`)).join('\n'), /the phone link/, href);
+        assert.match(html, /href="tel:\+1-866-250-4071"/);
+        for (const href of ['tel:++18662504071', 'tel:+18662504071ext.2', 'tel:+5198425555', 'tel:']) {
+            assert.match(problems(html.replace('href="tel:+1-866-250-4071"', `href="${href}"`)).join('\n'), /the phone link/, href);
         }
+        const fallback = await footer('tree-4', { rf_store_phone: '' });
+        assert.match(fallback, /href="tel:1 866 250 4071"/, 'the store profile\'s number, spaces and all');
+        assert.match(problems(fallback).join('\n'), /the phone link tel:1 866 250 4071 isn't tel:\+1 and ten digits/);
     });
 
-    it('fails a page with both the Shop column and the stock Categories column, or with neither', async () => {
-        const shop = await footer();
-        const stock = await footer('tree-4', { rf_menu_type_ids: '', rf_menu_species_root_id: '' });
-        const stockColumn = elementsHtml(stock, 'article').find(article => textOf(article).startsWith('Categories'));
-        assert.match(problems(shop.replace('<article', `${stockColumn}<article`)).join('\n'), /both the Shop column and the stock Categories column/);
-        assert.match(problems(stock.replace(stockColumn, '')).join('\n'), /neither the Shop column nor the stock Categories column/);
+    it('fails a social link with no words or without https', async () => {
+        const html = await footer();
+        assert.match(html, /<ul class="rf-foot__social"/);
+        assert.match(problems(html.replace('rel="noopener">Facebook</a>', 'rel="noopener"></a>')).join('\n'), /a social link with no words/);
+        assert.match(problems(html.replace('href="https://www.facebook.com/reelflies.ca/"', 'href="http://www.facebook.com/reelflies.ca/"')).join('\n'), /a social link that isn't https/);
+        assert.match(problems(html.replace(/(<ul class="rf-foot__social"[^>]*>)[\s\S]*?(<\/ul>)/, '$1$2')).join('\n'), /a social row \(ul\.rf-foot__social\) with no links/);
     });
 });

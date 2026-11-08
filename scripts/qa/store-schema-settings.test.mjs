@@ -1,8 +1,10 @@
-// Ticket 40's rf_store_* settings (the home page's store schema) against the release guard
-// (spec seam 5) and Theme Styles. ReelFlies_CA has run rf_store_same_as = "" since ticket 25's
-// push (RELEASES.md), so the guard's rule 1 holds it there until Shaun sets it in Theme Styles
-// first (CUSTOMIZATIONS.md, "Changing a pre-declared value"); the other nine keys are new, so
-// the next push lists them once as new and changes no live value.
+// Ticket 40's rf_store_* settings (the home page's store schema and the footer's store block)
+// against the release guard (spec seam 5) and Theme Styles. The Streamside Stone redesign's
+// step 4 declared the "Store details" group again, rf_store_same_as first. ReelFlies_CA has run
+// rf_store_same_as = "" since ticket 25's push (RELEASES.md), so the guard's rule 1 holds it
+// there until Shaun sets it in Theme Styles first (CUSTOMIZATIONS.md, "Changing a pre-declared
+// value"); the other nine keys are new to the live theme, so the next push lists them once as
+// new and changes no live value.
 //
 //   node --test scripts/qa/store-schema-settings.test.mjs
 
@@ -48,10 +50,13 @@ describe('the rf_store_* settings', () => {
     it('each have a Theme Styles text field under "Store details", so a value can be set live first', () => {
         const group = json('schema.json').find(item => item.name === 'i18n.RfReelFlies').settings;
         const heading = group.findIndex(setting => setting.content === 'i18n.RfStoreDetails');
+        assert.ok(heading > 0, 'the Store details heading is in the ReelFlies group');
+        assert.equal(json('schemaTranslations.json')['i18n.RfStoreDetails'].default, 'Store details');
         const next = group.findIndex((setting, index) => index > heading && setting.type === 'heading');
         const fields = group.slice(heading + 1, next);
-        assert.deepEqual(fields.map(setting => setting.id).sort(), [...NEW_KEYS, 'rf_store_same_as'].sort());
+        assert.deepEqual(fields.map(setting => setting.id), ['rf_store_same_as', ...NEW_KEYS]);
         assert.ok(fields.every(setting => setting.type === 'text'));
+        for (const field of fields) assert.equal(typeof json('schemaTranslations.json')[field.label]?.default, 'string', `${field.id} has its label`);
     });
 });
 

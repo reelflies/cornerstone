@@ -1,9 +1,11 @@
 // The home page's store schema, components/reelflies/store-schema.html (ticket 40; spec module 23,
 // stories 65 and 75; R10, SEO-9): a WebSite block and an OnlineStore block, JSON-LD, filled from
-// the variation's rf_store_* settings, with sameAs from ReelFlies' social set (the footer's row)
-// and the Canadian free-shipping rule from rf_ship_free_threshold (ticket 39's). No logo until
-// ticket 14's master (decision 17) and no hasMerchantReturnPolicy until Shaun states a policy
-// (decision 10). The raw-HTML assertion store-schema holds the same on every pinned home page.
+// the variation's rf_store_* settings ("Store details"), with sameAs from ReelFlies' social set
+// (the footer's row of text links, social-links.html) and the Canadian free-shipping rule from
+// rf_ship_free_threshold (ticket 39's). No logo until ticket 14's master (decision 17) and no
+// hasMerchantReturnPolicy until Shaun states a policy (decision 10). The Streamside Stone
+// redesign's step 4 brought the partial and its home.html include back from master, unchanged.
+// The raw-HTML assertion store-schema holds the same on every pinned home page.
 //
 //   node --test scripts/qa/render/partials/store-schema.test.mjs
 

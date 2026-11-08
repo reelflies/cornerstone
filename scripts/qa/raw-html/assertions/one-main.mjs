@@ -1,10 +1,13 @@
 // Exactly one main landmark in the server HTML (ticket 25; O24; spec Testing Decisions, seam 2).
 //
-// Stock home, product and cart pages have none, and many other stock templates carry their own
-// <main> (category.html, brand.html, search.html, page.html, errors/404.html ...). So body.html
-// wraps the page in <main> on home, product and cart only (build pipeline 6.1). This checks the
-// result on every pinned page: axe's landmark-one-main and landmark-no-duplicate-main, before
-// any JavaScript runs. A <main>, or any element with role="main", counts once.
+// Stock home, product and cart pages have none, and many stock templates carry their own <main>
+// (brands.html, compare.html, the account pages ...). The Streamside Stone redesign moved the
+// category, brand, search, Web Page, contact, blog, 404 and hook chart pages into the hero block
+// with no <main> of their own, so body.html's rf_main_templates wraps each of those in <main>
+// too, and every other template keeps the stock <div> (build pipeline 6.1; render/partials/
+// body.test.mjs holds the list). This checks the result on every pinned page: axe's
+// landmark-one-main and landmark-no-duplicate-main, before any JavaScript runs. A <main>, or any
+// element with role="main", counts once.
 
 import { findTags } from '../html.mjs';
 

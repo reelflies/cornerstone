@@ -2,7 +2,8 @@
 // - a favicon link. The file is the store's, set in the control panel (today the ReelFlies logo
 //   at 32x32), so this checks the link is there, not the picture.
 // - exactly one og:image: the page's own (a product's), or else the ReelFlies default share
-//   image that templates/components/reelflies/head.html adds.
+//   image that templates/components/reelflies/head.html adds (brought back by the Streamside
+//   Stone redesign's step 4; steps 1-3 had dropped it).
 
 import { findTags } from '../html.mjs';
 

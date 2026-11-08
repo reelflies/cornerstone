@@ -1,90 +1,221 @@
 <!DOCTYPE html>
 <html class="no-js" lang="en-CA">
     <head>
-        <title>ReelFlies.ca</title>
-        <link rel='canonical' href='https://reelflies.ca/' />
+        <title>About Us - ReelFlies.ca</title>
+        <link rel='canonical' href='https://reelflies.ca/about-us/' /><meta name='platform' content='bigcommerce.stencil' />
+        <!-- <link rel="canonical" href="/commented-out/"> is not markup a crawler reads -->
         <script nonce="">
-            // A string in a script is not markup: '<main>' and data-rf-live-region don't count here.
-            var later = '<main><div role="status" data-rf-live-region>Added</div></main>';
+            // Builds the card later; a string in a script is not server-rendered markup: '<main>',
+            // data-rf-live-region and data-rf-region-prompt don't count here.
+            var later = '<main><div role="status" data-rf-live-region>Added</div><section data-rf-region-prompt></section></main>';
         </script>
         <link href="https://cdn11.bigcommerce.com/s-8pfqkn26ea/product_images/favicon.png" rel="shortcut icon">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta http-equiv="content-language" content="en-CA">
-        <link rel="preload" href="/stencil/00000000-0000-0000-0000-000000000001/fonts/onest-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+        <link rel="preload" href="/stencil/00000000-0000-0000-0000-000000000001/fonts/archivo-latin-var.woff2" as="font" type="font/woff2" crossorigin>
         <meta property="og:image" content="/stencil/00000000-0000-0000-0000-000000000001/img/reelflies/social-default.jpg">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+        <link data-stencil-stylesheet href="/stencil/00000000-0000-0000-0000-000000000001/css/theme-00000000-0000-0000-0000-000000000003.css" rel="stylesheet">
     </head>
     <body>
-        <svg class="rf-icons u-hiddenVisually" data-rf-icons xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-            <symbol id="rf-icon-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
-        </svg>
-        <div class="is-srOnly" role="status" aria-live="polite" aria-atomic="true" data-rf-live-region></div>
-        <svg data-src="https://cdn11.bigcommerce.com/s-fixture/img/icon-sprite.svg" class="icons-svg-sprite"></svg>
+        <svg data-src="/stencil/00000000-0000-0000-0000-000000000001/img/icon-sprite.svg" class="icons-svg-sprite"></svg>
+
         <a href="#main-content" class="skip-to-main-link">Skip to main content</a>
-        <header class="header" role="banner" data-rf-header>
-            <div class="rf-header-row" data-rf-header-row>
-                <button class="rf-header-menu" type="button" data-mobile-menu-toggle="menu" aria-controls="menu" aria-expanded="false"><span>Menu</span><span>Close</span></button>
-                <div class="header-logo rf-header-logo" data-rf-logo><a class="header-logo__link rf-header-logo-link" href="https://reelflies.ca/" data-header-logo-link><img src="https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/250x100/reelflies-logo.png" alt="ReelFlies home" width="78" height="56"></a></div>
-                <nav class="rf-header-user" aria-label="Your account"><a class="rf-header-action rf-header-cart" href="/cart.php">Cart <span class="countPill cart-quantity"></span></a></nav>
-            </div>
-            <div class="navPages-container rf-header-drawer" id="menu" data-menu></div>
-        </header>
-        <div class="rf-strip-region" role="region" aria-label="Shipping and prices" data-rf-strip-region><div data-content-region="header_bottom--global"></div></div>
+<svg class="rf-icon-sheet" width="0" height="0" aria-hidden="true" focusable="false">
+    <symbol id="rf-i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m15.5 15.5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="rf-i-user" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.75" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 20c1.2-3.6 4-5.5 7.5-5.5s6.3 1.9 7.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="rf-i-box" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 11h18M9 7V5h6v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="rf-i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="rf-i-arrow" viewBox="0 0 24 24"><path d="M5 12h13m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="rf-i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="rf-i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="rf-i-phone" viewBox="0 0 24 24"><path d="M6.6 3.5h2.6l1.4 4-2 1.4a11 11 0 0 0 6.5 6.5l1.4-2 4 1.4v2.6a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.6 5.7a2 2 0 0 1 2-2.2Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="rf-i-star" viewBox="0 0 24 24"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9Z" fill="currentColor"/></symbol>
+    <symbol id="rf-i-minus" viewBox="0 0 24 24"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="rf-i-plus" viewBox="0 0 24 24"><path d="M6 12h12M12 6v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+</svg>
+<div class="rf-strip" role="region" aria-label="Shipping and contact">
+    <div class="rf-strip__inner">
+        <p>Free shipping in Canada on fly orders over <span class="rf-num">$60</span></p>
+        <p class="rf-strip__mid">100% Canadian, family-run since <span class="rf-num">2003</span></p>
+        <p class="rf-strip__end">
+            <a href="tel:+1-866-250-4071"><svg class="rf-icon" aria-hidden="true" focusable="false"><use href="#rf-i-phone"></use></svg><span class="rf-num">1 866 250 4071</span></a>
+            <a href="https://reelflies.com/">Shopping from the US? ReelFlies.com</a>
+        </p>
+    </div>
+</div>
+<header class="rf-head" data-rf-head>
+    <div class="rf-head__bar">
+        <button class="rf-head__menu" type="button" aria-expanded="false" aria-controls="rf-drawer" data-rf-drawer-open><svg class="rf-icon" aria-hidden="true" focusable="false"><use href="#rf-i-menu"></use></svg><span class="is-srOnly">Menu</span></button>
+        <a class="rf-brand" href="/"><img src="https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/133x95/new_logo_for_usa_site_white_background_1000dpi_1535389636__63856.original.png" srcset="https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/250x100/new_logo_for_usa_site_white_background_1000dpi_1535389636__63856.original.png" width="133" height="95" alt="ReelFlies.ca home"></a>
+        <nav class="rf-nav" aria-label="Main">
+            <ul class="rf-nav__list">
+                <li class="rf-nav__item" data-rf-mega>
+                    <button class="rf-nav__btn" type="button" aria-expanded="false" aria-controls="rf-mega-flies">Flies<svg class="rf-icon rf-nav__chev" aria-hidden="true" focusable="false"><use href="#rf-i-chevron"></use></svg></button>
+                    <div class="rf-mega" id="rf-mega-flies" data-rf-mega-panel hidden>
+                        <div class="rf-mega__inner rf-mega__inner--flies">
+                            <ul class="rf-mega__rail"><li><a class="rf-mega__type is-active" href="/flies/dry-flies/" data-rf-pane-for="298" data-rf-cat="Dry Flies"><span>Dry Flies</span><span class="rf-num rf-mega__n">501</span><svg class="rf-icon rf-mega__go" aria-hidden="true" focusable="false"><use href="#rf-i-arrow"></use></svg></a></li><li><a class="rf-mega__type" href="/flies/nymphs-sub-surface-flies/" data-rf-pane-for="251" data-rf-cat="Nymphs &amp; Sub Surface Flies"><span>Nymphs &amp; Sub Surface Flies</span><span class="rf-num rf-mega__n">1,446</span><svg class="rf-icon rf-mega__go" aria-hidden="true" focusable="false"><use href="#rf-i-arrow"></use></svg></a></li></ul>
+                            <div class="rf-mega__panes"><div class="rf-mega__pane" data-rf-pane="298">
+    <div>
+        <p class="rf-mega__head"><a href="/flies/dry-flies/">Dry Flies</a> <span><span class="rf-num">501</span> patterns</span></p>
+        <ul class="rf-mega__kids">
+            <li><a href="/flies/dry-flies/caddis-dry-flies/" data-rf-cat="Caddis Dry Flies"><span>Caddis Dry Flies</span><span class="rf-num">54</span></a></li><li><a href="/flies/dry-flies/parachute-dry-flies/" data-rf-cat="Parachute Dry Flies"><span>Parachute Dry Flies</span><span class="rf-num">46</span></a></li>
+        </ul>
+    </div>
+    <a class="rf-mega__plate" href="/flies/dry-flies/" tabindex="-1" aria-hidden="true">
+        <img src="https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/original/i/dry-flies__36885.original.jpg" srcset="https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/320w/i/dry-flies__36885.original.jpg 320w, https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/640w/i/dry-flies__36885.original.jpg 640w" sizes="400px" width="800" height="350" alt="" loading="lazy" decoding="async">
+        <span class="rf-mega__plate-name">All Dry Flies</span>
+    </a>
+</div><div class="rf-mega__pane" data-rf-pane="251" hidden>
+    <div>
+        <p class="rf-mega__head"><a href="/flies/nymphs-sub-surface-flies/">Nymphs &amp; Sub Surface Flies</a> <span><span class="rf-num">1,446</span> patterns</span></p>
+        <ul class="rf-mega__kids">
+            <li><a href="/flies/nymphs-sub-surface-flies/beadhead-nymphs/" data-rf-cat="Beadhead Nymphs"><span>Beadhead Nymphs</span><span class="rf-num">449</span></a></li>
+        </ul>
+    </div>
+</div></div>
+                        </div>
+                        <div class="rf-mega__more">
+                            <div class="rf-mega__more-inner">
+                                <p>Also</p>
+                                <ul>
+                                    <li><a href="/fly-selections-fly-boxes/">Fly Selections &amp; Fly Boxes <span class="rf-num">103</span></a></li>
+                                    <li><a href="/fly-hook-size-chart/">Hook size chart</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+                <li class="rf-nav__item"><a class="rf-nav__btn" href="/fly-selections-fly-boxes/">Fly Selections &amp; Fly Boxes</a></li><li class="rf-nav__item"><a class="rf-nav__btn" href="/fly-gear/">Fly Gear</a></li>
+                <li class="rf-nav__item"><a class="rf-nav__btn" href="/#hatch" data-rf-mega-close>Hatch chart</a></li>
+                <li class="rf-nav__item rf-nav__item--aside"><a class="rf-nav__btn" href="/contact-us/">Wholesale</a></li>
+            </ul>
+        </nav>
+        <form class="rf-search" role="search" action="/search.php" method="get" data-rf-search>
+    <label class="is-srOnly" for="rf-search-q">Search flies</label>
+    <svg class="rf-icon" aria-hidden="true" focusable="false"><use href="#rf-i-search"></use></svg>    <input id="rf-search-q" name="search_query" type="search" placeholder="Search caddis, size 16…" autocomplete="off" spellcheck="false" enterkeyhint="search">
+    <button class="rf-search__go" type="submit">Search</button>
+    <div class="rf-suggest" data-rf-suggest hidden></div>
+</form>
+        <a class="rf-head__link" href="/login.php"><svg class="rf-icon" aria-hidden="true" focusable="false"><use href="#rf-i-user"></use></svg><span class="rf-head__label">Account</span></a>
+        <a class="rf-box-btn" href="/cart.php" data-rf-box-btn><svg class="rf-icon" aria-hidden="true" focusable="false"><use href="#rf-i-box"></use></svg><span class="rf-head__label">Box</span><span class="rf-box-btn__count rf-num" data-rf-count>0</span><span class="is-srOnly" data-rf-count-label>flies in your box</span></a>
+    </div>
+</header>
+<div class="rf-mega-scrim" data-rf-mega-scrim hidden></div>
+<div class="rf-drawer" id="rf-drawer" hidden data-rf-drawer>
+    <div class="rf-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="rf-drawer-title">
+        <div class="rf-drawer__head">
+            <p class="rf-drawer__title" id="rf-drawer-title">Menu</p>
+            <button class="rf-drawer__close" type="button" data-rf-drawer-close><svg class="rf-icon" aria-hidden="true" focusable="false"><use href="#rf-i-close"></use></svg><span class="is-srOnly">Close menu</span></button>
+        </div>
+        <nav aria-label="Menu">
+            <details class="rf-drawer__group" open><summary>Flies<svg class="rf-icon rf-drawer__chev" aria-hidden="true" focusable="false"><use href="#rf-i-chevron"></use></svg></summary>
+                <ul class="rf-drawer__list"><li><details class="rf-drawer__sub"><summary><span>Dry Flies</span><span class="rf-num">501</span><svg class="rf-icon rf-drawer__chev" aria-hidden="true" focusable="false"><use href="#rf-i-chevron"></use></svg></summary>
+    <ul><li><a href="/flies/dry-flies/caddis-dry-flies/">Caddis Dry Flies</a></li><li><a href="/flies/dry-flies/parachute-dry-flies/">Parachute Dry Flies</a></li><li><a class="rf-drawer__all" href="/flies/dry-flies/">All Dry Flies</a></li></ul>
+</details></li>
+<li><details class="rf-drawer__sub"><summary><span>Nymphs &amp; Sub Surface Flies</span><span class="rf-num">1,446</span><svg class="rf-icon rf-drawer__chev" aria-hidden="true" focusable="false"><use href="#rf-i-chevron"></use></svg></summary>
+    <ul><li><a href="/flies/nymphs-sub-surface-flies/beadhead-nymphs/">Beadhead Nymphs</a></li><li><a class="rf-drawer__all" href="/flies/nymphs-sub-surface-flies/">All Nymphs &amp; Sub Surface Flies</a></li></ul>
+</details></li>
+</ul>
+            </details>
+            <ul class="rf-drawer__links">
+                <li><a href="/fly-selections-fly-boxes/">Fly Selections &amp; Fly Boxes</a></li><li><a href="/fly-gear/">Fly Gear</a></li>
+                <li><a href="/#hatch" data-rf-drawer-close>Hatch chart</a></li>
+                <li><a href="/fly-hook-size-chart/">Hook size chart</a></li>
+                <li><a href="/login.php">Account</a></li>
+                <li><a href="/contact-us/">Wholesale</a></li>
+            </ul>
+        </nav>
+        <p class="rf-drawer__call"><svg class="rf-icon" aria-hidden="true" focusable="false"><use href="#rf-i-phone"></use></svg><span>Questions? Call <a href="tel:+1-866-250-4071">1 866 250 4071</a></span></p>
+    </div>
+</div>
+<div class="is-srOnly" role="status" aria-live="polite" aria-atomic="true" data-rf-live-region></div>
+
+<div data-content-region="header_bottom"></div>
         <!-- <main> in a comment is not markup a crawler reads -->
         <main class="body" id="main-content" data-currency-code="CAD">
-            <div class="container">
-                <h1>Hand-tied flies</h1>
-            </div>
-            <!-- Ticket 40: the home page's store schema (components/reelflies/store-schema.html); this footer has no social row, so no sameAs -->
-            <script type="application/ld+json" data-rf-store-schema="website">
-            {
-                "@context": "https://schema.org",
-                "@type": "WebSite",
-                "@id": "https://reelflies.ca/#website",
-                "name": "ReelFlies.ca",
-                "url": "https://reelflies.ca/",
-                "publisher": { "@id": "https://reelflies.ca/#store" }
-            }
-            </script>
-            <script type="application/ld+json" data-rf-store-schema="store" data-rf-ship-free-threshold="60">
-            {
-                "@context": "https://schema.org",
-                "@type": "OnlineStore",
-                "@id": "https://reelflies.ca/#store",
-                "name": "ReelFlies.ca",
-                "url": "https://reelflies.ca/",
-                "legalName": "Digital Barn Ltd.",
-                "telephone": "+1-866-250-4071",
-                "address": {
-                    "@type": "PostalAddress",
-                    "streetAddress": "93 Broadway St",
-                    "addressLocality": "Tillsonburg",
-                    "addressRegion": "ON",
-                    "postalCode": "N4G 3P5",
-                    "addressCountry": "CA"
-                },
-                "hasShippingService": {
-                    "@type": "ShippingService",
-                    "name": "Free standard shipping in Canada",
-                    "description": "Free standard shipping in Canada on fly orders over $60. Fly boxes and gear not included.",
-                    "fulfillmentType": "FulfillmentTypeDelivery",
-                    "shippingConditions": {
-                        "@type": "ShippingConditions",
-                        "shippingDestination": { "@type": "DefinedRegion", "addressCountry": "CA" },
-                        "orderValue": { "@type": "MonetaryAmount", "minValue": 60, "currency": "CAD" },
-                        "shippingRate": { "@type": "MonetaryAmount", "value": 0, "currency": "CAD" }
-                    }
-                }
-            }
-            </script>
-        </main>
-        <footer class="footer rf-footer rf-on-dark" role="contentinfo" data-rf-footer>
-            <article class="rf-footer__col rf-footer__col--shop" data-section-type="footer-categories">
-                <h2 class="rf-footer__heading">Categories</h2>
-                <ul class="rf-footer__list" data-rf-footer-categories><li><a href="https://reelflies.ca/flies/">Flies</a></li></ul>
+    <div class="rf-page">
+        <div class="rf-list-head rf-page-head">
+            <nav class="rf-crumbs" aria-label="Breadcrumb"><ol class="breadcrumbs"><li class="breadcrumb"><a class="breadcrumb-label" href="/"><span>Home</span></a></li><li class="breadcrumb is-active"><span>About Us</span></li></ol></nav>
+            <h1 class="rf-list-head__title rf-page-head__title">About Us</h1>
+        </div>
+        <div class="rf-page__body">
+            <article class="rf-prose">
+                <p>Hand-tied flies, laid out on a riverside stone.</p>
             </article>
-            <div class="rf-footer__base" data-rf-footer-base>
-                <p class="rf-footer__promise">We stand behind every fly we sell. © 2026 ReelFlies.ca. ReelFlies® is a registered trademark of Digital Barn Ltd.</p>
-                <p class="rf-footer__country">Ordering from outside Canada? <a href="https://reelflies.com/" data-rf-com-link>Shop at ReelFlies.com</a></p>
+        </div>
+    </div>
+    <div class="container">
+    </div>
+    <div id="modal" class="modal" data-reveal data-prevent-quick-search-close>
+        <button class="modal-close" type="button" title="Close"><span class="aria-description--hidden">Close</span><span aria-hidden="true">&#215;</span></button>
+        <div id="modal-content" class="modal-content"></div>
+        <div class="loadingOverlay"></div>
+    </div>
+    <div id="alert-modal" class="modal modal--alert modal--small" data-reveal data-prevent-quick-search-close>
+        <div class="modal-content"></div>
+        <div class="button-container">
+            <button type="button" class="confirm button" data-reveal-close>OK</button>
+            <button type="button" class="cancel button" data-reveal-close>Cancel</button>
+        </div>
+    </div>
+        </main>
+<footer class="rf-foot rf-foot--orderline" data-rf-foot>
+    <h2 class="is-srOnly">Footer Start</h2>
+    <div class="rf-wrap rf-foot__news">
+        <form class="rf-news" action="/subscribe.php" method="post">
+            <input type="hidden" name="action" value="subscribe">
+            <input type="hidden" name="nl_first_name" value="bc">
+            <input type="hidden" name="check" value="1">
+            <h3 class="rf-news__title" id="rf-news-title">A few emails a year about new patterns and ReelFlies sales.</h3>
+            <label class="is-srOnly" for="nl_email">Email address</label>
+            <div class="rf-news__row">
+                <input id="nl_email" name="nl_email" type="email" value="" autocomplete="email" placeholder="you@example.com" required aria-describedby="rf-news-consent">
+                <button type="submit">Subscribe</button>
             </div>
-        </footer>
+            <p class="rf-news__fine" id="rf-news-consent">By subscribing you agree to receive email from ReelFlies. You can unsubscribe at any time.</p>
+        </form>
+    </div>
+    <div class="rf-wrap rf-foot__grid">
+        <div class="rf-foot__brand">
+            <span class="rf-foot__plate"><img src="https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/133x95/new_logo_for_usa_site_white_background_1000dpi_1535389636__63856.original.png" width="133" height="95" alt="ReelFlies.ca" loading="lazy" decoding="async"></span>
+            <address>ReelFlies, Digital Barn Ltd.<br>93 Broadway St<br>Tillsonburg, ON N4G 3P5</address>
+            <p><a href="tel:+1-866-250-4071">1 866 250 4071</a> toll free<br>Walk-ins by appointment</p>
+            <ul class="rf-foot__social" aria-label="ReelFlies on social media">    <li><a href="https://www.facebook.com/reelflies.ca/" rel="noopener">Facebook</a></li>    <li><a href="https://www.instagram.com/reelflies/" rel="noopener">Instagram</a></li>    <li><a href="https://www.pinterest.ca/reelflies/" rel="noopener">Pinterest</a></li>    <li><a href="https://twitter.com/reelfliescanada" rel="noopener">X</a></li>    <li><a href="https://www.youtube.com/user/reelflies01" rel="noopener">YouTube</a></li></ul>
+        </div>
+        <nav aria-labelledby="rf-foot-types"><h3 id="rf-foot-types">Fly types</h3><ul>
+            <li><a href="/flies/dry-flies/">Dry Flies</a></li><li><a href="/flies/nymphs-sub-surface-flies/">Nymphs &amp; Sub Surface Flies</a></li>
+        </ul></nav>
+        <nav aria-labelledby="rf-foot-more"><h3 id="rf-foot-more">More</h3><ul>
+            <li><a href="/fly-selections-fly-boxes/">Fly Selections &amp; Fly Boxes</a></li><li><a href="/fly-gear/">Fly Gear</a></li>
+            <li><a href="/fly-hook-size-chart/">Hook size chart</a></li>
+            <li><a href="/blog/">Fly fishing articles</a></li>
+        </ul></nav>
+        <nav aria-labelledby="rf-foot-help"><h3 id="rf-foot-help">Help</h3><ul>
+            <li><a href="/shipping-returns/">Shipping &amp; Returns</a></li><li><a href="/contact-us/">Contact Us</a></li><li><a href="/about-us/">About Us</a></li><li><a href="/privacy-policy/">Privacy Policy</a></li><li><a href="/giftcertificates.php">Gift certificates</a></li>
+        </ul></nav>
+    </div>
+    <div class="rf-wrap rf-foot__base">
+        <p>© 2026 Digital Barn Ltd. ReelFlies® is a registered trademark of Digital Barn Ltd.</p>
+        <p><a href="https://reelflies.com/">Ordering from outside Canada? Shop ReelFlies.com in US dollars</a></p>
+    </div>
+    <div data-content-region="ssl_site_seal--global"></div>
+</footer>
+<aside class="rf-orderline" aria-label="Your box" data-rf-orderline data-rf-free="60" data-rf-money="$">
+    <div class="rf-box" id="rf-box" hidden data-rf-box>
+        <div class="rf-box__head"><h2 tabindex="-1" data-rf-box-title>Your box</h2><button class="rf-box__close" type="button" data-rf-box-close><svg class="rf-icon" aria-hidden="true" focusable="false"><use href="#rf-i-close"></use></svg><span class="is-srOnly">Close your box</span></button></div>
+        <div class="rf-box__body" data-rf-box-body><p class="rf-box__empty">Nothing in your box yet. Tap + Add on any fly to start.</p></div>
+        <p class="rf-box__full"><a class="rf-more" href="/cart.php">Your whole box, with coupons and shipping<svg class="rf-icon" aria-hidden="true" focusable="false"><use href="#rf-i-arrow"></use></svg></a></p>
+    </div>
+    <div class="rf-orderline__bar">
+        <button class="rf-orderline__toggle" type="button" aria-expanded="false" aria-controls="rf-box" data-rf-box-toggle>
+            <span class="rf-orderline__thumbs" data-rf-thumbs aria-hidden="true"></span>
+            <span class="rf-orderline__sum" data-rf-sum>Your box is empty</span>
+        </button>
+        <p class="rf-orderline__ship" data-rf-ship>Free standard shipping in Canada on fly orders over <span class="rf-num">$60</span>.</p>
+        <a class="rf-buy rf-orderline__checkout" href="/cart.php" data-rf-checkout data-rf-checkout-url="/checkout" data-rf-cart-url="/cart.php" aria-disabled="true">Check out <span class="rf-num" data-rf-total></span></a>
+    </div>
+</aside>
     </body>
 </html>

@@ -1,5 +1,7 @@
-// Tests for the raw-HTML harness (scripts/qa/raw-html.mjs) and its registered
-// assertions, on fixture pages. CI runs them through `npm run test:scripts`.
+// Tests for the raw-HTML harness (scripts/qa/raw-html.mjs) and its registered assertions, on
+// fixture pages in the Streamside Stone skin (fixtures/good-product.html and the three pages
+// broken from it, and good-404.html, modelled on the dev server's pages of 2026-11-08). CI runs
+// them through `npm run test:scripts`.
 //
 //   node --test scripts/qa/raw-html/raw-html.test.mjs
 
@@ -33,7 +35,7 @@ describe('the registered assertions', () => {
         for (const id of ['one-canonical', 'json-ld-parses', 'no-region-prompt']) assert.ok(ids.includes(id), `${id} is registered`);
     });
 
-    it('pass a good product page', () => {
+    it('pass a good product page: the redesign\'s frame, head and footer round a product\'s breadcrumbs, photo, title, picker and JSON-LD', () => {
         const results = checkPage(fixture('good-product.html'), assertions);
         assert.deepEqual(failed(results), []);
         assert.ok(results.some(result => result.status === 'pass'));

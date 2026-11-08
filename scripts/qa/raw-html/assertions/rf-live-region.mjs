@@ -1,7 +1,8 @@
 // The shared live region (ticket 25; O24; spec Testing Decisions, seam 2): every page's server
 // HTML has exactly one, with role="status", and it is empty, so a screen reader reads nothing at
 // load and announces each message that assets/js/theme/reelflies/live-region.js writes later.
-// It is rendered by templates/components/reelflies/body-start.html.
+// The Streamside Stone redesign renders it in templates/components/reelflies/header.html, after
+// the phone drawer (master's body-start.html is gone).
 
 import { findTags, markupOnly } from '../html.mjs';
 

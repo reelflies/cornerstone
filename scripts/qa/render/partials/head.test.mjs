@@ -1,7 +1,9 @@
-// What ReelFlies adds to every page's <head> (ticket 25): components/reelflies/head.html, which
-// layout/base.html includes in place of stock's theme-bundle.font.js, and base.html's own hooks
-// (<html lang="en-CA">, getFontsCollection with swap). The raw-HTML check runs the same rules on
-// the served pages (lang-en-ca, rf-fonts, rf-brand-head).
+// What ReelFlies adds to every page's <head> (ticket 25, as the Streamside Stone redesign has it):
+// components/reelflies/head.html, which layout/base.html includes in place of stock's
+// theme-bundle.font.js, and base.html's own hooks (<html lang="en-CA">, getFontsCollection with
+// swap). Onest gave way to Archivo, one variable file behind all three cuts, and the default share
+// image came back in step 4. The raw-HTML check runs the same rules on the served pages
+// (lang-en-ca, rf-fonts, rf-brand-head).
 //
 //   node --test scripts/qa/render/partials/head.test.mjs
 
@@ -10,6 +12,8 @@ import path from 'path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { findTags } from '../../raw-html/html.mjs';
+import { FONT_FILE } from '../../raw-html/assertions/rf-fonts.mjs';
+import { DEFAULT_SHARE_IMAGE } from '../../raw-html/assertions/rf-brand-head.mjs';
 import { unbalancedTags } from '../html-checks.mjs';
 import { renderPartial, THEME_DIR } from '../render.mjs';
 
@@ -24,40 +28,49 @@ describe('components/reelflies/head', () => {
         assert.deepEqual(unbalancedTags(html), []);
     });
 
-    it('preloads Onest from theme assets, as a CORS font, at the URL the @font-face asks for', async () => {
+    it('preloads Archivo, once, from theme assets, as a CORS font, at the URL the @font-face asks for', async () => {
         const html = await render();
         const [preload, ...more] = findTags(html, 'link').filter(tag => tag.attrs.rel === 'preload');
-        assert.equal(more.length, 0);
+        assert.equal(more.length, 0, 'one preload: Kalam is small and appears once a region');
         assert.equal(preload.attrs.as, 'font');
         assert.equal(preload.attrs.type, 'font/woff2');
         assert.ok('crossorigin' in preload.attrs);
         // The cdn helper names the file under the theme's version folder, where the CSS's
         // url("../fonts/…") lands from css/theme-<id>.css.
-        assert.equal(preload.attrs.href, '/stencil/00000000-0000-0000-0000-000000000001/fonts/onest-latin-var.woff2');
+        assert.equal(FONT_FILE, 'fonts/archivo-latin-var.woff2');
+        assert.equal(preload.attrs.href, `/stencil/00000000-0000-0000-0000-000000000001/${FONT_FILE}`);
         const fonts = fs.readFileSync(path.join(THEME_DIR, 'assets/scss/reelflies/_fonts.scss'), 'utf8');
-        assert.match(fonts, /src: url\("\.\.\/fonts\/onest-latin-var\.woff2"\) format\("woff2"\);/);
-        assert.ok(fs.existsSync(path.join(THEME_DIR, 'assets/fonts/onest-latin-var.woff2')));
+        assert.match(fonts, /\$rf-archivo-src: url\("\.\.\/fonts\/archivo-latin-var\.woff2"\) format\("woff2"\);/);
+        assert.equal((fonts.match(/src: \$rf-archivo-src;/g) || []).length, 3, 'the three cuts share the file');
+        assert.ok(fs.existsSync(path.join(THEME_DIR, 'assets', FONT_FILE)));
     });
 
     it('serves the preload from the store CDN on the store', async () => {
         const html = await render('', { cdn_url: 'https://cdn11.bigcommerce.com/s-8pfqkn26ea', theme_version_id: 'v1' });
         const [preload] = findTags(html, 'link');
-        assert.equal(preload.attrs.href, 'https://cdn11.bigcommerce.com/s-8pfqkn26ea/stencil/v1/fonts/onest-latin-var.woff2');
+        assert.equal(preload.attrs.href, `https://cdn11.bigcommerce.com/s-8pfqkn26ea/stencil/v1/${FONT_FILE}`);
     });
 
-    it('gives a page with no image of its own the ReelFlies share image', async () => {
+    it('gives a page with no image of its own the ReelFlies share image, 1200 by 630', async () => {
         const html = await render('<meta name="description" content="Hand-tied flies">');
         const images = metas(html, 'property', 'og:image');
         assert.equal(images.length, 1);
-        assert.match(images[0].attrs.content, /\/img\/reelflies\/social-default\.jpg$/);
+        assert.ok(images[0].attrs.content.endsWith(`/${DEFAULT_SHARE_IMAGE}`), images[0].attrs.content);
         assert.equal(metas(html, 'property', 'og:image:width')[0].attrs.content, '1200');
         assert.equal(metas(html, 'property', 'og:image:height')[0].attrs.content, '630');
-        assert.ok(fs.existsSync(path.join(THEME_DIR, 'assets/img/reelflies/social-default.jpg')));
+        assert.ok(fs.existsSync(path.join(THEME_DIR, 'assets', DEFAULT_SHARE_IMAGE)));
     });
 
     it('adds no second image to a page the store already gives one, such as a product', async () => {
         const html = await render(PRODUCT_META);
         assert.equal(metas(html, 'property', 'og:image').length, 0);
+        assert.equal(metas(html, 'property', 'og:image:width').length, 0);
+    });
+
+    it('renders nothing but head elements: its page variables and injects leave no markup', async () => {
+        const html = await render();
+        assert.deepEqual([...new Set(findTags(html).map(tag => tag.name))].sort(), ['link', 'meta']);
+        assert.equal(html.replace(/<(meta|link)\b[^>]*>/g, '').trim(), '');
     });
 });
 

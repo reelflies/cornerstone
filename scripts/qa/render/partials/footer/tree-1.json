@@ -24,6 +24,7 @@
     ],
     "settings": {
         "store_name": "ReelFlies.ca",
+        "store_logo": {"title": "ReelFlies.ca", "image": {"data": "https://cdn11.bigcommerce.com/s-8pfqkn26ea/images/stencil/{:size}/new_logo_for_usa_site_white_background_1000dpi_1535389636__63856.original.png", "alt": "ReelFlies.ca", "width": 133, "height": 95}},
         "address": "Digital Barn Ltd.\n93 Broadway St. \nTillsonburg\nON, N4G3P5 \nCanada\n\nwww.ReelFlies.ca",
         "phone_number": "1 866 250 4071",
         "show_newsletter_box": 1,

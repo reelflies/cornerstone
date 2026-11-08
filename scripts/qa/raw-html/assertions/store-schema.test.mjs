@@ -1,5 +1,6 @@
 // Tests the store schema assertion (ticket 40; spec module 23, stories 65 and 75): store-schema,
-// on home pages built from the real partials (the store schema and the ReelFlies footer) and on
+// on home pages built from the real partials (the store schema and the Streamside Stone footer,
+// whose social row is a line of text links and whose phone link dials rf_store_phone) and on
 // pages broken one way at a time, each of which it must fail.
 //
 //   node --test scripts/qa/raw-html/assertions/store-schema.test.mjs
@@ -85,11 +86,15 @@ describe('store-schema', () => {
         ]);
     });
 
-    it('fails a store telephone that isn\'t the number the footer dials (the store profile\'s), however each is typed', async () => {
-        assert.deepEqual(await problems(home({ rf_store_phone: '+1-866-250-4000' })), [
-            'the OnlineStore\'s telephone +1-866-250-4000 isn\'t the number the footer dials, tel:+18662504071: rf_store_phone and the store profile\'s phone number must be one number',
+    it('fails a store telephone that isn\'t the number the footer dials, however each is typed', async () => {
+        // The schema and the footer both read rf_store_phone, so they part only when the pages
+        // were rendered with different settings, or the footer falls back to the store profile's
+        // number (rf_store_phone empty: then the schema has no telephone at all).
+        assert.deepEqual(await problems(home({ rf_store_phone: '+1-866-250-4000' }, {})), [
+            'the OnlineStore\'s telephone +1-866-250-4000 isn\'t the number the footer dials, tel:+1-866-250-4071: rf_store_phone and the number the footer shows must be one number',
         ]);
-        assert.deepEqual(await problems(home({ rf_store_phone: '+1 (866) 250.4071' })), []);
+        assert.deepEqual(await problems(home({ rf_store_phone: '+1 (866) 250.4071' }, {})), []);
+        assert.deepEqual(await problems(home({ rf_store_phone: '' }, {})), ['the OnlineStore block has no telephone (rf_store_phone)']);
         assert.deepEqual(await problems(page(await schema({ rf_store_phone: '+1-866-250-4000' }))), [], 'no footer phone, nothing to compare');
     });
 
@@ -103,7 +108,7 @@ describe('store-schema', () => {
         ]);
     });
 
-    it('fails a sameAs that isn\'t the footer\'s social row: one set (ticket 50)', async () => {
+    it('fails a sameAs that isn\'t the footer\'s social row (ul.rf-foot__social): one set (ticket 50)', async () => {
         assert.deepEqual(await problems(home({}, { rf_store_same_as: 'facebook,instagram,youtube' })), [
             'sameAs (https://www.facebook.com/reelflies.ca/, https://www.instagram.com/reelflies/, https://www.pinterest.ca/reelflies/, https://twitter.com/reelfliescanada, https://www.youtube.com/user/reelflies01) isn\'t the footer\'s social row (https://www.facebook.com/reelflies.ca/, https://www.instagram.com/reelflies/, https://www.youtube.com/user/reelflies01): both come from social-keep.html and rf_store_same_as',
         ]);

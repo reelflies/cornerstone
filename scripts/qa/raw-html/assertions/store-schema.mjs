@@ -3,10 +3,13 @@
 // - On the home page, exactly one WebSite block and one OnlineStore block, naming the same URL,
 //   the WebSite published by the store. On every other page, neither: they're the home page's.
 // - The OnlineStore with its telephone and every address line (stories 65 and 75). Its telephone
-//   (rf_store_phone) is the number the footer dials (the store profile's), digit for digit,
-//   whenever the footer shows one: the markup names the phone a shopper sees.
-// - sameAs exactly the footer's social row, in order, whenever the footer shows one: both come
-//   from ReelFlies' social set (social-keep.html and rf_store_same_as; ticket 50's note).
+//   (rf_store_phone) is the number the footer dials, digit for digit, whenever the footer shows
+//   one: the markup names the phone a shopper sees. The redesign's footer dials rf_store_phone
+//   too (the store profile's number when that is empty), so the two drift only when the footer
+//   falls back.
+// - sameAs exactly the footer's social row (ul.rf-foot__social, the redesign's line of text
+//   links), in order, whenever the footer shows one: both come from ReelFlies' social set
+//   (social-keep.html and rf_store_same_as; ticket 50's note).
 // - The free-shipping rule exactly when the store block declares a threshold
 //   (data-rf-ship-free-threshold, from rf_ship_free_threshold): free standard shipping to the
 //   store's country on orders from that amount. A threshold that isn't a number fails, so a
@@ -60,18 +63,19 @@ const hasKey = (value, key) => {
     return Object.keys(value).some(name => name === key || hasKey(value[name], key));
 };
 
-const footerOf = html => elementsHtml(html, 'footer', attrs => 'data-rf-footer' in attrs)[0];
+const footerOf = html => elementsHtml(html, 'footer', attrs => 'data-rf-foot' in attrs)[0];
 
-// The footer's social row: each link's href, in order, or null when the footer shows no row.
+// The footer's social row (social-links.html): each link's href, in order, or null when the
+// footer shows no row.
 function footerSocial(html) {
     const footer = footerOf(html);
-    const row = footer && elementsHtml(footer, 'ul', attrs => (attrs.class || '').split(/\s+/).includes('socialLinks'))[0];
+    const row = footer && elementsHtml(footer, 'ul', attrs => (attrs.class || '').split(/\s+/).includes('rf-foot__social'))[0];
     if (!row) return null;
     return findTags(row, 'a').map(tag => decodeHtml(tag.attrs.href || '').trim()).filter(Boolean);
 }
 
-// The number the footer's Contact column dials (the store profile's, settings.phone_number), as
-// its tel: href, or null when the footer shows no phone.
+// The number the footer's store block dials (rf_store_phone, or the store profile's
+// settings.phone_number when that is empty), as its tel: href, or null when the footer shows no phone.
 function footerPhone(html) {
     const footer = footerOf(html);
     const link = footer && findTags(footer, 'a').find(tag => /^tel:/i.test(decodeHtml(tag.attrs.href || '').trim()));
@@ -110,7 +114,7 @@ function storeProblems(store, attrs, html) {
     if (!text(store.telephone)) {
         problems.push('the OnlineStore block has no telephone (rf_store_phone)');
     } else if (dialled && digits(store.telephone) !== digits(dialled)) {
-        problems.push(`the OnlineStore's telephone ${text(store.telephone)} isn't the number the footer dials, ${dialled}: rf_store_phone and the store profile's phone number must be one number`);
+        problems.push(`the OnlineStore's telephone ${text(store.telephone)} isn't the number the footer dials, ${dialled}: rf_store_phone and the number the footer shows must be one number`);
     }
     if (!isType(store.address || {}, 'PostalAddress')) {
         problems.push('the OnlineStore block has no PostalAddress (rf_store_street and the other address lines)');

@@ -1,6 +1,8 @@
-// Tests for ticket 25's skin assertions (spec Testing Decisions, seam 2): Canadian English
-// (lang-en-ca), the self-hosted font (rf-fonts), the favicon and share image (rf-brand-head) and
-// the autocomplete tokens (autocomplete). CI runs them through `npm run test:scripts`.
+// Tests for ticket 25's skin assertions (spec Testing Decisions, seam 2), as the Streamside Stone
+// redesign fills the head: Canadian English (lang-en-ca), the self-hosted Archivo preload
+// (rf-fonts), the favicon and share image (rf-brand-head) and the autocomplete tokens
+// (autocomplete). The fixture pages are a Web Page and a product page in the redesign's skin
+// (fixtures/page-frame.html, good-product.html). CI runs them through `npm run test:scripts`.
 //
 //   node --test scripts/qa/raw-html/skin-head.test.mjs
 
@@ -14,10 +16,11 @@ import { TOKENS } from './assertions/autocomplete.mjs';
 const FIXTURES = path.resolve('scripts/qa/raw-html/fixtures');
 const FRAME = fs.readFileSync(path.join(FIXTURES, 'page-frame.html'), 'utf8');
 const PRODUCT = fs.readFileSync(path.join(FIXTURES, 'good-product.html'), 'utf8');
-const page = (html, kind = 'home') => ({
+const page = (html, kind = 'page') => ({
     kind, key: kind, path: '/', url: 'http://localhost:3701/', status: kind === '404' ? 404 : 200, html,
 });
-const PRELOAD = '<link rel="preload" href="/stencil/00000000-0000-0000-0000-000000000001/fonts/onest-latin-var.woff2" as="font" type="font/woff2" crossorigin>';
+const PRELOAD = '<link rel="preload" href="/stencil/00000000-0000-0000-0000-000000000001/fonts/archivo-latin-var.woff2" as="font" type="font/woff2" crossorigin>';
+const KALAM = '<link rel="preload" href="/stencil/00000000-0000-0000-0000-000000000001/fonts/kalam-latin-400.woff2" as="font" type="font/woff2" crossorigin>';
 const LANGUAGE = '<meta http-equiv="content-language" content="en-CA">';
 const SHARE = '<meta property="og:image" content="/stencil/00000000-0000-0000-0000-000000000001/img/reelflies/social-default.jpg">';
 const FAVICON = '<link href="https://cdn11.bigcommerce.com/s-8pfqkn26ea/product_images/favicon.png" rel="shortcut icon">';
@@ -41,7 +44,8 @@ describe('ticket 25\'s head assertions', () => {
         for (const id of ['lang-en-ca', 'rf-fonts', 'rf-brand-head', 'autocomplete']) assert.ok(ids.includes(id), `${id} is registered`);
     });
 
-    it('pass the fixture home page and product page', () => {
+    it('pass the fixture Web Page and product page', () => {
+        for (const constant of [PRELOAD, LANGUAGE, SHARE, FAVICON]) assert.ok(FRAME.includes(constant), `the fixture holds ${constant}`);
         assert.deepEqual(failed(FRAME), []);
         assert.deepEqual(failed(PRODUCT, 'product'), []);
     });
@@ -58,13 +62,13 @@ describe('lang-en-ca', () => {
     });
 
     it('applies to every page kind, the 404 page included', () => {
-        for (const kind of ['home', 'product', 'category', 'brand', 'cart', '404', 'login']) assert.equal(result(FRAME, 'lang-en-ca', kind).status, 'pass', kind);
+        for (const kind of ['home', 'product', 'category', 'brand', 'cart', '404', 'login', 'page']) assert.equal(result(FRAME, 'lang-en-ca', kind).status, 'pass', kind);
     });
 });
 
 describe('rf-fonts', () => {
-    it('fails a page without the Onest preload, or with it twice', () => {
-        fails(FRAME.replace(PRELOAD, ''), 'rf-fonts', /0 preloads of fonts\/onest-latin-var\.woff2/);
+    it('fails a page without the Archivo preload, or with it twice', () => {
+        fails(FRAME.replace(PRELOAD, ''), 'rf-fonts', /0 preloads of fonts\/archivo-latin-var\.woff2/);
         fails(FRAME.replace(PRELOAD, PRELOAD + PRELOAD), 'rf-fonts', /2 preloads/);
     });
 
@@ -73,8 +77,12 @@ describe('rf-fonts', () => {
     });
 
     it('fails a preload that isn\'t a woff2 font', () => {
-        fails(FRAME.replace('as="font"', 'as="style"'), 'rf-fonts', /as="style", not "font"/);
+        fails(FRAME.replace('as="font"', 'as="style"'), 'rf-fonts', /0 preloads of fonts\/archivo-latin-var\.woff2/);
         fails(FRAME.replace('type="font/woff2"', 'type="font/woff"'), 'rf-fonts', /type="font\/woff", not "font\/woff2"/);
+    });
+
+    it('fails a preload of another font, such as Kalam, which appears once a region and isn\'t preloaded', () => {
+        fails(FRAME.replace(PRELOAD, PRELOAD + KALAM), 'rf-fonts', /a preload of another font.*kalam-latin-400/);
     });
 
     it('fails any request to Google Fonts, as stock made for Karla and Montserrat', () => {
