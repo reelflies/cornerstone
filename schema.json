@@ -3197,6 +3197,12 @@
       },
       {
         "type": "text",
+        "label": "i18n.RfStoreSameAs",
+        "force_reload": true,
+        "id": "rf_store_same_as"
+      },
+      {
+        "type": "text",
         "label": "i18n.RfStoreName",
         "force_reload": true,
         "id": "rf_store_name"

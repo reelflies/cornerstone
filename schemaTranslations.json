@@ -6172,6 +6172,9 @@
   "i18n.RfStoreDetails": {
     "default": "Store details"
   },
+  "i18n.RfStoreSameAs": {
+    "default": "Social networks for the footer's links and the store's sameAs, comma-separated (facebook, instagram, youtube); empty shows every social link the store sets"
+  },
   "i18n.RfStoreName": {
     "default": "Store name, such as ReelFlies.ca"
   },

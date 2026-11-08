@@ -6,9 +6,17 @@
       so it arrives with the CSS: the same URL as the @font-face, crossorigin because fonts are
       always fetched in CORS mode. Kalam is small and appears once a region, so it isn't preloaded.
     Stock's theme-bundle.font.js loads Google fonts only; the theme's fonts are all self-hosted.
+    - the default share image, for a page with no image of its own (ticket 25): the store gives
+      products theirs in head.meta_tags, and every other page none. Built from the 133x95 logo
+      until the logo master arrives (ticket 14; decision 17). Steps 1–3 had dropped it (step 4).
 --}}
 <meta http-equiv="content-language" content="en-CA">
 <link rel="preload" href="{{cdn 'assets/fonts/archivo-latin-var.woff2'}}" as="font" type="font/woff2" crossorigin>
+{{#contains head.meta_tags 'og:image'}}{{else}}
+<meta property="og:image" content="{{cdn 'assets/img/reelflies/social-default.jpg'}}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+{{/contains}}
 {{!--
     Page variables the ReelFlies partials read from inside loops and a page's {{#partial}} block,
     where @root and theme_settings can't be reached. The head renders before the page's blocks,
