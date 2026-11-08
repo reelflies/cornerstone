@@ -383,7 +383,7 @@ A centred column of at most 1344px with a gutter of 16px on phones, 24px from 64
 - **On phones** way lists become single swipe rows bleeding to the screen edge, labelled at the left; the hero stack is tightened so the first two cards and their + Add sit above the order line at 390×844; buy rows stack with a full-width + Add.
 - **Touch:** every pill, nav row and control is at least 44px; size cells, steppers and quick-order fields are 44px tall.
 - **Grids:** specimen cards two across on phones, three from 640px, three beside the facets from 1040px and four from 1280px, on a true grid on limestone. Species hub tiles one, two, then three across (a compact row on phones). The hook gauge seven to a row, ten from 640px, one row from 1040px.
-- **Reading pages:** the words in one column at about 68 characters (17px, line height 1.6), left-aligned under the head, never centred. From 1040px the column (up to 46rem) sits beside an 18rem help column held in view below the pinned nav row.
+- **Reading pages:** the words in one column of 65–75 characters (60ch at 17px, line height 1.6: Archivo's "0", the `ch` unit, is wider than its average letter, so 68ch ran to 82), left-aligned under the head, never centred. A category's About text, the product details and reviews hold the same measure at 16px (35rem); a listing's intro 37rem. Paragraphs wrap `pretty`, so no word sits alone on a last line. From 1040px the column (up to 46rem) sits beside an 18rem help column held in view below the pinned nav row.
 
 **The Laid, Not Filed Rule.** From 1040px, specimen cards on stone and on moss are each nudged a few pixels off the grid (up to 5px across, 10px down) so they read as set down by hand. Reading order never changes, and cards on limestone sit on a true grid.
 
@@ -508,7 +508,7 @@ The base is Cornerstone 6.22, rebuilt fresh rather than ported from the old skin
 - **Cart ("Your box"):** `components/reelflies/cart-page.html` in stock's containers: the lines on a paper sheet, grouped by pattern; the order summary (stock's totals, coupons and estimator in the new type) beside them from 1040px and held in view, with the order line's shipping line and meter above the copper Check out; below 1040px a riverbed-shale bar at the foot with the count, the total and Check out. Stock cart.js does every update. Empty: "Your box is empty." and the Fly Types as chips.
 - **Species hub:** `pages/custom/category/species-hub.html` renders the category page in its hub mode (`components/reelflies/hub-head.html`): the moss field with the tiles, then the listing on limestone under "All flies", its cards all lazy.
 - **Hook size chart:** `pages/custom/page/hook-size-chart.html` (`components/reelflies/chart-page.html`): the Web Page's words, the gauge (`chart-gauge.html`), then the size rows `scripts/hook-chart/rows.mjs` writes into the page's content.
-- **Reading pages:** Web Pages, the contact page, the blog and its articles (`web-page.html`, `contact-page.html`, `blog-page.html`, `blog-post-page.html`): the listings' plain head, the words in one reading column at about 68 characters (the store's own markup styled in the new type), and from 1040px the help pages beside them (`help-aside.html`).
+- **Reading pages:** Web Pages, the contact page, the blog and its articles (`web-page.html`, `contact-page.html`, `blog-page.html`, `blog-post-page.html`): the listings' plain head, the words in one reading column of 65–75 characters (the store's own markup styled in the new type), and from 1040px the help pages beside them (`help-aside.html`).
 - **404 and dead ends:** `components/reelflies/not-found.html`: the H1, the search form with its suggestions, the Fly Types and Species hub as outlined chips (`dead-end-links.html`, shared with the empty cart and the empty search), the hook size chart and a Page Builder note region.
 
 ## Do's and Don'ts
@@ -522,7 +522,7 @@ The base is Cornerstone 6.22, rebuilt fresh rather than ported from the old skin
 - **Do** treat the warm `.graded` filter on the stand-in slate photographs as temporary: it comes off when the commissioned warm-light shoot replaces them, and it is never applied to product photos.
 - **Do** give every lit, lifted or dropping state an instant equivalent under reduced motion.
 - **Do** keep every touch target at least 44px on phones.
-- **Do** set a reading page's words in one left-aligned column at about 68 characters, the store's own markup styled in the system's type.
+- **Do** set a reading page's words in one left-aligned column of 65–75 characters, the store's own markup styled in the system's type.
 - **Do** give every dead end a way on: the 404, the empty box and the empty search each carry the Fly Types.
 
 ### Don't:

@@ -603,7 +603,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
 }
 
 .rf-details__body {
-    max-width: 44rem;
+    max-width: 35rem; // about 72 characters a line at 16px (44rem measured 93)
     padding: 0 0 var(--rf-space-6);
     font: 400 16px / 1.6 var(--rf-font-text);
 
@@ -735,7 +735,7 @@ $rf-pdp-pinned: 52px; // the header's nav row, pinned from 1040px
 }
 
 .rf-review__body {
-    max-width: 44rem;
+    max-width: 35rem;
     margin: 0;
     font-size: 16px;
     line-height: 1.6;

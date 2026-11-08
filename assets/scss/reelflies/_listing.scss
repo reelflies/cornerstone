@@ -52,7 +52,7 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
 }
 
 .rf-list-head__intro {
-    max-width: 40rem;
+    max-width: 37rem; // about 72 characters a line at 17px
     font-size: 17px;
     line-height: 1.5;
 
@@ -1253,7 +1253,7 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
 }
 
 .rf-list-about__text {
-    max-width: 44rem;
+    max-width: 35rem; // about 72 characters a line at 16px (44rem measured 90)
     font: 400 16px / 1.6 var(--rf-font-text);
 
     p,
@@ -1314,8 +1314,7 @@ $rf-two-rows: calc(2 * var(--rf-tap-min) + var(--rf-space-2));
         }
 
         .rf-list-head__title,
-        .rf-chips,
-        .rf-list-head__intro {
+        .rf-chips {
             max-width: 46rem;
         }
     }

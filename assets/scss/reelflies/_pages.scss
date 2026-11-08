@@ -79,7 +79,7 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
 .rf-page__feed {
     display: grid;
     gap: var(--rf-space-6);
-    max-width: 68ch;
+    max-width: 60ch;
     margin-top: var(--rf-space-8);
 
     h2 {
@@ -96,7 +96,7 @@ $rf-pages-pinned: 52px; // the header's nav row, pinned from 1040px
 // -----------------------------------------------------------------------------
 
 .rf-prose {
-    max-width: 68ch;
+    max-width: 60ch; // about 72 characters a line in Archivo at 17px (68ch measured 82)
     color: var(--rf-ink);
     font-size: 17px;
     line-height: 1.6;

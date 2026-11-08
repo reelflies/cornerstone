@@ -560,7 +560,7 @@
       "tapMin": "44px",
       "headerDesktop": "76px brand row (scrolls away) + 52px nav row (pinned) from 1040px",
       "scrollPaddingTop": "72px",
-      "readingMeasure": "68ch at 17px / 1.6, left-aligned; from 1040px a 46rem column beside an 18rem help column held in view",
+      "readingMeasure": "65–75 characters: 60ch at 17px for reading pages (Archivo's ch is wide), 35rem at 16px for About text, details and reviews, 37rem for listing intros; paragraphs text-wrap: pretty",
       "cardGrid": "2 across on phones, 3 from 640px, 3 beside the facets from 1040px, 4 from 1280px",
       "hubTiles": "1 across on phones (a compact row: 104px photo beside name and count), 2 from 640px, 3 from 1040px",
       "gauge": "7 to a row on phones, 10 from 640px, one row from 1040px; 1.5px, 2px, 2.6px per millimetre of hook",
@@ -803,7 +803,7 @@
       "**Do** treat the warm `.graded` filter on the stand-in slate photographs as temporary: it comes off when the commissioned warm-light shoot replaces them, and it is never applied to product photos.",
       "**Do** give every lit, lifted or dropping state an instant equivalent under reduced motion.",
       "**Do** keep every touch target at least 44px on phones.",
-      "**Do** set a reading page's words in one left-aligned column at about 68 characters, the store's own markup styled in the system's type.",
+      "**Do** set a reading page's words in one left-aligned column of 65–75 characters, the store's own markup styled in the system's type.",
       "**Do** give every dead end a way on: the 404, the empty box and the empty search each carry the Fly Types."
     ],
     "donts": [

@@ -30,6 +30,12 @@ $rf-regions: ".rf-strip, .rf-head, .rf-mega-scrim, .rf-drawer, .rf-foot, .rf-ord
         text-transform: none;
     }
 
+    // no word left alone on a paragraph's last line (progressive: a browser without it wraps as
+    // before)
+    p, li, dd, figcaption, blockquote {
+        text-wrap: pretty;
+    }
+
     ul, ol {
         padding: 0;
         list-style: none;
