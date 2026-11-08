@@ -1,43 +1,49 @@
-// The shipping strip's place (ticket 27; spec module 2, O04), on every page: the
-// header_bottom--global region, where the strip widget sits on 1895766, is after the header and
-// inside a labelled region landmark (<div data-rf-strip-region role="region" aria-label>), so
-// it isn't content outside any landmark (axe region) and, on phones, scrolls away under the
-// sticky bar. When the strip itself is on the page (data-rf-strip, widgets/shipping-strip), it
-// holds no link: the way to ReelFlies.com is ticket 52's prompt and ticket 50's footer.
+// The utility strip's landmark (ticket 27; spec module 2, O04; redrawn for Streamside Stone,
+// DESIGN.md "Navigation"), on every page: components/reelflies/strip.html, the riverbed shale
+// above the header, is one labelled region landmark (<div class="rf-strip" role="region"
+// aria-label>), so its words (the shipping promise, the family line, the phone number and the
+// other storefront) aren't content outside any landmark (axe region). It sits before the
+// <header>, never inside it, and every link in it has an href.
 //
-// Like every assertion it judges the page, never the store's record of the widget, so writing
-// the strip on 1895766 never fails an open branch's gate (build pipeline, section 6.6).
+// Retired with the redesign: the header_bottom--global region and the shipping-strip widget it
+// held (the strip is a theme partial now), the wrapper it sat in (data-rf-strip-region), and the
+// "no link in the strip" rule: the strip carries the phone number and the way to the other
+// storefront by design.
+//
+// Like every assertion it judges the page, never the store's record of a widget.
 
-import { findTags, outerHtml } from '../html.mjs';
+import { findTags, markupOnly, outerHtml } from '../html.mjs';
 
-export const REGION = 'header_bottom--global';
+const isStrip = attrs => /(^|\s)rf-strip(\s|$)/.test(attrs.class || '');
+
+// The strip's markup (<div class="rf-strip">), or null.
+export const stripSource = html => outerHtml(html, 'div', isStrip);
 
 export function stripRegionProblems(html) {
-    const regions = findTags(html, 'div').filter(tag => tag.attrs['data-content-region'] === REGION);
-    if (regions.length !== 1) return [`${regions.length} ${REGION} regions, not 1`];
-    const wrapper = outerHtml(html, 'div', attrs => 'data-rf-strip-region' in attrs);
-    if (!wrapper || !wrapper.includes(`data-content-region="${REGION}"`)) {
-        return [`${REGION} isn't inside the strip's landmark, <div data-rf-strip-region role="region" aria-label="…">`];
-    }
+    const strips = findTags(html, 'div').filter(tag => isStrip(tag.attrs));
+    if (strips.length !== 1) return [`${strips.length} utility strips (.rf-strip), not 1`];
     const problems = [];
-    const [landmark] = findTags(wrapper, 'div');
-    if (landmark.attrs.role !== 'region') problems.push(`the strip's landmark has role "${landmark.attrs.role || ''}", not "region"`);
-    if (!(landmark.attrs['aria-label'] || '').trim()) problems.push('the strip\'s landmark has no accessible name (aria-label)');
-    const header = outerHtml(html, 'header', attrs => 'data-rf-header' in attrs);
-    if (header && header.includes('data-rf-strip-region')) problems.push('the strip\'s landmark is inside the <header>: it belongs after it, so it scrolls away under the sticky phone bar');
-    else if (header && html.indexOf('data-rf-strip-region') < html.indexOf(header)) problems.push('the strip\'s landmark comes before the <header>: it belongs after it, under the bar');
-    const strip = outerHtml(html, 'div', attrs => 'data-rf-strip' in attrs);
-    if (strip) {
-        const links = findTags(strip, 'a').map(tag => tag.attrs.href || '(no href)');
-        if (links.length) problems.push(`the shipping strip holds ${links.length === 1 ? 'a link' : `${links.length} links`} (${links.join(', ')}): it carries the shipping promise and nothing else`);
+    const [strip] = strips;
+    if (strip.attrs.role !== 'region') problems.push(`the strip has role "${strip.attrs.role || ''}", not "region"`);
+    if (!(strip.attrs['aria-label'] || '').trim()) problems.push('the strip\'s landmark has no accessible name (aria-label)');
+    const header = outerHtml(html, 'header', attrs => 'data-rf-head' in attrs);
+    if (header) {
+        if (findTags(header, 'div').some(tag => isStrip(tag.attrs))) {
+            problems.push('the strip is inside the <header>: it belongs above it, its own landmark');
+        } else {
+            const markup = markupOnly(html);
+            if (markup.indexOf(strip.raw) > markup.indexOf(header)) problems.push('the strip comes after the <header>: it belongs above it');
+        }
     }
+    const dead = findTags(stripSource(html), 'a').filter(tag => !(tag.attrs.href || '').trim());
+    if (dead.length) problems.push(`${dead.length} link(s) in the strip with no href`);
     return problems;
 }
 
 export default {
     id: 'strip-region',
     ticket: 27,
-    description: `${REGION} after the header, inside a labelled region landmark, and the shipping strip in it with no link`,
+    description: 'the utility strip above the header is one labelled region landmark (role="region" with an aria-label), outside the <header>, and its links have hrefs',
     check(page) {
         return stripRegionProblems(page.html);
     },

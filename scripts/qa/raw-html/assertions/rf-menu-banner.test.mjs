@@ -1,7 +1,7 @@
-// Tests ticket 29's raw-HTML assertion rf-menu-banner (spec seam 2) on the header as
-// components/common/header.html renders it: the grouped menu on tree 4 with banners, which it
-// passes, with none, and the stock fallback, which it passes too, and broken copies, which it
-// fails.
+// Tests ticket 29's raw-HTML assertion rf-menu-banner (spec seam 2), redrawn for Streamside Stone,
+// on the header as components/common/header.html renders it after head.html: the Flies panel on
+// tree 4 with a pane's plate, which it passes, with none, and with the menu ids empty, which it
+// passes too, and broken copies, which it fails.
 //
 //   node --test scripts/qa/raw-html/assertions/rf-menu-banner.test.mjs
 
@@ -18,35 +18,45 @@ const STORE = {
     urls: {
         home: 'https://reelflies.ca/', search: '/search.php', cart: '/cart.php', account: { index: '/account.php' }, auth: { login: '/login.php' },
     },
-    settings: { store_logo: { image: null, title: 'ReelFlies.ca' }, phone_number: '1 866 250 4071', blog_enabled: true },
+    settings: {
+        store_logo: { image: null, title: 'ReelFlies.ca' }, store_name: 'ReelFlies', phone_number: '1 866 250 4071', blog_enabled: true,
+    },
     pages: [],
     page_type: 'default',
 };
+const PAGE = 'rf-test/rf-menu-banner-page';
+const WITH_HEAD = { [PAGE]: '{{> components/reelflies/head}}{{> components/common/header}}' };
 const IMAGE = { data: 'https://cdn11.bigcommerce.com/s-test/images/stencil/{:size}/d/dry-flies__1.original.jpg', alt: '' };
 const withDryImage = categories => categories.map(category => (category.id === '501' ? { ...category, image: IMAGE } : category));
 const page = html => ({
     kind: 'category', key: 'category', path: '/', url: 'http://localhost:3501/', status: 200, html,
 });
 
-let banner;
+let plate;
 let plain;
-let stock;
+let bare;
 before(async () => {
-    banner = await renderPartial('components/common/header', { ...STORE, ...TREE_4, categories: withDryImage(TREE_4.categories) });
-    plain = await renderPartial('components/common/header', { ...STORE, ...TREE_4 });
-    stock = await renderPartial('components/common/header', {
-        ...STORE, categories: withDryImage(TREE_4.categories), theme_settings: { rf_menu_type_ids: '', rf_menu_species_root_id: '' },
-    });
+    const render = context => renderPartial(PAGE, { ...STORE, ...context }, { overrides: WITH_HEAD });
+    plate = await render({ ...TREE_4, categories: withDryImage(TREE_4.categories) });
+    plain = await render(TREE_4);
+    bare = await render({ categories: withDryImage(TREE_4.categories), theme_settings: { rf_menu_type_ids: '', rf_menu_species_root_id: '' } });
 });
-const img = () => banner.match(/<img class="rf-menu-banner"[^>]*>/)[0];
-const swap = (from, to) => banner.replace(from, to);
+const img = () => plate.match(/<img src="https:\/\/cdn11\.bigcommerce\.com\/s-test[^>]*>/)[0];
+const link = () => plate.match(/<a class="rf-mega__plate"[^>]*>/)[0];
+const swap = (from, to) => {
+    const html = plate.replace(from, to);
+    assert.notEqual(html, plate, `the fixture holds ${from}`);
+    return html;
+};
 
 describe('rf-menu-banner', () => {
-    it('passes the grouped menu with a banner, without one, and the stock fallback', () => {
-        assert.match(banner, /data-rf-menu-banner/);
-        assert.deepEqual(bannerProblems(banner), []);
+    it('passes the Flies panel with a plate, without one, and the header with the menu ids empty', () => {
+        assert.match(plate, /class="rf-mega__plate"/);
+        assert.deepEqual(bannerProblems(plate), []);
+        assert.doesNotMatch(plain, /<img/);
         assert.deepEqual(bannerProblems(plain), []);
-        assert.deepEqual(bannerProblems(stock), []);
+        assert.doesNotMatch(bare, /data-rf-mega-panel/);
+        assert.deepEqual(bannerProblems(bare), []);
     });
 
     it('is registered, and runs on every page', async () => {
@@ -54,31 +64,40 @@ describe('rf-menu-banner', () => {
         const found = assertions.find(assertion => assertion.id === 'rf-menu-banner');
         assert.ok(found);
         assert.equal(found.ticket, 29);
-        const result = id => checkPage(page(id), assertions).find(entry => entry.id === 'rf-menu-banner');
-        assert.equal(result(banner).status, 'pass');
+        assert.equal(found.pages, undefined);
+        const result = html => checkPage(page(html), assertions).find(entry => entry.id === 'rf-menu-banner');
+        assert.equal(result(plate).status, 'pass');
         assert.equal(result(swap('loading="lazy"', 'loading="eager"')).status, 'fail');
     });
 
-    it('fails a banner that would download on a phone or for a closed pane', () => {
-        assert.match(bannerProblems(swap(' loading="lazy"', '')).join('\n'), /not "lazy"/);
-        assert.match(bannerProblems(swap('loading="lazy"', 'loading="eager"')).join('\n'), /not "lazy"/);
-        assert.match(bannerProblems(swap('loading="lazy"', 'loading="lazy" fetchpriority="high"')).join('\n'), /fetchpriority/);
+    it('fails a plate image that would download on a phone or for a closed panel', () => {
+        assert.match(bannerProblems(swap(' loading="lazy"', '')).join('\n'), /has loading="", not "lazy"/);
+        assert.match(bannerProblems(swap('loading="lazy"', 'loading="eager"')).join('\n'), /has loading="eager", not "lazy"/);
+        assert.match(bannerProblems(swap('loading="lazy"', 'loading="lazy" fetchpriority="high"')).join('\n'), /has fetchpriority="high"/);
     });
 
-    it('fails a banner without a srcset, sizes or dimensions, or with alt text', () => {
+    it('fails a plate image without a srcset, sizes or dimensions, or with alt text', () => {
         const without = attribute => swap(img(), img().replace(attribute, ''));
-        assert.match(bannerProblems(without(/ srcset="[^"]*"/)).join('\n'), /no srcset/);
+        assert.match(bannerProblems(without(/ srcset="[^"]*"/)).join('\n'), /no srcset of two or more candidates/);
+        assert.match(bannerProblems(swap(img(), img().replace(/ srcset="[^"]*"/, ' srcset="https://x/a.jpg 80w"'))).join('\n'), /no srcset of two or more candidates/);
         assert.match(bannerProblems(without(/ sizes="[^"]*"/)).join('\n'), /no sizes/);
         assert.match(bannerProblems(without(/ width="\d+"/)).join('\n'), /no width and height/);
-        assert.match(bannerProblems(swap(img(), img().replace('alt=""', 'alt="Dry Flies"'))).join('\n'), /alt "Dry Flies"/);
+        assert.match(bannerProblems(swap(img(), img().replace('alt=""', 'alt="Dry Flies"'))).join('\n'), /alt "Dry Flies", not ""/);
     });
 
-    it('fails an image in the rail, a second image in a pane, or a banner under the heading', () => {
-        const toggle = '<button class="rf-menu-toggle"';
-        assert.match(bannerProblems(banner.replace(toggle, `${img()}${toggle}`)).join('\n'), /outside a pane/);
-        assert.match(bannerProblems(swap(img(), `${img()}${img()}`)).join('\n'), /2 images/);
-        const heading = banner.match(/<h2 class="rf-menu-heading">[\s\S]*?<\/h2>/)[0];
-        assert.match(bannerProblems(swap(img(), '').replace(heading, `${heading}${img()}`)).join('\n'), /after its heading/);
-        assert.match(bannerProblems(swap(' data-rf-menu-banner', '')).join('\n'), /no data-rf-menu-banner/);
+    it('fails a plate link in the tab order or read by screen readers, or linking elsewhere than the heading', () => {
+        assert.match(bannerProblems(swap(link(), link().replace(' tabindex="-1"', ''))).join('\n'), /pane 501's plate link isn't aria-hidden="true" with tabindex="-1"/);
+        assert.match(bannerProblems(swap(link(), link().replace(' aria-hidden="true"', ''))).join('\n'), /pane 501's plate link isn't aria-hidden="true" with tabindex="-1"/);
+        assert.match(bannerProblems(swap(link(), link().replace('href="/dry-flies/"', 'href="/nymphs/"'))).join('\n'), /pane 501's plate links to \/nymphs\/, not its heading's \/dry-flies\//);
+    });
+
+    it('fails an image in the rail, a second plate in a pane, a second image in a plate, an image loose in a pane, and an image in the drawer', () => {
+        const rail = '<ul class="rf-mega__rail">';
+        assert.match(bannerProblems(swap(rail, `${rail}<li>${img()}</li>`)).join('\n'), /1 image\(s\) in the header's menus outside a pane's plate/);
+        const whole = plate.slice(plate.indexOf(link()), plate.indexOf('</a>', plate.indexOf(link())) + 4);
+        assert.match(bannerProblems(swap(whole, whole + whole)).join('\n'), /pane 501 has 2 plates, not one at most/);
+        assert.match(bannerProblems(swap(img(), img() + img())).join('\n'), /pane 501's plate holds 2 images, not 1/);
+        assert.match(bannerProblems(swap('<ul class="rf-mega__kids">', `${img()}<ul class="rf-mega__kids">`)).join('\n'), /pane 501 has 1 image\(s\) outside its plate/);
+        assert.match(bannerProblems(swap('<p class="rf-drawer__title"', `${img()}<p class="rf-drawer__title"`)).join('\n'), /1 image\(s\) in the drawer: a phone would download them with the page/);
     });
 });

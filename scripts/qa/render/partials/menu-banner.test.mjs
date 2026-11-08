@@ -1,18 +1,26 @@
-// The banner strip at the top of each desktop pane (ticket 29; O09, SEO-3, story 7):
-// components/reelflies/menu-banner.html, which menu-item.html includes in a pane whose category
-// has an image in the categories data (ticket 07's probe 1: on tree 1, all 61 menu categories
-// have one). It renders from fixture store data the way stencil start renders it (W0-9), on tree 4
-// and on tree 1 with the channel-1 variation's ids. The browser checks (its size at 1280, the child
-// links within 200px of the panel's top, nothing downloaded at 375 or for a closed pane) are
-// rail.spec.mjs's; the raw HTML on the storefront is the rf-menu-banner assertion's.
+// The plate in a Flies pane (ticket 29; O09, SEO-3, story 7; redrawn for Streamside Stone,
+// DESIGN.md "Mega menu"): cat-view.html's pane view puts the category's own photograph beside its
+// subcategories, in <a class="rf-mega__plate">, when the categories data gives the category an
+// image (ticket 07's probe 1: on tree 1, all 61 menu categories have one). It renders from fixture
+// store data the way stencil start renders it (W0-9), after head.html, on tree 4 and on tree 1
+// with the channel-1 variation's ids. The raw HTML on the storefront is the rf-menu-banner
+// assertion's.
+//
+// Retired with the redesign: the banner strip at the top of the pane (menu-banner.html,
+// data-rf-menu-banner, before the pane's <h2>) and its 827px sizes; the plate is a 400px graded
+// stone plate named "All …" in mist, hidden from the keyboard and screen readers because the
+// pane's heading is the same link.
 //
 //   node --test scripts/qa/render/partials/menu-banner.test.mjs
 
 import path from 'path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { findTags, outerHtml } from '../../raw-html/html.mjs';
-import { menuProblems, menuSource } from '../../raw-html/assertions/rf-menu.mjs';
+import { findTags, outerHtml, textOf } from '../../raw-html/html.mjs';
+import { headerSource } from '../../raw-html/assertions/rf-header.mjs';
+import {
+    drawerSource, menuProblems, menuSource, panelSource, panesFromHtml,
+} from '../../raw-html/assertions/rf-menu.mjs';
 import { bannerProblems } from '../../raw-html/assertions/rf-menu-banner.mjs';
 import { unbalancedTags } from '../html-checks.mjs';
 import { readFixture, renderPartial } from '../render.mjs';
@@ -24,10 +32,14 @@ const STORE = {
     urls: {
         home: 'https://reelflies.ca/', search: '/search.php', cart: '/cart.php', account: { index: '/account.php' }, auth: { login: '/login.php' },
     },
-    settings: { store_logo: { image: null, title: 'ReelFlies.ca' }, phone_number: '1 866 250 4071', blog_enabled: true },
+    settings: {
+        store_logo: { image: null, title: 'ReelFlies.ca' }, store_name: 'ReelFlies', phone_number: '1 866 250 4071', blog_enabled: true,
+    },
     pages: [],
     page_type: 'default',
 };
+const PAGE = 'rf-test/menu-banner-page';
+const WITH_HEAD = { [PAGE]: '{{> components/reelflies/head}}{{> components/common/header}}' };
 // A category image as the categories data gives it: a CDN URL with the {:size} placeholder.
 const imageOf = id => ({ data: `https://cdn11.bigcommerce.com/s-test/images/stencil/{:size}/c/category-${id}__1.original.jpg`, alt: '' });
 
@@ -41,67 +53,85 @@ function withImages(fixture, ids) {
     return { ...fixture, categories: add(fixture.categories) };
 }
 
-const render = (fixture, options) => renderPartial('components/common/header', { ...STORE, ...fixture }, options);
-const paneSource = (html, id) => outerHtml(menuSource(html), 'div', attrs => attrs.id === `rf-menu-pane-${id}`);
-const banners = html => findTags(menuSource(html), 'img');
+const render = (fixture, context = {}, options = {}) => renderPartial(PAGE, {
+    ...STORE, ...fixture, ...context, theme_settings: { ...fixture.theme_settings, ...context.theme_settings },
+}, { overrides: WITH_HEAD, ...options });
+const hasClass = (name, attrs) => new RegExp(`(^|\\s)${name}(\\s|$)`).test(attrs.class || '');
+const pane = (html, id) => panesFromHtml(panelSource(html, 'rf-mega-flies')).find(entry => entry.id === id);
+const plateOf = (html, id) => outerHtml(pane(html, id).source, 'a', attrs => hasClass('rf-mega__plate', attrs));
+const images = html => findTags(menuSource(headerSource(html)), 'img');
 
-describe('the banner strip on tree 4', () => {
-    it('puts the category\'s own image at the top of its pane: lazy, decorative, with srcset, sizes and its 16:7 dimensions', async () => {
+describe('the plate on tree 4', () => {
+    it('puts the category\'s own photograph in its pane\'s plate: lazy, decorative, with srcset, sizes and its 16:7 box, linking where the heading does, out of the tab order and hidden from screen readers', async () => {
         const html = await render(withImages(TREE_4, ['501']));
-        const pane = paneSource(html, '501');
-        const imgs = findTags(pane, 'img');
+        const dry = pane(html, '501');
+        assert.ok(!hasClass('rf-mega__pane--bare', findTags(dry.source, 'div')[0].attrs), 'a pane with a plate isn\'t bare');
+        const plate = plateOf(html, '501');
+        const [link] = findTags(plate, 'a');
+        assert.equal(link.attrs.href, '/dry-flies/', 'the heading\'s link');
+        assert.equal(link.attrs.tabindex, '-1');
+        assert.equal(link.attrs['aria-hidden'], 'true');
+        assert.equal(textOf(plate), 'All Dry Flies', 'named in mist on the stone');
+        const imgs = findTags(plate, 'img');
         assert.equal(imgs.length, 1);
         const { attrs } = imgs[0];
         const url = size => imageOf('501').data.replace('{:size}', size);
-        assert.ok('data-rf-menu-banner' in attrs);
-        assert.match(attrs.class, /(^|\s)rf-menu-banner(\s|$)/);
-        assert.equal(attrs.alt, '', 'decorative: the heading under it names the category');
-        assert.equal(attrs.loading, 'lazy', 'a closed pane, and a phone, download nothing');
+        assert.equal(attrs.alt, '', 'decorative: the heading beside it names the category');
+        assert.equal(attrs.loading, 'lazy', 'a closed panel, a hidden pane and a phone download nothing');
         assert.equal(attrs.decoding, 'async');
-        // A strip across the pane (Shaun, review-02): 827px from 1240px wide, so a 2x screen takes the 1600w file.
-        assert.equal(attrs.src, url('960w'));
-        const candidates = ['480w', '640w', '960w', '1280w', '1600w'].map(size => `${url(size)} ${size}`);
-        assert.deepEqual(attrs.srcset.split(',').map(candidate => candidate.trim()), candidates);
-        assert.match(attrs.sizes, /^\(min-width: 1240px\) 827px, calc\(100vw - 390px\)$/);
-        assert.equal(Number(attrs.width) * 7, Number(attrs.height) * 16, 'the store\'s category images are 1600x700');
+        // The template asks getImage for 800x800; stencil-paper (stencil start's and the store's)
+        // answers the original for a size that isn't a theme preset, and the srcset chooses the
+        // file anyway. The src is the category's own image, whatever the size segment.
+        assert.match(attrs.src, /^https:\/\/cdn11\.bigcommerce\.com\/s-test\/images\/stencil\/[^/]+\/c\/category-501__1\.original\.jpg$/);
+        const candidates = ['80w', '160w', '320w', '640w', '960w', '1280w', '1920w', '2560w'].map(size => `${url(size)} ${size}`);
+        assert.deepEqual(attrs.srcset.split(',').map(candidate => candidate.trim()), candidates, 'the stock default sizes, so a 2x screen takes the 960w file');
+        assert.equal(attrs.sizes, '400px');
+        assert.equal(Number(attrs.width) * 7, Number(attrs.height) * 16, 'the store\'s category images are 16:7');
         assert.ok(!('fetchpriority' in attrs), 'never high priority: the panel opens after the page has loaded');
-        assert.ok(pane.indexOf('<img') < pane.indexOf('<h2'), 'at the top of the pane, before its heading');
+        assert.ok(dry.source.indexOf('rf-mega__kids') < dry.source.indexOf('rf-mega__plate'), 'beside the subcategories, after them in the source');
+        assert.deepEqual(unbalancedTags(plate), []);
     });
 
-    it('leaves a pane whose category has no image without one, and puts no image in the rail', async () => {
+    it('leaves a pane whose category has no image bare, with no plate, and puts no image in the rail, the Species panel or the drawer', async () => {
         const html = await render(withImages(TREE_4, ['501']));
-        assert.equal(findTags(paneSource(html, '502'), 'img').length, 0);
-        assert.equal(banners(html).length, 1);
-        assert.equal(banners(await render(TREE_4)).length, 0, 'no image anywhere in the menu without one in the data');
+        const nymphs = pane(html, '502');
+        assert.ok(hasClass('rf-mega__pane--bare', findTags(nymphs.source, 'div')[0].attrs));
+        assert.equal(nymphs.plate, null);
+        assert.equal(findTags(nymphs.source, 'img').length, 0);
+        assert.equal(images(html).length, 1);
+        assert.equal(findTags(panelSource(html, 'rf-mega-species'), 'img').length, 0);
+        assert.equal(findTags(drawerSource(html), 'img').length, 0, 'a phone would download it with the page');
+        const plain = await render(TREE_4);
+        assert.equal(findTags(headerSource(plain), 'img').length + findTags(drawerSource(plain), 'img').length, 0, 'no image anywhere without one in the data');
     });
 
-    it('gives the Species and More panes theirs too, but never a plain link in the rail', async () => {
-        // 520 is Flies by Species, 550 Fly Gear (More); 560 Clearance has no children, so it is a
-        // plain link with no pane.
-        const html = await render(withImages(TREE_4, ['520', '550', '560']));
-        assert.equal(findTags(paneSource(html, '520'), 'img').length, 1);
-        assert.equal(findTags(paneSource(html, '550'), 'img').length, 1);
-        assert.equal(banners(html).length, 2);
+    it('gives a plate to a Fly Type pane only: an image on the Species root, a plain link or a subcategory draws none', async () => {
+        const html = await render(withImages(TREE_4, ['520', '550', '642']));
+        assert.equal(images(html).length, 0);
+        const asType = await render(withImages(TREE_4, ['642']), { theme_settings: { rf_menu_type_ids: '642' } });
+        assert.equal(images(asType).length, 1);
+        assert.equal(findTags(plateOf(asType, '642'), 'a')[0].attrs.href, '/dry-flies/mayfly-dry-flies/');
     });
 
     it('still passes the rf-menu assertion, and passes the rf-menu-banner one, with balanced tags', async () => {
         const html = await render(withImages(TREE_4, ['501', '502', '503', '504', '505', '506', '520', '540', '550']));
+        assert.equal(images(html).length, 6);
         assert.deepEqual(menuProblems(html), []);
         assert.deepEqual(bannerProblems(html), []);
         assert.deepEqual(unbalancedTags(html), []);
     });
 });
 
-describe('the banner strip on tree 1 (channel 1, "ReelFlies CA channel 1")', () => {
-    it('gives each Fly Type pane its category\'s image, and none to Flies, which is a plain link there', async () => {
+describe('the plate on tree 1 (channel 1, "ReelFlies CA channel 1")', () => {
+    it('gives each Fly Type pane its category\'s image, and none to Flies, which holds the Fly Types and sits in no menu', async () => {
         const ids = ['298', '251', '255', '272', '438', '398'];
-        const html = await render(withImages(TREE_1, ids), { variation: 'ReelFlies CA channel 1' });
+        const html = await render(withImages(TREE_1, ids), {}, { variation: 'ReelFlies CA channel 1' });
         ['298', '251', '255', '272', '438'].forEach(id => {
-            const imgs = findTags(paneSource(html, id), 'img');
+            const imgs = findTags(plateOf(html, id), 'img');
             assert.equal(imgs.length, 1, `pane ${id}`);
-            assert.equal(imgs[0].attrs.src, imageOf(id).data.replace('{:size}', '960w'));
+            assert.match(imgs[0].attrs.src, new RegExp(`/c/category-${id}__1\\.original\\.jpg$`));
         });
-        assert.equal(banners(html).length, 5, 'Flies (398) has no pane on channel 1: its children are the Fly Types');
+        assert.equal(images(html).length, 5);
         assert.deepEqual(bannerProblems(html), []);
     });
 });
